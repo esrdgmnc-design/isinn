@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 
-export default function AuthView({ onAuthenticated }) {
+export default function AuthView({ onAuthenticated, onCancel }) {
   const [mode, setMode] = useState("login"); // login | signup
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -66,7 +66,17 @@ export default function AuthView({ onAuthenticated }) {
 
   if (signupDone) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-5" style={{ background: "#FFFFFF" }}>
+      <div className="min-h-screen flex items-center justify-center px-5 relative" style={{ background: "#FFFFFF" }}>
+        {onCancel && (
+          <button
+            type="button"
+            onClick={onCancel}
+            className="absolute top-5 left-5 text-sm font-medium"
+            style={{ color: "#6B7280" }}
+          >
+            ← Gezinmeye devam et
+          </button>
+        )}
         <div className="max-w-sm w-full text-center">
           <h1 className="font-sans text-2xl font-black mb-3" style={{ color: "#0F1115" }}>E-postanı kontrol et</h1>
           <p className="text-sm" style={{ color: "#6B7280" }}>
@@ -78,7 +88,17 @@ export default function AuthView({ onAuthenticated }) {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-5" style={{ background: "#FFFFFF" }}>
+    <div className="min-h-screen flex items-center justify-center px-5 relative" style={{ background: "#FFFFFF" }}>
+      {onCancel && (
+        <button
+          type="button"
+          onClick={onCancel}
+          className="absolute top-5 left-5 text-sm font-medium"
+          style={{ color: "#6B7280" }}
+        >
+          ← Gezinmeye devam et
+        </button>
+      )}
       <form onSubmit={handleSubmit} className="max-w-sm w-full">
         <h1 className="font-sans text-3xl font-black mb-1" style={{ color: "#0F1115" }}>
           İşinn<span style={{ color: "#2563EB" }}>.</span>

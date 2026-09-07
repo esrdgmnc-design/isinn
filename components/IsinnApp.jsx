@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { supabase } from "../lib/supabaseClient";
 import {
   Search, MapPin, Star, Heart, PlayCircle, ChevronLeft, ChevronRight,
   Wrench, Truck, Monitor, Paintbrush, Code2, Sparkles, ThumbsUp,
@@ -10,7 +11,8 @@ import {
   Scissors, Shirt, Salad, Brain, HeartHandshake, Milk, Zap, Droplets, SprayCan, PartyPopper, Eye, Flower2,
   ChefHat, Flower, Sprout, Camera, MoreHorizontal, Dumbbell, Unlock,
   LifeBuoy, Bot, Loader2, AlertCircle, Inbox,
-  UploadCloud, FileText, Trash2
+  UploadCloud, FileText, Trash2, Pencil, Phone, Lock, Bell,
+  PaintBucket, AirVent, PawPrint, Music2, Calculator, Languages
 } from "lucide-react";
 
 // ---------------------------------------------------------------
@@ -55,15 +57,24 @@ const CATEGORIES = [
   { id: "etkinlik-organizatoru", name: "Doğum Günü / Etkinlik Organizatörü", mode: "local", icon: PartyPopper },
   { id: "bahce-bakim", name: "Bahçe / Bakım", mode: "local", icon: Sprout },
   { id: "profesyonel-fotograf", name: "Profesyonel Fotoğraf", mode: "local", icon: Camera },
+  // Kullanıcıyla birlikte gerçek pazar boşluğu olarak belirlendi (2026-09-07) —
+  // bkz. supabase/categories_seed_v2.sql (bu satırları DB'ye de eklemek gerekiyor).
+  { id: "boya-badana", name: "Boya & Badana", mode: "local", icon: PaintBucket },
+  { id: "klima-beyaz-esya", name: "Klima & Beyaz Eşya Servisi", mode: "local", icon: AirVent },
+  { id: "kuafor-berber", name: "Kuaför / Berber", mode: "local", icon: Scissors },
+  { id: "evcil-hayvan", name: "Evcil Hayvan Bakımı", mode: "local", icon: PawPrint },
+  { id: "muzik-egitmeni", name: "Müzik Eğitmeni", mode: "both", icon: Music2 },
+  { id: "muhasebe", name: "Muhasebe / Mali Müşavir", mode: "both", icon: Calculator },
+  { id: "ceviri", name: "Çeviri", mode: "remote", icon: Languages },
 ];
 
 const PARENT_CATEGORIES = [
-  { id: "ev-hizmetleri", name: "Ev Hizmetleri", icon: Home, categoryIds: ["temizlik", "nakliye", "tadilat", "cilingir", "terzi", "elektrikci", "su-tesisatcisi", "hali-yikama", "yemek"] },
-  { id: "guzellik-bakim", name: "Güzellik & Bakım", icon: Wand2, categoryIds: ["tirnakci", "makyaj", "bakim"] },
+  { id: "ev-hizmetleri", name: "Ev Hizmetleri", icon: Home, categoryIds: ["temizlik", "nakliye", "tadilat", "cilingir", "terzi", "elektrikci", "su-tesisatcisi", "hali-yikama", "yemek", "boya-badana", "klima-beyaz-esya"] },
+  { id: "guzellik-bakim", name: "Güzellik & Bakım", icon: Wand2, categoryIds: ["tirnakci", "makyaj", "bakim", "kuafor-berber"] },
   { id: "saglik", name: "Sağlık", icon: HeartPulse, categoryIds: ["hasta-bakici", "hemsire", "fizyoterapist", "diyetisyen", "psikolog", "yoga-koc", "spor-egitmeni"] },
-  { id: "egitim-aile", name: "Eğitim & Aile", icon: GraduationCap, categoryIds: ["ogretmen", "bakici", "logusa-bakicisi", "emzirme-danismani", "etkinlik-organizatoru"] },
-  { id: "profesyonel", name: "Profesyonel Hizmetler", icon: Briefcase, categoryIds: ["tasarim", "yazilim", "dijital"] },
-  { id: "diger", name: "Diğer", icon: MoreHorizontal, categoryIds: ["bahce-bakim", "muhendis", "sosyal-medya", "profesyonel-fotograf"] },
+  { id: "egitim-aile", name: "Eğitim & Aile", icon: GraduationCap, categoryIds: ["ogretmen", "bakici", "logusa-bakicisi", "emzirme-danismani", "etkinlik-organizatoru", "muzik-egitmeni"] },
+  { id: "profesyonel", name: "Profesyonel Hizmetler", icon: Briefcase, categoryIds: ["tasarim", "yazilim", "dijital", "muhasebe", "ceviri"] },
+  { id: "diger", name: "Diğer", icon: MoreHorizontal, categoryIds: ["bahce-bakim", "muhendis", "sosyal-medya", "profesyonel-fotograf", "evcil-hayvan"] },
 ];
 
 const LEVEL_META = {
@@ -72,6 +83,19 @@ const LEVEL_META = {
   "level-1": { label: "Level 1", color: "#3A5BA0" },
   "new": { label: "Yeni Satıcı", color: "#8A8368" },
 };
+
+// Gerçek vitrinler için seviye — tamamen otomatik, kimse manuel atamıyor
+// (bkz. fetchListings). Fiverr'ın seviye mantığından esinlenildi ama bu
+// şemada gerçekten ölçülebilen 3 sinyale (tamamlanan iş, ortalama puan,
+// yorum sayısı) indirgendi — yanıt süresi/iptal oranı gibi burada takip
+// edilmeyen sinyaller kullanılmadı (var olmayan veriyle sahte kesinlik
+// yaratmamak için).
+function computeProviderLevel(completedJobs, rating, reviewCount) {
+  if (completedJobs >= 50 && rating >= 4.8 && reviewCount >= 30) return "top-rated";
+  if (completedJobs >= 15 && rating >= 4.5 && reviewCount >= 10) return "level-2";
+  if (completedJobs >= 3 && rating >= 4.0 && reviewCount >= 3) return "level-1";
+  return "new";
+}
 
 const LISTINGS = [
   {
@@ -637,6 +661,353 @@ function distanceKm(lat1, lng1, lat2, lng2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+// ---------------------------------------------------------------
+// Gerçek veritabanı yardımcıları
+// `services` tablosundaki satırları, bu dosyanın geri kalanının zaten
+// bildiği LISTINGS/LOCAL_PROVIDERS şekline çeviren yardımcı fonksiyonlar.
+// Bu sayede bileşenlerin JSX'i neredeyse hiç değişmeden gerçek veriyle
+// çalışabiliyor — sadece veri kaynağı değişiyor.
+// ---------------------------------------------------------------
+const FALLBACK_LISTING_IMG = "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=600";
+
+// services.price bir numeric alan, ama arayüz "8.500₺'den" / "450₺/saat" gibi
+// serbest metin bekliyor/üretiyor. Formu gönderirken metinden sayı çıkarıyoruz,
+// listelerken de sayıdan aynı formatta bir etiket geri üretiyoruz.
+function parsePriceInput(raw) {
+  const priceType = /saat/i.test(raw) ? "hourly" : "fixed";
+  const match = (raw || "").match(/[\d.,]+/);
+  if (!match) return { numeric: null, priceType };
+  let s = match[0];
+  s = s.includes(",") ? s.replace(/\./g, "").replace(",", ".") : s.replace(/\./g, "");
+  const numeric = parseFloat(s);
+  return { numeric: Number.isNaN(numeric) ? null : numeric, priceType };
+}
+
+function formatPriceLabel(price, priceType) {
+  if (price == null) return priceType === "hourly" ? "Fiyat belirtilmemiş/saat" : "Fiyat belirtilmemiş";
+  const formatted = Number(price).toLocaleString("tr-TR");
+  if (priceType === "hourly") return `${formatted}₺/saat`;
+  if (priceType === "quote") return "Teklif alın";
+  return `${formatted}₺'den`;
+}
+
+// Bir kullanıcının kaç vitrin hakkı olduğunu hesaplar (plan tavanı + varsa
+// Ek Vitrin Paketi). CreateListingView'daki checkVitrinLimit ile ProfileView'ın
+// "Vitrinlerim (N/cap)" göstergesi aynı mantığı paylaşsın diye ortak fonksiyon —
+// önceden sadece CreateListingView'da vardı, ProfileView kullanıcıya kaç
+// vitrin hakkı olduğunu hiç göstermiyordu (sadece "Vitrinlerim (N)" — tavan
+// görünmüyordu, "3'ten kaçı doldu" bilgisi eksikti).
+async function getVitrinCapInfo(userId) {
+  if (!userId) return { cap: 1, planName: "Standart Üyelik", hasExtraVitrinAddon: false };
+  const [{ data: subRow }, { data: addonProduct }] = await Promise.all([
+    supabase
+      .from("provider_subscriptions")
+      .select("subscription_plans(name, max_active_listings)")
+      .eq("profile_id", userId)
+      .in("status", ["active", "trialing"])
+      .maybeSingle(),
+    supabase.from("addon_products").select("id").eq("slug", "ek-vitrin").maybeSingle(),
+  ]);
+  let cap = subRow?.subscription_plans?.max_active_listings ?? 1;
+  const planName = subRow?.subscription_plans?.name || "Standart Üyelik";
+  let hasExtraVitrinAddon = false;
+  if (addonProduct?.id) {
+    const { data: addonRow } = await supabase
+      .from("provider_addons")
+      .select("id, current_period_end")
+      .eq("profile_id", userId)
+      .eq("addon_id", addonProduct.id)
+      .eq("status", "active")
+      .maybeSingle();
+    hasExtraVitrinAddon = !!addonRow && new Date(addonRow.current_period_end) > new Date();
+  }
+  if (hasExtraVitrinAddon) cap += 3;
+  return { cap, planName, hasExtraVitrinAddon };
+}
+
+// Şüpheli içerik önce ucuz bir anahtar kelime filtresinden geçiyor — her
+// mesajda AI çağırmak hem pahalı hem gereksiz. Sadece bu kalıplardan biri
+// eşleşirse AI'ye "gerçekten şüpheli mi" diye soruyoruz (yanlış pozitifleri
+// azaltmak için). Sessiz, engellemeyen bir katman — hiçbir gönderimi
+// durdurmuyor, sadece admin'in görebileceği content_flags'a düşürüyor
+// (bkz. growth_features_batch.sql). Platform komisyon almadığı için "ücret
+// kaçırma" değil, asıl risk WhatsApp/Telegram'a çekip dolandırıcılık yapmak.
+const SUSPICIOUS_CONTENT_PATTERN = /whatsapp|telegram|\biban\b|banka hesab|kapora|ön ödeme|hemen ödeme|platform dışı|dışarıdan (öde|anlaş)/i;
+
+async function checkAndFlagContent(contentType, contentId, text, profileId) {
+  if (!text || !contentId || !SUSPICIOUS_CONTENT_PATTERN.test(text)) return;
+  try {
+    const response = await fetch("/api/claude", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-6",
+        max_tokens: 150,
+        messages: [{
+          role: "user",
+          content: `Bir hizmet pazaryerinde şu metin gönderildi:\n"${text}"\n\nBu metin platformu atlayıp doğrudan ödeme isteme, dolandırıcılık kalıbı ya da kullanıcıyı kandırmaya yönelik şüpheli bir istek içeriyor mu? Sadece WhatsApp/Telegram'dan iletişime geçmeyi önermek TEK BAŞINA şüpheli sayılmaz (normal bir tercih olabilir) — asıl önemli olan ödeme/kapora isteme veya aldatma niyeti var mı.\n\nSADECE şu JSON formatında yanıt ver: {"suspicious": true veya false, "reason": "kısa gerekçe (en fazla 15 kelime)"}`,
+        }],
+      }),
+    });
+    const data = await response.json();
+    const raw = (data.content || []).map((b) => b.text || "").join("\n");
+    const clean = raw.replace(/```json|```/g, "").trim();
+    const parsed = JSON.parse(clean);
+    if (parsed.suspicious) {
+      await supabase.from("content_flags").insert({
+        content_type: contentType, content_id: contentId, flagged_profile_id: profileId || null,
+        reason: parsed.reason || "AI şüpheli buldu", excerpt: text.slice(0, 200),
+      });
+    }
+  } catch {
+    // sessizce vazgeç — bu tamamen ek bir katman, asıl akışı asla engellememeli
+  }
+}
+
+// Bir şehrin merkez lat/lng'sini PostGIS'in anlayacağı EWKT metnine çevirir —
+// services.location (geography(Point,4326)) kolonuna doğrudan yazılabilir.
+function cityToLocationEwkt(cityId) {
+  const c = CITIES.find((x) => x.id === cityId);
+  if (!c) return null;
+  return `SRID=4326;POINT(${c.lng} ${c.lat})`;
+}
+
+// "Kadıköy, İstanbul" gibi bir city metninden CITIES listesindeki id'yi bulmaya çalışır.
+function deriveCityIdFromLabel(label) {
+  if (!label) return null;
+  const parts = label.split(",");
+  const name = parts[parts.length - 1].trim().toLocaleLowerCase("tr-TR");
+  const found = CITIES.find((c) => c.name.toLocaleLowerCase("tr-TR") === name);
+  return found ? found.id : null;
+}
+
+// Görünürlük/sıralama matematiği — esrdgmnc@gmail.com ile konuşulan "50/5000
+// kişi boost alırsa ne olur" sorusunun cevabı: Öne Çıkarma Paketi kaliteyi hiç
+// EZMEZ, sadece sınırlı ve sabit bir bonus verir. Puan (ve puan sayısına göre
+// güven payı) skorun büyük kısmını oluşturur; boost'lular kendi aralarında da
+// hâlâ kaliteye göre sıralanır — "para = otomatik #1" değil, "para = adil bir
+// avantaj". reviewCount=0 olan yeni vitrinlere de gömülüp kaybolmasınlar diye
+// nötr bir başlangıç puanı veriyoruz (soğuk başlangıç sorunu).
+function computeVisibilityScore(l) {
+  const ratingScore = l.reviewCount > 0 ? l.rating * 20 : 75;
+  const confidenceBonus = Math.min(l.reviewCount || 0, 20); // en fazla +20
+  const boostBonus = l.isBoosted ? 15 : 0; // sabit, sınırlı bonus
+  return ratingScore + confidenceBonus + boostBonus;
+}
+
+// "Öne Çıkan" şeridi gibi sınırlı-kapasiteli alanlarda, uygun havuzun TAMAMI
+// arasında GÜNLÜK olarak adil rotasyon sağlar — yoksa havuzda kaç kişi olursa
+// olsun hep en yüksek puanlılar sabit kalır, geri kalanının parası boşa gider.
+// Aynı gün içinde herkese aynı sırayı gösterir (tutarlı), gün değişince
+// rotasyon kayar (mulberry32 tabanlı, deterministik — sunucu/istemci arası
+// state gerektirmez).
+function seededDailyShuffle(arr) {
+  const seed = Math.floor(Date.now() / (24 * 60 * 60 * 1000)) >>> 0;
+  const a = [...arr];
+  let s = seed;
+  const rand = () => {
+    s = (s + 0x6d2b79f5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// supabase.from('services').select('*, profiles(*), categories(*)') sonucundaki
+// bir satırı, LISTINGS dizisindeki nesnelerle aynı şekle çevirir.
+function mapServiceRowToListing(row) {
+  const profile = row.profiles;
+  const category = row.categories;
+  // Görünecek isim artık vitrine özel (services.display_name) — eskiden
+  // profiles.business_name'i paylaşıyordu, bu da bir vitrinde ismini
+  // değiştirince diğer tüm vitrinlerin de adını sessizce değiştiriyordu (gerçek
+  // bir hataydı). display_name boşsa (henüz ayarlanmamış eski vitrinler) eski
+  // paylaşılan isme düşülüyor.
+  const provider = (row.display_name && row.display_name.trim()) || (profile?.business_name && profile.business_name.trim()) || profile?.full_name || "Sağlayıcı";
+  return {
+    id: row.id,
+    dbId: row.id,
+    isReal: true,
+    category: category?.slug || "",
+    categoryDbId: row.category_id,
+    mode: row.is_remote ? "remote" : "local",
+    title: row.title,
+    provider,
+    providerId: row.provider_id,
+    city: row.is_remote ? "Uzaktan" : (row.city || "Belirtilmemiş"),
+    price: formatPriceLabel(row.price, row.price_type),
+    rating: 0,
+    reviewCount: 0,
+    img: (Array.isArray(row.images) && row.images[0]) || FALLBACK_LISTING_IMG,
+    desc: row.description || "",
+    level: "new",
+    // "Doğrulanmış" değil bilerek — kimse belgeyi incelemedi/onaylamadı, sadece
+    // en az bir sertifika yüklendiğini dürüstçe belirtiyoruz (bkz.
+    // vitrin_media.sql'deki sync_service_has_certificates — artık vitrin bazlı,
+    // bir vitrindeki belge başka vitrini etkilemiyor).
+    verified: row.has_certificates ? ["Belge Paylaştı"] : [],
+    // Eskiden burada her zaman "evde" sabitlenmişti — sağlayıcının formda
+    // ne seçtiğine hiç bakılmıyordu (alan zaten kaydedilmiyordu). Artık
+    // gerçek services.home_service_type okunuyor, yoksa (eski satırlar için)
+    // eski varsayılana düşülüyor.
+    homeService: row.is_remote ? undefined : (row.home_service_type || "evde"),
+    isBoosted: false, // fetchListings, aktif Öne Çıkarma Paketi'ne göre bunu güncelliyor
+    // Değerlendirmeler bu vitrinle diğer vitrinler arasında birleşik mi
+    // gösterilsin (varsayılan) yoksa sadece bu vitrine mi özel — vitrin
+    // sahibinin kararı (bkz. VitrinMediaView, vitrin_media.sql).
+    shareProfileReviews: row.share_profile_reviews ?? true,
+  };
+}
+
+// Gerçek bir ilanı, MapView'ın stilize haritasında gösterebileceği bir "pin"e çevirir.
+// Gerçek adres/ilçe koordinatımız yok, bu yüzden şehir merkezinin lat/lng'sini
+// kullanıyoruz (haritadaki not zaten pin konumlarının stilize olduğunu söylüyor).
+function mapServiceRowToPin(row, listing) {
+  if (listing.mode !== "local") return null;
+  const cityId = deriveCityIdFromLabel(row.city);
+  const cityInfo = CITIES.find((c) => c.id === cityId);
+  if (!cityInfo) return null;
+  const seed = String(row.id).split("").reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
+  return {
+    id: `real-${row.id}`,
+    name: listing.provider,
+    category: listing.category,
+    homeService: listing.homeService || "evde",
+    city: cityId,
+    district: (row.city || "").split(",")[0].trim(),
+    lat: cityInfo.lat,
+    lng: cityInfo.lng,
+    x: 20 + (seed % 60),
+    y: 20 + ((seed * 7) % 60),
+    rating: listing.rating,
+    price: listing.price,
+    img: listing.img,
+    listing,
+  };
+}
+
+function formatRelativeTr(iso) {
+  const diffMin = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+  if (diffMin < 1) return "az önce";
+  if (diffMin < 60) return `${diffMin} dakika önce`;
+  const diffH = Math.round(diffMin / 60);
+  if (diffH < 24) return `${diffH} saat önce`;
+  const diffD = Math.round(diffH / 24);
+  return `${diffD} gün önce`;
+}
+
+// jobs satırını, JOB_POSTINGS'teki sabit iş ilanlarıyla aynı şekle çevirir
+// ("Aranıyor" panosunda gerçek+demo ilanlar aynı kartla gösterilebilsin diye).
+function mapJobRowToPosting(row) {
+  const profile = row.profiles;
+  const category = row.categories;
+  const posterName = (profile?.business_name && profile.business_name.trim()) || profile?.full_name || "Bir kullanıcı";
+  const budget =
+    row.budget_min != null && row.budget_max != null
+      ? `${Number(row.budget_min).toLocaleString("tr-TR")}–${Number(row.budget_max).toLocaleString("tr-TR")}₺`
+      : row.budget_min != null
+      ? `${Number(row.budget_min).toLocaleString("tr-TR")}₺'den`
+      : row.budget_max != null
+      ? `${Number(row.budget_max).toLocaleString("tr-TR")}₺'e kadar`
+      : "Bütçe belirtilmemiş";
+  return {
+    id: row.id,
+    dbId: row.id,
+    isReal: true,
+    category: category?.slug || "",
+    categoryDbId: row.category_id,
+    posterName,
+    posterId: row.client_id,
+    district: row.is_remote ? "Uzaktan" : (row.city || "Belirtilmemiş"),
+    title: row.title,
+    desc: row.description,
+    schedule: "Detaylar ilanda",
+    budget,
+    // "Yenile" (bump) sonrası bumped_at güncellenir — "postedTime" onu
+    // yansıtmalı, yoksa yenileme hiçbir şeyi değiştirmiş gibi görünmez.
+    postedTime: formatRelativeTr(row.bumped_at || row.created_at),
+    offerCount: 0, // gerçek teklif/bidding akışı henüz yok
+  };
+}
+
+// Gerçek bir iş ilanını (client'ın ihtiyacı), MapView'da servis pin'lerinden
+// ayırt edilebilecek bir "job pin"e çevirir — bkz. mapServiceRowToPin.
+// job: mapJobRowToPosting'in çıktısı (district alanı yerinde işler için
+// "semt, şehir" metnini, uzaktan işler için "Uzaktan" tutuyor).
+function mapJobRowToPin(job) {
+  if (job.district === "Uzaktan") return null;
+  const cityId = deriveCityIdFromLabel(job.district);
+  const cityInfo = CITIES.find((c) => c.id === cityId);
+  if (!cityInfo) return null;
+  const seed = String(job.dbId).split("").reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
+  return {
+    id: `job-${job.dbId}`,
+    kind: "job",
+    name: job.posterName,
+    category: job.category,
+    homeService: "evde",
+    city: cityId,
+    district: (job.district || "").split(",")[0].trim(),
+    lat: cityInfo.lat,
+    lng: cityInfo.lng,
+    x: 20 + (seed % 60),
+    y: 20 + ((seed * 7) % 60),
+    rating: 0,
+    price: job.budget,
+    img: FALLBACK_LISTING_IMG,
+    job,
+  };
+}
+
+function formatMessageTime(iso) {
+  const d = new Date(iso);
+  const now = new Date();
+  if (d.toDateString() === now.toDateString()) {
+    return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  }
+  return d.toLocaleDateString("tr-TR", { day: "2-digit", month: "2-digit" });
+}
+
+// İlan/iş ilanı oluşturma ve mesaj gönderme gibi "eylemler" için ortak telefon
+// doğrulama kilidi (Fiverr'ın yaptığı gibi — gezinme/görüntüleme serbest,
+// sadece eylemler kilitli). SMS servisi henüz yapılandırılmadıysa (Netgsm
+// anahtarları yoksa) kilit devreye girmiyor — yumuşak blok, anahtar eklenince
+// otomatik sertleşir.
+async function checkPhoneGate(userId) {
+  if (!userId) return { ok: false, reason: "Giriş yapmış olmalısın." };
+  try {
+    const cfgRes = await fetch("/api/send-otp");
+    const cfg = await cfgRes.json();
+    if (!cfg.configured) return { ok: true };
+  } catch {
+    return { ok: true }; // SMS servisi kontrol edilemiyorsa engelleme
+  }
+  const { data: prof } = await supabase.from("profiles").select("phone_verified").eq("id", userId).maybeSingle();
+  if (!prof?.phone_verified) {
+    return { ok: false, reason: "Devam etmeden önce profilinden telefonunu doğrulaman gerekiyor." };
+  }
+  return { ok: true };
+}
+
+// Temel profil kilidi — telefon gibi yumuşak değil, doğrudan sert: fotoğrafsız
+// ve şehirsiz, gerçek anlamda "ciddi" bir profil oluşturmadan biri ne mesaj
+// atabilsin ne vitrin/iş ilanı verebilsin ("ciddi bir profil oluşturmadım,
+// yapamasın" — kullanıcının kararı). Netgsm gibi dış bir servise bağlı değil,
+// bu yüzden ertelenecek bir sebep yok — baştan itibaren gerçek bir kilit.
+async function checkProfileGate(userId) {
+  if (!userId) return { ok: false, reason: "Giriş yapmış olmalısın." };
+  const { data: prof } = await supabase.from("profiles").select("avatar_url, city").eq("id", userId).maybeSingle();
+  if (!prof?.avatar_url || !prof?.city) {
+    return { ok: false, reason: "Devam etmeden önce profiline bir fotoğraf ve şehir eklemen gerekiyor." };
+  }
+  return { ok: true };
+}
+
 const LOCAL_ONLY_CATEGORIES = CATEGORIES.filter((c) => c.mode === "local" || c.mode === "both");
 
 const OFFER_POOLS = {
@@ -984,8 +1355,114 @@ function HomeServiceBadge({ value, size = "sm" }) {
   );
 }
 
-function Header({ onNav, onSearch, pendingCount }) {
+// Bildirim merkezi — schema (3).sql'de tam bir `notifications` tablosu ve
+// trigger'lar hazır duruyordu ama hiç okunmuyordu (bkz. notifications_center.sql).
+// E-posta bilerek yok — kullanıcının "sadece uygulama içi" kararı burada da geçerli.
+function NotificationBell({ userId, onNavigate }) {
+  const [open, setOpen] = useState(false);
+  const [items, setItems] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loading, setLoading] = useState(false);
+
+  const loadUnreadCount = async () => {
+    if (!userId) return;
+    const { count } = await supabase
+      .from("notifications")
+      .select("id", { count: "exact", head: true })
+      .eq("profile_id", userId)
+      .is("read_at", null);
+    setUnreadCount(count || 0);
+  };
+
+  useEffect(() => {
+    loadUnreadCount();
+    if (!userId) return;
+    // Gerçek zamanlı abonelik yok (projenin geri kalanı da yok — mesajlaşma
+    // ekranı da yenilemede tazeleniyor) — hafif bir polling yeterli.
+    const interval = setInterval(loadUnreadCount, 60000);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
+
+  const togglePanel = async () => {
+    const next = !open;
+    setOpen(next);
+    if (!next || !userId) return;
+    setLoading(true);
+    const { data } = await supabase
+      .from("notifications")
+      .select("id, type, title, body, read_at, related_job_id, related_service_id, created_at")
+      .eq("profile_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(20);
+    setItems(data || []);
+    setLoading(false);
+    const unreadIds = (data || []).filter((n) => !n.read_at).map((n) => n.id);
+    if (unreadIds.length > 0) {
+      await supabase.from("notifications").update({ read_at: new Date().toISOString() }).in("id", unreadIds);
+      setUnreadCount(0);
+    }
+  };
+
+  if (!userId) return null;
+
+  return (
+    <div className="relative">
+      <button
+        onClick={togglePanel}
+        className="relative w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-colors"
+        style={{ background: "#F7F7F8", color: "#0F1115" }}
+      >
+        <Bell size={16} />
+        {unreadCount > 0 && (
+          <span
+            className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
+            style={{ background: "#EF4444" }}
+          >
+            {unreadCount > 9 ? "9+" : unreadCount}
+          </span>
+        )}
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div
+            className="absolute right-0 top-11 z-20 w-80 max-h-96 overflow-y-auto rounded-xl shadow-lg border"
+            style={{ borderColor: "#F0F0F0", background: "#FFFFFF" }}
+          >
+            <div className="px-4 py-3 border-b sticky top-0" style={{ borderColor: "#F0F0F0", background: "#FFFFFF" }}>
+              <p className="text-sm font-bold" style={{ color: "#0F1115" }}>Bildirimler</p>
+            </div>
+            {loading ? (
+              <div className="px-4 py-8 text-center"><Loader2 size={16} className="animate-spin mx-auto" style={{ color: "#9CA3AF" }} /></div>
+            ) : items.length === 0 ? (
+              <p className="px-4 py-8 text-center text-xs" style={{ color: "#9CA3AF" }}>Henüz bir bildirimin yok.</p>
+            ) : (
+              items.map((n) => (
+                <button
+                  key={n.id}
+                  onClick={() => { setOpen(false); onNavigate?.(n); }}
+                  className="w-full text-left px-4 py-3 border-b hover:bg-black/[0.03] transition-colors"
+                  style={{ borderColor: "#F7F7F8", background: n.read_at ? "transparent" : "rgba(37,99,235,0.04)" }}
+                >
+                  <p className="text-xs font-bold mb-0.5" style={{ color: "#0F1115" }}>{n.title}</p>
+                  <p className="text-xs leading-snug" style={{ color: "#6B7280" }}>{n.body}</p>
+                  <p className="text-[10px] mt-1" style={{ color: "#9CA3AF" }}>{formatRelativeTr(n.created_at)}</p>
+                </button>
+              ))
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function Header({ onNav, onSearch, pendingCount, session, onNotificationClick }) {
   const [q, setQ] = useState("");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const emailPrefix = session?.user?.email ? session.user.email.split("@")[0] : "";
+  const initials = emailPrefix ? emailPrefix.slice(0, 2).toUpperCase() : "?";
   return (
     <header className="sticky top-0 z-30 backdrop-blur border-b" style={{ background: "rgba(255,255,255,0.85)", borderColor: "#EAEAEA" }}>
       <div className="max-w-6xl mx-auto px-5 py-3 flex items-center gap-4">
@@ -1004,6 +1481,9 @@ function Header({ onNav, onSearch, pendingCount }) {
           />
         </div>
         <div className="flex items-center gap-2 ml-auto">
+          {session?.user?.id && (
+            <NotificationBell userId={session.user.id} onNavigate={onNotificationClick} />
+          )}
           <button
             onClick={() => onNav("messages")}
             className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-colors"
@@ -1041,21 +1521,67 @@ function Header({ onNav, onSearch, pendingCount }) {
               İlan Ver
             </button>
           </div>
-          <button
-            onClick={() => onNav("profile")}
-            className="relative w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0"
-            style={{ background: "linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%)" }}
-          >
-            SK
-            {pendingCount > 0 && (
-              <span
-                className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
-                style={{ background: "#EF4444" }}
+          {session ? (
+            <div className="relative">
+              <button
+                onClick={() => setMenuOpen((v) => !v)}
+                className="relative w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0"
+                style={{ background: "linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%)" }}
               >
-                {pendingCount > 9 ? "9+" : pendingCount}
-              </span>
-            )}
-          </button>
+                {initials}
+                {pendingCount > 0 && (
+                  <span
+                    className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
+                    style={{ background: "#EF4444" }}
+                  >
+                    {pendingCount > 9 ? "9+" : pendingCount}
+                  </span>
+                )}
+              </button>
+              {menuOpen && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+                  <div
+                    className="absolute right-0 top-11 z-20 w-44 rounded-xl overflow-hidden shadow-lg border py-1"
+                    style={{ borderColor: "#F0F0F0", background: "#FFFFFF" }}
+                  >
+                    <button
+                      onClick={() => { setMenuOpen(false); onNav("profile"); }}
+                      className="w-full text-left px-4 py-2.5 text-sm font-medium hover:bg-black/5"
+                      style={{ color: "#0F1115" }}
+                    >
+                      Profilim
+                    </button>
+                    <button
+                      onClick={() => { setMenuOpen(false); onNav("favorites"); }}
+                      className="w-full text-left px-4 py-2.5 text-sm font-medium hover:bg-black/5"
+                      style={{ color: "#0F1115" }}
+                    >
+                      Favorilerim
+                    </button>
+                    <button
+                      onClick={() => { setMenuOpen(false); supabase.auth.signOut(); }}
+                      className="w-full text-left px-4 py-2.5 text-sm font-medium hover:bg-black/5"
+                      style={{ color: "#9C4A3C" }}
+                    >
+                      Çıkış Yap
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          ) : (
+            // Session yok — ziyaretçi gezinmeye devam edebilir, giriş/kayıt
+            // sadece bu butonla veya kilitli bir eyleme (mesaj/vitrin/ilan)
+            // dokununca açılıyor (bkz. IsinnPrototype'taki handleNav).
+            <button
+              onClick={() => onNav("auth")}
+              className="text-sm font-bold px-4 py-2 rounded-full text-white shrink-0"
+              style={{ background: "#0F1115" }}
+            >
+              Giriş Yap
+            </button>
+          )}
           <Menu size={20} className="sm:hidden" style={{ color: "#1B2B24" }} />
         </div>
       </div>
@@ -1107,23 +1633,28 @@ const FEATURED_PROFILE_CARDS = [
   { listingId: 21, bg: "#1B3B3A", specialties: ["Doğum Sonrası Beslenme", "Emzirme Dönemi Diyeti", "Çocuk Beslenmesi"] },
 ];
 
-function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApplyJob, userListings }) {
+function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApplyJob, onOpenJob, realListings, listingsLoading, realJobs, favoriteIds, onToggleFavorite, onToggleJobFavorite, platformStats }) {
   const [heroQ, setHeroQ] = useState("");
   const [wordIndex, setWordIndex] = useState(0);
   const [showRemote, setShowRemote] = useState(false);
-  const [favorites, setFavorites] = useState(new Set());
-  const toggleFavorite = (id) => setFavorites((prev) => {
-    const next = new Set(prev);
-    next.has(id) ? next.delete(id) : next.add(id);
-    return next;
-  });
   const [featuredIndex, setFeaturedIndex] = useState(0);
-  const allListings = [...(userListings || []), ...LISTINGS];
-  const featured = LISTINGS.filter((l) => l.level === "top-rated");
-  const filtered =
+  const allListings = [...(realListings || []), ...LISTINGS];
+  // Gerçek ilanlar da en az bir değerlendirmeyle 4.5+ puana ulaşınca "Öne Çıkan"a
+  // girebiliyor — sabit demo listesine hapsolmuyor, gerçekten hak ederek çıkıyor.
+  // "Öne Çıkan" şeridi sınırlı kapasiteli (FEATURED_SLOT_CAP) — uygun havuz
+  // (boost'lu VEYA gerçekten 4.5+ puanlı) kapasiteden büyükse günlük adil
+  // rotasyonla paylaşılır, yoksa her zaman aynı birkaç kişi kalıcı olarak
+  // üstte kalır ve geri kalanların Öne Çıkarma parası boşa gider (bkz.
+  // computeVisibilityScore/seededDailyShuffle üstündeki not).
+  const FEATURED_SLOT_CAP = 8;
+  const featuredEligible = (realListings || []).filter((l) => l.isBoosted || (l.reviewCount > 0 && l.rating >= 4.5));
+  const realFeatured = seededDailyShuffle(featuredEligible).slice(0, FEATURED_SLOT_CAP);
+  const featured = [...realFeatured, ...LISTINGS.filter((l) => l.level === "top-rated")];
+  const filtered = (
     filter === "all" ? allListings :
     filter === "home" ? allListings.filter((l) => l.mode === "local" && (l.homeService === "evde" || l.homeService === "esnek")) :
-    allListings.filter((l) => l.mode === filter);
+    allListings.filter((l) => l.mode === filter)
+  ).slice().sort((a, b) => computeVisibilityScore(b) - computeVisibilityScore(a));
 
   useEffect(() => {
     const t = setInterval(() => setWordIndex((i) => (i + 1) % ROTATING_WORDS.length), 1800);
@@ -1188,7 +1719,11 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
             </button>
           </div>
           <div className="flex gap-5 mt-8 flex-wrap">
-            {[["12.400+", "Sağlayıcı"], ["38.000+", "Tamamlanan iş"], ["4.8 ★", "Ortalama puan"]].map(([val, label]) => (
+            {[
+              [String(platformStats?.providers ?? 0), "Sağlayıcı"],
+              [String(platformStats?.completedJobs ?? 0), "Tamamlanan iş"],
+              [platformStats?.avgRating != null ? `${platformStats.avgRating} ★` : "—", "Ortalama puan"],
+            ].map(([val, label]) => (
               <div key={label} className="flex items-baseline gap-1.5">
                 <span className="font-sans text-xl font-black" style={{ color: "#FFFFFF" }}>{val}</span>
                 <span className="text-xs font-medium" style={{ color: "#7A7F8A" }}>{label}</span>
@@ -1212,6 +1747,133 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
             </button>
           ))}
         </div>
+      </section>
+
+      {featured.length > 0 && (
+        <section className="max-w-6xl mx-auto px-5 mt-8">
+          <h2 className="font-sans text-2xl font-black mb-4" style={{ color: "#0F1115" }}>Öne Çıkan Sağlayıcılar ⭐</h2>
+          {(() => {
+            const p = featured[featuredIndex];
+            return (
+              <button
+                onClick={() => onSelectListing(p)}
+                className="w-full text-left rounded-2xl overflow-hidden flex flex-col sm:flex-row hover:shadow-xl transition-shadow shadow-md"
+                style={{ border: "1px solid #F0F0F0", background: "#FFFFFF" }}
+              >
+                <div className="sm:w-64 h-44 sm:h-auto shrink-0 relative overflow-hidden">
+                  <img src={p.img} alt="" className="w-full h-full object-cover" />
+                  <span
+                    className="absolute top-2 left-2 text-[11px] font-bold px-2 py-0.5 rounded-full text-white flex items-center gap-1"
+                    style={{ background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)" }}
+                  >
+                    <Award size={11} /> Top Rated
+                  </span>
+                </div>
+                <div className="p-5 flex-1 flex flex-col justify-center">
+                  <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
+                    <ModeTag mode={p.mode} />
+                  </div>
+                  <p className="font-sans text-lg font-bold mb-1" style={{ color: "#0F1115" }}>{p.title}</p>
+                  <p className="text-xs mb-2" style={{ color: "#9CA3AF" }}>{p.provider} · {p.city}</p>
+                  <p className="text-xs leading-relaxed line-clamp-2 mb-3" style={{ color: "#6B7280" }}>{p.desc}</p>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <Stars value={p.rating} size={13} />
+                      <span className="text-xs font-bold" style={{ color: "#0F1115" }}>{p.rating}</span>
+                      <span className="text-xs" style={{ color: "#9CA3AF" }}>({p.reviewCount} değerlendirme)</span>
+                    </div>
+                    <span className="text-sm font-black" style={{ color: "#F59E0B" }}>{p.price}</span>
+                  </div>
+                </div>
+              </button>
+            );
+          })()}
+          <div className="flex items-center justify-center gap-1.5 mt-3">
+            {featured.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setFeaturedIndex(i)}
+                className="rounded-full transition-all"
+                style={{
+                  width: i === featuredIndex ? "18px" : "6px",
+                  height: "6px",
+                  background: i === featuredIndex ? "#2563EB" : "#E5E7EB",
+                }}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      <section className="max-w-6xl mx-auto px-5 mt-12">
+        <div className="flex items-end justify-between mb-5 flex-wrap gap-2">
+          <div>
+            <h2 className="font-sans text-3xl font-black" style={{ color: "#0F1115" }}>Vitrinler</h2>
+            <p className="text-sm mt-0.5" style={{ color: "#6B7280" }}>Şu an aktif, gerçek zamanlı vitrinler — filtrele, keşfet, doğrudan ulaş</p>
+          </div>
+          {!listingsLoading && filtered.length > 0 && (
+            <span className="text-xs font-bold px-3 py-1.5 rounded-full" style={{ background: "#EFF6FF", color: "#2563EB" }}>
+              {filtered.length} vitrin
+            </span>
+          )}
+        </div>
+        {listingsLoading ? (
+          <div className="flex items-center gap-2 py-16 justify-center">
+            <Loader2 size={16} className="animate-spin" style={{ color: "#9CA3AF" }} />
+            <span className="text-sm" style={{ color: "#9CA3AF" }}>Vitrinler yükleniyor...</span>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="rounded-2xl p-8 text-center" style={{ border: "1px solid #F0F0F0", background: "#FAFAFA" }}>
+            <p className="text-sm" style={{ color: "#6B7280" }}>Bu filtreyle eşleşen bir vitrin bulunamadı.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+            {filtered.map((l) => (
+              <div
+                key={l.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => onSelectListing(l)}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onSelectListing(l); }}
+                className="text-left rounded-2xl overflow-hidden hover:-translate-y-1.5 transition-all group shadow-sm hover:shadow-xl cursor-pointer"
+                style={{ border: "1px solid #F0F0F0", background: "#FFFFFF" }}
+              >
+                <div className="relative h-44 overflow-hidden">
+                  <img src={l.img} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
+                  <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
+                    <ModeTag mode={l.mode} />
+                    {l.isBoosted && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white flex items-center gap-0.5" style={{ background: "#F59E0B" }}><Sparkles size={9} />Öne Çıkan</span>
+                    )}
+                    {l.isReal && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: "#2FBF71" }}>Yeni</span>
+                    )}
+                  </div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onToggleFavorite?.(l); }}
+                    className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full bg-white/90 flex items-center justify-center hover:scale-110 transition-transform"
+                  >
+                    <Heart size={13} style={{ color: "#EF4444" }} fill={favoriteIds?.has(l.dbId) ? "#EF4444" : "none"} />
+                  </button>
+                  <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between">
+                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white border-2 border-white shrink-0" style={{ background: "linear-gradient(135deg, #8B5CF6, #6D28D9)" }}>
+                      {l.provider.split(" ").map((w) => w[0]).join("").slice(0, 2)}
+                    </div>
+                    <span className="text-xs font-black px-2 py-0.5 rounded-full" style={{ background: "rgba(15,17,21,0.75)", color: "#FFFFFF" }}>{l.price}</span>
+                  </div>
+                </div>
+                <div className="p-3.5">
+                  <p className="text-sm font-bold leading-snug line-clamp-2 min-h-[2.5em]" style={{ color: "#0F1115" }}>{l.title}</p>
+                  <p className="text-xs mt-1 truncate" style={{ color: "#9CA3AF" }}>{l.provider} · {l.city}</p>
+                  <div className="flex items-center gap-1 mt-2">
+                    <Stars value={l.rating} size={12} />
+                    <span className="text-xs" style={{ color: "#6B7280" }}>{l.reviewCount > 0 ? `(${l.reviewCount})` : "Yeni vitrin"}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       <section className="max-w-6xl mx-auto px-5 mt-10">
@@ -1251,63 +1913,6 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
         </div>
       </section>
 
-      {featured.length > 0 && (
-        <section className="max-w-6xl mx-auto px-5 mt-12">
-          <h2 className="font-sans text-2xl font-black mb-4" style={{ color: "#0F1115" }}>Öne Çıkan Sağlayıcılar ⭐</h2>
-          {(() => {
-            const p = featured[featuredIndex];
-            return (
-              <button
-                onClick={() => onSelectListing(p)}
-                className="w-full text-left rounded-2xl overflow-hidden flex flex-col sm:flex-row hover:shadow-xl transition-shadow shadow-md"
-                style={{ border: "1px solid #F0F0F0", background: "#FFFFFF" }}
-              >
-                <div className="sm:w-64 h-44 sm:h-auto shrink-0 relative overflow-hidden">
-                  <img src={p.img} alt="" className="w-full h-full object-cover" />
-                  <span
-                    className="absolute top-2 left-2 text-[11px] font-bold px-2 py-0.5 rounded-full text-white flex items-center gap-1"
-                    style={{ background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)" }}
-                  >
-                    <Award size={11} /> Top Rated
-                  </span>
-                </div>
-                <div className="p-5 flex-1 flex flex-col justify-center">
-                  <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
-                    <ModeTag mode={p.mode} />
-                    {p.homeService && <HomeServiceBadge value={p.homeService} />}
-                  </div>
-                  <p className="font-sans text-lg font-bold mb-1" style={{ color: "#0F1115" }}>{p.title}</p>
-                  <p className="text-xs mb-2" style={{ color: "#9CA3AF" }}>{p.provider} · {p.city}</p>
-                  <p className="text-xs leading-relaxed line-clamp-2 mb-3" style={{ color: "#6B7280" }}>{p.desc}</p>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5">
-                      <Stars value={p.rating} size={13} />
-                      <span className="text-xs font-bold" style={{ color: "#0F1115" }}>{p.rating}</span>
-                      <span className="text-xs" style={{ color: "#9CA3AF" }}>({p.reviewCount} değerlendirme)</span>
-                    </div>
-                    <span className="text-sm font-black" style={{ color: "#F59E0B" }}>{p.price}</span>
-                  </div>
-                </div>
-              </button>
-            );
-          })()}
-          <div className="flex items-center justify-center gap-1.5 mt-3">
-            {featured.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setFeaturedIndex(i)}
-                className="rounded-full transition-all"
-                style={{
-                  width: i === featuredIndex ? "18px" : "6px",
-                  height: "6px",
-                  background: i === featuredIndex ? "#2563EB" : "#E5E7EB",
-                }}
-              />
-            ))}
-          </div>
-        </section>
-      )}
-
       <section className="max-w-6xl mx-auto px-5 mt-12">
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -1318,46 +1923,138 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
             Sen de ilan ver
           </button>
         </div>
-        <div className="flex gap-3 overflow-x-auto pb-2 -mx-5 px-5" style={{ scrollbarWidth: "thin" }}>
-          {JOB_POSTINGS.map((job) => {
+        <div className="flex gap-4 overflow-x-auto pb-2 -mx-5 px-5" style={{ scrollbarWidth: "thin" }}>
+          {[...(realJobs || []), ...JOB_POSTINGS].map((job, jobIdx) => {
             const cat = CATEGORIES.find((c) => c.id === job.category);
             const Icon = cat?.icon;
+            const catIndex = CATEGORIES.findIndex((c) => c.id === job.category);
+            const tileColor = CATEGORY_TILE_COLORS[(catIndex >= 0 ? catIndex : jobIdx) % CATEGORY_TILE_COLORS.length];
             return (
               <div
                 key={job.id}
-                className="rounded-2xl p-4 shrink-0 shadow-sm hover:shadow-md transition-shadow"
-                style={{ border: "1px solid #F0F0F0", background: "#FFFFFF", width: "260px" }}
+                role="button"
+                tabIndex={0}
+                onClick={() => onOpenJob(job)}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onOpenJob(job); }}
+                className="text-left rounded-2xl overflow-hidden shrink-0 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer"
+                style={{ border: "1px solid #F0F0F0", background: "#FFFFFF", width: "270px" }}
               >
-                <div className="flex items-center gap-2 mb-2">
-                  {Icon && (
-                    <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" style={{ background: "linear-gradient(135deg, #FFF3E0, #FFE8CC)" }}>
-                      <Icon size={13} style={{ color: "#F59E0B" }} />
-                    </div>
-                  )}
-                  <span className="text-[11px] font-semibold" style={{ color: "#9CA3AF" }}>{cat?.name} · {job.postedTime}</span>
+                <div className="h-16 flex items-center justify-between px-4" style={{ background: `${tileColor}17` }}>
+                  <div className="flex items-center gap-2 min-w-0">
+                    {Icon && (
+                      <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: tileColor }}>
+                        <Icon size={16} className="text-white" />
+                      </div>
+                    )}
+                    <span className="text-[11px] font-bold truncate" style={{ color: tileColor }}>{cat?.name}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {job.isReal && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: "#2FBF71" }}>Yeni</span>
+                    )}
+                    {job.isReal && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onToggleJobFavorite?.(job); }}
+                        className="w-6 h-6 rounded-full bg-white/90 flex items-center justify-center hover:scale-110 transition-transform"
+                      >
+                        <Heart size={12} style={{ color: "#EF4444" }} fill={favoriteIds?.has(job.dbId) ? "#EF4444" : "none"} />
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <p className="text-sm font-bold leading-snug mb-1.5" style={{ color: "#0F1115" }}>{job.title}</p>
-                <p className="text-xs mb-0.5" style={{ color: "#6B7280" }}>📍 {job.district}</p>
-                <p className="text-xs mb-3" style={{ color: "#6B7280" }}>🕐 {job.schedule}</p>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-black" style={{ color: "#F59E0B" }}>{job.budget}</span>
-                  <span className="text-[11px] font-medium" style={{ color: "#9CA3AF" }}>{job.offerCount} teklif var</span>
+                <div className="p-4">
+                  <p className="text-[11px] mb-1.5" style={{ color: "#9CA3AF" }}>{job.postedTime}</p>
+                  <p className="text-sm font-bold leading-snug mb-2 line-clamp-2 min-h-[2.5em]" style={{ color: "#0F1115" }}>{job.title}</p>
+                  <p className="text-xs mb-0.5 flex items-center gap-1" style={{ color: "#6B7280" }}><MapPin size={11} />{job.district}</p>
+                  <p className="text-xs mb-3 flex items-center gap-1" style={{ color: "#6B7280" }}><Clock size={11} />{job.schedule}</p>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-base font-black" style={{ color: "#F59E0B" }}>{job.budget}</span>
+                    <span className="text-[11px] font-medium" style={{ color: "#9CA3AF" }}>{job.offerCount} teklif var</span>
+                  </div>
+                  <span
+                    onClick={(e) => { e.stopPropagation(); onApplyJob(job); }}
+                    className="w-full py-2 rounded-full text-xs font-bold text-white flex items-center justify-center"
+                    style={{ background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)" }}
+                  >
+                    Teklif Ver
+                  </span>
                 </div>
-                <button
-                  onClick={() => onApplyJob(job)}
-                  className="w-full mt-3 py-2 rounded-full text-xs font-bold text-white"
-                  style={{ background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)" }}
-                >
-                  Teklif Ver
-                </button>
               </div>
             );
           })}
         </div>
       </section>
 
-      <section className="max-w-6xl mx-auto px-5 mt-12 space-y-9">
-        <h2 className="font-sans text-2xl font-black -mb-2" style={{ color: "#0F1115" }}>Ne arıyorsun? 👀</h2>
+      <section className="max-w-6xl mx-auto px-5 mt-12">
+        <h2 className="font-sans text-2xl font-black mb-1" style={{ color: "#0F1115" }}>Öne çıkan profiller</h2>
+        <p className="text-sm mb-5" style={{ color: "#6B7280" }}>Doğrulanmış sağlayıcıların gerçek uzmanlıkları</p>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            // Gerçek değerlendirme almış sağlayıcılar, sabit demo kartlardan
+            // önce gösteriliyor — burada yer almak sabit bir listeye değil,
+            // gerçekten kazanılan puana bağlı.
+            ...(realListings || [])
+              .filter((l) => l.reviewCount > 0)
+              .sort((a, b) => b.rating - a.rating)
+              .slice(0, 4)
+              .map((l) => ({ listing: l, specialties: [l.desc ? (l.desc.length > 42 ? `${l.desc.slice(0, 42)}…` : l.desc) : ""], bg: "#1F2937" })),
+            ...FEATURED_PROFILE_CARDS.map((card) => {
+              const l = LISTINGS.find((x) => x.id === card.listingId);
+              return l ? { listing: l, specialties: card.specialties, bg: card.bg } : null;
+            }).filter(Boolean),
+          ].slice(0, 4).map((item) => {
+            const l = item.listing;
+            return (
+              <div
+                key={l.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => onSelectListing(l)}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onSelectListing(l); }}
+                className="text-left rounded-2xl overflow-hidden hover:-translate-y-1.5 transition-all group shadow-sm hover:shadow-xl cursor-pointer"
+              >
+                <div className="relative h-44 overflow-hidden" style={{ background: item.bg }}>
+                  <img src={l.img} alt="" className="w-full h-full object-cover opacity-90 group-hover:scale-110 transition-transform duration-300" />
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onToggleFavorite?.(l); }}
+                    className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full bg-white/90 flex items-center justify-center hover:scale-110 transition-transform"
+                  >
+                    <Heart size={13} style={{ color: "#EF4444" }} fill={favoriteIds?.has(l.dbId) ? "#EF4444" : "none"} />
+                  </button>
+                  <div className="absolute bottom-2.5 left-2.5 flex items-center gap-1.5">
+                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white border-2 border-white" style={{ background: "linear-gradient(135deg, #8B5CF6, #6D28D9)" }}>
+                      {l.provider.split(" ").map((w) => w[0]).join("").slice(0, 2)}
+                    </div>
+                    <LevelBadge level={l.level} />
+                  </div>
+                </div>
+                <div className="pt-3">
+                  <p className="text-sm font-black mb-0.5 truncate" style={{ color: "#0F1115" }}>{l.provider}</p>
+                  <div className="flex items-center gap-1 mb-2">
+                    <Stars value={l.rating} size={11} />
+                    <span className="text-[11px]" style={{ color: "#9CA3AF" }}>{l.rating} ({l.reviewCount})</span>
+                  </div>
+                  <div className="space-y-0.5">
+                    {item.specialties.map((s, si) => (
+                      <p key={si} className="text-xs line-clamp-2" style={{ color: "#6B7280" }}>{s}</p>
+                    ))}
+                  </div>
+                  <span className="text-xs font-black inline-block mt-2" style={{ color: "#F59E0B" }}>{l.price}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* Sayfanın en altına bilerek taşındı — akışta (Öne Çıkan/Vitrinler/
+          Aranıyor) aradığını bulamayan biri için son bir "ilham ver" katmanı,
+          önden dayatılan bir kategori seçimi değil (kullanıcının kararı). */}
+      <section className="max-w-6xl mx-auto px-5 mt-12 pb-16 space-y-9">
+        <div>
+          <h2 className="font-sans text-2xl font-black mb-1" style={{ color: "#0F1115" }}>Aradığını bulamadın mı? 👀</h2>
+          <p className="text-sm" style={{ color: "#6B7280" }}>Kategorilere göz at, bir fikir versin</p>
+        </div>
         {PARENT_CATEGORIES.filter((g) => g.id !== "profesyonel").map((group) => {
           const GroupIcon = group.icon;
           const groupCategories = group.categoryIds
@@ -1439,53 +2136,6 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
           })()
         )}
       </section>
-
-      <section className="max-w-6xl mx-auto px-5 mt-12 pb-16">
-        <h2 className="font-sans text-2xl font-black mb-1" style={{ color: "#0F1115" }}>Öne çıkan profiller</h2>
-        <p className="text-sm mb-5" style={{ color: "#6B7280" }}>Doğrulanmış sağlayıcıların gerçek uzmanlıkları</p>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {FEATURED_PROFILE_CARDS.map((card) => {
-            const l = LISTINGS.find((x) => x.id === card.listingId);
-            if (!l) return null;
-            return (
-              <button
-                key={l.id}
-                onClick={() => onSelectListing(l)}
-                className="text-left rounded-2xl overflow-hidden hover:-translate-y-1.5 transition-all group shadow-sm hover:shadow-xl"
-              >
-                <div className="relative h-44 overflow-hidden" style={{ background: card.bg }}>
-                  <img src={l.img} alt="" className="w-full h-full object-cover opacity-90 group-hover:scale-110 transition-transform duration-300" />
-                  <button
-                    onClick={(e) => { e.stopPropagation(); toggleFavorite(l.id); }}
-                    className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full bg-white/90 flex items-center justify-center hover:scale-110 transition-transform"
-                  >
-                    <Heart size={13} style={{ color: "#EF4444" }} fill={favorites.has(l.id) ? "#EF4444" : "none"} />
-                  </button>
-                  <div className="absolute bottom-2.5 left-2.5 flex items-center gap-1.5">
-                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white border-2 border-white" style={{ background: "linear-gradient(135deg, #8B5CF6, #6D28D9)" }}>
-                      {l.provider.split(" ").map((w) => w[0]).join("").slice(0, 2)}
-                    </div>
-                    <LevelBadge level={l.level} />
-                  </div>
-                </div>
-                <div className="pt-3">
-                  <p className="text-sm font-black mb-0.5 truncate" style={{ color: "#0F1115" }}>{l.provider}</p>
-                  <div className="flex items-center gap-1 mb-2">
-                    <Stars value={l.rating} size={11} />
-                    <span className="text-[11px]" style={{ color: "#9CA3AF" }}>{l.rating} ({l.reviewCount})</span>
-                  </div>
-                  <div className="space-y-0.5">
-                    {card.specialties.map((s) => (
-                      <p key={s} className="text-xs" style={{ color: "#6B7280" }}>{s}</p>
-                    ))}
-                  </div>
-                  <span className="text-xs font-black inline-block mt-2" style={{ color: "#F59E0B" }}>{l.price}</span>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </section>
     </div>
   );
 }
@@ -1514,9 +2164,62 @@ function MediaLightbox({ media, index, onClose, onNav }) {
   );
 }
 
-function ReviewCard({ review, onOpenMedia }) {
+function ReviewCard({ review, onOpenMedia, isReal, currentUserId, providerId }) {
   const [helpful, setHelpful] = useState(review.helpful);
   const [voted, setVoted] = useState(false);
+  const [votePending, setVotePending] = useState(false);
+  // Değerlendirmeye herkese açık yanıt — sağlayıcı kendi vitrinine bırakılan
+  // bir yoruma tek bir yanıt yazabilir (bkz. growth_features_batch.sql).
+  const isOwner = isReal && currentUserId && currentUserId === providerId;
+  const [showReplyForm, setShowReplyForm] = useState(false);
+  const [replyText, setReplyText] = useState("");
+  const [replySubmitting, setReplySubmitting] = useState(false);
+  const [providerReply, setProviderReply] = useState(review.providerReply || "");
+  const submitReply = async () => {
+    if (!replyText.trim()) return;
+    setReplySubmitting(true);
+    const { error } = await supabase
+      .from("ratings")
+      .update({ provider_reply: replyText.trim(), provider_reply_at: new Date().toISOString() })
+      .eq("id", review.id);
+    setReplySubmitting(false);
+    if (!error) { setProviderReply(replyText.trim()); setShowReplyForm(false); }
+  };
+
+  // Gerçek yorumlarda "Faydalı buldum" eskiden tamamen sahteydi — tıklayınca
+  // sadece local state artıyordu, hiçbir yere kaydedilmiyordu, yenilemede
+  // sıfırlanıyordu (favoriler'deki aynı hatanın bir başka örneği). review_
+  // helpful_votes tablosu + ratings.helpful_count'u senkron tutan trigger
+  // zaten şemada hazırdı, hiç kullanılmıyordu.
+  useEffect(() => {
+    if (!isReal || !currentUserId) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("review_helpful_votes")
+        .select("id")
+        .eq("rating_id", review.id)
+        .eq("profile_id", currentUserId)
+        .maybeSingle();
+      if (!cancelled) setVoted(!!data);
+    })();
+    return () => { cancelled = true; };
+  }, [isReal, currentUserId, review.id]);
+
+  const toggleHelpful = async () => {
+    if (!isReal || !currentUserId || votePending) return;
+    setVotePending(true);
+    if (voted) {
+      const { error } = await supabase.from("review_helpful_votes").delete().eq("rating_id", review.id).eq("profile_id", currentUserId);
+      setVotePending(false);
+      if (!error) { setVoted(false); setHelpful((h) => Math.max(0, h - 1)); }
+    } else {
+      const { error } = await supabase.from("review_helpful_votes").insert({ rating_id: review.id, profile_id: currentUserId });
+      setVotePending(false);
+      if (!error) { setVoted(true); setHelpful((h) => h + 1); }
+    }
+  };
+
   return (
     <div className="py-4 border-b last:border-0" style={{ borderColor: "#D9D0BA" }}>
       <div className="flex items-center justify-between mb-2">
@@ -1555,22 +2258,88 @@ function ReviewCard({ review, onOpenMedia }) {
           ))}
         </div>
       )}
-      <button
-        onClick={() => { if (!voted) { setHelpful(helpful + 1); setVoted(true); } }}
-        className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border"
-        style={{ borderColor: voted ? "#C2872B" : "#D9D0BA", color: voted ? "#C2872B" : "#5C5744" }}
-      >
-        <ThumbsUp size={12} />
-        Faydalı buldum · {helpful}
-      </button>
+      <div className="flex items-center gap-2 flex-wrap">
+        <button
+          onClick={isReal ? toggleHelpful : () => { if (!voted) { setHelpful(helpful + 1); setVoted(true); } }}
+          disabled={votePending}
+          className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border"
+          style={{ borderColor: voted ? "#C2872B" : "#D9D0BA", color: voted ? "#C2872B" : "#5C5744", opacity: votePending ? 0.6 : 1 }}
+        >
+          <ThumbsUp size={12} />
+          Faydalı buldum · {helpful}
+        </button>
+        {isOwner && !providerReply && !showReplyForm && (
+          <button onClick={() => setShowReplyForm(true)} className="text-xs font-bold" style={{ color: "#2563EB" }}>
+            Yanıtla
+          </button>
+        )}
+      </div>
+
+      {showReplyForm && (
+        <div className="mt-2.5 pl-3 border-l-2" style={{ borderColor: "#D9D0BA" }}>
+          <textarea
+            value={replyText}
+            onChange={(e) => setReplyText(e.target.value)}
+            rows={2}
+            placeholder="Bu değerlendirmeye herkese açık bir yanıt yaz..."
+            className="w-full px-3 py-2 rounded-lg border text-xs outline-none resize-none mb-1.5"
+            style={{ borderColor: "#D9D0BA", background: "#FFFFFF", color: "#1B2B24" }}
+          />
+          <div className="flex items-center gap-2">
+            <button
+              onClick={submitReply}
+              disabled={replySubmitting || !replyText.trim()}
+              className="text-xs font-bold px-3 py-1.5 rounded-full text-white"
+              style={{ background: "#2563EB", opacity: replySubmitting ? 0.7 : 1 }}
+            >
+              {replySubmitting ? "Gönderiliyor..." : "Yanıtı Yayınla"}
+            </button>
+            <button onClick={() => setShowReplyForm(false)} className="text-xs font-medium" style={{ color: "#8A8368" }}>Vazgeç</button>
+          </div>
+        </div>
+      )}
+
+      {providerReply && (
+        <div className="mt-2.5 pl-3 py-2 border-l-2 rounded-r-lg" style={{ borderColor: "#3F7D5C", background: "#F8F4E9" }}>
+          <p className="text-[11px] font-bold mb-0.5" style={{ color: "#3F7D5C" }}>Sağlayıcının yanıtı</p>
+          <p className="text-xs leading-relaxed" style={{ color: "#3D3B30" }}>{providerReply}</p>
+        </div>
+      )}
     </div>
   );
 }
 
-function ListingDetail({ listing, onBack, onContact, userReviews, onAddReview, onSubmitPendingMedia, onSubmitStaffReview }) {
+function ListingDetail({ listing, onBack, onContact, userReviews, onAddReview, onSubmitPendingMedia, onSubmitStaffReview, currentUserId, favoriteIds, onToggleFavorite }) {
+  const isRealListing = !!(listing.isReal && listing.providerId);
   const [lightbox, setLightbox] = useState(null); // { media, index }
-  const [isFavorited, setIsFavorited] = useState(false);
+  const isFavorited = !!favoriteIds?.has(listing.dbId);
+
+  // "İlanı Bildir" — sahibinden.com'un ilanın kendisini (kişiyi değil)
+  // bildirebilme özelliğinden — bkz. supabase/sahibinden_features.sql.
+  const canReportListing = isRealListing && currentUserId && currentUserId !== listing.providerId;
+  const [showListingReportForm, setShowListingReportForm] = useState(false);
+  const [listingReportReason, setListingReportReason] = useState("yanlis_kategori");
+  const [listingReportDetail, setListingReportDetail] = useState("");
+  const [listingReportSubmitting, setListingReportSubmitting] = useState(false);
+  const [listingReportSubmitted, setListingReportSubmitted] = useState(false);
+  const [listingReportError, setListingReportError] = useState("");
+  const submitListingReport = async () => {
+    setListingReportSubmitting(true);
+    setListingReportError("");
+    const { error } = await supabase.from("listing_reports").insert({
+      reporter_id: currentUserId, service_id: listing.dbId, reason: listingReportReason, detail: listingReportDetail.trim() || null,
+    });
+    setListingReportSubmitting(false);
+    if (error) { setListingReportError(`Bildirilemedi: ${error.message}`); return; }
+    setListingReportSubmitted(true);
+  };
+
   const [showReviewForm, setShowReviewForm] = useState(false);
+  // Değerlendirme yazabilmek için gerçek bir "eşleşme" şartı: aranan kişiyle
+  // bu vitrin için gerçekten iletişime geçmiş olman VE sağlayıcının en az bir
+  // kez yanıt vermiş olması gerekiyor — yoksa herkes herkesi hiç tanışmadan
+  // değerlendirebilirdi (kullanıcının fark ettiği gerçek bir boşluktu).
+  const [reviewEligibility, setReviewEligibility] = useState(null); // { checking, ok, reason, jobId }
   const [reviewName, setReviewName] = useState("");
   const [reviewValue, setReviewValue] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
@@ -1583,9 +2352,132 @@ function ListingDetail({ listing, onBack, onContact, userReviews, onAddReview, o
     return () => { mountedRef.current = false; };
   }, []);
 
-  const myReviews = (userReviews || []).filter((r) => r.listingId === listing.id);
-  const allReviews = [...myReviews, ...REVIEWS];
-  const avg = (allReviews.reduce((s, r) => s + r.value, 0) / allReviews.length).toFixed(1);
+  // Gerçek bir ilan için sağlayıcının vitrin bilgilerini (tanıtım videosu +
+  // portföy galerisi) çekiyoruz — Instagram profili gibi sergileme burada,
+  // müşterinin gerçekten göreceği yerde olmalı, sadece kendi profilinde değil.
+  // Not: sertifika/CV RLS ile sahibinden başkasına kapalı (kişisel bilgi
+  // içerebiliyor), o yüzden burada gösterilmiyor — sadece profil sahibi görür.
+  const [providerShowcase, setProviderShowcase] = useState(null); // { video_intro_url, video_intro_name }
+  const [providerPortfolio, setProviderPortfolio] = useState([]);
+  const [showcaseLightbox, setShowcaseLightbox] = useState(null); // { media, index }
+
+  useEffect(() => {
+    if (!listing.isReal || !listing.dbId) return;
+    let cancelled = false;
+    (async () => {
+      const [{ data: serviceData }, { data: portfolioData }] = await Promise.all([
+        supabase.from("services").select("video_intro_url, video_intro_name").eq("id", listing.dbId).maybeSingle(),
+        supabase.from("portfolio_items").select("id, media_type, url, file_name").eq("service_id", listing.dbId).order("created_at", { ascending: true }),
+      ]);
+      if (cancelled) return;
+      setProviderShowcase(serviceData || null);
+      setProviderPortfolio(portfolioData || []);
+    })();
+    return () => { cancelled = true; };
+  }, [listing.isReal, listing.dbId]);
+
+  // Gerçek ilanlar için değerlendirmeler gerçekten ratings tablosundan geliyor
+  // (sahte REVIEWS demo dizisiyle karıştırılmıyor — bir müşteri gerçek bir
+  // ilanda alakasız sahte yorumlar görmemeli). Vitrin sahibi "Birleştir" derse
+  // (varsayılan) ratings.rated_profile_id üzerinden kişiye bağlı TÜM
+  // değerlendirmeler gösterilir; "Ayrı tut" derse sadece bu vitrine
+  // (ratings.service_id) bırakılanlar sayılır (bkz. VitrinMediaView, vitrin_media.sql).
+  const [realReviews, setRealReviews] = useState([]);
+  const [reviewError, setReviewError] = useState("");
+  const [shareProfileReviews, setShareProfileReviews] = useState(true);
+
+  const loadRealReviews = async () => {
+    if (!isRealListing) return;
+    const { data: serviceRow } = await supabase.from("services").select("share_profile_reviews").eq("id", listing.dbId).maybeSingle();
+    const shared = serviceRow?.share_profile_reviews ?? true;
+    setShareProfileReviews(shared);
+    let ratingsQuery = supabase.from("ratings").select("*").order("created_at", { ascending: false });
+    ratingsQuery = shared ? ratingsQuery.eq("rated_profile_id", listing.providerId) : ratingsQuery.eq("service_id", listing.dbId);
+    const { data: ratingsData } = await ratingsQuery;
+    const rows = ratingsData || [];
+    const raterIds = [...new Set(rows.map((r) => r.rater_id))];
+    let profilesById = {};
+    if (raterIds.length > 0) {
+      const { data: profilesData } = await supabase.from("profiles").select("id, full_name, business_name").in("id", raterIds);
+      (profilesData || []).forEach((p) => { profilesById[p.id] = p; });
+    }
+    // review_media'nın RLS'i zaten "not_required/approved herkese, pending/
+    // rejected sadece yorumu yapan veya değerlendirilen sağlayıcıya" kuralını
+    // uyguluyor — burada ek filtre gerekmiyor, RLS'e güveniyoruz (aynı
+    // provider_documents'taki gibi: sadece görebildiğin satırlar dönüyor).
+    const ratingIds = rows.map((r) => r.id);
+    let mediaByRating = {};
+    if (ratingIds.length > 0) {
+      const { data: mediaData } = await supabase
+        .from("review_media")
+        .select("id, rating_id, media_type, url, approval_status")
+        .in("rating_id", ratingIds)
+        .order("sort_order", { ascending: true });
+      (mediaData || []).forEach((m) => { (mediaByRating[m.rating_id] = mediaByRating[m.rating_id] || []).push(m); });
+    }
+    setRealReviews(rows.map((r) => {
+      const p = profilesById[r.rater_id];
+      const name = (p?.business_name && p.business_name.trim()) || p?.full_name || "Kullanıcı";
+      return {
+        id: r.id,
+        name,
+        initials: name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase() || "??",
+        value: r.value,
+        verified: true,
+        time: formatRelativeTr(r.created_at),
+        comment: r.comment || "",
+        helpful: r.helpful_count || 0,
+        media: (mediaByRating[r.id] || []).map((m) => ({ type: m.media_type, url: m.url, pending: m.approval_status === "pending" })),
+        providerReply: r.provider_reply || "",
+        providerReplyAt: r.provider_reply_at,
+      };
+    }));
+  };
+
+  useEffect(() => {
+    loadRealReviews();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isRealListing, listing.providerId]);
+
+  const myReviews = isRealListing ? [] : (userReviews || []).filter((r) => r.listingId === listing.id);
+  const allReviews = isRealListing ? realReviews : [...myReviews, ...REVIEWS];
+  const avg = allReviews.length ? (allReviews.reduce((s, r) => s + r.value, 0) / allReviews.length).toFixed(1) : null;
+
+  // Yorum özeti — sadece gerçek vitrinlerde ve yeterince (en az 3) yazılı
+  // yorum birikince anlamlı; her açılışta değil, yorum sayısı değiştiğinde
+  // yeniden üretiliyor (aynı sayıdaysa tekrar tekrar çağırmamak için).
+  const [reviewSummary, setReviewSummary] = useState("");
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const summarizedCountRef = useRef(0);
+  useEffect(() => {
+    if (!isRealListing) return;
+    const withText = realReviews.filter((r) => r.comment && r.comment.trim().length > 0);
+    if (withText.length < 3 || summarizedCountRef.current === withText.length) return;
+    let cancelled = false;
+    (async () => {
+      setSummaryLoading(true);
+      try {
+        const commentsList = withText.slice(0, 30).map((r, i) => `${i + 1}. (${r.value}★) ${r.comment}`).join("\n");
+        const response = await fetch("/api/claude", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: "claude-sonnet-4-6",
+            max_tokens: 200,
+            messages: [{ role: "user", content: `Aşağıda bir hizmet sağlayıcı için bırakılmış müşteri değerlendirmeleri var. Bunları okuyup, öne çıkan ortak temaları (olumlu ve varsa olumsuz) tek, akıcı bir Türkçe cümleyle (en fazla 25 kelime) özetle. Yorumlardan alıntı yapma, sadece genel izlenimi yaz.\n\n${commentsList}\n\nSADECE özet cümleyi yaz, başka hiçbir şey ekleme.` }],
+          }),
+        });
+        const data = await response.json();
+        const text = (data.content || []).map((b) => b.text || "").join("\n").trim();
+        if (!cancelled && text) { setReviewSummary(text); summarizedCountRef.current = withText.length; }
+      } catch {
+        // sessizce vazgeç — özet olmadan da yorumlar normal şekilde listelenir
+      } finally {
+        if (!cancelled) setSummaryLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [isRealListing, realReviews]);
 
   const checkReviewMedia = async (mediaType, dataUrl, mimeType) => {
     // Video: Claude'un vision API'si video işleyemiyor. Sessizce yanlış çalışmak
@@ -1644,9 +2536,179 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
     e.target.value = "";
   };
 
+  // "Eşleşme" kontrolü — asıl kalıcı çözüm: değerlendirme sadece MÜŞTERİ
+  // (jobs.client_id) mesajlaşma ekranından "Hizmeti Aldım" diyerek job.state'i
+  // gerçekten 'delivered'a çevirdikten sonra açılır (bkz. MessagesView.markDelivered).
+  // Öncesinde burada sahte bir "delivered" job otomatik oluşturuluyordu (hiç
+  // konuşmamış biri bile değerlendirme bırakabiliyordu), sonra geçici bir
+  // heuristik (min. mesaj sayısı + zaman eşiği) kullanıldı — ikisi de gerçek
+  // bir "işlem tamamlandı" onayının yerini tutamaz, o yüzden asıl bu.
+  // Telefon doğrulama şartı hâlâ duruyor (ucuz, tamamlayıcı bir katman) ama
+  // checkPhoneGate'teki gibi YUMUŞAK — Netgsm henüz kurulu değilken (SMS
+  // gönderilemiyorken) kimse gerçekten telefonunu doğrulayamaz, bu şartı sert
+  // bırakmak herkesi sonsuza kadar kilitler (canlı testte fark edildi — gerçek
+  // bir tutarsızlıktı). Anahtarlar eklenince otomatik sertleşir, kod değişmez.
+  const checkReviewEligibility = async () => {
+    if (!currentUserId) return { ok: false, reason: "Değerlendirme bırakmak için giriş yapmış olmalısın." };
+    if (currentUserId === listing.providerId) return { ok: false, reason: "Kendi vitrinini değerlendiremezsin." };
+
+    let smsConfigured = true;
+    try {
+      const cfgRes = await fetch("/api/send-otp");
+      smsConfigured = (await cfgRes.json()).configured;
+    } catch {
+      smsConfigured = false;
+    }
+    if (smsConfigured) {
+      const { data: profilesData } = await supabase
+        .from("profiles")
+        .select("id, phone_verified")
+        .in("id", [currentUserId, listing.providerId]);
+      const myVerified = profilesData?.find((p) => p.id === currentUserId)?.phone_verified;
+      const providerVerified = profilesData?.find((p) => p.id === listing.providerId)?.phone_verified;
+      if (!myVerified) {
+        return { ok: false, reason: "Değerlendirme yapabilmek için önce kendi telefonunu doğrulaman gerekiyor (Profilim → Telefon Doğrulama)." };
+      }
+      if (!providerVerified) {
+        return { ok: false, reason: "Bu sağlayıcı henüz telefonunu doğrulamadığı için şu an değerlendirilemiyor." };
+      }
+    }
+
+    const { data: jobRow } = await supabase
+      .from("jobs")
+      .select("id, state")
+      .eq("client_id", currentUserId)
+      .eq("service_id", listing.dbId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!jobRow) {
+      return { ok: false, reason: "Değerlendirme yapabilmek için önce bu sağlayıcıyla iletişime geçmelisin.", needsContact: true };
+    }
+    if (jobRow.state !== "delivered") {
+      return { ok: false, reason: "Değerlendirme yapabilmek için önce hizmeti aldığını mesajlaşma ekranından \"Hizmeti Aldım\" diyerek işaretlemen gerekiyor.", needsDelivery: true };
+    }
+
+    // Daha önce bu vitrini değerlendirdiysen (ratings tablosunda zaten bir
+    // satır varsa), yeni bir insert değil GÜNCELLEME akışına geç — eskiden
+    // burada bir yol yoktu, tekrar denersen sadece unique(job_id, rater_id,
+    // rated_profile_id) kısıtına takılıp "zaten değerlendirdin" hatası
+    // alıyordun (kısıt doğru çalışıyordu, sadece düzeltme yolu eksikti).
+    // .maybeSingle() değil — teoride aynı vitrine birden fazla iş/tekrar
+    // müşterisi olarak gelinip her birinde ayrı ayrı değerlendirme
+    // bırakılmış olabilir (ratings'in unique kısıtı job_id bazlı, service_id
+    // bazlı değil); en sonuncusunu düzenliyoruz.
+    const { data: existingRatings } = await supabase
+      .from("ratings")
+      .select("id, value, comment")
+      .eq("rater_id", currentUserId)
+      .eq("service_id", listing.dbId)
+      .order("created_at", { ascending: false });
+    const existingRating = existingRatings?.[0] || null;
+
+    return { ok: true, jobId: jobRow.id, existingRating: existingRating || null };
+  };
+
+  // Bir yorum fotoğrafı sağlayıcının kendi yüzünü/kimliğini gösteriyor
+  // olabilir — TMK m.24-25 kişilik hakları nedeniyle bu durumda önce
+  // sağlayıcının onayına gidiyor (review_media.approval_status='pending'),
+  // az önce checkReviewMedia'nın (yukarıda, AI ile) verdiği karara göre.
+  // Video burada bilerek desteklenmiyor: demo akışta video "AI kontrol
+  // edemiyor, platform ekibine gider" diyor ama gerçek veride henüz bir
+  // staff/admin inceleme ekranı yok (bkz. proje notları) — kimsenin
+  // çözemeyeceği bir "pending" kaydı oluşturmaktansa şimdilik sadece
+  // fotoğrafı gerçek akışa bağlıyoruz.
+  const attachRealReviewMedia = async (ratingId) => {
+    const check = await checkReviewMedia(reviewMediaFile.type, reviewMediaFile.dataUrl, reviewMediaFile.mimeType);
+    if (!mountedRef.current) return null;
+    if (!check.appropriate) return "rejected";
+    if (check.showsIdentifiableChild) return "child";
+    try {
+      const ext = (reviewMediaFile.name || "").split(".").pop() || "jpg";
+      const path = `${currentUserId}/review-${ratingId}-${Date.now()}.${ext}`;
+      const blob = await (await fetch(reviewMediaFile.dataUrl)).blob();
+      const { error: uploadError } = await supabase.storage.from("profile-media").upload(path, blob, { contentType: reviewMediaFile.mimeType });
+      if (uploadError) throw uploadError;
+      const { data: pub } = supabase.storage.from("profile-media").getPublicUrl(path);
+      const approvalStatus = check.showsIdentifiableAdult ? "pending" : "not_required";
+      const { error: mediaErr } = await supabase.from("review_media").insert({
+        rating_id: ratingId, media_type: "image", url: pub.publicUrl,
+        contains_provider_identity: check.showsIdentifiableAdult, approval_status: approvalStatus,
+      });
+      if (mediaErr) throw mediaErr;
+      return approvalStatus === "pending" ? "pending" : "auto";
+    } catch {
+      // Görsel yüklenemese bile yazılı yorum zaten kaydedildi — metin her
+      // zaman öncelikli, burada sessizce "auto" dönüp kullanıcıyı üzmüyoruz.
+      return "auto";
+    }
+  };
+
+  const submitRealReview = async () => {
+    setReviewError("");
+    const jobId = reviewEligibility?.jobId;
+    const existing = reviewEligibility?.existingRating;
+    if (!jobId) {
+      setReviewError("Değerlendirme yapabilmek için önce bu sağlayıcıyla iletişime geçmelisin.");
+      return null;
+    }
+    try {
+      let ratingId;
+      if (existing) {
+        // Güncelleme — bkz. supabase/edit_reviews.sql (ratings için update
+        // RLS policy'si yoktu, bu satır olmadan da bu update sessizce 0 satır
+        // etkilerdi, o yüzden migration'ı çalıştırmadan bu akış çalışmaz).
+        const { error: updateErr } = await supabase
+          .from("ratings")
+          .update({ value: reviewValue, comment: reviewComment.trim() })
+          .eq("id", existing.id);
+        if (updateErr) throw updateErr;
+        ratingId = existing.id;
+      } else {
+        const { data: ratingRow, error: ratingErr } = await supabase
+          .from("ratings")
+          .insert({
+            job_id: jobId, rater_id: currentUserId, rated_profile_id: listing.providerId, service_id: listing.dbId, value: reviewValue, comment: reviewComment.trim(),
+          })
+          .select("id")
+          .single();
+        if (ratingErr) throw ratingErr;
+        ratingId = ratingRow.id;
+      }
+      const mediaResult = reviewMediaFile ? await attachRealReviewMedia(ratingId) : null;
+      await loadRealReviews();
+      return mediaResult || (existing ? "updated" : "auto");
+    } catch (err) {
+      const msg = (err?.message || "").includes("duplicate") || err?.code === "23505"
+        ? "Bu sağlayıcıyı zaten değerlendirdin."
+        : `Değerlendirme kaydedilemedi: ${err?.message || "bilinmeyen hata"}`;
+      setReviewError(msg);
+      return null;
+    }
+  };
+
   const submitReview = async () => {
     if (!reviewComment.trim()) return;
     setReviewSubmitting(true);
+
+    // Gerçek bir ilansa değerlendirme (puan + yorum + fotoğraf) gerçekten
+    // kaydediliyor. Başarısız olursa formda kal, sahte akışa düşme.
+    if (isRealListing) {
+      if (!currentUserId) {
+        setReviewError("Değerlendirme bırakmak için giriş yapmış olmalısın.");
+        setReviewSubmitting(false);
+        return;
+      }
+      const result = await submitRealReview();
+      if (!mountedRef.current) return;
+      setReviewSubmitting(false);
+      if (!result) return;
+      setReviewSubmitted(result);
+      setReviewComment("");
+      setReviewMediaFile(null);
+      return;
+    }
+
     const reviewId = Date.now();
     const name = reviewName.trim() || "Misafir Kullanıcı";
     let media = [];
@@ -1756,13 +2818,55 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
             İletişime Geç
           </button>
           <button
-            onClick={() => setIsFavorited(!isFavorited)}
+            onClick={() => onToggleFavorite?.(listing)}
             className="w-full py-2.5 rounded-full text-sm font-medium border flex items-center justify-center gap-1.5"
             style={isFavorited ? { borderColor: "#9C4A3C", color: "#9C4A3C", background: "rgba(156,74,60,0.06)" } : { borderColor: "#D9D0BA", color: "#1B2B24" }}
           >
             <Heart size={14} fill={isFavorited ? "#9C4A3C" : "none"} />
             {isFavorited ? "Favorilerden Çıkar" : "Favorilere Ekle"}
           </button>
+
+          {canReportListing && !listingReportSubmitted && (
+            <button
+              onClick={() => setShowListingReportForm((v) => !v)}
+              className="w-full py-2 mt-2 rounded-full text-xs font-medium"
+              style={{ color: "#9C4A3C" }}
+            >
+              Vitrini Bildir
+            </button>
+          )}
+          {listingReportSubmitted && (
+            <p className="text-xs text-center mt-2" style={{ color: "#3F7D5C" }}>Bildirimin alındı, teşekkürler.</p>
+          )}
+          {showListingReportForm && !listingReportSubmitted && (
+            <div className="mt-2 pt-3 border-t" style={{ borderColor: "#D9D0BA" }}>
+              <select
+                value={listingReportReason}
+                onChange={(e) => setListingReportReason(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border text-xs outline-none mb-2"
+                style={{ borderColor: "#D9D0BA", background: "#FFFFFF", color: "#1B2B24" }}
+              >
+                {Object.entries(LISTING_REPORT_REASON_LABELS).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
+              </select>
+              <textarea
+                value={listingReportDetail}
+                onChange={(e) => setListingReportDetail(e.target.value)}
+                rows={2}
+                placeholder="Ek detay (opsiyonel)"
+                className="w-full px-3 py-2 rounded-lg border text-xs outline-none mb-2 resize-none"
+                style={{ borderColor: "#D9D0BA", background: "#FFFFFF", color: "#1B2B24" }}
+              />
+              {listingReportError && <p className="text-[11px] mb-2" style={{ color: "#9C4A3C" }}>{listingReportError}</p>}
+              <button
+                onClick={submitListingReport}
+                disabled={listingReportSubmitting}
+                className="w-full py-2 rounded-full text-xs font-bold text-white"
+                style={{ background: "#9C4A3C", opacity: listingReportSubmitting ? 0.7 : 1 }}
+              >
+                {listingReportSubmitting ? "Gönderiliyor..." : "Şikayeti Gönder"}
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1838,14 +2942,87 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
         </div>
       )}
 
+      {(providerShowcase?.video_intro_url || providerPortfolio.length > 0) && (
+        <div className="mt-10 pt-8 border-t" style={{ borderColor: "#D9D0BA" }}>
+          <div className="flex items-center gap-2 mb-1">
+            <Grid3x3 size={18} style={{ color: "#3F7D5C" }} />
+            <h2 className="font-serif text-xl" style={{ color: "#1B2B24" }}>{listing.provider} — Vitrin</h2>
+          </div>
+          <p className="text-xs mb-5" style={{ color: "#8A8368" }}>
+            Sağlayıcının tanıtım videosu ve iş başında çektiği fotoğraf/videolar
+          </p>
+
+          {providerShowcase?.video_intro_url && (
+            <div className="mb-6">
+              <p className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: "#5C5744" }}>Video Tanıtım</p>
+              <video controls playsInline className="w-full rounded-xl bg-black" style={{ maxHeight: "320px" }}>
+                <source src={providerShowcase.video_intro_url} />
+              </video>
+            </div>
+          )}
+
+          {providerPortfolio.length > 0 && (
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: "#5C5744" }}>Portföy — İş Başında</p>
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
+                {providerPortfolio.map((item, i) => (
+                  <button
+                    key={item.id}
+                    onClick={() => setShowcaseLightbox({ media: providerPortfolio.map((p) => ({ type: p.media_type, url: p.url })), index: i })}
+                    className="relative aspect-square rounded-lg overflow-hidden group"
+                  >
+                    {item.media_type === "video" ? (
+                      <video muted playsInline className="w-full h-full object-cover">
+                        <source src={item.url} />
+                      </video>
+                    ) : (
+                      <img src={item.url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                    )}
+                    {item.media_type === "video" && (
+                      <div className="absolute inset-0 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.15)" }}>
+                        <PlayCircle size={20} className="text-white" />
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {showcaseLightbox && (
+        <MediaLightbox
+          media={showcaseLightbox.media}
+          index={showcaseLightbox.index}
+          onClose={() => setShowcaseLightbox(null)}
+          onNav={(i) => setShowcaseLightbox({ ...showcaseLightbox, index: i })}
+        />
+      )}
+
       <div className="mt-10 pt-8 border-t" style={{ borderColor: "#D9D0BA" }}>
         <div className="flex items-center justify-between flex-wrap gap-2 mb-1">
           <div className="flex items-center gap-3">
             <h2 className="font-serif text-xl" style={{ color: "#1B2B24" }}>Değerlendirmeler</h2>
-            <span className="text-sm" style={{ color: "#5C5744" }}>{avg} ortalama · {allReviews.length} yorum</span>
+            <span className="text-sm" style={{ color: "#5C5744" }}>
+              {avg ? `${avg} ortalama · ${allReviews.length} yorum` : "Henüz değerlendirme yok"}
+            </span>
           </div>
           <button
-            onClick={() => setShowReviewForm(!showReviewForm)}
+            onClick={async () => {
+              if (showReviewForm) { setShowReviewForm(false); return; }
+              if (!isRealListing) { setShowReviewForm(true); return; }
+              setReviewEligibility({ checking: true });
+              const result = await checkReviewEligibility();
+              setReviewEligibility(result);
+              // Daha önce değerlendirmişse formu boş değil, mevcut
+              // puan/yorumla aç — "güncelle" tam olarak bunu bekler.
+              if (result?.existingRating) {
+                setReviewValue(result.existingRating.value);
+                setReviewComment(result.existingRating.comment || "");
+              }
+              setShowReviewForm(true);
+            }}
             className="text-xs font-bold px-3.5 py-2 rounded-full text-white"
             style={{ background: "#2563EB" }}
           >
@@ -1853,6 +3030,17 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
           </button>
         </div>
         <p className="text-xs mb-4" style={{ color: "#8A8368" }}>Fotoğraf ve video içeren yorumlar önce gösterilir</p>
+
+        {isRealListing && (summaryLoading || reviewSummary) && (
+          <div className="flex items-start gap-2 rounded-xl p-3.5 mb-4" style={{ background: "#EFF6FF" }}>
+            <Sparkles size={14} style={{ color: "#2563EB" }} className="mt-0.5 shrink-0" />
+            {summaryLoading && !reviewSummary ? (
+              <p className="text-xs" style={{ color: "#5C5744" }}>Yorumlar AI ile özetleniyor...</p>
+            ) : (
+              <p className="text-xs leading-relaxed" style={{ color: "#1B2B24" }}>{reviewSummary}</p>
+            )}
+          </div>
+        )}
 
         {showReviewForm && (
           <div className="rounded-xl border p-4 mb-5" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
@@ -1866,6 +3054,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
                 <p className="text-sm font-medium mb-1" style={{ color: "#1B2B24" }}>
                   {reviewSubmitted === "rejected" ? "Yorumun yayınlandı, görsel eklenemedi"
                     : reviewSubmitted === "child" ? "Yorumun yayınlandı, görsel eklenemedi"
+                    : reviewSubmitted === "updated" ? "Değerlendirmen güncellendi!"
                     : "Yorumun yayınlandı!"}
                 </p>
                 {reviewSubmitted === "pending" && (
@@ -1882,15 +3071,37 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
                 )}
                 <button onClick={() => { setShowReviewForm(false); setReviewSubmitted(null); }} className="text-xs font-medium mt-2" style={{ color: "#2563EB" }}>Kapat</button>
               </div>
+            ) : isRealListing && reviewEligibility?.checking ? (
+              <div className="flex items-center gap-2 py-3 justify-center">
+                <Loader2 size={14} className="animate-spin" style={{ color: "#8A8368" }} />
+                <span className="text-xs" style={{ color: "#8A8368" }}>Kontrol ediliyor...</span>
+              </div>
+            ) : isRealListing && !reviewEligibility?.ok ? (
+              <div className="text-center py-3">
+                <p className="text-xs" style={{ color: "#5C5744" }}>{reviewEligibility?.reason || "Değerlendirme yapabilmen için önce bu sağlayıcıyla iletişime geçmen gerekiyor."}</p>
+                {reviewEligibility?.needsContact && (
+                  <button onClick={onContact} className="text-xs font-bold mt-2" style={{ color: "#2563EB" }}>İletişime Geç</button>
+                )}
+                {reviewEligibility?.needsDelivery && (
+                  <button onClick={onContact} className="text-xs font-bold mt-2" style={{ color: "#2563EB" }}>Mesajlara Git</button>
+                )}
+              </div>
             ) : (
               <>
-                <input
-                  value={reviewName}
-                  onChange={(e) => setReviewName(e.target.value)}
-                  placeholder="Adın (isteğe bağlı)"
-                  className="w-full px-3 py-2 rounded-lg border text-sm outline-none mb-2.5"
-                  style={{ borderColor: "#D9D0BA", background: "#FFFFFF", color: "#1B2B24" }}
-                />
+                {isRealListing && reviewEligibility?.existingRating && (
+                  <p className="text-xs mb-2.5 px-3 py-2 rounded-lg" style={{ background: "rgba(37,99,235,0.08)", color: "#2563EB" }}>
+                    Bu sağlayıcıyı zaten değerlendirmiştin — aşağıdakini düzenleyip güncelleyebilirsin.
+                  </p>
+                )}
+                {!isRealListing && (
+                  <input
+                    value={reviewName}
+                    onChange={(e) => setReviewName(e.target.value)}
+                    placeholder="Adın (isteğe bağlı)"
+                    className="w-full px-3 py-2 rounded-lg border text-sm outline-none mb-2.5"
+                    style={{ borderColor: "#D9D0BA", background: "#FFFFFF", color: "#1B2B24" }}
+                  />
+                )}
                 <div className="flex gap-1 mb-2.5">
                   {[1, 2, 3, 4, 5].map((n) => (
                     <button key={n} onClick={() => setReviewValue(n)}>
@@ -1906,30 +3117,41 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
                   className="w-full px-3 py-2 rounded-lg border text-sm outline-none resize-none mb-2.5"
                   style={{ borderColor: "#D9D0BA", background: "#FFFFFF", color: "#1B2B24" }}
                 />
-                <div className="flex items-center gap-2 mb-3">
-                  {reviewMediaFile && (
-                    reviewMediaFile.type === "video" ? (
-                      <video src={reviewMediaFile.url} muted className="w-14 h-14 rounded-lg object-cover" />
-                    ) : (
-                      <img src={reviewMediaFile.url} alt="" className="w-14 h-14 rounded-lg object-cover" />
-                    )
-                  )}
-                  <label className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg border-2 border-dashed cursor-pointer" style={{ borderColor: "#D9D0BA", color: "#5C5744" }}>
-                    <Camera size={13} />
-                    {reviewMediaFile ? "Değiştir" : "Fotoğraf/Video Ekle"}
-                    <input type="file" accept="image/*,video/*" className="hidden" onChange={handleReviewMedia} />
-                  </label>
-                </div>
-                <p className="text-[11px] mb-3" style={{ color: "#8A8368" }}>
-                  Eklediğin görsel sağlayıcının kendisini gösteriyorsa, yayınlanmadan önce sağlayıcının onayına sunulur. Yazılı yorumun her zaman anında yayınlanır.
-                </p>
+                {(
+                  <>
+                    <div className="flex items-center gap-2 mb-3">
+                      {reviewMediaFile && (
+                        reviewMediaFile.type === "video" ? (
+                          <video src={reviewMediaFile.url} muted className="w-14 h-14 rounded-lg object-cover" />
+                        ) : (
+                          <img src={reviewMediaFile.url} alt="" className="w-14 h-14 rounded-lg object-cover" />
+                        )
+                      )}
+                      <label className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg border-2 border-dashed cursor-pointer" style={{ borderColor: "#D9D0BA", color: "#5C5744" }}>
+                        <Camera size={13} />
+                        {reviewMediaFile ? "Değiştir" : isRealListing ? "Fotoğraf Ekle" : "Fotoğraf/Video Ekle"}
+                        {/* Gerçek vitrinlerde video bilerek desteklenmiyor — bkz.
+                            attachRealReviewMedia'daki not (AI videoyu kontrol
+                            edemiyor, gerçek veride henüz bir staff inceleme
+                            ekranı yok). */}
+                        <input type="file" accept={isRealListing ? "image/*" : "image/*,video/*"} className="hidden" onChange={handleReviewMedia} />
+                      </label>
+                    </div>
+                    <p className="text-[11px] mb-3" style={{ color: "#8A8368" }}>
+                      Eklediğin görsel sağlayıcının kendisini gösteriyorsa, yayınlanmadan önce sağlayıcının onayına sunulur. Yazılı yorumun her zaman anında yayınlanır.
+                    </p>
+                  </>
+                )}
+                {reviewError && (
+                  <p className="text-xs mb-3 px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{reviewError}</p>
+                )}
                 <button
                   onClick={submitReview}
                   disabled={!reviewComment.trim() || reviewSubmitting}
                   className="w-full py-2.5 rounded-full text-sm font-bold text-white"
                   style={{ background: "#2563EB", opacity: reviewSubmitting ? 0.6 : 1 }}
                 >
-                  {reviewSubmitting ? "Gönderiliyor..." : "Yorumu Gönder"}
+                  {reviewSubmitting ? "Gönderiliyor..." : reviewEligibility?.existingRating ? "Değerlendirmeyi Güncelle" : "Yorumu Gönder"}
                 </button>
               </>
             )}
@@ -1938,7 +3160,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
 
         <div>
           {allReviews.map((r) => (
-            <ReviewCard key={r.id} review={r} onOpenMedia={(media, index) => setLightbox({ media, index })} />
+            <ReviewCard key={r.id} review={r} onOpenMedia={(media, index) => setLightbox({ media, index })} isReal={isRealListing} currentUserId={currentUserId} providerId={listing.providerId} />
           ))}
         </div>
       </div>
@@ -1955,13 +3177,24 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
   );
 }
 
-function MapView({ onBack, onSelectProvider }) {
+function MapView({ onBack, onSelectProvider, onSelectJob, realListings, realJobs }) {
   const [mapQuery, setMapQuery] = useState("");
   const [homeOnly, setHomeOnly] = useState(false);
   const [active, setActive] = useState(null);
   const [cityId, setCityId] = useState("istanbul");
   const [userLoc, setUserLoc] = useState(null); // { lat, lng }
   const [locStatus, setLocStatus] = useState("idle"); // idle | loading | granted | denied
+
+  // Gerçek (yerinde) ilanları haritada gösterilebilecek pin'lere çeviriyoruz —
+  // bkz. mapServiceRowToPin. Uzaktan hizmetler haritada gösterilmiyor (LOCAL_PROVIDERS'ta da yok).
+  const realPins = (realListings || [])
+    .filter((l) => l.mode === "local")
+    .map((l) => mapServiceRowToPin({ id: l.dbId, city: l.city }, l))
+    .filter(Boolean);
+  // Gerçek iş ilanları (client'ların "İlan Ver" ile girdiği ihtiyaçlar) da
+  // haritada ayrı bir pin türü olarak gösteriliyor — bkz. mapJobRowToPin.
+  const jobPins = (realJobs || []).map((j) => mapJobRowToPin(j)).filter(Boolean);
+  const allProviders = [...LOCAL_PROVIDERS, ...realPins, ...jobPins];
 
   const city = CITIES.find((c) => c.id === cityId);
   const catColor = {
@@ -1971,6 +3204,11 @@ function MapView({ onBack, onSelectProvider }) {
     diyetisyen: "#5C9C4A", psikolog: "#7B5FA8", "logusa-bakicisi": "#D1706B", "emzirme-danismani": "#4A9C8C",
     elektrikci: "#D1A23B", "su-tesisatcisi": "#3A7CA5", "hali-yikama": "#6B8E4E", "etkinlik-organizatoru": "#D16BA5",
     "yoga-koc": "#8FA65C", "bahce-bakim": "#5C8A3F", "profesyonel-fotograf": "#6B5B95", "spor-egitmeni": "#B85450",
+    // 2026-09-07'de eklenen 7 kategori — bu haritada unutulursa pin rengi
+    // undefined olur (görünmez/kırık daire), her yeni kategoride burayı da
+    // güncellemek gerekiyor.
+    "boya-badana": "#E07A5F", "klima-beyaz-esya": "#4A90A4", "kuafor-berber": "#A8527A",
+    "evcil-hayvan": "#C68642", "muzik-egitmeni": "#8A5FBF", "muhasebe": "#4A6572", "ceviri": "#5FA8A0",
   };
 
   const useMyLocation = () => {
@@ -1993,7 +3231,7 @@ function MapView({ onBack, onSelectProvider }) {
     );
   };
 
-  let list = cityId === "all" ? LOCAL_PROVIDERS : LOCAL_PROVIDERS.filter((p) => p.city === cityId);
+  let list = cityId === "all" ? allProviders : allProviders.filter((p) => p.city === cityId);
   if (mapQuery.trim()) {
     const q = mapQuery.trim().toLocaleLowerCase("tr-TR");
     list = list.filter((p) => {
@@ -2110,7 +3348,7 @@ function MapView({ onBack, onSelectProvider }) {
                 className="w-8 h-8 rounded-full flex items-center justify-center text-white shadow-md border-2 border-white transition-transform"
                 style={{ background: catColor[p.category], transform: active?.id === p.id ? "scale(1.15)" : "scale(1)" }}
               >
-                <MapPin size={15} fill="white" />
+                {p.kind === "job" ? <Megaphone size={14} fill="white" /> : <MapPin size={15} fill="white" />}
               </div>
               <span
                 className="mt-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full whitespace-nowrap shadow-sm"
@@ -2131,23 +3369,30 @@ function MapView({ onBack, onSelectProvider }) {
           {active ? (
             <div>
               <button onClick={() => setActive(null)} className="text-xs mb-3" style={{ color: "#8A8368" }}>← Listeye dön</button>
+              {active.kind === "job" && (
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full mb-2" style={{ background: "#FFF3E0", color: "#C2872B" }}>
+                  <Megaphone size={10} /> İş İlanı
+                </span>
+              )}
               <img src={active.img} alt="" className="w-full h-28 object-cover rounded-lg mb-3" />
               <p className="text-sm font-medium" style={{ color: "#1B2B24" }}>{active.name}</p>
               <p className="text-xs mb-2" style={{ color: "#8A8368" }}>{active.district}, {city?.name}</p>
-              <div className="flex items-center gap-1 mb-1">
-                <Stars value={active.rating} size={12} />
-                <span className="text-xs" style={{ color: "#5C5744" }}>{active.rating}</span>
-              </div>
+              {active.kind !== "job" && (
+                <div className="flex items-center gap-1 mb-1">
+                  <Stars value={active.rating} size={12} />
+                  <span className="text-xs" style={{ color: "#5C5744" }}>{active.rating}</span>
+                </div>
+              )}
               {active.distance != null && (
                 <p className="text-xs mb-2" style={{ color: "#3F7D5C" }}>Senden yaklaşık {active.distance.toFixed(1)} km uzakta</p>
               )}
               <p className="text-sm font-medium mb-3 mt-2" style={{ color: "#C2872B" }}>{active.price}</p>
               <button
-                onClick={() => onSelectProvider(active)}
+                onClick={() => (active.kind === "job" ? onSelectJob(active.job) : onSelectProvider(active))}
                 className="w-full py-2 rounded-full text-sm font-medium text-white"
                 style={{ background: "#C2872B" }}
               >
-                Profili Gör
+                {active.kind === "job" ? "Teklif Ver" : "Profili Gör"}
               </button>
             </div>
           ) : (
@@ -2165,7 +3410,7 @@ function MapView({ onBack, onSelectProvider }) {
                   className="w-full flex items-center gap-2.5 p-2 rounded-lg hover:bg-black/5 text-left"
                 >
                   <div className="w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-white" style={{ background: catColor[p.category] }}>
-                    <MapPin size={14} fill="white" />
+                    {p.kind === "job" ? <Megaphone size={13} fill="white" /> : <MapPin size={14} fill="white" />}
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-xs font-medium truncate" style={{ color: "#1B2B24" }}>{p.name}</p>
@@ -2183,6 +3428,154 @@ function MapView({ onBack, onSelectProvider }) {
       <p className="text-xs mt-3" style={{ color: "#8A8368" }}>
         Not: Şehir içi harita konumları stilize gösterimdir, ama mesafeler ("Konumumu Kullan" ile) tarayıcının gerçek GPS konumundan hesaplanır. Gerçek üründe pin konumları da Google Maps/Mapbox ile gerçek koordinatlarda gösterilecek.
       </p>
+    </div>
+  );
+}
+
+const LISTING_REPORT_REASON_LABELS = {
+  yanlis_kategori: "Yanlış kategori",
+  supheli_sahte: "Şüpheli / sahte ilan",
+  kopya_ilan: "Kopya ilan",
+  uygunsuz_icerik: "Uygunsuz içerik",
+  diger: "Diğer",
+};
+
+function JobDetailView({ job, onBack, onContact, currentUserId }) {
+  const cat = CATEGORIES.find((c) => c.id === job?.category);
+  const Icon = cat?.icon;
+  const isOwner = job?.isReal && currentUserId && job.posterId === currentUserId;
+  const canReport = job?.isReal && currentUserId && job.posterId !== currentUserId;
+
+  const [showReportForm, setShowReportForm] = useState(false);
+  const [reportReason, setReportReason] = useState("yanlis_kategori");
+  const [reportDetail, setReportDetail] = useState("");
+  const [reportSubmitting, setReportSubmitting] = useState(false);
+  const [reportSubmitted, setReportSubmitted] = useState(false);
+  const [reportError, setReportError] = useState("");
+
+  const submitListingReport = async () => {
+    setReportSubmitting(true);
+    setReportError("");
+    const { error } = await supabase.from("listing_reports").insert({
+      reporter_id: currentUserId, job_id: job.dbId, reason: reportReason, detail: reportDetail.trim() || null,
+    });
+    setReportSubmitting(false);
+    if (error) { setReportError(`Bildirilemedi: ${error.message}`); return; }
+    setReportSubmitted(true);
+  };
+
+  // "Yenile" — sahibinden'in "ilanı üste taşı" mantığı: eski, unutulmuş iş
+  // ilanları listede sessizce dibe batmasın diye sahibi manuel tazeleyebilsin.
+  // jobs.bumped_at (bkz. sahibinden_features.sql) — mevcut "Clients can
+  // update their own jobs" RLS policy'si zaten bu update'e izin veriyor.
+  const [bumping, setBumping] = useState(false);
+  const [bumped, setBumped] = useState(false);
+  const bumpJob = async () => {
+    if (!job?.dbId) return;
+    setBumping(true);
+    const { error } = await supabase.from("jobs").update({ bumped_at: new Date().toISOString() }).eq("id", job.dbId).eq("client_id", currentUserId);
+    setBumping(false);
+    if (!error) setBumped(true);
+  };
+
+  return (
+    <div className="max-w-3xl mx-auto px-5 py-8">
+      <button onClick={onBack} className="flex items-center gap-1 text-sm mb-5" style={{ color: "#5C5744" }}>
+        <ChevronLeft size={16} /> Geri
+      </button>
+
+      <div className="rounded-2xl p-7 mb-6 relative overflow-hidden" style={{ background: "linear-gradient(135deg, #0F1115 0%, #1A1D23 60%, #16321F 100%)" }}>
+        <div className="absolute -bottom-10 -right-10 w-52 h-52 rounded-full blur-3xl opacity-20" style={{ background: "#F59E0B" }} />
+        <div className="flex items-center gap-2 mb-3 relative">
+          {Icon && (
+            <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background: "rgba(255,255,255,0.12)" }}>
+              <Icon size={16} style={{ color: "#F59E0B" }} />
+            </div>
+          )}
+          <span className="text-xs font-semibold" style={{ color: "#B8BCC4" }}>{cat?.name}{job?.postedTime ? ` · ${job.postedTime}` : ""}</span>
+        </div>
+        <h1 className="font-sans text-2xl font-black relative" style={{ color: "#FFFFFF" }}>{job?.title}</h1>
+      </div>
+
+      <div className="grid sm:grid-cols-[1fr_240px] gap-6">
+        <div>
+          <h2 className="text-sm font-bold mb-2" style={{ color: "#0F1115" }}>İş Detayı</h2>
+          <p className="text-sm leading-relaxed whitespace-pre-line" style={{ color: "#374151" }}>
+            {job?.desc || "Bu ilan için ek bir açıklama eklenmemiş."}
+          </p>
+        </div>
+        <div className="rounded-xl border p-5 h-fit" style={{ borderColor: "#F0F0F0", background: "#FAFAFA" }}>
+          <p className="text-xs font-medium mb-1" style={{ color: "#9CA3AF" }}>Bütçe</p>
+          <p className="text-lg font-black mb-4" style={{ color: "#F59E0B" }}>{job?.budget}</p>
+          <p className="text-xs font-medium mb-1" style={{ color: "#9CA3AF" }}>Konum</p>
+          <p className="text-sm mb-4 flex items-center gap-1" style={{ color: "#374151" }}>
+            <MapPin size={13} />{job?.district}
+          </p>
+          <p className="text-xs font-medium mb-1" style={{ color: "#9CA3AF" }}>İlan Sahibi</p>
+          <p className="text-sm mb-5" style={{ color: "#374151" }}>{job?.posterName || "—"}</p>
+          <button
+            onClick={onContact}
+            className="w-full py-2.5 rounded-full text-sm font-bold text-white"
+            style={{ background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)" }}
+          >
+            Teklif Ver
+          </button>
+
+          {isOwner && (
+            <button
+              onClick={bumpJob}
+              disabled={bumping || bumped}
+              className="w-full py-2 mt-2 rounded-full text-xs font-bold border flex items-center justify-center gap-1.5"
+              style={{ borderColor: "#D9D0BA", color: bumped ? "#3F7D5C" : "#5C5744", opacity: bumping ? 0.6 : 1 }}
+            >
+              {bumping ? <Loader2 size={12} className="animate-spin" /> : bumped ? <Check size={12} /> : null}
+              {bumped ? "Yenilendi" : "İlanı Yenile"}
+            </button>
+          )}
+
+          {canReport && !reportSubmitted && (
+            <button
+              onClick={() => setShowReportForm((v) => !v)}
+              className="w-full py-2 mt-2 rounded-full text-xs font-medium"
+              style={{ color: "#9C4A3C" }}
+            >
+              İlanı Bildir
+            </button>
+          )}
+          {reportSubmitted && (
+            <p className="text-xs text-center mt-2" style={{ color: "#3F7D5C" }}>Bildirimin alındı, teşekkürler.</p>
+          )}
+          {showReportForm && !reportSubmitted && (
+            <div className="mt-2 pt-3 border-t" style={{ borderColor: "#F0F0F0" }}>
+              <select
+                value={reportReason}
+                onChange={(e) => setReportReason(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border text-xs outline-none mb-2"
+                style={{ borderColor: "#D9D0BA", background: "#FFFFFF", color: "#1B2B24" }}
+              >
+                {Object.entries(LISTING_REPORT_REASON_LABELS).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
+              </select>
+              <textarea
+                value={reportDetail}
+                onChange={(e) => setReportDetail(e.target.value)}
+                rows={2}
+                placeholder="Ek detay (opsiyonel)"
+                className="w-full px-3 py-2 rounded-lg border text-xs outline-none mb-2 resize-none"
+                style={{ borderColor: "#D9D0BA", background: "#FFFFFF", color: "#1B2B24" }}
+              />
+              {reportError && <p className="text-[11px] mb-2" style={{ color: "#9C4A3C" }}>{reportError}</p>}
+              <button
+                onClick={submitListingReport}
+                disabled={reportSubmitting}
+                className="w-full py-2 rounded-full text-xs font-bold text-white"
+                style={{ background: "#9C4A3C", opacity: reportSubmitting ? 0.7 : 1 }}
+              >
+                {reportSubmitting ? "Gönderiliyor..." : "Şikayeti Gönder"}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -2310,17 +3703,85 @@ function OffersView({ onBack, job }) {
   );
 }
 
-function SearchResultsView({ query, onBack, onSelectListing, userListings }) {
+function SearchResultsView({ query, onBack, onSelectListing, realListings, currentUserId }) {
   const [homeOnly, setHomeOnly] = useState(false);
+  // Kayıtlı arama — sahibinden.com'un "aramanı kaydet, yeni ilan gelince
+  // haber ver" özelliği. bkz. supabase/sahibinden_features.sql (saved_searches
+  // + notify_saved_search_matches trigger'ı).
+  const [savingSearch, setSavingSearch] = useState(false);
+  const [searchSaved, setSearchSaved] = useState(false);
+  const saveThisSearch = async () => {
+    if (!currentUserId || !query.trim()) return;
+    setSavingSearch(true);
+    const { error } = await supabase.from("saved_searches").insert({ profile_id: currentUserId, query: query.trim() });
+    setSavingSearch(false);
+    if (!error) setSearchSaved(true);
+  };
   const q = query.trim().toLocaleLowerCase("tr-TR");
-  const results = [...(userListings || []), ...LISTINGS].filter((l) => {
-    const haystack = [l.title, l.provider, l.city, CATEGORIES.find((c) => c.id === l.category)?.name || ""]
-      .join(" ")
-      .toLocaleLowerCase("tr-TR");
-    const matchesQuery = q.length === 0 || haystack.includes(q);
-    const matchesHome = !homeOnly || l.homeService === "evde" || l.homeService === "esnek";
-    return matchesQuery && matchesHome;
-  });
+  const pool = [...(realListings || []), ...LISTINGS];
+  const literalResults = pool
+    .filter((l) => {
+      const haystack = [l.title, l.provider, l.city, l.desc || "", CATEGORIES.find((c) => c.id === l.category)?.name || ""]
+        .join(" ")
+        .toLocaleLowerCase("tr-TR");
+      const matchesQuery = q.length === 0 || haystack.includes(q);
+      const matchesHome = !homeOnly || l.homeService === "evde" || l.homeService === "esnek";
+      return matchesQuery && matchesHome;
+    })
+    .sort((a, b) => computeVisibilityScore(b) - computeVisibilityScore(a));
+
+  // Düz kelime eşleşmesi hiç sonuç bulamazsa ("evimi kim toplar" gibi
+  // dolaylı bir arama, "temizlik" kelimesini hiç içermiyor) AI ile aramayı
+  // genişletiyoruz — kategori/anahtar kelime çıkarıp tekrar filtreliyoruz.
+  // Sadece literal arama boşken devreye giriyor, her tuşta değil.
+  const [aiKeywords, setAiKeywords] = useState(null); // { categorySlugs, keywords }
+  const [aiExpanding, setAiExpanding] = useState(false);
+  const expandedForRef = useRef("");
+  useEffect(() => {
+    if (q.length < 2 || literalResults.length > 0) { setAiKeywords(null); return; }
+    if (expandedForRef.current === q) return;
+    let cancelled = false;
+    (async () => {
+      setAiExpanding(true);
+      try {
+        const catList = CATEGORIES.map((c) => `${c.id}: ${c.name}`).join(", ");
+        const response = await fetch("/api/claude", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: "claude-sonnet-4-6",
+            max_tokens: 200,
+            messages: [{ role: "user", content: `Bir hizmet pazaryerinde kullanıcı şunu aradı: "${query}". Kategori listesi (slug: isim): ${catList}. Kullanıcının kastettiği en olası 1-2 kategori slug'ını ve aramaya eklenebilecek 3-5 ilgili Türkçe anahtar kelimeyi bul.\n\nSADECE şu JSON formatında yanıt ver: {"categorySlugs": ["..."], "keywords": ["..."]}` }],
+          }),
+        });
+        const data = await response.json();
+        const text = (data.content || []).map((b) => b.text || "").join("\n");
+        const clean = text.replace(/```json|```/g, "").trim();
+        const parsed = JSON.parse(clean);
+        if (!cancelled) { setAiKeywords(parsed); expandedForRef.current = q; }
+      } catch {
+        if (!cancelled) setAiKeywords(null);
+      } finally {
+        if (!cancelled) setAiExpanding(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [q, literalResults.length, query]);
+
+  const aiResults = aiKeywords
+    ? pool
+        .filter((l) => {
+          const haystack = [l.title, l.provider, l.city, l.desc || ""].join(" ").toLocaleLowerCase("tr-TR");
+          const matchesCategory = (aiKeywords.categorySlugs || []).includes(l.category);
+          const matchesKeyword = (aiKeywords.keywords || []).some((k) => haystack.includes(String(k).toLocaleLowerCase("tr-TR")));
+          const matchesHome = !homeOnly || l.homeService === "evde" || l.homeService === "esnek";
+          return (matchesCategory || matchesKeyword) && matchesHome;
+        })
+        .sort((a, b) => computeVisibilityScore(b) - computeVisibilityScore(a))
+    : [];
+
+  const results = literalResults.length > 0 ? literalResults : aiResults;
+  const isAiBoosted = literalResults.length === 0 && aiResults.length > 0;
 
   return (
     <div className="max-w-6xl mx-auto px-5 py-8">
@@ -2328,17 +3789,41 @@ function SearchResultsView({ query, onBack, onSelectListing, userListings }) {
         <ChevronLeft size={16} /> Geri
       </button>
       <h1 className="font-serif text-2xl mb-1" style={{ color: "#1B2B24" }}>"{query}" için {results.length} sonuç</h1>
-      <div className="flex items-center justify-between flex-wrap gap-3 mb-6">
+      <div className="flex items-center justify-between flex-wrap gap-3 mb-3">
         <p className="text-sm" style={{ color: "#5C5744" }}>Başlık, hizmet sağlayan ve bölgeye göre eşleşenler</p>
-        <button
-          onClick={() => setHomeOnly(!homeOnly)}
-          className="flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-full border"
-          style={homeOnly ? { background: "#3F7D5C", color: "white", borderColor: "#3F7D5C" } : { borderColor: "#D9D0BA", color: "#5C5744" }}
-        >
-          <Home size={13} />
-          Sadece evime gelsin
-        </button>
+        <div className="flex items-center gap-2">
+          {currentUserId && query.trim() && (
+            <button
+              onClick={saveThisSearch}
+              disabled={savingSearch || searchSaved}
+              className="flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-full border"
+              style={searchSaved ? { background: "#3F7D5C", color: "white", borderColor: "#3F7D5C" } : { borderColor: "#D9D0BA", color: "#5C5744" }}
+            >
+              <Bell size={13} />
+              {searchSaved ? "Kaydedildi" : savingSearch ? "Kaydediliyor..." : "Bu Aramayı Kaydet"}
+            </button>
+          )}
+          <button
+            onClick={() => setHomeOnly(!homeOnly)}
+            className="flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-full border"
+            style={homeOnly ? { background: "#3F7D5C", color: "white", borderColor: "#3F7D5C" } : { borderColor: "#D9D0BA", color: "#5C5744" }}
+          >
+            <Home size={13} />
+            Sadece evime gelsin
+          </button>
+        </div>
       </div>
+
+      {aiExpanding && (
+        <p className="flex items-center gap-1.5 text-xs mb-3" style={{ color: "#2563EB" }}>
+          <Loader2 size={12} className="animate-spin" /> Tam eşleşme yok, AI ile aramanı genişletiyorum...
+        </p>
+      )}
+      {isAiBoosted && !aiExpanding && (
+        <p className="flex items-center gap-1.5 text-xs mb-3" style={{ color: "#2563EB" }}>
+          <Sparkles size={12} /> Tam eşleşme bulunamadı, bunlar AI ile ilgili görülüp önerildi
+        </p>
+      )}
 
       {results.length === 0 ? (
         <div className="rounded-xl border p-8 text-center" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
@@ -2355,7 +3840,15 @@ function SearchResultsView({ query, onBack, onSelectListing, userListings }) {
             >
               <div className="relative h-40 overflow-hidden">
                 <img src={l.img} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                <div className="absolute top-2 left-2"><ModeTag mode={l.mode} /></div>
+                <div className="absolute top-2 left-2 flex items-center gap-1.5">
+                  <ModeTag mode={l.mode} />
+                  {l.isBoosted && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white flex items-center gap-0.5" style={{ background: "#F59E0B" }}><Sparkles size={9} />Öne Çıkan</span>
+                  )}
+                  {l.isReal && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: "#2FBF71" }}>Yeni</span>
+                  )}
+                </div>
               </div>
               <div className="p-3.5">
                 <p className="text-sm font-medium leading-snug line-clamp-2" style={{ color: "#1B2B24" }}>{l.title}</p>
@@ -2363,11 +3856,10 @@ function SearchResultsView({ query, onBack, onSelectListing, userListings }) {
                   <p className="text-xs" style={{ color: "#8A8368" }}>{l.provider} · {l.city}</p>
                   <LevelBadge level={l.level} />
                 </div>
-                {l.homeService && <div className="mt-1.5"><HomeServiceBadge value={l.homeService} /></div>}
                 <div className="flex items-center justify-between mt-2.5">
                   <div className="flex items-center gap-1">
                     <Stars value={l.rating} size={12} />
-                    <span className="text-xs" style={{ color: "#5C5744" }}>({l.reviewCount})</span>
+                    <span className="text-xs" style={{ color: "#5C5744" }}>{l.reviewCount > 0 ? `(${l.reviewCount})` : "Yeni vitrin"}</span>
                   </div>
                   <span className="text-sm font-medium" style={{ color: "#C2872B" }}>{l.price}</span>
                 </div>
@@ -2379,7 +3871,87 @@ function SearchResultsView({ query, onBack, onSelectListing, userListings }) {
     </div>
   );
 }
-function PostJobView({ onBack, onSubmitted, onViewOffers, onMatchAI }) {
+
+// Gerçek, kalıcı favoriler — hem vitrinler hem iş ilanları favorilenebiliyor
+// (favorites tablosu schema (3).sql'de zaten ikisini de destekliyordu, artık
+// gerçekten kullanılıyor). Kalp ikonuna bastığında burada birikir, sayfa
+// yenilenince kaybolmaz.
+function FavoritesView({ onBack, onSelectListing, onOpenJob, realListings, realJobs, favoriteIds, onToggleFavorite, onToggleJobFavorite }) {
+  const favoriteListings = (realListings || []).filter((l) => favoriteIds?.has(l.dbId));
+  const favoriteJobs = (realJobs || []).filter((j) => favoriteIds?.has(j.dbId));
+  const isEmpty = favoriteListings.length === 0 && favoriteJobs.length === 0;
+  return (
+    <div className="max-w-6xl mx-auto px-5 py-8">
+      <button onClick={onBack} className="flex items-center gap-1 text-sm mb-4" style={{ color: "#5C5744" }}>
+        <ChevronLeft size={16} /> Geri
+      </button>
+      <h1 className="font-serif text-2xl mb-1" style={{ color: "#1B2B24" }}>Favorilerim</h1>
+      <p className="text-sm mb-6" style={{ color: "#5C5744" }}>Kalp ikonuyla işaretlediğin vitrinler ve iş ilanları burada birikir.</p>
+
+      {isEmpty ? (
+        <div className="rounded-xl border p-8 text-center" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
+          <Heart size={22} style={{ color: "#D9D0BA" }} className="mx-auto mb-2" />
+          <p className="text-sm" style={{ color: "#5C5744" }}>Henüz favorin yok. Beğendiğin bir vitrin ya da iş ilanında kalp ikonuna basarak buraya ekleyebilirsin.</p>
+        </div>
+      ) : (
+        <>
+          {favoriteListings.length > 0 && (
+            <div className="mb-8">
+              <h2 className="text-sm font-bold mb-3" style={{ color: "#1B2B24" }}>Vitrinler ({favoriteListings.length})</h2>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {favoriteListings.map((l) => (
+                  <div key={l.id} className="rounded-xl overflow-hidden border" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
+                    <button onClick={() => onSelectListing(l)} className="w-full text-left">
+                      <div className="relative h-40 overflow-hidden">
+                        <img src={l.img} alt="" className="w-full h-full object-cover" />
+                      </div>
+                      <div className="p-3.5">
+                        <p className="text-sm font-medium leading-snug line-clamp-2" style={{ color: "#1B2B24" }}>{l.title}</p>
+                        <p className="text-xs mt-1" style={{ color: "#8A8368" }}>{l.provider} · {l.city}</p>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => onToggleFavorite?.(l)}
+                      className="w-full flex items-center justify-center gap-1.5 text-xs font-medium py-2 border-t"
+                      style={{ borderColor: "#D9D0BA", color: "#9C4A3C" }}
+                    >
+                      <Heart size={13} fill="#9C4A3C" /> Favorilerden çıkar
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {favoriteJobs.length > 0 && (
+            <div>
+              <h2 className="text-sm font-bold mb-3" style={{ color: "#1B2B24" }}>İş İlanları ({favoriteJobs.length})</h2>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {favoriteJobs.map((j) => (
+                  <div key={j.id} className="rounded-xl overflow-hidden border" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
+                    <button onClick={() => onOpenJob(j)} className="w-full text-left p-3.5">
+                      <p className="text-sm font-medium leading-snug line-clamp-2" style={{ color: "#1B2B24" }}>{j.title}</p>
+                      <p className="text-xs mt-1" style={{ color: "#8A8368" }}>{j.district} · {j.budget}</p>
+                    </button>
+                    <button
+                      onClick={() => onToggleJobFavorite?.(j)}
+                      className="w-full flex items-center justify-center gap-1.5 text-xs font-medium py-2 border-t"
+                      style={{ borderColor: "#D9D0BA", color: "#9C4A3C" }}
+                    >
+                      <Heart size={13} fill="#9C4A3C" /> Favorilerden çıkar
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+function PostJobView({ onBack, onSubmitted, onViewOffers, onMatchAI, userId, onJobPosted }) {
   const [mode, setMode] = useState("local");
   const [step, setStep] = useState("form"); // form | success
   const [title, setTitle] = useState("");
@@ -2393,6 +3965,21 @@ function PostJobView({ onBack, onSubmitted, onViewOffers, onMatchAI }) {
   const [homeServicePref, setHomeServicePref] = useState("evde"); // evde | mekanda | esnek
   const [photos, setPhotos] = useState([]); // { url, name }
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [categoryIdBySlug, setCategoryIdBySlug] = useState({});
+  const [postedJob, setPostedJob] = useState(null); // { dbId, posterId, categoryDbId, ... } — gerçek jobs satırı
+  const [aiWriting, setAiWriting] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    supabase.from("categories").select("id, slug").then(({ data }) => {
+      if (cancelled || !data) return;
+      const map = {};
+      data.forEach((c) => { map[c.slug] = c.id; });
+      setCategoryIdBySlug(map);
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   const availableCategories = CATEGORIES.filter((c) => c.mode === mode || c.mode === "both");
   const selectedCategory = CATEGORIES.find((c) => c.id === categoryId);
@@ -2411,12 +3998,83 @@ function PostJobView({ onBack, onSubmitted, onViewOffers, onMatchAI }) {
     });
   };
 
-  const handleSubmit = () => {
+  // CreateListingView'daki writeWithAI ile aynı desen — vitrin tarafında
+  // vardı, iş ilanı tarafında hiç yoktu (tutarsızlık).
+  const writeWithAI = async () => {
+    if (!categoryId) { setError("Önce bir kategori seç, AI ona göre yazsın."); return; }
+    setAiWriting(true);
+    setError("");
+    try {
+      const catName = CATEGORIES.find((c) => c.id === categoryId)?.name || "";
+      const prompt = `Bir hizmet pazaryeri uygulamasında bir MÜŞTERİ, ihtiyacı olan işi anlatan bir ilan yazıyor (bir sağlayıcı değil). Kategori: "${catName}". ${title.trim() || desc.trim() ? `Kullanıcının notu: "${title.trim()} ${desc.trim()}"` : "Kullanıcı henüz bir şey yazmadı, kategoriye uygun genel ve gerçekçi bir müşteri ihtiyacı metni üret."}
+SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
+{"title": "kısa, net bir ilan başlığı (en fazla 8 kelime)", "desc": "2-3 cümlelik, ihtiyacı ve beklentiyi anlatan bir açıklama"}`;
+      const response = await fetch("/api/claude", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 400, messages: [{ role: "user", content: prompt }] }),
+      });
+      const data = await response.json();
+      const text = (data.content || []).map((b) => b.text || "").join("\n");
+      const clean = text.replace(/```json|```/g, "").trim();
+      const parsed = JSON.parse(clean);
+      setTitle(parsed.title || title);
+      setDesc(parsed.desc || desc);
+    } catch (err) {
+      setError("AI şu an yazamadı, tekrar dener misin?");
+    } finally {
+      setAiWriting(false);
+    }
+  };
+
+  const handleSubmit = async () => {
     if (!title.trim()) { setError("Bir başlık yazmalısın."); return; }
     if (!categoryId) { setError("Bir kategori seçmelisin."); return; }
     if (!desc.trim()) { setError("İşin ne olduğunu kısaca anlat."); return; }
+    if (!userId) { setError("İlan vermek için giriş yapmış olmalısın."); return; }
+    const categoryDbId = categoryIdBySlug[categoryId];
+    if (!categoryDbId) { setError("Bu kategori veritabanında henüz tanımlı değil."); return; }
     setError("");
+    setSubmitting(true);
+    const profileGate = await checkProfileGate(userId);
+    if (!profileGate.ok) { setSubmitting(false); setError(profileGate.reason); return; }
+    const gate = await checkPhoneGate(userId);
+    if (!gate.ok) { setSubmitting(false); setError(gate.reason); return; }
+
+    const parseBudget = (v) => {
+      const n = parseFloat(v.replace(/\./g, "").replace(",", "."));
+      return Number.isNaN(n) ? null : n;
+    };
+    const cityLabel = `${district.trim() ? district.trim() + ", " : ""}${cityName}`;
+
+    const { data, error: insertError } = await supabase
+      .from("jobs")
+      .insert({
+        client_id: userId,
+        category_id: categoryDbId,
+        title: title.trim(),
+        description: desc.trim(),
+        budget_min: minBudget.trim() ? parseBudget(minBudget.trim()) : null,
+        budget_max: maxBudget.trim() ? parseBudget(maxBudget.trim()) : null,
+        is_remote: mode === "remote",
+        city: mode === "local" ? cityLabel : null,
+        location: mode === "local" ? cityToLocationEwkt(cityId) : null,
+        state: "new_offer",
+        active: true,
+      })
+      .select()
+      .single();
+
+    setSubmitting(false);
+    if (insertError || !data) {
+      setError(`İlan kaydedilemedi: ${insertError?.message || "bilinmeyen bir hata oluştu"}`);
+      return;
+    }
+    setPostedJob({ dbId: data.id, posterId: data.client_id, categoryDbId: data.category_id });
+    onJobPosted?.();
     setStep("success");
+    // Şüpheli içerik taraması — sessiz, engellemeyen.
+    checkAndFlagContent("job", data.id, `${title} ${desc}`.trim(), userId);
   };
 
   if (step === "success") {
@@ -2439,9 +4097,18 @@ function PostJobView({ onBack, onSubmitted, onViewOffers, onMatchAI }) {
           <Sparkles size={15} /> Yapay Zeka ile En Uygun Kişileri Bul
         </button>
         <div className="flex gap-2 justify-center">
-          <button onClick={() => onViewOffers({ title, categoryId, homeServicePref })} className="px-5 py-2.5 rounded-full text-sm font-medium text-white" style={{ background: "#C2872B" }}>Teklifleri Gör</button>
+          <button
+            onClick={() => onViewOffers({ title, categoryId, homeServicePref, ...postedJob })}
+            className="px-5 py-2.5 rounded-full text-sm font-medium text-white"
+            style={{ background: "#C2872B" }}
+          >
+            Teklifleri Gör
+          </button>
           <button onClick={onSubmitted} className="px-5 py-2.5 rounded-full text-sm font-medium border" style={{ borderColor: "#D9D0BA", color: "#1B2B24" }}>Ana Sayfaya Dön</button>
         </div>
+        <p className="text-[11px] mt-4" style={{ color: "#8A8368" }}>
+          Not: İlanın gerçekten kaydedildi. "Teklifleri Gör" ekranındaki teklifler ise henüz örnek veri — sağlayıcıların gerçek teklif göndermesi ayrı bir özellik, istersen onu da ekleyebiliriz.
+        </p>
       </div>
     );
   }
@@ -2469,17 +4136,6 @@ function PostJobView({ onBack, onSubmitted, onViewOffers, onMatchAI }) {
 
       <div className="space-y-4">
         <div>
-          <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>Başlık</label>
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Örn. 2+1 daire boyama işi"
-            className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
-            style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
-          />
-        </div>
-
-        <div>
           <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>Kategori</label>
           <select
             value={categoryId}
@@ -2505,6 +4161,28 @@ function PostJobView({ onBack, onSubmitted, onViewOffers, onMatchAI }) {
                 : `Bu kategoride ${nearbyCount > 0 ? nearbyCount : "çok sayıda"} uzaktan çalışan sağlayıcı var`}
             </p>
           )}
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="text-xs font-medium" style={{ color: "#5C5744" }}>Başlık</label>
+            <button
+              onClick={writeWithAI}
+              disabled={aiWriting}
+              className="text-[11px] font-bold flex items-center gap-1 px-2.5 py-1 rounded-full"
+              style={{ background: "#EFF6FF", color: "#2563EB" }}
+            >
+              {aiWriting ? <Loader2 size={11} className="animate-spin" /> : <Sparkles size={11} />}
+              {aiWriting ? "Yazıyor..." : "AI ile Yaz"}
+            </button>
+          </div>
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Örn. 2+1 daire boyama işi"
+            className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
+            style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
+          />
         </div>
 
         <div>
@@ -2650,15 +4328,21 @@ function PostJobView({ onBack, onSubmitted, onViewOffers, onMatchAI }) {
           <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{error}</p>
         )}
 
-        <button onClick={handleSubmit} className="w-full py-3 rounded-full text-sm font-medium text-white mt-2" style={{ background: "#C2872B" }}>
-          İlanı Yayınla
+        <button
+          onClick={handleSubmit}
+          disabled={submitting}
+          className="w-full py-3 rounded-full text-sm font-medium text-white mt-2 flex items-center justify-center gap-2"
+          style={{ background: "#C2872B", opacity: submitting ? 0.7 : 1 }}
+        >
+          {submitting && <Loader2 size={14} className="animate-spin" />}
+          {submitting ? "Yayınlanıyor..." : "İlanı Yayınla"}
         </button>
       </div>
     </div>
   );
 }
 
-function AIMatchView({ job, onBack, onSelectListing }) {
+function AIMatchView({ job, onBack, onSelectListing, realListings }) {
   const [status, setStatus] = useState("loading"); // loading | done | error
   const [matches, setMatches] = useState([]);
   const [errorMsg, setErrorMsg] = useState("");
@@ -2666,8 +4350,12 @@ function AIMatchView({ job, onBack, onSelectListing }) {
   const category = CATEGORIES.find((c) => c.id === job?.categoryId);
   const cityName = CITIES.find((c) => c.id === job?.cityId)?.name;
 
-  // Build the candidate pool: real listings in this category (+ nearby-in-mode local providers as extra context)
-  const candidates = LISTINGS.filter((l) => {
+  // Aday havuzu — eskiden sadece sabit demo LISTINGS'ten geliyordu, gerçek
+  // vitrinler (realListings) hiç dahil edilmiyordu; yani AI eşleştirme
+  // gerçek bir sağlayıcıyı asla önermiyordu. category alanı (slug) her
+  // ikisinde de aynı uzayı paylaşıyor (categories_seed.sql), o yüzden aynı
+  // filtre ikisine de doğrudan uygulanabiliyor.
+  const candidates = [...LISTINGS, ...(realListings || [])].filter((l) => {
     const matchesCategory = l.categoryId === job?.categoryId || l.category === job?.categoryId;
     if (!matchesCategory) return false;
     if (!job?.homeServicePref || job.homeServicePref === "esnek") return true;
@@ -2708,7 +4396,12 @@ ${candidateList}
 SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
 [{"name": "aday adı", "matchScore": 92, "reason": "kısa gerekçe"}]`;
 
-        const response = await fetch("https://api.anthropic.com/v1/messages", {
+        // Doğrudan api.anthropic.com'a, tarayıcıdan, API anahtarı hiç
+        // eklenmeden çağrılıyordu — bu yüzden her zaman başarısız oluyordu
+        // (checkReviewMedia/checkPhotoContent/writeWithAI'nin kullandığı
+        // doğru /api/claude sunucu route'u kullanılmıyordu, muhtemelen
+        // gözden kaçmıştı). Aynı desene çekildi.
+        const response = await fetch("/api/claude", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -2927,37 +4620,317 @@ const AUTO_REPLIES = [
   "Elbette, fiyat teklifimi birazdan iletiyorum.",
 ];
 
-function MessagesView({ onBack, initialContact }) {
-  const [conversations, setConversations] = useState(INITIAL_CONVERSATIONS);
+function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) {
+  const [conversations, setConversations] = useState(INITIAL_CONVERSATIONS.map((c) => ({ ...c, demo: true })));
   const [threads, setThreads] = useState(INITIAL_THREADS);
   const [activeId, setActiveId] = useState(null);
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
+  const [loading, setLoading] = useState(!!currentUserId);
+  const [sending, setSending] = useState(false);
+  const [gateError, setGateError] = useState("");
+  const [draftingMessage, setDraftingMessage] = useState(false);
+  // Gerçek, kalıcı engelleme/şikayet (bkz. supabase/user_safety.sql) —
+  // önceki "Destek Talepleri" ekranı tamamen sahteydi, hiçbir yere yazmıyordu.
+  const [myBlockOfThem, setMyBlockOfThem] = useState(false); // ben onu engelledim mi
+  const [blockChecking, setBlockChecking] = useState(false);
+  const [blockError, setBlockError] = useState("");
+  const [showReportForm, setShowReportForm] = useState(false);
+  const [reportReason, setReportReason] = useState("uygunsuz_mesaj");
+  const [reportDetail, setReportDetail] = useState("");
+  const [reportSubmitting, setReportSubmitting] = useState(false);
+  const [reportSubmitted, setReportSubmitted] = useState(false);
+  const [reportError, setReportError] = useState("");
+  // Gerçek "iş tamamlandı" onayı — değerlendirme güvenliğinin asıl kalıcı
+  // çözümü. jobs.client_id her zaman hizmeti ALAN taraf (bir vitrine mesaj
+  // atarak geldiyse de, kendi iş ilanına gelen bir teklifi kabul ettiyse de
+  // aynı — bkz. schema (3).sql). Sadece o taraf "Hizmeti Aldım" diyebilir;
+  // state 'delivered' olunca ListingDetail'deki değerlendirme kapısı açılır.
+  const [activeJob, setActiveJob] = useState(null); // { clientId, state, serviceId }
+  const [markingDelivered, setMarkingDelivered] = useState(false);
+  const [deliveredError, setDeliveredError] = useState("");
+  const [openingReview, setOpeningReview] = useState(false);
 
+  // Gerçek konuşmaları messages/jobs/profiles tablolarından yükler. Anlık
+  // (realtime) değil — sayfa/görünüm yenilendiğinde yeniden çekiliyor.
+  const loadRealConversations = async () => {
+    if (!currentUserId) return { realConvos: [], realThreads: {} };
+    const { data: myMessages, error } = await supabase
+      .from("messages")
+      .select("*")
+      .or(`sender_id.eq.${currentUserId},receiver_id.eq.${currentUserId}`)
+      .order("created_at", { ascending: true });
+    if (error || !myMessages || myMessages.length === 0) return { realConvos: [], realThreads: {} };
+
+    const byJob = {};
+    myMessages.forEach((m) => { (byJob[m.job_id] = byJob[m.job_id] || []).push(m); });
+    const jobIds = Object.keys(byJob);
+
+    const { data: jobsData } = await supabase.from("jobs").select("id, title, service_id").in("id", jobIds);
+    const jobsById = {};
+    (jobsData || []).forEach((j) => { jobsById[j.id] = j; });
+
+    // Bir görüşme belirli bir vitrin için açıldıysa (job.service_id), o
+    // vitrinin sahibine gösterilecek isim PAYLAŞILAN profil adı değil, o
+    // vitrinin display_name'i olmalı — yoksa aynı kişinin iki farklı vitrini
+    // müşteriye aynı isimle görünür (bkz. vitrin_media.sql'deki not).
+    const serviceIds = [...new Set((jobsData || []).map((j) => j.service_id).filter(Boolean))];
+    const servicesById = {};
+    if (serviceIds.length > 0) {
+      const { data: servicesData } = await supabase.from("services").select("id, display_name, provider_id").in("id", serviceIds);
+      (servicesData || []).forEach((s) => { servicesById[s.id] = s; });
+    }
+
+    const otherIds = new Set();
+    jobIds.forEach((jid) => byJob[jid].forEach((m) => {
+      const otherId = m.sender_id === currentUserId ? m.receiver_id : m.sender_id;
+      if (otherId && otherId !== currentUserId) otherIds.add(otherId);
+    }));
+    const profilesById = {};
+    if (otherIds.size > 0) {
+      const { data: profilesData } = await supabase
+        .from("profiles")
+        .select("id, full_name, business_name")
+        .in("id", Array.from(otherIds));
+      (profilesData || []).forEach((p) => { profilesById[p.id] = p; });
+    }
+
+    const realThreads = {};
+    const realConvos = jobIds
+      .map((jid) => {
+        const msgs = [...byJob[jid]].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+        const last = msgs[msgs.length - 1];
+        const otherId = last.sender_id === currentUserId ? last.receiver_id : last.sender_id;
+        const otherProfile = profilesById[otherId];
+        // Bu görüşmenin bağlı olduğu vitrin, karşı tarafın SAHİBİ olduğu bir
+        // vitrinse (yani biz bu vitrine mesaj atan taraf isek) vitrinin
+        // display_name'ini kullan — kendi vitrinimize gelen bir müşteri
+        // konuşmasında ise bu koşul sağlanmaz, paylaşılan isme düşülür.
+        const vitrin = servicesById[jobsById[jid]?.service_id];
+        const vitrinName = vitrin && vitrin.provider_id === otherId ? (vitrin.display_name || "").trim() : "";
+        const otherName = vitrinName || (otherProfile?.business_name && otherProfile.business_name.trim()) || otherProfile?.full_name || "Kullanıcı";
+        realThreads[jid] = msgs.map((m) => ({
+          id: m.id, sender: m.sender_id === currentUserId ? "me" : "them", text: m.body, time: formatMessageTime(m.created_at),
+        }));
+        return {
+          id: jid,
+          name: otherName,
+          initials: otherName.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase(),
+          lastMessage: last.body,
+          time: formatMessageTime(last.created_at),
+          unread: 0,
+          listingTitle: jobsById[jid]?.title || "",
+          otherId,
+          sortTime: last.created_at,
+        };
+      })
+      .sort((a, b) => new Date(b.sortTime) - new Date(a.sortTime));
+
+    return { realConvos, realThreads };
+  };
+
+  // İlk açılışta gerçek konuşmalarımı yükle.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { realConvos, realThreads } = await loadRealConversations();
+      if (cancelled) return;
+      if (Object.keys(realThreads).length > 0) setThreads((t) => ({ ...t, ...realThreads }));
+      if (realConvos.length > 0) setConversations((prev) => [...realConvos, ...prev.filter((c) => c.demo)]);
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUserId]);
+
+  // Bir ilan/profilden "İletişime Geç" ile gelindiğinde: gerçek bir sağlayıcıysa
+  // (providerId + categoryId, yani gerçek bir services satırından geldiyse) o
+  // konuşma için gerçek bir jobs satırı bulur/oluşturur ve mesajları oraya bağlar.
+  // Değilse (demo akışlar: "Aranıyor" panosu, Nail Art) eski local-only davranış sürer.
   useEffect(() => {
     if (!initialContact) return;
-    setConversations((prev) => {
-      const existing = prev.find((c) => c.name === initialContact.name);
-      if (existing) {
-        setActiveId(existing.id);
-        return prev;
+
+    if (!currentUserId || !initialContact.providerId || !initialContact.categoryId) {
+      setConversations((prev) => {
+        const existing = prev.find((c) => c.demo && c.name === initialContact.name);
+        if (existing) { setActiveId(existing.id); return prev; }
+        const demoIds = prev.filter((c) => c.demo).map((c) => c.id);
+        const newId = Math.max(...demoIds, 0) + 1;
+        setThreads((t) => ({ ...t, [newId]: [] }));
+        setActiveId(newId);
+        return [
+          { id: newId, demo: true, name: initialContact.name, initials: initialContact.name.split(" ").map((w) => w[0]).join("").slice(0, 2), lastMessage: "Yeni sohbet", time: "Şimdi", unread: 0, listingTitle: initialContact.listingTitle },
+          ...prev,
+        ];
+      });
+      return;
+    }
+
+    if (initialContact.providerId === currentUserId) return; // kendine mesaj atamaz
+
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      // Gerçek bir iş ilanından (PostJobView → jobs) geliniyorsa o job zaten
+      // var — yeni bir tane oluşturmaya gerek yok, doğrudan onu kullanıyoruz.
+      let jobId = initialContact.existingJobId || null;
+      if (!jobId) {
+        const threadTitle = `${initialContact.listingTitle} hakkında görüşme`;
+        // Eskiden burada iki ayrı sorgu vardı (var mı diye bak, yoksa
+        // insert et) — aralarında kilit olmadığı için art arda iki kez
+        // tetiklenince (örn. StrictMode) aynı client+vitrin için iki jobs
+        // satırı oluşabiliyordu (canlı testte yakalandı — bkz.
+        // dedupe_jobs.sql). Artık tek, atomik bir RPC çağrısı.
+        const { data: foundJobId, error: jobError } = await supabase.rpc("find_or_create_job", {
+          p_service_id: initialContact.listingId || null,
+          p_category_id: initialContact.categoryId,
+          p_title: threadTitle,
+        });
+        if (jobError || !foundJobId) { if (!cancelled) setLoading(false); return; }
+        jobId = foundJobId;
       }
-      const newId = Math.max(...prev.map((c) => c.id), 0) + 1;
-      setThreads((t) => ({ ...t, [newId]: [] }));
-      setActiveId(newId);
-      return [
-        { id: newId, name: initialContact.name, initials: initialContact.name.split(" ").map((w) => w[0]).join("").slice(0, 2), lastMessage: "Yeni sohbet", time: "Şimdi", unread: 0, listingTitle: initialContact.listingTitle },
-        ...prev,
-      ];
-    });
+      if (cancelled) return;
+
+      const { realConvos, realThreads } = await loadRealConversations();
+      if (cancelled) return;
+      if (Object.keys(realThreads).length > 0) setThreads((t) => ({ ...t, ...realThreads }));
+      setConversations((prev) => {
+        const merged = [...realConvos, ...prev.filter((c) => c.demo)];
+        if (!merged.find((c) => c.id === jobId)) {
+          merged.unshift({
+            id: jobId,
+            name: initialContact.name,
+            initials: initialContact.name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase(),
+            lastMessage: "Yeni sohbet", time: "Şimdi", unread: 0, listingTitle: initialContact.listingTitle, otherId: initialContact.providerId,
+          });
+        }
+        return merged;
+      });
+      setActiveId(jobId);
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialContact?.name]);
+  }, [initialContact?.providerId, initialContact?.categoryId, initialContact?.listingTitle, initialContact?.existingJobId]);
 
   const active = conversations.find((c) => c.id === activeId);
   const activeMessages = threads[activeId] || [];
 
-  const sendMessage = () => {
-    if (!input.trim() || !activeId) return;
+  useEffect(() => {
+    if (!active?.otherId || active.demo || !currentUserId) { setMyBlockOfThem(false); return; }
+    let cancelled = false;
+    (async () => {
+      setBlockChecking(true);
+      const { data } = await supabase
+        .from("user_blocks")
+        .select("id")
+        .eq("blocker_id", currentUserId)
+        .eq("blocked_id", active.otherId)
+        .maybeSingle();
+      if (!cancelled) { setMyBlockOfThem(!!data); setBlockChecking(false); }
+    })();
+    setShowReportForm(false);
+    setReportSubmitted(false);
+    return () => { cancelled = true; };
+  }, [active?.otherId, currentUserId]);
+
+  useEffect(() => {
+    if (!activeId || active?.demo || !currentUserId) { setActiveJob(null); return; }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase.from("jobs").select("client_id, state, service_id").eq("id", activeId).maybeSingle();
+      if (!cancelled) setActiveJob(data ? { clientId: data.client_id, state: data.state, serviceId: data.service_id } : null);
+    })();
+    setDeliveredError("");
+    return () => { cancelled = true; };
+  }, [activeId, active?.demo, currentUserId]);
+
+  const markDelivered = async () => {
+    if (!activeId || !currentUserId || activeJob?.clientId !== currentUserId) return;
+    setDeliveredError("");
+    setMarkingDelivered(true);
+    const { error } = await supabase.from("jobs").update({ state: "delivered" }).eq("id", activeId).eq("client_id", currentUserId);
+    setMarkingDelivered(false);
+    if (error) { setDeliveredError(`İşaretlenemedi: ${error.message}`); return; }
+    setActiveJob((j) => (j ? { ...j, state: "delivered" } : j));
+  };
+
+  // "Değerlendirme Yaz" mesajlaşma ekranından doğrudan vitrine gitsin diye —
+  // önceden hizmeti aldım demeden sonra kullanıcı ilanı tekrar isim yazıp
+  // aramak zorunda kalıyordu (canlı testte fark edildi).
+  const goToReview = async () => {
+    if (!activeJob?.serviceId || !onOpenListing) return;
+    setOpeningReview(true);
+    const { data } = await supabase
+      .from("services")
+      .select("*, profiles(*), categories(*)")
+      .eq("id", activeJob.serviceId)
+      .maybeSingle();
+    setOpeningReview(false);
+    if (data) onOpenListing(mapServiceRowToListing(data));
+  };
+
+  // İlk mesajı ne yazacağını bilememe sürtünmesini azaltmak için — sadece
+  // henüz hiç mesaj atılmamış gerçek bir sohbette görünür, taslağı input'a
+  // yazar (otomatik göndermez, kullanıcı düzenleyip kendi göndersin).
+  const suggestOpeningMessage = async () => {
+    if (!active) return;
+    setDraftingMessage(true);
+    try {
+      const response = await fetch("/api/claude", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-6",
+          max_tokens: 150,
+          messages: [{ role: "user", content: `Bir hizmet pazaryerinde bir müşteri "${active.name}" adlı sağlayıcıyla "${active.listingTitle || "bir hizmet"}" konusunda ilk kez iletişime geçiyor. Onun yerine, nazik, net ve kısa (en fazla 3 cümle) bir açılış mesajı yaz — ihtiyacını kısaca belirtsin ve müsaitlik/fiyat sorsun. Türkçe, samimi ama profesyonel bir dille.\n\nSADECE mesaj metnini yaz, tırnak işareti veya başka hiçbir şey ekleme.` }],
+        }),
+      });
+      const data = await response.json();
+      const text = (data.content || []).map((b) => b.text || "").join("\n").trim();
+      if (text) setInput(text);
+    } catch {
+      // sessizce vazgeç — kullanıcı zaten kendi yazabilir
+    } finally {
+      setDraftingMessage(false);
+    }
+  };
+
+  const toggleBlock = async () => {
+    if (!active?.otherId || !currentUserId) return;
+    setBlockError("");
+    setBlockChecking(true);
+    if (myBlockOfThem) {
+      const { error } = await supabase.from("user_blocks").delete().eq("blocker_id", currentUserId).eq("blocked_id", active.otherId);
+      setBlockChecking(false);
+      if (error) { setBlockError(`Engel kaldırılamadı: ${error.message}`); return; }
+      setMyBlockOfThem(false);
+    } else {
+      const { error } = await supabase.from("user_blocks").insert({ blocker_id: currentUserId, blocked_id: active.otherId });
+      setBlockChecking(false);
+      if (error) { setBlockError(`Engellenemedi: ${error.message}`); return; }
+      setMyBlockOfThem(true);
+    }
+  };
+
+  const submitReport = async () => {
+    if (!active?.otherId || !currentUserId) return;
+    setReportError("");
+    setReportSubmitting(true);
+    const { error } = await supabase.from("user_reports").insert({
+      reporter_id: currentUserId,
+      reported_id: active.otherId,
+      reason: reportReason,
+      detail: reportDetail.trim() || null,
+      job_id: active.demo ? null : activeId,
+    });
+    setReportSubmitting(false);
+    if (error) { setReportError(`Şikayet gönderilemedi: ${error.message}`); return; }
+    setReportSubmitted(true);
+    setReportDetail("");
+  };
+
+  const sendDemoMessage = () => {
     const now = new Date();
     const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2, "0")}`;
     const msg = { id: (threads[activeId]?.length || 0) + 1, sender: "me", text: input.trim(), time: timeStr };
@@ -2974,6 +4947,60 @@ function MessagesView({ onBack, initialContact }) {
     }, 1400);
   };
 
+  const sendRealMessage = async () => {
+    if (!active?.otherId || !currentUserId) return;
+    const body = input.trim();
+    if (!body) return;
+    setSending(true);
+    // Aramızda herhangi bir yönde engel varsa (ben onu engelledim ya da o beni
+    // engelledi) mesaj gitmez — yönü açıklamıyor, sadece engelli olduğunu
+    // söylüyor (bkz. supabase/user_safety.sql'deki is_blocked_between).
+    const { data: blocked } = await supabase.rpc("is_blocked_between", { other_id: active.otherId });
+    if (blocked) {
+      setSending(false);
+      setGateError("Bu kişiyle mesajlaşamıyorsun.");
+      return;
+    }
+    const profileGate = await checkProfileGate(currentUserId);
+    if (!profileGate.ok) {
+      setSending(false);
+      setGateError(profileGate.reason);
+      return;
+    }
+    const gate = await checkPhoneGate(currentUserId);
+    if (!gate.ok) {
+      setSending(false);
+      setGateError(gate.reason);
+      return;
+    }
+    const { data, error } = await supabase
+      .from("messages")
+      .insert({ job_id: activeId, sender_id: currentUserId, receiver_id: active.otherId, body })
+      .select()
+      .single();
+    setSending(false);
+    if (error || !data) {
+      // Eskiden burada input zaten temizlenmişti, hata sessizce yutuluyordu —
+      // kullanıcı yazdığı mesajı kaybediyordu, hiçbir açıklama görmüyordu.
+      // Artık hız sınırı gibi gerçek bir red sebebi varsa (bkz.
+      // growth_features_batch.sql) görünür oluyor, metin de kaybolmuyor.
+      setGateError(error?.message || "Mesaj gönderilemedi, tekrar dener misin?");
+      return;
+    }
+    setInput("");
+    const time = formatMessageTime(data.created_at);
+    setThreads((t) => ({ ...t, [activeId]: [...(t[activeId] || []), { id: data.id, sender: "me", text: body, time }] }));
+    setConversations((cs) => cs.map((c) => (c.id === activeId ? { ...c, lastMessage: body, time } : c)));
+    // Şüpheli içerik taraması — sessiz, engellemeyen, mesaj zaten gönderildi.
+    checkAndFlagContent("message", data.id, body, currentUserId);
+  };
+
+  const sendMessage = () => {
+    if (!input.trim() || !activeId) return;
+    if (active?.demo) sendDemoMessage();
+    else sendRealMessage();
+  };
+
   if (activeId && active) {
     return (
       <div className="max-w-2xl mx-auto px-5 py-6 flex flex-col" style={{ height: "calc(100vh - 64px)" }}>
@@ -2981,16 +5008,132 @@ function MessagesView({ onBack, initialContact }) {
           <ArrowLeft size={16} /> Sohbetler
         </button>
         <div className="flex items-center gap-2.5 pb-3 border-b mb-3 shrink-0" style={{ borderColor: "#D9D0BA" }}>
-          <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-medium text-white" style={{ background: "#1B2B24" }}>{active.initials}</div>
-          <div>
-            <p className="text-sm font-medium" style={{ color: "#1B2B24" }}>{active.name}</p>
+          <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-medium text-white shrink-0" style={{ background: "#1B2B24" }}>{active.initials}</div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5">
+              <p className="text-sm font-medium" style={{ color: "#1B2B24" }}>{active.name}</p>
+              {active.demo && (
+                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "#F0EAD6", color: "#8A8368" }}>Örnek</span>
+              )}
+            </div>
             <p className="text-[11px]" style={{ color: "#8A8368" }}>{active.listingTitle}</p>
           </div>
+          {!active.demo && (
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                onClick={toggleBlock}
+                disabled={blockChecking}
+                className="text-[11px] font-medium px-2.5 py-1.5 rounded-full"
+                style={myBlockOfThem ? { background: "#3F7D5C", color: "white" } : { color: "#9C4A3C" }}
+              >
+                {myBlockOfThem ? "Engeli Kaldır" : "Engelle"}
+              </button>
+              <button
+                onClick={() => setShowReportForm((v) => !v)}
+                className="text-[11px] font-medium px-2.5 py-1.5 rounded-full"
+                style={{ color: "#8A8368" }}
+              >
+                Şikayet Et
+              </button>
+            </div>
+          )}
         </div>
+
+        {blockError && (
+          <p className="text-xs mb-2 px-3 py-2 rounded-lg shrink-0" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{blockError}</p>
+        )}
+
+        {showReportForm && (
+          <div className="rounded-xl border p-3 mb-3 shrink-0" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
+            {reportSubmitted ? (
+              <div className="text-center py-2">
+                <Check size={16} style={{ color: "#3F7D5C" }} className="mx-auto mb-1" />
+                <p className="text-xs" style={{ color: "#5C5744" }}>Şikayetin kaydedildi.</p>
+              </div>
+            ) : (
+              <>
+                <p className="text-xs font-bold mb-2" style={{ color: "#1B2B24" }}>Bu kişiyi şikayet et</p>
+                <select
+                  value={reportReason}
+                  onChange={(e) => setReportReason(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border text-xs outline-none mb-2"
+                  style={{ borderColor: "#D9D0BA", background: "#FFFFFF", color: "#1B2B24" }}
+                >
+                  <option value="uygunsuz_mesaj">Taciz / uygunsuz mesaj</option>
+                  <option value="sahte_profil">Sahte profil</option>
+                  <option value="dolandiricilik">Dolandırıcılık şüphesi</option>
+                  <option value="diger">Diğer</option>
+                </select>
+                <textarea
+                  value={reportDetail}
+                  onChange={(e) => setReportDetail(e.target.value)}
+                  placeholder="Kısaca ne olduğunu anlat (isteğe bağlı)"
+                  rows={2}
+                  className="w-full px-3 py-2 rounded-lg border text-xs outline-none mb-2"
+                  style={{ borderColor: "#D9D0BA", background: "#FFFFFF", color: "#1B2B24" }}
+                />
+                {reportError && <p className="text-xs mb-2" style={{ color: "#9C4A3C" }}>{reportError}</p>}
+                <button
+                  onClick={submitReport}
+                  disabled={reportSubmitting}
+                  className="text-xs font-bold px-3.5 py-2 rounded-full text-white flex items-center gap-1.5"
+                  style={{ background: "#9C4A3C", opacity: reportSubmitting ? 0.7 : 1 }}
+                >
+                  {reportSubmitting && <Loader2 size={12} className="animate-spin" />}
+                  Şikayeti Gönder
+                </button>
+              </>
+            )}
+          </div>
+        )}
+
+        {!active.demo && activeJob && (
+          activeJob.state === "delivered" ? (
+            <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-xs mb-3 shrink-0" style={{ background: "rgba(63,125,92,0.1)", color: "#3F7D5C" }}>
+              <span className="flex items-center gap-2">
+                <Check size={13} className="shrink-0" />
+                {activeJob.clientId === currentUserId ? "Hizmeti aldığını işaretledin — değerlendirme yazabilirsin." : "Müşteri hizmeti aldığını onayladı."}
+              </span>
+              {activeJob.clientId === currentUserId && activeJob.serviceId && (
+                <button onClick={goToReview} disabled={openingReview} className="font-bold shrink-0 flex items-center gap-1" style={{ color: "#2563EB" }}>
+                  {openingReview && <Loader2 size={11} className="animate-spin" />}
+                  Değerlendirme Yaz
+                </button>
+              )}
+            </div>
+          ) : activeJob.clientId === currentUserId ? (
+            <div className="rounded-lg p-2.5 mb-3 shrink-0" style={{ background: "#F8F4E9", border: "1px solid #D9D0BA" }}>
+              <p className="text-xs mb-1.5" style={{ color: "#5C5744" }}>Hizmeti aldıysan işaretle — değerlendirme yazabilmen için gerekiyor.</p>
+              {deliveredError && <p className="text-xs mb-1.5" style={{ color: "#9C4A3C" }}>{deliveredError}</p>}
+              <button
+                onClick={markDelivered}
+                disabled={markingDelivered}
+                className="text-xs font-bold px-3 py-1.5 rounded-full text-white flex items-center gap-1.5"
+                style={{ background: "#3F7D5C", opacity: markingDelivered ? 0.7 : 1 }}
+              >
+                {markingDelivered && <Loader2 size={12} className="animate-spin" />}
+                Hizmeti Aldım
+              </button>
+            </div>
+          ) : null
+        )}
 
         <div className="flex-1 overflow-y-auto space-y-2.5 pr-1">
           {activeMessages.length === 0 && (
-            <p className="text-xs text-center mt-8" style={{ color: "#8A8368" }}>Henüz mesaj yok, ilk mesajı sen gönder.</p>
+            <div className="text-center mt-8">
+              <p className="text-xs mb-2" style={{ color: "#8A8368" }}>Henüz mesaj yok, ilk mesajı sen gönder.</p>
+              {!active.demo && (
+                <button
+                  onClick={suggestOpeningMessage}
+                  disabled={draftingMessage}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full"
+                  style={{ background: "#EFF6FF", color: "#2563EB", opacity: draftingMessage ? 0.7 : 1 }}
+                >
+                  {draftingMessage ? <Loader2 size={11} className="animate-spin" /> : <Sparkles size={11} />}
+                  {draftingMessage ? "Yazılıyor..." : "AI ile Taslak Öner"}
+                </button>
+              )}
+            </div>
           )}
           {activeMessages.map((m) => (
             <div key={m.id} className={`flex ${m.sender === "me" ? "justify-end" : "justify-start"}`}>
@@ -3014,19 +5157,32 @@ function MessagesView({ onBack, initialContact }) {
           )}
         </div>
 
-        <div className="flex items-center gap-2 pt-3 mt-2 border-t shrink-0" style={{ borderColor: "#D9D0BA" }}>
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") sendMessage(); }}
-            placeholder="Mesaj yaz..."
-            className="flex-1 px-3.5 py-2.5 rounded-full border text-sm outline-none"
-            style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
-          />
-          <button onClick={sendMessage} className="w-10 h-10 rounded-full flex items-center justify-center text-white shrink-0" style={{ background: "#2FBF71" }}>
-            <Send size={16} />
-          </button>
-        </div>
+        {gateError && (
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs mt-2 shrink-0" style={{ background: "#FDECEC", color: "#B3261E" }}>
+            <Lock size={13} className="shrink-0" />
+            <span>{gateError}{gateError.includes("doğrula") && <> — <span className="underline">Profilinden doğrula</span>.</>}</span>
+          </div>
+        )}
+        {!active.demo && myBlockOfThem ? (
+          <div className="flex items-center justify-between gap-2 pt-3 mt-2 border-t shrink-0" style={{ borderColor: "#D9D0BA" }}>
+            <p className="text-xs" style={{ color: "#8A8368" }}>Bu kişiyi engelledin, mesaj gönderemezsin.</p>
+            <button onClick={toggleBlock} className="text-xs font-bold shrink-0" style={{ color: "#3F7D5C" }}>Engeli Kaldır</button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 pt-3 mt-2 border-t shrink-0" style={{ borderColor: "#D9D0BA" }}>
+            <input
+              value={input}
+              onChange={(e) => { setInput(e.target.value); if (gateError) setGateError(""); }}
+              onKeyDown={(e) => { if (e.key === "Enter") sendMessage(); }}
+              placeholder="Mesaj yaz..."
+              className="flex-1 px-3.5 py-2.5 rounded-full border text-sm outline-none"
+              style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
+            />
+            <button onClick={sendMessage} disabled={sending} className="w-10 h-10 rounded-full flex items-center justify-center text-white shrink-0" style={{ background: "#2FBF71", opacity: sending ? 0.6 : 1 }}>
+              {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+            </button>
+          </div>
+        )}
       </div>
     );
   }
@@ -3037,6 +5193,12 @@ function MessagesView({ onBack, initialContact }) {
         <ChevronLeft size={16} /> Geri
       </button>
       <h1 className="font-serif text-2xl mb-6" style={{ color: "#1B2B24" }}>Mesajlar</h1>
+      {loading && (
+        <div className="flex items-center gap-2 mb-4">
+          <Loader2 size={14} className="animate-spin" style={{ color: "#8A8368" }} />
+          <span className="text-xs" style={{ color: "#8A8368" }}>Konuşmalar yükleniyor...</span>
+        </div>
+      )}
       <div className="space-y-1">
         {conversations.map((c) => (
           <button
@@ -3054,8 +5216,13 @@ function MessagesView({ onBack, initialContact }) {
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-medium" style={{ color: "#1B2B24" }}>{c.name}</p>
-                <span className="text-[11px]" style={{ color: "#8A8368" }}>{c.time}</span>
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <p className="text-sm font-medium truncate" style={{ color: "#1B2B24" }}>{c.name}</p>
+                  {c.demo && (
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0" style={{ background: "#F0EAD6", color: "#8A8368" }}>Örnek</span>
+                  )}
+                </div>
+                <span className="text-[11px] shrink-0" style={{ color: "#8A8368" }}>{c.time}</span>
               </div>
               <p className="text-xs truncate" style={{ color: c.unread > 0 ? "#1B2B24" : "#8A8368" }}>{c.lastMessage}</p>
             </div>
@@ -3066,13 +5233,16 @@ function MessagesView({ onBack, initialContact }) {
   );
 }
 
+// Lansman fiyatlandırması (esrdgmnc@gmail.com ile birlikte karara bağlandı —
+// bkz. supabase/pro_plan.sql'deki not). Yıllıkta ~%17 indirim (159×10=1590,
+// 649×10=6490 — "2 ay bedava" hissi).
 const PLANS = [
   {
-    id: "standart", name: "Standart Üyelik", priceMonthly: 159, priceYearly: 1749, trialMonths: 1, currency: "₺",
+    id: "standart", name: "Standart Üyelik", priceMonthly: 159, priceYearly: 1590, trialMonths: 1, currency: "₺",
     tagline: "Herkes için tek, basit plan",
     features: [
-      "Sınırsız aktif ilan", "Tam profil sayfası (video, sertifika, CV)", "Mesajlaşma + bildirimler",
-      "AI eşleştirmede yer alma", "Harita ve arama görünürlüğü",
+      "1 vitrin dahil", "Sınırsız teklif", "Tam profil sayfası (video, sertifika, CV)", "Mesajlaşma + bildirimler",
+      "AI eşleştirmede yer alma", "Harita ve arama görünürlüğü", "Diğer tüm ilan ve vitrinleri görüntüleme",
     ],
     notIncluded: [],
     badge: null, highlight: false,
@@ -3081,25 +5251,47 @@ const PLANS = [
 
 const BOOST_PACKAGE = {
   id: "one-cikarma", name: "Öne Çıkarma Paketi", priceMonthly: 459, currency: "₺",
-  tagline: "Standart Üyeliğe ek, isteğe bağlı",
+  tagline: "Seçtiğin bir vitrini öne çıkarır — Standart Üyeliğe ek, isteğe bağlı",
   features: [
     "Öne çıkan sağlayıcı rozeti", "Haritada ve aramada üstte görünme",
     "AI eşleştirmede öncelik", "Pazar Analizi'ne erişim (talep trendleri)", "Destek asistanında öncelikli sıra",
   ],
 };
 
-function CreateListingView({ onBack, onCreated }) {
-  const [mode, setMode] = useState("local");
-  const [providerName, setProviderName] = useState("");
-  const [categoryId, setCategoryId] = useState("");
-  const [title, setTitle] = useState("");
-  const [desc, setDesc] = useState("");
-  const [cityId, setCityId] = useState("istanbul");
-  const [district, setDistrict] = useState("");
-  const [price, setPrice] = useState("");
-  const [homeServiceVal, setHomeServiceVal] = useState("evde");
-  const [photo, setPhoto] = useState(null); // { url, name }
+// Birden fazla vitrin açmak isteyenler için (örn. iki ayrı uzmanlık alanını
+// ayrı vitrinlerde sergilemek) — bkz. supabase/pro_plan.sql. Artık Planlar'da
+// tam bir kart (kullanıcının kararı, bkz. sohbet geçmişi) — asıl teklif
+// noktası hâlâ kullanıcının 2. vitrini açmak isteyip Hizmet Ekle'deki sınıra
+// takıldığı an (bkz. CreateListingView), ama artık ön planda da görünür.
+// Hediye metni: "her ayın ilk haftası" — gerçekten öyle çalışıyor, ödeme
+// döngüsünden (aylık/yıllık) bağımsız olarak (bkz. pro_boost_monthly_fix.sql
+// — eski hâli yıllık ödeyenlerde yılda bir kereye düşüyordu, gerçek bir hataydı).
+const PRO_PACKAGE = {
+  id: "pro", name: "Pro Üyelik", priceMonthly: 649, priceYearly: 6490, currency: "₺",
+  tagline: "Birden fazla vitrin açmak isteyenler için",
+  features: [
+    "3 vitrin hakkı (Standart'ta 1)", "Sınırsız teklif",
+    "Her ayın ilk haftası tüm vitrinlerin Öne Çıkarma Paketi hediyeli", "AI eşleştirmede öncelik",
+  ],
+};
+
+function CreateListingView({ onBack, onCreated, userId, editingListing }) {
+  const isEditing = !!editingListing;
+  const [mode, setMode] = useState(editingListing?.mode || "local");
+  const [providerName, setProviderName] = useState(editingListing?.provider || "");
+  const [categoryId, setCategoryId] = useState(editingListing?.category || "");
+  const [title, setTitle] = useState(editingListing?.title || "");
+  const [desc, setDesc] = useState(editingListing?.desc || "");
+  const [cityId, setCityId] = useState(() => deriveCityIdFromLabel(editingListing?.city) || "istanbul");
+  const [district, setDistrict] = useState(() => (editingListing?.city || "").split(",")[0]?.trim() || "");
+  const [price, setPrice] = useState(editingListing ? "" : "");
+  const [homeServiceVal, setHomeServiceVal] = useState(editingListing?.homeService || "evde");
+  const [photo, setPhoto] = useState(editingListing?.img && editingListing.img !== FALLBACK_LISTING_IMG ? { url: editingListing.img, name: "mevcut fotoğraf" } : null);
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoError, setPhotoError] = useState("");
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [categoryIdBySlug, setCategoryIdBySlug] = useState({});
   const [step, setStep] = useState("form"); // form | success
   const [created, setCreated] = useState(null);
   const [aiWriting, setAiWriting] = useState(false);
@@ -3107,8 +5299,70 @@ function CreateListingView({ onBack, onCreated }) {
   const [recommendation, setRecommendation] = useState(null); // { product, pitch }
   const [recLoading, setRecLoading] = useState(false);
 
+  // Ücretsiz vitrin sınırı: Standart Üyelik'te 1 vitrin, Pro Üyelik'te 3 vitrin
+  // hakkı var (bkz. supabase/pro_plan.sql — subscription_plans.max_active_listings).
+  // Sadece YENİ vitrin açarken kontrol ediyoruz — düzenlemede sınır uygulanmaz.
+  const [vitrinLimit, setVitrinLimit] = useState({ checking: !isEditing, blocked: false, count: 0, cap: 1, planName: "Standart Üyelik" });
+  const [upgrading, setUpgrading] = useState(false);
+
+  // Güncel sonucu hem state'e yazıyor hem de doğrudan döndürüyor — handleSubmit
+  // state'in henüz render'a yansımamış olma ihtimaline karşı dönen değeri kullanıyor.
+  const checkVitrinLimit = async () => {
+    if (isEditing || !userId) return { checking: false, blocked: false, count: 0, cap: 1, planName: "Standart Üyelik" };
+    setVitrinLimit((v) => ({ ...v, checking: true }));
+    const [{ count }, { cap, planName, hasExtraVitrinAddon }] = await Promise.all([
+      supabase.from("services").select("id", { count: "exact", head: true }).eq("provider_id", userId).eq("active", true),
+      getVitrinCapInfo(userId),
+    ]);
+    const realCount = count || 0;
+    const result = { checking: false, blocked: cap != null && realCount >= cap, count: realCount, cap, planName, hasExtraVitrinAddon };
+    setVitrinLimit(result);
+    return result;
+  };
+
+  useEffect(() => { checkVitrinLimit(); }, [userId, isEditing]);
+
+  const upgradeToPro = async () => {
+    setUpgrading(true);
+    const { error: rpcError } = await supabase.rpc("upgrade_to_pro");
+    setUpgrading(false);
+    if (rpcError) { setError(rpcError.message); return; }
+    await checkVitrinLimit();
+  };
+
+  const buyExtraVitrinAddon = async () => {
+    setUpgrading(true);
+    const { error: rpcError } = await supabase.rpc("add_extra_vitrin_addon");
+    setUpgrading(false);
+    if (rpcError) { setError(rpcError.message); return; }
+    await checkVitrinLimit();
+  };
+
   const availableCategories = CATEGORIES.filter((c) => c.mode === mode || c.mode === "both");
   const cityName = CITIES.find((c) => c.id === cityId)?.name;
+
+  // categories tablosundaki uuid'leri, arayüzün kullandığı slug'larla (temizlik, nakliye...)
+  // eşleştiriyoruz — services.category_id gerçek bir uuid bekliyor.
+  useEffect(() => {
+    let cancelled = false;
+    supabase
+      .from("categories")
+      .select("id, slug")
+      .then(({ data }) => {
+        if (cancelled || !data) return;
+        const map = {};
+        data.forEach((c) => { map[c.slug] = c.id; });
+        setCategoryIdBySlug(map);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  // Düzenleme modunda mevcut fiyatı, price/price_type'tan okunabilir bir
+  // metne çeviriyoruz — kullanıcı formda düzenlerken tekrar aynı formatı görsün.
+  useEffect(() => {
+    if (!editingListing) return;
+    setPrice(editingListing.price || "");
+  }, [editingListing]);
 
   const writeWithAI = async () => {
     if (!categoryId) { setError("Önce bir kategori seç, AI ona göre yazsın."); return; }
@@ -3119,7 +5373,10 @@ function CreateListingView({ onBack, onCreated }) {
       const prompt = `Bir hizmet pazaryeri uygulaması için ilan metni yaz. Kategori: "${catName}". ${title.trim() ? `Kullanıcının notu: "${title.trim()} ${desc.trim()}"` : "Kullanıcı henüz bir şey yazmadı, kategoriye uygun genel ve inandırıcı bir metin üret."}
 SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
 {"title": "çekici, kısa bir ilan başlığı (en fazla 8 kelime)", "desc": "2-3 cümlelik, samimi ve profesyonel bir hizmet açıklaması"}`;
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
+      // Not: api.anthropic.com'a doğrudan tarayıcıdan istek atılamaz (CORS + API
+      // anahtarı gizliliği) — ListingDetail'deki checkReviewMedia'nın da yaptığı
+      // gibi /api/claude sunucu route'u üzerinden gidiyoruz.
+      const response = await fetch("/api/claude", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 400, messages: [{ role: "user", content: prompt }] }),
@@ -3141,7 +5398,7 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
     setModeration({ status: "checking" });
     try {
       const base64 = dataUrl.split(",")[1];
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
+      const response = await fetch("/api/claude", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -3174,8 +5431,8 @@ SADECE şu JSON formatında yanıt ver: {"approved": true veya false, "reason": 
   const getRecommendation = async (listing) => {
     setRecLoading(true);
     try {
-      const prompt = `Bir hizmet pazaryerinde yeni bir ilan oluşturuldu. Başlık: "${listing.title}", kategori: "${CATEGORIES.find((c) => c.id === listing.category)?.name}". Bu sağlayıcıya, platformun sunduğu ücretli ek ürünlerden (Öne Çıkan İlan, Beceri Testi Rozeti, Görünürlük Paketi) birini kişiselleştirilmiş, samimi bir dille öner. SADECE şu JSON formatında yanıt ver: {"product": "Öne Çıkan İlan" | "Beceri Testi Rozeti" | "Görünürlük Paketi", "pitch": "2 cümlelik, o kişiye özel gerekçe"}`;
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
+      const prompt = `Bir hizmet pazaryerinde yeni bir hizmet vitrini oluşturuldu. Başlık: "${listing.title}", kategori: "${CATEGORIES.find((c) => c.id === listing.category)?.name}". Bu sağlayıcıya, platformun sunduğu ücretli ek ürünlerden (Öne Çıkan Vitrin, Beceri Testi Rozeti, Görünürlük Paketi) birini kişiselleştirilmiş, samimi bir dille öner. SADECE şu JSON formatında yanıt ver: {"product": "Öne Çıkan Vitrin" | "Beceri Testi Rozeti" | "Görünürlük Paketi", "pitch": "2 cümlelik, o kişiye özel gerekçe"}`;
+      const response = await fetch("/api/claude", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 300, messages: [{ role: "user", content: prompt }] }),
@@ -3191,47 +5448,120 @@ SADECE şu JSON formatında yanıt ver: {"approved": true veya false, "reason": 
     }
   };
 
-  const handlePhoto = (e) => {
+  const handlePhoto = async (e) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-    const url = URL.createObjectURL(file);
-    setPhoto({ url, name: file.name });
-    const reader = new FileReader();
-    reader.onload = () => checkPhotoContent(reader.result, file.type);
-    reader.readAsDataURL(file);
     e.target.value = "";
+    if (!file || !userId) return;
+    setPhotoError("");
+    setPhotoUploading(true);
+    try {
+      // profile-media zaten public bir bucket (profil fotoğrafı/portföy için
+      // kurulmuştu) — ilan kapak fotoğrafları için de aynısını kullanıyoruz,
+      // ayrı bir bucket/migration gerekmiyor.
+      const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+      const path = `${userId}/listing-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error: uploadError } = await supabase.storage.from("profile-media").upload(path, file);
+      if (uploadError) throw uploadError;
+      const { data } = supabase.storage.from("profile-media").getPublicUrl(path);
+      setPhoto({ url: data.publicUrl, name: file.name });
+      // AI fotoğraf kontrolü — daha önce "lüks özellikler" kapsamında
+      // ertelenmişti, checkPhotoContent fonksiyonu hazır duruyordu ama hiç
+      // çağrılmıyordu. Yükleme bitince (dosya zaten elimizde) base64'e
+      // çevirip kontrolü tetikliyoruz — checkReviewMedia'nın kullandığı
+      // aynı /api/claude deseni.
+      const reader = new FileReader();
+      reader.onload = () => checkPhotoContent(reader.result, file.type);
+      reader.readAsDataURL(file);
+    } catch (err) {
+      setPhotoError(`Fotoğraf yüklenemedi: ${err.message}`);
+    } finally {
+      setPhotoUploading(false);
+    }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!providerName.trim()) { setError("Görünecek isim/işletme adını yaz."); return; }
     if (!categoryId) { setError("Bir kategori seçmelisin."); return; }
-    if (!title.trim()) { setError("İlan başlığı yazmalısın."); return; }
+    if (!title.trim()) { setError("Vitrin başlığı yazmalısın."); return; }
     if (!desc.trim()) { setError("Sunduğun hizmeti kısaca anlat."); return; }
     if (!price.trim()) { setError("Bir fiyat belirtmelisin."); return; }
     if (moderation?.status === "checking") { setError("Fotoğraf içerik kontrolü bitene kadar bekle."); return; }
-    if (moderation?.status === "flagged") { setError("Kapak fotoğrafın incelemeye alındı, ilanı yayınlamadan önce fotoğrafı kaldır ya da değiştir."); return; }
+    if (moderation?.status === "flagged") { setError("Kapak fotoğrafın incelemeye alındı, vitrini yayınlamadan önce fotoğrafı kaldır ya da değiştir."); return; }
+    if (!userId) { setError("Vitrin yayınlamak için giriş yapmış olmalısın."); return; }
+    const categoryDbId = categoryIdBySlug[categoryId];
+    if (!categoryDbId) {
+      setError("Bu kategori veritabanında henüz tanımlı değil (supabase/categories_seed.sql çalıştırıldı mı?).");
+      return;
+    }
     setError("");
+    setSubmitting(true);
+    if (!isEditing) {
+      const profileGate = await checkProfileGate(userId);
+      if (!profileGate.ok) { setSubmitting(false); setError(profileGate.reason); return; }
+      const gate = await checkPhoneGate(userId);
+      if (!gate.ok) { setSubmitting(false); setError(gate.reason); return; }
+      // Vitrin sınırının istemci tarafındaki kontrolü sadece UX içindir — burada
+      // da tekrar kontrol ediyoruz (sekme arkada açıkken sınır dolmuş olabilir).
+      const freshLimit = await checkVitrinLimit();
+      if (freshLimit.blocked) { setSubmitting(false); return; }
+    }
 
-    const listing = {
-      id: Date.now(),
-      category: categoryId,
-      mode,
+    const { numeric: priceNumeric, priceType } = parsePriceInput(price.trim());
+    const cityLabel = `${district.trim() ? district.trim() + ", " : ""}${cityName}`;
+    const payload = {
+      category_id: categoryDbId,
       title: title.trim(),
-      provider: providerName.trim(),
-      city: mode === "local" ? `${district.trim() ? district.trim() + ", " : ""}${cityName}` : "Uzaktan",
-      price: price.trim(),
-      rating: 0,
-      reviewCount: 0,
-      img: photo?.url || "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=600",
-      desc: desc.trim(),
-      level: "new",
-      verified: [],
-      homeService: mode === "local" ? homeServiceVal : undefined,
+      description: desc.trim(),
+      // Görünecek isim vitrine özel (services.display_name) — eskiden
+      // profiles.business_name'i güncelliyordu, bu da bir vitrinde ismini
+      // değiştirince diğer TÜM vitrinlerin de adını sessizce değiştiriyordu.
+      display_name: providerName.trim(),
+      price: priceNumeric,
+      price_type: priceType,
+      is_remote: mode === "remote",
+      city: mode === "local" ? cityLabel : null,
+      location: mode === "local" ? cityToLocationEwkt(cityId) : null,
+      // "Nerede hizmet veriyorsun?" — eskiden hiçbir yere kaydedilmiyordu
+      // (bkz. supabase/home_service_type.sql), sadece ekranda duran kozmetik
+      // bir seçimdi.
+      home_service_type: mode === "local" ? homeServiceVal : null,
+      images: photo?.url ? [photo.url] : null,
     };
+
+    const { data, error: dbError } = isEditing
+      ? await supabase
+          .from("services")
+          .update(payload)
+          .eq("id", editingListing.dbId)
+          .select("*, profiles(*), categories(*)")
+          .single()
+      : await supabase
+          .from("services")
+          .insert({ ...payload, provider_id: userId, active: true })
+          .select("*, profiles(*), categories(*)")
+          .single();
+
+    if (dbError || !data) {
+      setSubmitting(false);
+      setError(`Vitrin kaydedilemedi: ${dbError?.message || "bilinmeyen bir hata oluştu"}`);
+      return;
+    }
+
+    // Pro Üyelik'te, mevcut dönemin ilk 7 günü içindeysek Öne Çıkarma Paketi'ni
+    // (yeniden) açar/yeniler — sağlayıcı bazlı olduğu için TÜM vitrinleri kapsar,
+    // sadece yeni açılanı değil (bkz. supabase/pro_boost_recurring.sql). Sessizce
+    // deniyoruz — uygun değilse RPC hiçbir şey yapmadan döner, akışı bozmaz.
+    if (!isEditing) supabase.rpc("sync_pro_boost").then(() => {});
+
+    // Şüpheli içerik taraması — sessiz, engellemeyen.
+    checkAndFlagContent("service", data.id, `${title} ${desc}`.trim(), userId);
+
+    const listing = mapServiceRowToListing(data);
+    setSubmitting(false);
     setCreated(listing);
-    onCreated(listing);
+    onCreated();
     setStep("success");
-    getRecommendation(listing);
+    if (!isEditing) getRecommendation(listing);
   };
 
   if (step === "success") {
@@ -3240,10 +5570,12 @@ SADECE şu JSON formatında yanıt ver: {"approved": true veya false, "reason": 
         <div className="w-14 h-14 rounded-full mx-auto mb-5 flex items-center justify-center" style={{ background: "rgba(47,191,113,0.15)" }}>
           <Check size={22} style={{ color: "#2FBF71" }} />
         </div>
-        <h2 className="font-serif text-xl mb-2" style={{ color: "#1B2B24" }}>İlanın yayında! 🎉</h2>
-        <p className="text-sm mb-6" style={{ color: "#5C5744" }}>"{created?.title}" artık ana sayfada ve aramada görünüyor.</p>
+        <h2 className="font-serif text-xl mb-2" style={{ color: "#1B2B24" }}>{isEditing ? "Vitrinin güncellendi ✓" : "Vitrinin yayında! 🎉"}</h2>
+        <p className="text-sm mb-6" style={{ color: "#5C5744" }}>
+          {isEditing ? `"${created?.title}" değişiklikleri kaydedildi.` : `"${created?.title}" artık ana sayfada ve aramada görünüyor.`}
+        </p>
 
-        {recLoading && (
+        {!isEditing && recLoading && (
           <div className="rounded-2xl border p-4 mb-6 text-xs flex items-center justify-center gap-2" style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#8A8368" }}>
             <Loader2 size={13} className="animate-spin" /> Senin için kişisel bir öneri hazırlanıyor...
           </div>
@@ -3267,13 +5599,73 @@ SADECE şu JSON formatında yanıt ver: {"approved": true veya false, "reason": 
     );
   }
 
+  if (!isEditing && vitrinLimit.blocked) {
+    return (
+      <div className="max-w-md mx-auto px-5 py-20 text-center">
+        <button onClick={onBack} className="flex items-center gap-1 text-sm mb-8" style={{ color: "#5C5744" }}>
+          <ChevronLeft size={16} /> Geri
+        </button>
+        <div className="w-14 h-14 rounded-full mx-auto mb-5 flex items-center justify-center" style={{ background: "rgba(245,158,11,0.15)" }}>
+          <Sparkles size={22} style={{ color: "#F59E0B" }} />
+        </div>
+        <h2 className="font-serif text-xl mb-2" style={{ color: "#1B2B24" }}>{vitrinLimit.planName} vitrin hakkını doldurdun</h2>
+        <p className="text-sm mb-6" style={{ color: "#5C5744" }}>
+          {vitrinLimit.planName === "Pro Üyelik"
+            ? `Şu an ${vitrinLimit.count} aktif vitrinin var, ${vitrinLimit.hasExtraVitrinAddon ? "Ek Vitrin Paketi'yle birlikte" : "Pro Üyelik"} en fazla ${vitrinLimit.cap} vitrin hakkı veriyor.`
+            : `Standart Üyelik'te 1 vitrin hakkın var, zaten kullandın. Pro Üyelik'e geçerek 3 vitrin açabilir, hizmetlerini (örn. mühendislik + nefes terapisi gibi ayrı alanları) ayrı ayrı vitrinlerde sergileyebilirsin.`}
+        </p>
+        {vitrinLimit.planName !== "Pro Üyelik" ? (
+          <div className="rounded-2xl border-2 p-5 mb-6 text-left" style={{ borderColor: "#F59E0B", background: "#FFFBEB" }}>
+            <p className="text-sm font-bold mb-1" style={{ color: "#1B2B24" }}>Pro Üyelik — 649₺/ay</p>
+            <ul className="text-xs space-y-1 mb-4" style={{ color: "#5C5744" }}>
+              <li>• 3 vitrin hakkı, sınırsız teklif</li>
+              <li>• Pro'ya geçtiğin ilk 7 gün açtığın her vitrin, Öne Çıkarma Paketi hediyeli</li>
+              <li>• AI eşleştirmede öncelik</li>
+            </ul>
+            {error && <p className="text-xs mb-3" style={{ color: "#9C4A3C" }}>{error}</p>}
+            <button
+              onClick={upgradeToPro}
+              disabled={upgrading}
+              className="w-full py-2.5 rounded-full text-sm font-medium text-white flex items-center justify-center gap-1.5"
+              style={{ background: "#F59E0B", opacity: upgrading ? 0.7 : 1 }}
+            >
+              {upgrading && <Loader2 size={13} className="animate-spin" />}
+              Pro Üyelik'e Geç
+            </button>
+          </div>
+        ) : !vitrinLimit.hasExtraVitrinAddon ? (
+          <div className="rounded-2xl border-2 p-5 mb-6 text-left" style={{ borderColor: "#8B5CF6", background: "#F8F4E9" }}>
+            <p className="text-sm font-bold mb-1" style={{ color: "#1B2B24" }}>Ek Vitrin Paketi — 249₺/ay</p>
+            <ul className="text-xs space-y-1 mb-4" style={{ color: "#5C5744" }}>
+              <li>• 3 vitrin hakkına +3 daha ekler (toplam 6 vitrin)</li>
+              <li>• Pro Üyeliğe ek, isteğe bağlı</li>
+            </ul>
+            {error && <p className="text-xs mb-3" style={{ color: "#9C4A3C" }}>{error}</p>}
+            <button
+              onClick={buyExtraVitrinAddon}
+              disabled={upgrading}
+              className="w-full py-2.5 rounded-full text-sm font-medium text-white flex items-center justify-center gap-1.5"
+              style={{ background: "#8B5CF6", opacity: upgrading ? 0.7 : 1 }}
+            >
+              {upgrading && <Loader2 size={13} className="animate-spin" />}
+              Ek Vitrin Paketi Al
+            </button>
+          </div>
+        ) : null}
+        <button onClick={onBack} className="text-xs font-medium" style={{ color: "#8A8368" }}>Şimdilik vazgeç</button>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-xl mx-auto px-5 py-10">
       <button onClick={onBack} className="flex items-center gap-1 text-sm mb-5" style={{ color: "#5C5744" }}>
         <ChevronLeft size={16} /> Geri
       </button>
-      <h1 className="font-serif text-2xl mb-1" style={{ color: "#1B2B24" }}>Hizmet Ekle</h1>
-      <p className="text-sm mb-6" style={{ color: "#5C5744" }}>Sunduğun hizmeti anlat, ilanın hemen yayına girsin.</p>
+      <h1 className="font-serif text-2xl mb-1" style={{ color: "#1B2B24" }}>{isEditing ? "Vitrini Düzenle" : "Hizmet Vitrini Oluştur"}</h1>
+      <p className="text-sm mb-6" style={{ color: "#5C5744" }}>
+        {isEditing ? "Vitrininin bilgilerini güncelle, kaydettiğinde hemen yansısın." : "Sunduğun hizmeti anlat, vitrinin hemen yayına girsin."}
+      </p>
 
       <div className="flex gap-2 mb-6">
         {[["local", "Yerinde hizmet"], ["remote", "Uzaktan hizmet"]].map(([key, label]) => (
@@ -3323,7 +5715,7 @@ SADECE şu JSON formatında yanıt ver: {"approved": true veya false, "reason": 
 
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <label className="text-xs font-medium" style={{ color: "#5C5744" }}>İlan Başlığı</label>
+            <label className="text-xs font-medium" style={{ color: "#5C5744" }}>Vitrin Başlığı</label>
             <button
               onClick={writeWithAI}
               disabled={aiWriting}
@@ -3359,17 +5751,26 @@ SADECE şu JSON formatında yanıt ver: {"approved": true veya false, "reason": 
           <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>Kapak fotoğrafı (opsiyonel)</label>
           <div className="flex items-center gap-3">
             {photo && (
-              <img src={photo.url} alt="" className="w-16 h-16 rounded-lg object-cover" />
+              <label className="relative w-16 h-16 rounded-lg overflow-hidden cursor-pointer shrink-0 group">
+                <img src={photo.url} alt="" className="w-16 h-16 rounded-lg object-cover" />
+                <div className="absolute inset-0 rounded-lg flex items-center justify-center bg-black/0 group-hover:bg-black/40 transition-colors">
+                  <Camera size={16} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+                <input type="file" accept="image/*" className="hidden" onChange={handlePhoto} disabled={photoUploading} />
+              </label>
             )}
             <label
               className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg border-2 border-dashed text-xs font-medium cursor-pointer"
-              style={{ borderColor: "#D9D0BA", color: "#5C5744" }}
+              style={{ borderColor: "#D9D0BA", color: "#5C5744", opacity: photoUploading ? 0.6 : 1 }}
             >
-              <UploadCloud size={14} />
-              {photo ? "Fotoğrafı Değiştir" : "Fotoğraf Yükle"}
-              <input type="file" accept="image/*" className="hidden" onChange={handlePhoto} />
+              {photoUploading ? <Loader2 size={14} className="animate-spin" /> : <UploadCloud size={14} />}
+              {photoUploading ? "Yükleniyor..." : photo ? "Fotoğrafı Değiştir" : "Fotoğraf Yükle"}
+              <input type="file" accept="image/*" className="hidden" onChange={handlePhoto} disabled={photoUploading} />
             </label>
           </div>
+          {photoError && (
+            <p className="text-[11px] mt-1.5" style={{ color: "#9C4A3C" }}>{photoError}</p>
+          )}
           {moderation && (
             <p
               className="text-[11px] mt-1.5 flex items-center gap-1"
@@ -3417,7 +5818,7 @@ SADECE şu JSON formatında yanıt ver: {"approved": true veya false, "reason": 
             <div>
               <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>Nerede hizmet veriyorsun?</label>
               <div className="flex gap-2">
-                {[["evde", "Eve giderim"], ["mekanda", "Kendi mekanımda"], ["esnek", "İkisi de olur"]].map(([key, label]) => (
+                {[["evde", "Müşteri Konumu"], ["mekanda", "Kendi Konumum"], ["esnek", "İkisi de Olsun"]].map(([key, label]) => (
                   <button
                     key={key}
                     onClick={() => setHomeServiceVal(key)}
@@ -3449,12 +5850,20 @@ SADECE şu JSON formatında yanıt ver: {"approved": true veya false, "reason": 
           <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{error}</p>
         )}
 
-        <button onClick={handleSubmit} className="w-full py-3 rounded-full text-sm font-medium text-white mt-2" style={{ background: "#2FBF71", color: "#1B2B24" }}>
-          İlanı Yayınla
+        <button
+          onClick={handleSubmit}
+          disabled={submitting || photoUploading}
+          className="w-full py-3 rounded-full text-sm font-medium text-white mt-2 flex items-center justify-center gap-2"
+          style={{ background: "#2FBF71", color: "#1B2B24", opacity: submitting || photoUploading ? 0.7 : 1 }}
+        >
+          {submitting && <Loader2 size={14} className="animate-spin" />}
+          {submitting ? (isEditing ? "Kaydediliyor..." : "Yayınlanıyor...") : isEditing ? "Değişiklikleri Kaydet" : "Vitrini Yayınla"}
         </button>
-        <p className="text-[11px] text-center" style={{ color: "#8A8368" }}>
-          Sertifika, CV ve video tanıtım eklemek için profilini de tamamlamayı unutma.
-        </p>
+        {!isEditing && (
+          <p className="text-[11px] text-center" style={{ color: "#8A8368" }}>
+            Sertifika, CV ve video tanıtım eklemek için profilini de tamamlamayı unutma.
+          </p>
+        )}
       </div>
     </div>
   );
@@ -3467,7 +5876,7 @@ const SUPPORT_CATEGORY_META = {
   "diğer": { label: "Diğer", color: "#6B7280" },
 };
 
-function SupportChatView({ onBack, onReport }) {
+function SupportChatView({ onBack, onReport, currentUserId }) {
   const [messages, setMessages] = useState([
     { sender: "ai", text: "Merhaba! Ben İşinn destek asistanıyım. Yaşadığın teknik sorunu, isteğini ya da şikayetini buraya yazabilirsin, sana yardımcı olmaya çalışırım." },
   ]);
@@ -3487,7 +5896,10 @@ function SupportChatView({ onBack, onReport }) {
       const apiMessages = newMessages
         .filter((m) => m.sender !== "ai" || newMessages.indexOf(m) !== 0) // include all but keep flow natural
         .map((m) => ({ role: m.sender === "me" ? "user" : "assistant", content: m.text }));
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
+      // Doğrudan api.anthropic.com'a, tarayıcıdan, API anahtarı hiç eklenmeden
+      // çağrılıyordu — Destek Asistanı'nın kendisi bu yüzden hiç çalışmıyordu,
+      // her mesajda sessizce "Bağlantı sorunu oluştu" hatasına düşüyordu.
+      const response = await fetch("/api/claude", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -3517,7 +5929,7 @@ function SupportChatView({ onBack, onReport }) {
 
 YAZIŞMA:
 ${convoText}`;
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
+      const response = await fetch("/api/claude", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 400, messages: [{ role: "user", content: prompt }] }),
@@ -3526,6 +5938,14 @@ ${convoText}`;
       const text = (data.content || []).map((b) => b.text || "").join("\n");
       const clean = text.replace(/```json|```/g, "").trim();
       const parsed = JSON.parse(clean);
+      // Gerçekten kaydet — bkz. supabase/support_tickets.sql. Öncesinde bu
+      // rapor sadece o anki tarayıcı oturumunun local state'inde duruyordu,
+      // sayfa yenilenince kayboluyordu.
+      if (currentUserId) {
+        await supabase.from("support_tickets").insert({
+          reporter_id: currentUserId, title: parsed.title, category: parsed.category, summary: parsed.summary, transcript: convoText,
+        });
+      }
       onReport({ ...parsed, id: Date.now(), time: "az önce" });
       setReported(true);
     } catch (err) {
@@ -3634,7 +6054,7 @@ function AdminAnalyticsView({ onBack }) {
 
 VERİ:
 ${summary}`;
-        const response = await fetch("https://api.anthropic.com/v1/messages", {
+        const response = await fetch("/api/claude", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 700, messages: [{ role: "user", content: prompt }] }),
@@ -3739,7 +6159,53 @@ function AdminModerationQueueView({ onBack, queue, onApprove, onReject }) {
   );
 }
 
-function AdminReportsView({ onBack, reports }) {
+function AdminReportsView({ onBack, reports, userId, isAdmin }) {
+  // Admin değilsen bu hâlâ "Destek Taleplerim" — sadece kendi bildirdiklerin
+  // (RLS zaten öyle sınırlıyor). Admin isen (bkz. supabase/admin_role.sql)
+  // gerçekten HERKESİN taleplerini görebiliyorsun, artık "Yönetim" ismini
+  // hak ediyor, ve durum güncelleyebiliyorsun (open/reviewed/dismissed).
+  const [realTickets, setRealTickets] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [updatingId, setUpdatingId] = useState(null);
+
+  const loadTickets = async () => {
+    if (!userId) { setLoading(false); return; }
+    setLoading(true);
+    let query = supabase
+      .from("support_tickets")
+      .select("id, title, category, summary, transcript, status, created_at, reporter_id")
+      .order("created_at", { ascending: false });
+    if (!isAdmin) query = query.eq("reporter_id", userId);
+    const { data } = await query;
+    let rows = data || [];
+    if (isAdmin && rows.length > 0) {
+      const reporterIds = [...new Set(rows.map((r) => r.reporter_id))];
+      const { data: profilesData } = await supabase.from("profiles").select("id, full_name, business_name").in("id", reporterIds);
+      const profilesById = {};
+      (profilesData || []).forEach((p) => { profilesById[p.id] = p; });
+      rows = rows.map((r) => ({ ...r, reporterName: (profilesById[r.reporter_id]?.business_name || profilesById[r.reporter_id]?.full_name || "Bilinmiyor") }));
+    }
+    setRealTickets(rows);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    loadTickets();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, isAdmin]);
+
+  const updateStatus = async (id, status) => {
+    setUpdatingId(id);
+    const { error } = await supabase.from("support_tickets").update({ status }).eq("id", id);
+    setUpdatingId(null);
+    if (!error) setRealTickets((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
+  };
+
+  const merged = [
+    ...realTickets.map((r) => ({ ...r, time: formatRelativeTr(r.created_at) })),
+    ...(isAdmin ? [] : reports), // bu oturumda az önce gönderilenler — admin görünümünde zaten DB'den geliyor
+  ];
+
   return (
     <div className="max-w-2xl mx-auto px-5 py-8">
       <button onClick={onBack} className="flex items-center gap-1 text-sm mb-4" style={{ color: "#6B7280" }}>
@@ -3747,18 +6213,22 @@ function AdminReportsView({ onBack, reports }) {
       </button>
       <div className="flex items-center gap-2 mb-1">
         <Inbox size={20} style={{ color: "#2563EB" }} />
-        <h1 className="font-sans text-2xl font-black" style={{ color: "#0F1115" }}>Destek Talepleri</h1>
+        <h1 className="font-sans text-2xl font-black" style={{ color: "#0F1115" }}>{isAdmin ? "Destek Talepleri (Yönetim)" : "Destek Taleplerim"}</h1>
       </div>
-      <p className="text-sm mb-6" style={{ color: "#6B7280" }}>Kullanıcıların destek asistanına yazdığı ve yönetime bildirilen özetler</p>
+      <p className="text-sm mb-6" style={{ color: "#6B7280" }}>
+        {isAdmin ? "Tüm kullanıcıların destek asistanına yazdığı ve bildirdiği talepler" : "Destek asistanına yazdığın ve bildirdiğin geçmiş talepler"}
+      </p>
 
-      {reports.length === 0 ? (
+      {loading ? (
+        <div className="flex items-center justify-center py-8"><Loader2 size={18} className="animate-spin" style={{ color: "#9CA3AF" }} /></div>
+      ) : merged.length === 0 ? (
         <div className="rounded-2xl border p-8 text-center" style={{ borderColor: "#F0F0F0", background: "#FAFAFA" }}>
           <Inbox size={28} className="mx-auto mb-2" style={{ color: "#D1D5DB" }} />
-          <p className="text-sm" style={{ color: "#9CA3AF" }}>Henüz bildirilen bir destek talebi yok.</p>
+          <p className="text-sm" style={{ color: "#9CA3AF" }}>{isAdmin ? "Henüz bildirilen bir destek talebi yok." : "Henüz bildirdiğin bir destek talebi yok."}</p>
         </div>
       ) : (
         <div className="space-y-3">
-          {reports.map((r) => {
+          {merged.map((r) => {
             const meta = SUPPORT_CATEGORY_META[r.category] || SUPPORT_CATEGORY_META["diğer"];
             return (
               <div key={r.id} className="rounded-2xl border p-4" style={{ borderColor: "#F0F0F0", background: "#FFFFFF" }}>
@@ -3766,8 +6236,28 @@ function AdminReportsView({ onBack, reports }) {
                   <p className="text-sm font-bold" style={{ color: "#0F1115" }}>{r.title}</p>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: `${meta.color}18`, color: meta.color }}>{meta.label}</span>
                 </div>
+                {isAdmin && r.reporterName && (
+                  <p className="text-[11px] mb-1" style={{ color: "#8A8368" }}>Bildiren: <span className="font-medium">{r.reporterName}</span></p>
+                )}
                 <p className="text-xs leading-relaxed mb-2" style={{ color: "#6B7280" }}>{r.summary}</p>
-                <p className="text-[11px]" style={{ color: "#9CA3AF" }}>{r.time}</p>
+                <p className="text-[11px] mb-2" style={{ color: "#9CA3AF" }}>{r.time}</p>
+                {isAdmin && (
+                  <div className="flex items-center gap-2">
+                    {["open", "reviewed", "dismissed"].map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => updateStatus(r.id, s)}
+                        disabled={updatingId === r.id}
+                        className="text-[11px] font-bold px-2.5 py-1 rounded-full border"
+                        style={(r.status || "open") === s
+                          ? { background: "#1B2B24", color: "#EFE8D8", borderColor: "#1B2B24" }
+                          : { borderColor: "#D9D0BA", color: "#5C5744" }}
+                      >
+                        {s === "open" ? "Açık" : s === "reviewed" ? "İncelendi" : "Kapatıldı"}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             );
           })}
@@ -3777,14 +6267,380 @@ function AdminReportsView({ onBack, reports }) {
   );
 }
 
-function PricingView({ onBack, onJoined }) {
+const REPORT_REASON_LABELS = {
+  uygunsuz_mesaj: "Taciz / uygunsuz mesaj",
+  sahte_profil: "Sahte profil",
+  dolandiricilik: "Dolandırıcılık şüphesi",
+  diger: "Diğer",
+};
+
+// Kullanıcı şikayetleri — user_safety.sql'de gerçek bir user_reports tablosu
+// vardı (MessagesView'daki "Şikayet Et" oradan geliyor, gerçekten kaydediyor)
+// ama bunu okuyan/inceleyen hiçbir ekran yoktu — şikayetler birikiyordu,
+// kimse görmüyordu. Sadece admin (bkz. supabase/admin_role.sql) erişebilir.
+function AdminUserReportsView({ onBack }) {
+  const [reports, setReports] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [updatingId, setUpdatingId] = useState(null);
+
+  const loadReports = async () => {
+    setLoading(true);
+    const { data } = await supabase
+      .from("user_reports")
+      .select("id, reporter_id, reported_id, reason, detail, status, created_at")
+      .order("created_at", { ascending: false });
+    const rows = data || [];
+    if (rows.length > 0) {
+      const profileIds = [...new Set(rows.flatMap((r) => [r.reporter_id, r.reported_id]))];
+      const { data: profilesData } = await supabase.from("profiles").select("id, full_name, business_name").in("id", profileIds);
+      const profilesById = {};
+      (profilesData || []).forEach((p) => { profilesById[p.id] = p; });
+      const nameOf = (id) => (profilesById[id]?.business_name || profilesById[id]?.full_name || "Bilinmiyor");
+      setReports(rows.map((r) => ({ ...r, reporterName: nameOf(r.reporter_id), reportedName: nameOf(r.reported_id) })));
+    } else {
+      setReports([]);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    loadReports();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const updateStatus = async (id, status) => {
+    setUpdatingId(id);
+    const { error } = await supabase.from("user_reports").update({ status }).eq("id", id);
+    setUpdatingId(null);
+    if (!error) setReports((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
+  };
+
+  return (
+    <div className="max-w-2xl mx-auto px-5 py-8">
+      <button onClick={onBack} className="flex items-center gap-1 text-sm mb-4" style={{ color: "#6B7280" }}>
+        <ChevronLeft size={16} /> Geri
+      </button>
+      <div className="flex items-center gap-2 mb-1">
+        <ShieldCheck size={20} style={{ color: "#9C4A3C" }} />
+        <h1 className="font-sans text-2xl font-black" style={{ color: "#0F1115" }}>Kullanıcı Şikayetleri (Yönetim)</h1>
+      </div>
+      <p className="text-sm mb-6" style={{ color: "#6B7280" }}>Kullanıcıların mesajlaşma ekranından bildirdiği şikayetler</p>
+
+      {loading ? (
+        <div className="flex items-center justify-center py-8"><Loader2 size={18} className="animate-spin" style={{ color: "#9CA3AF" }} /></div>
+      ) : reports.length === 0 ? (
+        <div className="rounded-2xl border p-8 text-center" style={{ borderColor: "#F0F0F0", background: "#FAFAFA" }}>
+          <ShieldCheck size={28} className="mx-auto mb-2" style={{ color: "#D1D5DB" }} />
+          <p className="text-sm" style={{ color: "#9CA3AF" }}>Henüz bir şikayet yok.</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {reports.map((r) => (
+            <div key={r.id} className="rounded-2xl border p-4" style={{ borderColor: "#F0F0F0", background: "#FFFFFF" }}>
+              <div className="flex items-center justify-between mb-1.5">
+                <p className="text-sm font-bold" style={{ color: "#0F1115" }}>{r.reporterName} → {r.reportedName}</p>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "rgba(156,74,60,0.12)", color: "#9C4A3C" }}>
+                  {REPORT_REASON_LABELS[r.reason] || r.reason}
+                </span>
+              </div>
+              {r.detail && <p className="text-xs leading-relaxed mb-2" style={{ color: "#6B7280" }}>{r.detail}</p>}
+              <p className="text-[11px] mb-2" style={{ color: "#9CA3AF" }}>{formatRelativeTr(r.created_at)}</p>
+              <div className="flex items-center gap-2">
+                {["open", "reviewed", "dismissed"].map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => updateStatus(r.id, s)}
+                    disabled={updatingId === r.id}
+                    className="text-[11px] font-bold px-2.5 py-1 rounded-full border"
+                    style={(r.status || "open") === s
+                      ? { background: "#1B2B24", color: "#EFE8D8", borderColor: "#1B2B24" }
+                      : { borderColor: "#D9D0BA", color: "#5C5744" }}
+                  >
+                    {s === "open" ? "Açık" : s === "reviewed" ? "İncelendi" : "Kapatıldı"}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// İlan şikayetleri — sahibinden.com'un "ilanı bildir" özelliğinin admin
+// tarafı. user_reports'tan ayrı: burada bildirilen bir KİŞİ değil, bir
+// vitrin/iş ilanının kendisi (yanlış kategori, sahte, kopya vb.).
+function AdminListingReportsView({ onBack }) {
+  const [reports, setReports] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [updatingId, setUpdatingId] = useState(null);
+
+  const loadReports = async () => {
+    setLoading(true);
+    const { data } = await supabase
+      .from("listing_reports")
+      .select("id, reporter_id, service_id, job_id, reason, detail, status, created_at")
+      .order("created_at", { ascending: false });
+    const rows = data || [];
+    if (rows.length > 0) {
+      const reporterIds = [...new Set(rows.map((r) => r.reporter_id))];
+      const serviceIds = [...new Set(rows.map((r) => r.service_id).filter(Boolean))];
+      const jobIds = [...new Set(rows.map((r) => r.job_id).filter(Boolean))];
+      const [{ data: profilesData }, { data: servicesData }, { data: jobsData }] = await Promise.all([
+        supabase.from("profiles").select("id, full_name, business_name").in("id", reporterIds),
+        serviceIds.length > 0 ? supabase.from("services").select("id, title, display_name").in("id", serviceIds) : Promise.resolve({ data: [] }),
+        jobIds.length > 0 ? supabase.from("jobs").select("id, title").in("id", jobIds) : Promise.resolve({ data: [] }),
+      ]);
+      const profilesById = {};
+      (profilesData || []).forEach((p) => { profilesById[p.id] = p; });
+      const servicesById = {};
+      (servicesData || []).forEach((s) => { servicesById[s.id] = s; });
+      const jobsById = {};
+      (jobsData || []).forEach((j) => { jobsById[j.id] = j; });
+      setReports(rows.map((r) => ({
+        ...r,
+        reporterName: (profilesById[r.reporter_id]?.business_name || profilesById[r.reporter_id]?.full_name || "Bilinmiyor"),
+        listingTitle: r.service_id ? (servicesById[r.service_id]?.title || "Silinmiş vitrin") : (jobsById[r.job_id]?.title || "Silinmiş ilan"),
+        listingKind: r.service_id ? "Vitrin" : "İş İlanı",
+      })));
+    } else {
+      setReports([]);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    loadReports();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const updateStatus = async (id, status) => {
+    setUpdatingId(id);
+    const { error } = await supabase.from("listing_reports").update({ status }).eq("id", id);
+    setUpdatingId(null);
+    if (!error) setReports((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
+  };
+
+  return (
+    <div className="max-w-2xl mx-auto px-5 py-8">
+      <button onClick={onBack} className="flex items-center gap-1 text-sm mb-4" style={{ color: "#6B7280" }}>
+        <ChevronLeft size={16} /> Geri
+      </button>
+      <div className="flex items-center gap-2 mb-1">
+        <AlertCircle size={20} style={{ color: "#9C4A3C" }} />
+        <h1 className="font-sans text-2xl font-black" style={{ color: "#0F1115" }}>İlan Şikayetleri (Yönetim)</h1>
+      </div>
+      <p className="text-sm mb-6" style={{ color: "#6B7280" }}>Vitrin/iş ilanlarının kendisi için bildirilen şikayetler (yanlış kategori, sahte, kopya vb.)</p>
+
+      {loading ? (
+        <div className="flex items-center justify-center py-8"><Loader2 size={18} className="animate-spin" style={{ color: "#9CA3AF" }} /></div>
+      ) : reports.length === 0 ? (
+        <div className="rounded-2xl border p-8 text-center" style={{ borderColor: "#F0F0F0", background: "#FAFAFA" }}>
+          <AlertCircle size={28} className="mx-auto mb-2" style={{ color: "#D1D5DB" }} />
+          <p className="text-sm" style={{ color: "#9CA3AF" }}>Henüz bir ilan şikayeti yok.</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {reports.map((r) => (
+            <div key={r.id} className="rounded-2xl border p-4" style={{ borderColor: "#F0F0F0", background: "#FFFFFF" }}>
+              <div className="flex items-center justify-between mb-1.5">
+                <p className="text-sm font-bold" style={{ color: "#0F1115" }}>
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded mr-1.5" style={{ background: "#F0F0F0", color: "#6B7280" }}>{r.listingKind}</span>
+                  {r.listingTitle}
+                </p>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0" style={{ background: "rgba(156,74,60,0.12)", color: "#9C4A3C" }}>
+                  {LISTING_REPORT_REASON_LABELS[r.reason] || r.reason}
+                </span>
+              </div>
+              <p className="text-[11px] mb-1" style={{ color: "#8A8368" }}>Bildiren: <span className="font-medium">{r.reporterName}</span></p>
+              {r.detail && <p className="text-xs leading-relaxed mb-2" style={{ color: "#6B7280" }}>{r.detail}</p>}
+              <p className="text-[11px] mb-2" style={{ color: "#9CA3AF" }}>{formatRelativeTr(r.created_at)}</p>
+              <div className="flex items-center gap-2">
+                {["open", "reviewed", "dismissed"].map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => updateStatus(r.id, s)}
+                    disabled={updatingId === r.id}
+                    className="text-[11px] font-bold px-2.5 py-1 rounded-full border"
+                    style={(r.status || "open") === s
+                      ? { background: "#1B2B24", color: "#EFE8D8", borderColor: "#1B2B24" }
+                      : { borderColor: "#D9D0BA", color: "#5C5744" }}
+                  >
+                    {s === "open" ? "Açık" : s === "reviewed" ? "İncelendi" : "Kapatıldı"}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const CONTENT_FLAG_TYPE_LABELS = { message: "Mesaj", service: "Vitrin", job: "İş İlanı" };
+
+// İçerik uyarıları — AI'nin şüpheli bulduğu mesaj/vitrin/iş ilanı metinleri
+// (bkz. checkAndFlagContent, growth_features_batch.sql). Hiçbir şeyi
+// otomatik engellemiyor/silmiyor, sadece admin'in incelemesine sunuyor —
+// aynı user_reports/listing_reports felsefesi.
+function AdminContentFlagsView({ onBack }) {
+  const [flags, setFlags] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [updatingId, setUpdatingId] = useState(null);
+
+  const loadFlags = async () => {
+    setLoading(true);
+    const { data } = await supabase
+      .from("content_flags")
+      .select("id, content_type, content_id, flagged_profile_id, reason, excerpt, status, created_at")
+      .order("created_at", { ascending: false });
+    const rows = data || [];
+    if (rows.length > 0) {
+      const profileIds = [...new Set(rows.map((r) => r.flagged_profile_id).filter(Boolean))];
+      let profilesById = {};
+      if (profileIds.length > 0) {
+        const { data: profilesData } = await supabase.from("profiles").select("id, full_name, business_name").in("id", profileIds);
+        (profilesData || []).forEach((p) => { profilesById[p.id] = p; });
+      }
+      setFlags(rows.map((r) => ({
+        ...r,
+        profileName: r.flagged_profile_id ? ((profilesById[r.flagged_profile_id]?.business_name || profilesById[r.flagged_profile_id]?.full_name) || "Bilinmiyor") : null,
+      })));
+    } else {
+      setFlags([]);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    loadFlags();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const updateStatus = async (id, status) => {
+    setUpdatingId(id);
+    const { error } = await supabase.from("content_flags").update({ status }).eq("id", id);
+    setUpdatingId(null);
+    if (!error) setFlags((prev) => prev.map((f) => (f.id === id ? { ...f, status } : f)));
+  };
+
+  return (
+    <div className="max-w-2xl mx-auto px-5 py-8">
+      <button onClick={onBack} className="flex items-center gap-1 text-sm mb-4" style={{ color: "#6B7280" }}>
+        <ChevronLeft size={16} /> Geri
+      </button>
+      <div className="flex items-center gap-2 mb-1">
+        <ShieldCheck size={20} style={{ color: "#9C4A3C" }} />
+        <h1 className="font-sans text-2xl font-black" style={{ color: "#0F1115" }}>İçerik Uyarıları (Yönetim)</h1>
+      </div>
+      <p className="text-sm mb-6" style={{ color: "#6B7280" }}>AI'nin şüpheli bulduğu mesaj/vitrin/iş ilanı metinleri — hiçbiri otomatik engellenmedi</p>
+
+      {loading ? (
+        <div className="flex items-center justify-center py-8"><Loader2 size={18} className="animate-spin" style={{ color: "#9CA3AF" }} /></div>
+      ) : flags.length === 0 ? (
+        <div className="rounded-2xl border p-8 text-center" style={{ borderColor: "#F0F0F0", background: "#FAFAFA" }}>
+          <ShieldCheck size={28} className="mx-auto mb-2" style={{ color: "#D1D5DB" }} />
+          <p className="text-sm" style={{ color: "#9CA3AF" }}>Henüz işaretlenen bir içerik yok.</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {flags.map((f) => (
+            <div key={f.id} className="rounded-2xl border p-4" style={{ borderColor: "#F0F0F0", background: "#FFFFFF" }}>
+              <div className="flex items-center justify-between mb-1.5">
+                <p className="text-sm font-bold" style={{ color: "#0F1115" }}>
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded mr-1.5" style={{ background: "#F0F0F0", color: "#6B7280" }}>
+                    {CONTENT_FLAG_TYPE_LABELS[f.content_type] || f.content_type}
+                  </span>
+                  {f.profileName || "Bilinmiyor"}
+                </p>
+              </div>
+              <p className="text-xs mb-1" style={{ color: "#9C4A3C" }}>{f.reason}</p>
+              {f.excerpt && <p className="text-xs leading-relaxed mb-2 italic" style={{ color: "#6B7280" }}>"{f.excerpt}"</p>}
+              <p className="text-[11px] mb-2" style={{ color: "#9CA3AF" }}>{formatRelativeTr(f.created_at)}</p>
+              <div className="flex items-center gap-2">
+                {["open", "reviewed", "dismissed"].map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => updateStatus(f.id, s)}
+                    disabled={updatingId === f.id}
+                    className="text-[11px] font-bold px-2.5 py-1 rounded-full border"
+                    style={(f.status || "open") === s
+                      ? { background: "#1B2B24", color: "#EFE8D8", borderColor: "#1B2B24" }
+                      : { borderColor: "#D9D0BA", color: "#5C5744" }}
+                  >
+                    {s === "open" ? "Açık" : s === "reviewed" ? "İncelendi" : "Kapatıldı"}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PricingView({ onBack, onJoined, userId }) {
   const [joined, setJoined] = useState(false);
   const [boostSelected, setBoostSelected] = useState(false);
   const [cycle, setCycle] = useState("monthly"); // monthly | yearly
+  const [joining, setJoining] = useState(false);
+  const [joinError, setJoinError] = useState("");
+  const [proJoining, setProJoining] = useState(false);
+  const [proJoined, setProJoined] = useState(false);
+  const [proError, setProError] = useState("");
+  const proPrice = cycle === "monthly" ? PRO_PACKAGE.priceMonthly : PRO_PACKAGE.priceYearly;
   const plan = PLANS[0];
   const basePrice = cycle === "monthly" ? plan.priceMonthly : plan.priceYearly;
   const period = cycle === "monthly" ? "/ay" : "/yıl";
   const total = basePrice + (boostSelected ? BOOST_PACKAGE.priceMonthly : 0);
+
+  // Gerçek ödeme entegrasyonu ayrı bir faz (görev kapsamı dışı) — ama şemanın
+  // kendi 30 günlük ücretsiz deneme mekanizması (provider_subscriptions,
+  // status='trialing') hiçbir ödeme/kart bilgisi gerektirmeden gerçekten
+  // kurulabilir. provider_subscriptions/provider_addons tablolarında bilerek
+  // sadece SELECT RLS politikası var (insert/update yok) — istemciden doğrudan
+  // yazmaya izin vermek, herkesin kendine bedava "active" abonelik açmasına
+  // kapı aralardı. Onun yerine sadece auth.uid() için, sadece deneme başlatan,
+  // güvenli bir RPC fonksiyonu üzerinden yazıyoruz (bkz. billing_trial_rpc.sql).
+  const startTrial = async () => {
+    if (!userId) { setJoinError("Denemeye başlamak için giriş yapmış olmalısın."); return; }
+    setJoinError("");
+    setJoining(true);
+    try {
+      const { error: subErr } = await supabase.rpc("start_free_trial", { p_billing_cycle: cycle });
+      if (subErr) throw subErr;
+      if (boostSelected) {
+        const { error: addonErr } = await supabase.rpc("add_boost_addon");
+        if (addonErr) throw addonErr;
+      }
+      setJoined(true);
+    } catch (err) {
+      setJoinError(`Kaydedilemedi: ${err?.message || "bilinmeyen hata"}`);
+    } finally {
+      setJoining(false);
+    }
+  };
+
+  // Pro Üyelik, Standart'ın denemesinden bağımsız, ayrı bir yükseltme —
+  // birden fazla vitrin açmak isteyen (örn. iki farklı uzmanlık alanı) biri
+  // deneme beklemeden doğrudan buradan geçebilir (bkz. supabase/pro_plan.sql).
+  const joinPro = async () => {
+    if (!userId) { setProError("Pro Üyelik için giriş yapmış olmalısın."); return; }
+    setProError("");
+    setProJoining(true);
+    try {
+      const { error: proErr } = await supabase.rpc("upgrade_to_pro", { p_billing_cycle: cycle });
+      if (proErr) throw proErr;
+      setProJoined(true);
+    } catch (err) {
+      setProError(`Geçilemedi: ${err?.message || "bilinmeyen hata"}`);
+    } finally {
+      setProJoining(false);
+    }
+  };
 
   if (joined) {
     return (
@@ -3797,10 +6653,10 @@ function PricingView({ onBack, onJoined }) {
           İlk {plan.trialMonths} ayın tamamen ücretsiz — hiçbir kart çekimi olmayacak.
         </p>
         <p className="text-sm mb-6" style={{ color: "#5C5744" }}>
-          Deneme süresi bitince {cycle === "monthly" ? `ayda ${total}₺` : `yılda ${total}₺ (11 ay fiyatına 12 ay)`} olarak faturalandırılacaksın{boostSelected ? " (Standart Üyelik + Öne Çıkarma Paketi)" : ""}. Kazandığından hiçbir komisyon kesilmez.
+          Deneme süresi bitince {cycle === "monthly" ? `ayda ${total}₺` : `yılda ${total}₺ (~%17 indirimli)`} olarak faturalandırılacaksın{boostSelected ? " (Standart Üyelik + Öne Çıkarma Paketi)" : ""}. İstediğin zaman iptal edebilirsin, kazandığından hiçbir komisyon kesilmez.
         </p>
         <div className="flex gap-2 justify-center">
-          <button onClick={onJoined} className="px-5 py-2.5 rounded-full text-sm font-medium text-white" style={{ background: "#2563EB" }}>İlk İlanını Oluştur</button>
+          <button onClick={onJoined} className="px-5 py-2.5 rounded-full text-sm font-medium text-white" style={{ background: "#2563EB" }}>Profilini Tamamla</button>
           <button onClick={onBack} className="px-5 py-2.5 rounded-full text-sm font-medium border" style={{ borderColor: "#D9D0BA", color: "#1B2B24" }}>Ana Sayfaya Dön</button>
         </div>
       </div>
@@ -3813,9 +6669,9 @@ function PricingView({ onBack, onJoined }) {
         <ChevronLeft size={16} /> Geri
       </button>
       <div className="text-center mb-6">
-        <h1 className="font-serif text-3xl mb-3" style={{ color: "#1B2B24" }}>Sağlayıcı Ol</h1>
+        <h1 className="font-serif text-3xl mb-3" style={{ color: "#1B2B24" }}>İlk vitrinin bizden</h1>
         <p className="text-sm mb-4" style={{ color: "#5C5744" }}>
-          Tek, basit bir aylık ücret — kazandığından hiçbir komisyon almıyoruz.
+          İşini göster, fırsatlara teklif ver, İşinn'de yerini al. Kazandığından hiçbir komisyon almıyoruz.
         </p>
         <span
           className="inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-full text-white"
@@ -3823,6 +6679,7 @@ function PricingView({ onBack, onJoined }) {
         >
           <Sparkles size={13} /> İlk {plan.trialMonths} Ay Herkese Ücretsiz 🎉
         </span>
+        <p className="text-[11px] mt-2" style={{ color: "#8A8368" }}>Kredi kartı istemiyoruz — deneme süresi dolmadan haber veririz.</p>
       </div>
 
       <div className="flex justify-center mb-6">
@@ -3834,7 +6691,7 @@ function PricingView({ onBack, onJoined }) {
               className="text-sm font-bold px-4 py-1.5 rounded-full transition-all"
               style={cycle === key ? { background: "#2563EB", color: "#FFFFFF" } : { color: "#8A8368" }}
             >
-              {label} {key === "yearly" && <span className="text-[10px]" style={{ color: cycle === key ? "#DBEAFE" : "#2563EB" }}>11 ay fiyatına 12 ay</span>}
+              {label} {key === "yearly" && <span className="text-[10px]" style={{ color: cycle === key ? "#DBEAFE" : "#2563EB" }}>~2 ay bedava</span>}
             </button>
           ))}
         </div>
@@ -3872,7 +6729,7 @@ function PricingView({ onBack, onJoined }) {
             {boostSelected && <Check size={13} className="text-white" />}
           </div>
         </div>
-        <p className="text-xs mb-4" style={{ color: "#8A8368" }}>{BOOST_PACKAGE.tagline} — isteğe bağlı, deneme kapsamında değil</p>
+        <p className="text-xs mb-4" style={{ color: "#8A8368" }}>{BOOST_PACKAGE.tagline}, deneme kapsamında değil</p>
         <div className="mb-4 flex items-baseline gap-1">
           <span className="font-serif text-2xl" style={{ color: "#1B2B24" }}>+{BOOST_PACKAGE.priceMonthly}₺</span>
           <span className="text-sm" style={{ color: "#8A8368" }}>/ay</span>
@@ -3887,6 +6744,44 @@ function PricingView({ onBack, onJoined }) {
         </div>
       </button>
 
+      {/* Pro Üyelik artık her zaman görünür bir kart — önceden lansmanın ilk
+          ayında kimseye zorla satmamak için küçük, tıklanmadan açılmayan bir
+          nota gizlenmişti; artık Ek Vitrin Paketi de var, Pro'nun değeri daha
+          net olduğu için tam kart olarak gösteriliyor (kullanıcının kararı). */}
+      <div className="rounded-2xl border-2 p-6 flex flex-col mb-6" style={{ borderColor: proJoined ? "#2FBF71" : "#8B5CF6", background: "#F8F4E9" }}>
+        <div className="flex items-center justify-between mb-1">
+          <p className="font-serif text-lg" style={{ color: "#1B2B24" }}>{PRO_PACKAGE.name}</p>
+          {proJoined && (
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: "#2FBF71" }}>Aktif</span>
+          )}
+        </div>
+        <p className="text-xs mb-4" style={{ color: "#8A8368" }}>{PRO_PACKAGE.tagline} — deneme kapsamında değil, doğrudan üyelik</p>
+        <div className="mb-4 flex items-baseline gap-1">
+          <span className="font-serif text-2xl" style={{ color: "#1B2B24" }}>{proPrice}₺</span>
+          <span className="text-sm" style={{ color: "#8A8368" }}>{period}</span>
+        </div>
+        <div className="space-y-2 mb-4">
+          {PRO_PACKAGE.features.map((f, i) => (
+            <div key={i} className="flex items-start gap-2 text-xs" style={{ color: "#3D3B30" }}>
+              <Sparkles size={13} style={{ color: "#8B5CF6" }} className="mt-0.5 shrink-0" />
+              {f}
+            </div>
+          ))}
+        </div>
+        {proError && (
+          <p className="text-xs mb-3 px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{proError}</p>
+        )}
+        <button
+          onClick={joinPro}
+          disabled={proJoining || proJoined}
+          className="w-full py-2.5 rounded-full text-sm font-medium text-white flex items-center justify-center gap-1.5"
+          style={{ background: "#8B5CF6", opacity: proJoining ? 0.7 : proJoined ? 0.6 : 1 }}
+        >
+          {proJoining && <Loader2 size={13} className="animate-spin" />}
+          {proJoined ? "Pro Üyeliğe geçtin ✓" : "Pro Üyelik'e Geç"}
+        </button>
+      </div>
+
       <div className="rounded-xl p-4 mb-4 flex items-center justify-between" style={{ background: "#0F1115" }}>
         <div>
           <span className="text-sm font-medium block" style={{ color: "#EFE8D8" }}>{cycle === "monthly" ? "Aylık toplam" : "Yıllık toplam"}</span>
@@ -3895,12 +6790,17 @@ function PricingView({ onBack, onJoined }) {
         <span className="font-serif text-2xl font-bold text-white">{total}₺</span>
       </div>
 
+      {joinError && (
+        <p className="text-xs mb-3 px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{joinError}</p>
+      )}
       <button
-        onClick={() => setJoined(true)}
-        className="w-full py-3 rounded-full text-sm font-bold text-white"
-        style={{ background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)" }}
+        onClick={startTrial}
+        disabled={joining}
+        className="w-full py-3 rounded-full text-sm font-bold text-white flex items-center justify-center gap-2"
+        style={{ background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)", opacity: joining ? 0.7 : 1 }}
       >
-        Ücretsiz Denemeye Başla
+        {joining && <Loader2 size={14} className="animate-spin" />}
+        {joining ? "Kaydediliyor..." : "Ücretsiz Denemeye Başla"}
       </button>
       <p className="text-xs text-center mt-6" style={{ color: "#8A8368" }}>
         İstediğin zaman iptal edebilir ya da Öne Çıkarma Paketi'ni ekleyip çıkarabilirsin. Müşterilerden aldığın ödemelerden İşinn hiçbir kesinti yapmaz — kazancının tamamı sana kalır.
@@ -3909,52 +6809,340 @@ function PricingView({ onBack, onJoined }) {
   );
 }
 
-function ProfileView({ onBack, onOpenAdminReports, onOpenAnalytics, onOpenModeration, pendingMediaApprovals, onApproveMedia, onRejectMedia }) {
-  const [certificates, setCertificates] = useState([]); // { name, url, isPdf }
-  const [cv, setCv] = useState(null); // { name, url }
+function ProfileView({ userId, onBack, onOpenAdminReports, onOpenAnalytics, onOpenModeration, onOpenUserReports, onOpenListingReports, onOpenContentFlags, isAdmin, pendingMediaApprovals, onApproveMedia, onRejectMedia, onListingsChanged, onJobsChanged, onEditListing, onOpenVitrinMedia }) {
+  // Video tanıtım/portföy/sertifika/CV artık vitrine özel — bkz. VitrinMediaView
+  // (supabase/vitrin_media.sql). Burada sadece paylaşılan profil fotoğrafı kalıyor
+  // ("aynı kişinin gerçek yüzü her vitrinde aynı görünsün" — kullanıcının kararı).
   const [profilePhoto, setProfilePhoto] = useState(null); // { url }
-  const [portfolio, setPortfolio] = useState([]); // { type: 'image'|'video', url, name } — work-in-action examples
-  const [videoIntro, setVideoIntro] = useState(null); // { url, name } — single self-introduction video
-  const [lightbox, setLightbox] = useState(null); // { media, index }
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoError, setPhotoError] = useState("");
 
-  const handleCertAdd = (e) => {
-    const files = Array.from(e.target.files || []).slice(0, 5 - certificates.length);
-    files.forEach((file) => {
-      const url = URL.createObjectURL(file);
-      setCertificates((prev) => [...prev, { name: file.name, url, isPdf: file.type === "application/pdf" }].slice(0, 5));
-    });
-    e.target.value = "";
+  // Gerçek profil — profiles tablosundan okunur/güncellenir.
+  const [profile, setProfile] = useState(null);
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [myListings, setMyListings] = useState([]); // kendi ilanlarım — services tablosundan
+  const [myJobs, setMyJobs] = useState([]); // kendi verdiğim iş ilanları — jobs tablosundan
+  const [myRating, setMyRating] = useState(null); // { avg, count } — ratings tablosundan gerçek puan
+  const [myPhone, setMyPhone] = useState(null); // { phone, verified, show_publicly } — özel profile_phone tablosundan
+  const [phoneInput, setPhoneInput] = useState("");
+  const [otpInput, setOtpInput] = useState("");
+  const [phoneStage, setPhoneStage] = useState("idle"); // idle | sending | code_sent | verifying
+  const [phoneError, setPhoneError] = useState("");
+  const [phoneNotConfigured, setPhoneNotConfigured] = useState(false);
+  const [deactivatingJobId, setDeactivatingJobId] = useState(null);
+  const [confirmDeactivateJobId, setConfirmDeactivateJobId] = useState(null);
+  const [jobsError, setJobsError] = useState("");
+  const [deletingId, setDeletingId] = useState(null);
+  const [editing, setEditing] = useState(false);
+  const [fullName, setFullName] = useState("");
+  const [cityId, setCityId] = useState("istanbul");
+  const [bio, setBio] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const [saveDone, setSaveDone] = useState(false);
+
+  // Gerçek "onay bekleyen medyalarım" — review_media tablosundan. Eskiden bu
+  // liste tamamen sahteydi (yalnızca demo akışının doldurduğu local state),
+  // gerçek bir yorum fotoğrafı hiç buraya düşmüyordu (bkz. attachRealReviewMedia).
+  const [realPendingMedia, setRealPendingMedia] = useState([]);
+  // Kaç vitrin hakkın var — eskiden "Vitrinlerim (N)" sadece kaç vitrinin
+  // olduğunu gösteriyordu, tavanı (kaçına kadar hakkın var) hiç göstermiyordu.
+  const [vitrinCap, setVitrinCap] = useState(null); // { cap, planName, hasExtraVitrinAddon }
+  useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
+    getVitrinCapInfo(userId).then((info) => { if (!cancelled) setVitrinCap(info); });
+    return () => { cancelled = true; };
+  }, [userId]);
+  const [mediaActionId, setMediaActionId] = useState(null);
+
+  // Kayıtlı aramalar — bkz. SearchResultsView.saveThisSearch/sahibinden_features.sql.
+  const [savedSearches, setSavedSearches] = useState([]);
+  const loadSavedSearches = async () => {
+    if (!userId) return;
+    const { data } = await supabase.from("saved_searches").select("id, query, created_at").eq("profile_id", userId).order("created_at", { ascending: false });
+    setSavedSearches(data || []);
+  };
+  useEffect(() => {
+    loadSavedSearches();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
+  const deleteSavedSearch = async (id) => {
+    setSavedSearches((prev) => prev.filter((s) => s.id !== id)); // iyimser — geri almaya gerek yok, silme nadiren başarısız olur
+    await supabase.from("saved_searches").delete().eq("id", id);
   };
 
-  const handleCvAdd = (e) => {
+  const loadRealPendingMedia = async () => {
+    if (!userId) return;
+    // Ayrı sorgular tercih edildi — services/jobs/ratings'te olduğu gibi,
+    // PostgREST'in aynı tabloya iki farklı FK'dan (rater_id/rated_profile_id)
+    // gelen belirsiz embed sorgularından kaçınmak için (bkz. loadRealReviews).
+    const { data: ratingsData } = await supabase
+      .from("ratings")
+      .select("id, rater_id, comment")
+      .eq("rated_profile_id", userId);
+    const ratingsById = {};
+    (ratingsData || []).forEach((r) => { ratingsById[r.id] = r; });
+    const ratingIds = Object.keys(ratingsById);
+    if (ratingIds.length === 0) { setRealPendingMedia([]); return; }
+
+    const { data: mediaData } = await supabase
+      .from("review_media")
+      .select("id, rating_id, media_type, url")
+      .in("rating_id", ratingIds)
+      .eq("approval_status", "pending");
+    const pending = mediaData || [];
+    if (pending.length === 0) { setRealPendingMedia([]); return; }
+
+    const raterIds = [...new Set(pending.map((m) => ratingsById[m.rating_id]?.rater_id).filter(Boolean))];
+    let profilesById = {};
+    if (raterIds.length > 0) {
+      const { data: profilesData } = await supabase.from("profiles").select("id, full_name, business_name").in("id", raterIds);
+      (profilesData || []).forEach((p) => { profilesById[p.id] = p; });
+    }
+    setRealPendingMedia(
+      pending.map((m) => {
+        const rating = ratingsById[m.rating_id];
+        const p = rating ? profilesById[rating.rater_id] : null;
+        return {
+          id: `real-${m.id}`,
+          dbId: m.id,
+          real: true,
+          mediaType: m.media_type,
+          mediaUrl: m.url,
+          reviewerName: (p?.business_name && p.business_name.trim()) || p?.full_name || "Bir kullanıcı",
+          listingTitle: rating?.comment ? `"${rating.comment.slice(0, 40)}${rating.comment.length > 40 ? "…" : ""}"` : "Bir değerlendirme",
+          submittedAt: "",
+        };
+      })
+    );
+  };
+
+  useEffect(() => {
+    loadRealPendingMedia();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
+
+  const decideRealMedia = async (dbId, approve) => {
+    setMediaActionId(dbId);
+    const { error } = await supabase
+      .from("review_media")
+      .update({ approval_status: approve ? "approved" : "rejected", approved_at: approve ? new Date().toISOString() : null })
+      .eq("id", dbId);
+    setMediaActionId(null);
+    if (!error) setRealPendingMedia((prev) => prev.filter((m) => m.dbId !== dbId));
+  };
+
+  const loadMyListings = async () => {
+    if (!userId) return;
+    // description/category_id/images de çekiyoruz — sadece listelemek için değil,
+    // "Düzenle" ile CreateListingView'ı dolu açabilmek için de gerekiyor.
+    const { data } = await supabase
+      .from("services")
+      .select("id, title, description, city, price, price_type, is_remote, home_service_type, category_id, images, active, created_at, display_name, categories(slug)")
+      .eq("provider_id", userId)
+      .order("created_at", { ascending: false });
+    setMyListings(data || []);
+  };
+
+  // myListings satırını CreateListingView'ın "editingListing" prop'unun
+  // beklediği şekle çevirir (mapServiceRowToListing ile aynı alan adları).
+  const toEditableListing = (l) => ({
+    dbId: l.id,
+    category: l.categories?.slug || "",
+    categoryDbId: l.category_id,
+    mode: l.is_remote ? "remote" : "local",
+    title: l.title,
+    desc: l.description || "",
+    city: l.is_remote ? "Uzaktan" : (l.city || ""),
+    price: formatPriceLabel(l.price, l.price_type),
+    img: (Array.isArray(l.images) && l.images[0]) || FALLBACK_LISTING_IMG,
+    provider: (l.display_name && l.display_name.trim()) || (profile?.business_name && profile.business_name.trim()) || profile?.full_name || "",
+    homeService: l.is_remote ? undefined : (l.home_service_type || "evde"),
+  });
+
+  const loadMyJobs = async () => {
+    if (!userId) return;
+    const { data } = await supabase
+      .from("jobs")
+      .select("id, title, city, budget_min, budget_max, is_remote, active, created_at")
+      .eq("client_id", userId)
+      .eq("active", true)
+      .order("created_at", { ascending: false });
+    setMyJobs(data || []);
+  };
+
+  // Gerçek puan ortalaması — "Tamamlanan İş" olarak da kaç kez değerlendirildiğini
+  // (yani kaç iş için gerçek geri bildirim aldığını) kullanıyoruz, çünkü
+  // schema'da provider'a özel ayrı bir "tamamlanan iş sayısı" alanı yok.
+  const loadMyRating = async () => {
+    if (!userId) return;
+    const { data } = await supabase.from("ratings").select("value").eq("rated_profile_id", userId);
+    const rows = data || [];
+    if (rows.length === 0) { setMyRating(null); return; }
+    const avg = rows.reduce((s, r) => s + r.value, 0) / rows.length;
+    setMyRating({ avg: avg.toFixed(1), count: rows.length });
+  };
+
+  // Telefon numarasının kendisi HERKESE AÇIK profiles tablosunda hiç durmuyor —
+  // ayrı, sadece sahibinin okuyabildiği profile_phone tablosunda tutuluyor.
+  const loadMyPhone = async () => {
+    if (!userId) return;
+    const { data } = await supabase.from("profile_phone").select("*").eq("profile_id", userId).maybeSingle();
+    setMyPhone(data || null);
+    if (data?.phone) setPhoneInput(data.phone);
+  };
+
+  const sendPhoneCode = async () => {
+    if (!phoneInput.trim()) { setPhoneError("Telefon numarası gir."); return; }
+    setPhoneError("");
+    setPhoneStage("sending");
+    try {
+      const { data: code, error: rpcErr } = await supabase.rpc("request_phone_otp", { p_phone: phoneInput.trim() });
+      if (rpcErr) throw rpcErr;
+      const res = await fetch("/api/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: phoneInput.trim(), code }),
+      });
+      const result = await res.json();
+      if (!result.configured) {
+        setPhoneNotConfigured(true);
+        setPhoneStage("idle");
+        return;
+      }
+      if (!result.sent) throw new Error(result.message || "SMS gönderilemedi.");
+      setPhoneStage("code_sent");
+    } catch (err) {
+      setPhoneError(err.message || "Bir hata oluştu.");
+      setPhoneStage("idle");
+    }
+  };
+
+  const verifyPhoneCode = async () => {
+    if (!otpInput.trim()) return;
+    setPhoneError("");
+    setPhoneStage("verifying");
+    try {
+      const { data: ok, error } = await supabase.rpc("verify_phone_otp", { p_code: otpInput.trim() });
+      if (error) throw error;
+      if (!ok) { setPhoneError("Kod yanlış, tekrar dene."); setPhoneStage("code_sent"); return; }
+      await loadMyPhone();
+      setProfile((p) => (p ? { ...p, phone_verified: true } : p));
+      setPhoneStage("idle");
+      setOtpInput("");
+    } catch (err) {
+      setPhoneError(err.message || "Bir hata oluştu.");
+      setPhoneStage("code_sent");
+    }
+  };
+
+  const togglePhonePublic = async (val) => {
+    if (!userId) return;
+    await supabase.from("profile_phone").update({ show_publicly: val }).eq("profile_id", userId);
+    setMyPhone((p) => (p ? { ...p, show_publicly: val } : p));
+  };
+
+  // jobs tablosunda delete RLS policy yok (bilerek — kalıcı silme değil, pasife
+  // alma öngörülmüş) — "Kaldır" burada active=false yapıyor, kayıt siliniyor sayılır.
+  const deactivateJob = async (jobId) => {
+    setJobsError("");
+    setDeactivatingJobId(jobId);
+    const { error } = await supabase.from("jobs").update({ active: false }).eq("id", jobId);
+    setDeactivatingJobId(null);
+    setConfirmDeactivateJobId(null);
+    if (error) { setJobsError(`Kaldırılamadı: ${error.message}`); return; }
+    setMyJobs((prev) => prev.filter((j) => j.id !== jobId));
+    onJobsChanged?.();
+  };
+
+  // provider-documents PRIVATE bir bucket, o yüzden görüntülemek için her seferinde
+  // kısa ömürlü (1 saat) bir "signed URL" üretiyoruz — public URL çalışmıyor.
+  useEffect(() => {
+    if (!userId) { setProfileLoading(false); return; }
+    let cancelled = false;
+    (async () => {
+      setProfileLoading(true);
+      const [{ data: profileData }] = await Promise.all([
+        supabase.from("profiles").select("*").eq("id", userId).maybeSingle(),
+        loadMyListings(),
+        loadMyJobs(),
+        loadMyRating(),
+        loadMyPhone(),
+      ]);
+      if (cancelled) return;
+      setProfile(profileData || null);
+      setFullName(profileData?.full_name || "");
+      setCityId(deriveCityIdFromLabel(profileData?.city) || "istanbul");
+      setBio(profileData?.bio || "");
+      if (profileData?.avatar_url) setProfilePhoto({ url: profileData.avatar_url });
+      setProfileLoading(false);
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
+
+  // profile-media PUBLIC bucket'ına {userId}/{prefix}-{timestamp}.{ext} yoluna yükler.
+  const uploadToProfileMedia = async (file, prefix) => {
+    const ext = (file.name.split(".").pop() || "bin").toLowerCase();
+    const path = `${userId}/${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const { error: uploadError } = await supabase.storage.from("profile-media").upload(path, file);
+    if (uploadError) throw uploadError;
+    const { data } = supabase.storage.from("profile-media").getPublicUrl(path);
+    return { path, publicUrl: data.publicUrl };
+  };
+
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [deleteError, setDeleteError] = useState("");
+
+  const deleteListing = async (listingId) => {
+    setDeleteError("");
+    setDeletingId(listingId);
+    const { error } = await supabase.from("services").delete().eq("id", listingId);
+    setDeletingId(null);
+    setConfirmDeleteId(null);
+    if (error) { setDeleteError(`Silinemedi: ${error.message}`); return; }
+    setMyListings((prev) => prev.filter((l) => l.id !== listingId));
+    onListingsChanged?.();
+  };
+
+  const saveProfile = async () => {
+    if (!userId) return;
+    if (!fullName.trim()) { setSaveError("Ad Soyad boş olamaz."); return; }
+    setSaveError("");
+    setSaving(true);
+    const cityName = CITIES.find((c) => c.id === cityId)?.name || null;
+    const patch = { full_name: fullName.trim(), city: cityName, bio: bio.trim() || null };
+    const { data, error } = await supabase.from("profiles").update(patch).eq("id", userId).select("*").maybeSingle();
+    setSaving(false);
+    if (error) { setSaveError(`Kaydedilemedi: ${error.message}`); return; }
+    setProfile(data || { ...profile, ...patch });
+    setEditing(false);
+    setSaveDone(true);
+    setTimeout(() => setSaveDone(false), 2500);
+  };
+
+  const joinedLabel = profile?.created_at
+    ? new Date(profile.created_at).toLocaleDateString("tr-TR", { month: "long", year: "numeric" })
+    : null;
+
+  const handlePhotoAdd = async (e) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-    setCv({ name: file.name, url: URL.createObjectURL(file) });
     e.target.value = "";
-  };
-
-  const handlePhotoAdd = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setProfilePhoto({ url: URL.createObjectURL(file) });
-    e.target.value = "";
-  };
-
-  const handlePortfolioAdd = (e) => {
-    const files = Array.from(e.target.files || []).slice(0, 9 - portfolio.length);
-    files.forEach((file) => {
-      const url = URL.createObjectURL(file);
-      const type = file.type.startsWith("video/") ? "video" : "image";
-      setPortfolio((prev) => [...prev, { type, url, name: file.name }].slice(0, 9));
-    });
-    e.target.value = "";
-  };
-
-  const handleVideoAdd = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setVideoIntro({ url: URL.createObjectURL(file), name: file.name });
-    e.target.value = "";
+    if (!file || !userId) return;
+    setPhotoError("");
+    setPhotoUploading(true);
+    try {
+      const { publicUrl } = await uploadToProfileMedia(file, "avatar");
+      const { error } = await supabase.from("profiles").update({ avatar_url: publicUrl }).eq("id", userId);
+      if (error) throw error;
+      setProfilePhoto({ url: publicUrl });
+      setProfile((p) => (p ? { ...p, avatar_url: publicUrl } : p));
+    } catch (err) {
+      setPhotoError(`Yüklenemedi: ${err.message}`);
+    } finally {
+      setPhotoUploading(false);
+    }
   };
 
   return (
@@ -3967,20 +7155,31 @@ function ProfileView({ onBack, onOpenAdminReports, onOpenAnalytics, onOpenModera
           {profilePhoto ? (
             <img src={profilePhoto.url} alt="" className="w-16 h-16 rounded-full object-cover" />
           ) : (
-            <div className="w-16 h-16 rounded-full flex items-center justify-center text-lg font-medium text-white" style={{ background: "#1B2B24" }}>SK</div>
+            <div className="w-16 h-16 rounded-full flex items-center justify-center text-lg font-medium text-white" style={{ background: "#1B2B24" }}>
+              {(profile?.full_name || "?").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
+            </div>
           )}
           <div className="absolute inset-0 rounded-full flex items-center justify-center bg-black/0 group-hover:bg-black/40 transition-colors">
-            <Camera size={16} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+            {photoUploading ? <Loader2 size={16} className="text-white animate-spin" /> : <Camera size={16} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />}
           </div>
-          <input type="file" accept="image/*" className="hidden" onChange={handlePhotoAdd} />
+          <input type="file" accept="image/*" className="hidden" onChange={handlePhotoAdd} disabled={photoUploading} />
         </label>
         <div>
-          <h1 className="font-serif text-xl" style={{ color: "#1B2B24" }}>Sen (örnek profil)</h1>
-          <p className="text-sm" style={{ color: "#5C5744" }}>İstanbul · Üye: Ağustos 2026</p>
+          <h1 className="font-serif text-xl" style={{ color: "#1B2B24" }}>
+            {profileLoading ? "Yükleniyor..." : profile?.full_name || "Profilini tamamla"}
+          </h1>
+          <p className="text-sm" style={{ color: "#5C5744" }}>
+            {profile?.city ? `${profile.city} · ` : ""}{joinedLabel ? `Üye: ${joinedLabel}` : ""}
+          </p>
+          {photoError && <p className="text-xs mt-1" style={{ color: "#9C4A3C" }}>{photoError}</p>}
         </div>
       </div>
       <div className="grid grid-cols-3 gap-3 mb-8">
-        {[["0", "İlan"], ["0", "Tamamlanan İş"], ["—", "Puan"]].map(([val, label]) => (
+        {[
+          [String(myListings.length), "Vitrin"],
+          [myRating ? String(myRating.count) : "0", "Değerlendirme"],
+          [myRating ? myRating.avg : "—", "Puan"],
+        ].map(([val, label]) => (
           <div key={label} className="rounded-xl border p-4 text-center" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
             <p className="font-serif text-xl" style={{ color: "#1B2B24" }}>{val}</p>
             <p className="text-xs mt-1" style={{ color: "#8A8368" }}>{label}</p>
@@ -3989,166 +7188,333 @@ function ProfileView({ onBack, onOpenAdminReports, onOpenAnalytics, onOpenModera
       </div>
 
       <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
-        <div className="flex items-center gap-2 mb-1">
-          <PlayCircle size={16} style={{ color: "#2FBF71" }} />
-          <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>Tanıtım Videosu</h2>
+        <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center gap-2">
+            <Users size={16} style={{ color: "#2FBF71" }} />
+            <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>Profil Bilgileri</h2>
+          </div>
+          {!editing && (
+            <button onClick={() => setEditing(true)} className="text-xs font-bold" style={{ color: "#2563EB" }}>Düzenle</button>
+          )}
         </div>
-        <p className="text-xs mb-4" style={{ color: "#8A8368" }}>
-          Kendini kısa bir videoyla tanıt — kim olduğunu, deneyimini anlat. Örneğin İngilizce konuşabildiğini göstermek istiyorsan burada anlatabilirsin. Güven Merkezi'nde en üstte, tek ve öne çıkan video olarak görünür.
-        </p>
-        {videoIntro ? (
-          <div>
-            <video controls playsInline className="w-full rounded-lg bg-black mb-2" style={{ maxHeight: "240px" }}>
-              <source src={videoIntro.url} />
-            </video>
-            <div className="flex items-center justify-between">
-              <span className="text-xs truncate" style={{ color: "#5C5744" }}>{videoIntro.name}</span>
-              <button onClick={() => setVideoIntro(null)} className="text-xs font-medium flex items-center gap-1" style={{ color: "#9C4A3C" }}>
-                <Trash2 size={12} /> Kaldır
+        {profileLoading ? (
+          <p className="text-xs mt-3" style={{ color: "#8A8368" }}>Yükleniyor...</p>
+        ) : !editing ? (
+          <div className="mt-3 space-y-1.5 text-sm" style={{ color: "#3D3B30" }}>
+            <p><span style={{ color: "#8A8368" }}>Ad Soyad:</span> {profile?.full_name || "—"}</p>
+            <p><span style={{ color: "#8A8368" }}>Şehir:</span> {profile?.city || "—"}</p>
+            <p><span style={{ color: "#8A8368" }}>Hakkımda / Uzmanlık:</span> {profile?.bio || "—"}</p>
+            {saveDone && <p className="text-xs" style={{ color: "#2FBF71" }}>Kaydedildi ✓</p>}
+          </div>
+        ) : (
+          <div className="mt-3 space-y-3">
+            <div>
+              <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>Ad Soyad</label>
+              <input
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
+                style={{ borderColor: "#D9D0BA", background: "#FFFFFF", color: "#1B2B24" }}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>Şehir</label>
+              <select
+                value={cityId}
+                onChange={(e) => setCityId(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
+                style={{ borderColor: "#D9D0BA", background: "#FFFFFF", color: "#1B2B24" }}
+              >
+                {["Türkiye", "Hindistan", "Avrupa", "Kuzey Amerika", "Orta Doğu", "Asya-Pasifik"].map((region) => (
+                  <optgroup key={region} label={region}>
+                    {CITIES.filter((c) => c.region === region).map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>Hakkımda / Uzmanlık kategorin</label>
+              <textarea
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                rows={3}
+                placeholder="Örn. 5 yıldır çocuk bakıcılığı yapıyorum, İstanbul Anadolu yakasında hizmet veriyorum..."
+                className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none resize-none"
+                style={{ borderColor: "#D9D0BA", background: "#FFFFFF", color: "#1B2B24" }}
+              />
+            </div>
+            {saveError && (
+              <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{saveError}</p>
+            )}
+            <div className="flex gap-2">
+              <button
+                onClick={saveProfile}
+                disabled={saving}
+                className="flex-1 py-2.5 rounded-full text-sm font-medium text-white flex items-center justify-center gap-2"
+                style={{ background: "#2FBF71", color: "#1B2B24", opacity: saving ? 0.7 : 1 }}
+              >
+                {saving && <Loader2 size={14} className="animate-spin" />}
+                {saving ? "Kaydediliyor..." : "Kaydet"}
+              </button>
+              <button
+                onClick={() => {
+                  setEditing(false);
+                  setFullName(profile?.full_name || "");
+                  setCityId(deriveCityIdFromLabel(profile?.city) || "istanbul");
+                  setBio(profile?.bio || "");
+                  setSaveError("");
+                }}
+                className="px-4 py-2.5 rounded-full text-sm font-medium border"
+                style={{ borderColor: "#D9D0BA", color: "#5C5744" }}
+              >
+                Vazgeç
               </button>
             </div>
           </div>
-        ) : (
-          <label
-            className="flex items-center justify-center gap-2 py-6 rounded-lg border-2 border-dashed text-xs font-medium cursor-pointer"
-            style={{ borderColor: "#D9D0BA", color: "#5C5744" }}
-          >
-            <UploadCloud size={16} />
-            Tanıtım Videosu Yükle (en fazla 60 saniye önerilir)
-            <input type="file" accept="video/*" className="hidden" onChange={handleVideoAdd} />
-          </label>
         )}
       </div>
 
       <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
         <div className="flex items-center gap-2 mb-1">
-          <Grid3x3 size={16} style={{ color: "#2FBF71" }} />
-          <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>Portföy — İş Başında</h2>
-        </div>
-        <p className="text-xs mb-4" style={{ color: "#8A8368" }}>
-          İş yaparken çekilmiş fotoğraf ve videolarını ekle — örneğin oyun ablasıysan çocuklarla oynarken çekilmiş anlar. Instagram tarzı bir ızgarada görünür, tanıtım videondan ayrı ve ayrıca gösterilir.
-        </p>
-        <div className="grid grid-cols-3 gap-1.5">
-          {portfolio.map((item, i) => (
-            <div key={i} className="relative aspect-square rounded-lg overflow-hidden group">
-              <button
-                onClick={() => setLightbox({ media: portfolio, index: i })}
-                className="w-full h-full block"
-              >
-                {item.type === "video" ? (
-                  <video muted playsInline className="w-full h-full object-cover">
-                    <source src={item.url} />
-                  </video>
-                ) : (
-                  <img src={item.url} alt="" className="w-full h-full object-cover" />
-                )}
-                {item.type === "video" && (
-                  <div className="absolute inset-0 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.15)" }}>
-                    <PlayCircle size={22} className="text-white" />
-                  </div>
-                )}
-              </button>
-              <button
-                onClick={() => setPortfolio(portfolio.filter((_, idx) => idx !== i))}
-                className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                <X size={11} className="text-white" />
-              </button>
-            </div>
-          ))}
-          {portfolio.length < 9 && (
-            <label className="aspect-square rounded-lg border-2 border-dashed flex flex-col items-center justify-center cursor-pointer gap-1" style={{ borderColor: "#D9D0BA", color: "#8A8368" }}>
-              <UploadCloud size={18} />
-              <span className="text-[10px] font-medium">Ekle</span>
-              <input type="file" accept="image/*,video/*" multiple className="hidden" onChange={handlePortfolioAdd} />
-            </label>
+          <Phone size={16} style={{ color: myPhone?.verified ? "#3F7D5C" : "#C2872B" }} />
+          <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>Telefon Doğrulama</h2>
+          {myPhone?.verified && (
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: "#3F7D5C" }}>Doğrulandı</span>
           )}
         </div>
-      </div>
-
-      {lightbox && (
-        <MediaLightbox
-          media={lightbox.media}
-          index={lightbox.index}
-          onClose={() => setLightbox(null)}
-          onNav={(i) => setLightbox({ ...lightbox, index: i })}
-        />
-      )}
-
-      <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
-        <div className="flex items-center gap-2 mb-1">
-          <Award size={16} style={{ color: "#C2872B" }} />
-          <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>Sertifika & Belgeler</h2>
-        </div>
         <p className="text-xs mb-4" style={{ color: "#8A8368" }}>
-          Diploma, ustalık belgesi, lisans veya sertifikalarını ekle — ilanında "Doğrulanmış" rozeti olarak görünür.
+          Mesaj gönderme ve vitrin/iş ilanı yayınlama için telefon doğrulaması gerekiyor. Numaran gizli tutulur — profilinde göstermek istersen ayrıca izin vermen gerekir.
         </p>
-        <div className="space-y-2 mb-3">
-          {certificates.map((c, i) => (
-            <div key={i} className="flex items-center gap-2.5 p-2.5 rounded-lg" style={{ background: "#EFE8D8" }}>
-              {c.isPdf ? (
-                <FileText size={16} style={{ color: "#3A5BA0" }} className="shrink-0" />
-              ) : (
-                <img src={c.url} alt="" className="w-9 h-9 rounded object-cover shrink-0" />
-              )}
-              <span className="text-xs flex-1 truncate" style={{ color: "#1B2B24" }}>{c.name}</span>
-              <button onClick={() => setCertificates(certificates.filter((_, idx) => idx !== i))}>
-                <Trash2 size={14} style={{ color: "#9C4A3C" }} />
-              </button>
-            </div>
-          ))}
-        </div>
-        {certificates.length < 5 && (
-          <label
-            className="flex items-center justify-center gap-2 py-2.5 rounded-lg border-2 border-dashed text-xs font-medium cursor-pointer"
-            style={{ borderColor: "#D9D0BA", color: "#5C5744" }}
-          >
-            <UploadCloud size={14} />
-            Sertifika/Belge Ekle (PDF veya görsel)
-            <input type="file" accept="image/*,application/pdf" multiple className="hidden" onChange={handleCertAdd} />
-          </label>
+
+        {phoneError && (
+          <p className="text-xs mb-3 px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{phoneError}</p>
         )}
-      </div>
+        {phoneNotConfigured && (
+          <p className="text-xs mb-3 px-3 py-2 rounded-lg flex items-center gap-1.5" style={{ background: "#FFFBEB", color: "#92640B" }}>
+            <AlertCircle size={13} /> SMS doğrulama servisi yakında aktif olacak, şimdilik bu adımı atlayabilirsin.
+          </p>
+        )}
 
-      <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
-        <div className="flex items-center gap-2 mb-1">
-          <FileText size={16} style={{ color: "#3A5BA0" }} />
-          <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>CV / Özgeçmiş</h2>
-        </div>
-        <p className="text-xs mb-4" style={{ color: "#8A8368" }}>
-          İş verenlerin deneyimini görebilmesi için özgeçmişini ekle (özellikle Mühendis, Öğretmen gibi kategorilerde önerilir).
-        </p>
-        {cv ? (
-          <div className="flex items-center gap-2.5 p-2.5 rounded-lg" style={{ background: "#EFE8D8" }}>
-            <FileText size={16} style={{ color: "#3A5BA0" }} className="shrink-0" />
-            <span className="text-xs flex-1 truncate" style={{ color: "#1B2B24" }}>{cv.name}</span>
-            <button onClick={() => setCv(null)}>
-              <Trash2 size={14} style={{ color: "#9C4A3C" }} />
+        {myPhone?.verified ? (
+          <div>
+            <p className="text-sm mb-3" style={{ color: "#1B2B24" }}>{myPhone.phone}</p>
+            <label className="flex items-center gap-2 text-xs" style={{ color: "#5C5744" }}>
+              <input
+                type="checkbox"
+                checked={!!myPhone.show_publicly}
+                onChange={(e) => togglePhonePublic(e.target.checked)}
+              />
+              Profilimde telefon numaramı göster
+            </label>
+          </div>
+        ) : phoneStage === "code_sent" ? (
+          <div className="flex items-center gap-2">
+            <input
+              value={otpInput}
+              onChange={(e) => setOtpInput(e.target.value)}
+              placeholder="6 haneli kod"
+              inputMode="numeric"
+              className="flex-1 px-3.5 py-2.5 rounded-lg border text-sm outline-none"
+              style={{ borderColor: "#D9D0BA", background: "#FFFFFF", color: "#1B2B24" }}
+            />
+            <button
+              onClick={verifyPhoneCode}
+              disabled={phoneStage === "verifying" || !otpInput.trim()}
+              className="px-4 py-2.5 rounded-full text-sm font-medium text-white flex items-center gap-1.5"
+              style={{ background: "#3F7D5C", opacity: phoneStage === "verifying" ? 0.7 : 1 }}
+            >
+              {phoneStage === "verifying" && <Loader2 size={13} className="animate-spin" />}
+              Doğrula
             </button>
           </div>
         ) : (
-          <label
-            className="flex items-center justify-center gap-2 py-2.5 rounded-lg border-2 border-dashed text-xs font-medium cursor-pointer"
-            style={{ borderColor: "#D9D0BA", color: "#5C5744" }}
-          >
-            <UploadCloud size={14} />
-            CV Yükle (PDF)
-            <input type="file" accept="application/pdf" className="hidden" onChange={handleCvAdd} />
-          </label>
+          <div className="flex items-center gap-2">
+            <input
+              value={phoneInput}
+              onChange={(e) => setPhoneInput(e.target.value)}
+              placeholder="05xx xxx xx xx"
+              className="flex-1 px-3.5 py-2.5 rounded-lg border text-sm outline-none"
+              style={{ borderColor: "#D9D0BA", background: "#FFFFFF", color: "#1B2B24" }}
+            />
+            <button
+              onClick={sendPhoneCode}
+              disabled={phoneStage === "sending"}
+              className="px-4 py-2.5 rounded-full text-sm font-medium text-white flex items-center gap-1.5 shrink-0"
+              style={{ background: "#C2872B", opacity: phoneStage === "sending" ? 0.7 : 1 }}
+            >
+              {phoneStage === "sending" && <Loader2 size={13} className="animate-spin" />}
+              Kod Gönder
+            </button>
+          </div>
         )}
       </div>
 
-      {pendingMediaApprovals && pendingMediaApprovals.length > 0 && (
+      {savedSearches.length > 0 && (
+        <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
+          <div className="flex items-center gap-2 mb-3">
+            <Bell size={16} style={{ color: "#2563EB" }} />
+            <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>Kayıtlı Aramalarım ({savedSearches.length})</h2>
+          </div>
+          <p className="text-xs mb-3" style={{ color: "#8A8368" }}>Bu aramalara uyan yeni bir vitrin yayına girince bildirim alırsın.</p>
+          <div className="space-y-2">
+            {savedSearches.map((s) => (
+              <div key={s.id} className="flex items-center justify-between gap-2 p-2.5 rounded-lg" style={{ background: "#EFE8D8" }}>
+                <span className="text-xs font-medium" style={{ color: "#1B2B24" }}>"{s.query}"</span>
+                <button onClick={() => deleteSavedSearch(s.id)} className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" title="Kaldır">
+                  <X size={13} style={{ color: "#8A8368" }} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
+        <div className="flex items-center gap-2 mb-3">
+          <Briefcase size={16} style={{ color: "#2FBF71" }} />
+          <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>
+            Vitrinlerim ({myListings.length}{vitrinCap ? `/${vitrinCap.cap}` : ""})
+          </h2>
+        </div>
+        {deleteError && (
+          <p className="text-xs mb-2 px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{deleteError}</p>
+        )}
+        {profileLoading ? (
+          <p className="text-xs" style={{ color: "#8A8368" }}>Yükleniyor...</p>
+        ) : myListings.length === 0 ? (
+          <p className="text-xs" style={{ color: "#8A8368" }}>Henüz bir vitrinin yok. "Hizmet Ekle" ile ilk vitrinini oluşturabilirsin.</p>
+        ) : (
+          <div className="space-y-2">
+            {myListings.map((l) => (
+              <div
+                key={l.id}
+                onClick={() => confirmDeleteId !== l.id && onOpenVitrinMedia?.(l)}
+                className="flex items-center gap-3 p-2.5 rounded-lg cursor-pointer"
+                style={{ background: "#EFE8D8" }}
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium truncate" style={{ color: "#1B2B24" }}>{l.title}</p>
+                  <p className="text-[11px] truncate" style={{ color: "#8A8368" }}>
+                    {l.is_remote ? "Uzaktan" : l.city || "—"} · {formatPriceLabel(l.price, l.price_type)} · <span className="underline">fotoğraf/video/belge yönet</span>
+                  </p>
+                </div>
+                {confirmDeleteId === l.id ? (
+                  <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      onClick={() => deleteListing(l.id)}
+                      disabled={deletingId === l.id}
+                      className="text-[11px] font-bold px-2.5 py-1.5 rounded-full text-white flex items-center gap-1"
+                      style={{ background: "#9C4A3C", opacity: deletingId === l.id ? 0.6 : 1 }}
+                    >
+                      {deletingId === l.id && <Loader2 size={11} className="animate-spin" />}
+                      Evet, sil
+                    </button>
+                    <button
+                      onClick={() => setConfirmDeleteId(null)}
+                      disabled={deletingId === l.id}
+                      className="text-[11px] font-medium px-2.5 py-1.5 rounded-full"
+                      style={{ color: "#5C5744" }}
+                    >
+                      Vazgeç
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      onClick={() => onEditListing?.(toEditableListing(l))}
+                      className="w-8 h-8 rounded-full flex items-center justify-center"
+                      title="Vitrini düzenle"
+                    >
+                      <Pencil size={13} style={{ color: "#3A5BA0" }} />
+                    </button>
+                    <button
+                      onClick={() => setConfirmDeleteId(l.id)}
+                      className="w-8 h-8 rounded-full flex items-center justify-center"
+                      title="Vitrini sil"
+                    >
+                      <Trash2 size={14} style={{ color: "#9C4A3C" }} />
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
+        <div className="flex items-center gap-2 mb-3">
+          <Megaphone size={16} style={{ color: "#C2872B" }} />
+          <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>İş İlanlarım ({myJobs.length})</h2>
+        </div>
+        {jobsError && (
+          <p className="text-xs mb-2 px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{jobsError}</p>
+        )}
+        {profileLoading ? (
+          <p className="text-xs" style={{ color: "#8A8368" }}>Yükleniyor...</p>
+        ) : myJobs.length === 0 ? (
+          <p className="text-xs" style={{ color: "#8A8368" }}>Henüz bir iş ilanı vermedin. "İlan Ver" ile ihtiyacını anlatabilirsin.</p>
+        ) : (
+          <div className="space-y-2">
+            {myJobs.map((j) => (
+              <div key={j.id} className="flex items-center gap-3 p-2.5 rounded-lg" style={{ background: "#EFE8D8" }}>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium truncate" style={{ color: "#1B2B24" }}>{j.title}</p>
+                  <p className="text-[11px] truncate" style={{ color: "#8A8368" }}>
+                    {j.is_remote ? "Uzaktan" : j.city || "—"}
+                    {(j.budget_min != null || j.budget_max != null) &&
+                      ` · ${j.budget_min != null ? Number(j.budget_min).toLocaleString("tr-TR") + "₺" : ""}${j.budget_min != null && j.budget_max != null ? "–" : ""}${j.budget_max != null ? Number(j.budget_max).toLocaleString("tr-TR") + "₺" : ""}`}
+                  </p>
+                </div>
+                {confirmDeactivateJobId === j.id ? (
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      onClick={() => deactivateJob(j.id)}
+                      disabled={deactivatingJobId === j.id}
+                      className="text-[11px] font-bold px-2.5 py-1.5 rounded-full text-white flex items-center gap-1"
+                      style={{ background: "#9C4A3C", opacity: deactivatingJobId === j.id ? 0.6 : 1 }}
+                    >
+                      {deactivatingJobId === j.id && <Loader2 size={11} className="animate-spin" />}
+                      Evet, kaldır
+                    </button>
+                    <button
+                      onClick={() => setConfirmDeactivateJobId(null)}
+                      disabled={deactivatingJobId === j.id}
+                      className="text-[11px] font-medium px-2.5 py-1.5 rounded-full"
+                      style={{ color: "#5C5744" }}
+                    >
+                      Vazgeç
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setConfirmDeactivateJobId(j.id)}
+                    className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+                    title="İlanı kaldır"
+                  >
+                    <Trash2 size={14} style={{ color: "#9C4A3C" }} />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+
+      {((pendingMediaApprovals && pendingMediaApprovals.length > 0) || realPendingMedia.length > 0) && (
         <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#F59E0B", background: "#FFFBEB" }}>
           <div className="flex items-center gap-2 mb-1">
             <AlertCircle size={16} style={{ color: "#F59E0B" }} />
-            <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>Onay Bekleyen Medyalarım ({pendingMediaApprovals.length})</h2>
+            <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>Onay Bekleyen Medyalarım ({(pendingMediaApprovals?.length || 0) + realPendingMedia.length})</h2>
           </div>
           <p className="text-xs mb-4" style={{ color: "#8A8368" }}>
-            Bir müşteri, seni gösterebilecek bir fotoğraf/video ile ilanını değerlendirdi. Yayınlanması için onayın gerekiyor.
+            Bir müşteri, seni gösterebilecek bir fotoğraf ile seni değerlendirdi. Yayınlanması için onayın gerekiyor.
           </p>
           <div className="space-y-3">
-            {pendingMediaApprovals.map((item) => (
+            {[...realPendingMedia, ...(pendingMediaApprovals || [])].map((item) => (
               <div key={item.id} className="rounded-lg border p-3 flex items-center gap-3" style={{ borderColor: "#F0E4C4", background: "#FFFFFF" }}>
                 {item.mediaType === "video" ? (
                   <video src={item.mediaUrl} muted className="w-14 h-14 rounded-lg object-cover shrink-0" />
@@ -4163,10 +7529,20 @@ function ProfileView({ onBack, onOpenAdminReports, onOpenAnalytics, onOpenModera
                   )}
                 </div>
                 <div className="flex gap-1.5 shrink-0">
-                  <button onClick={() => onApproveMedia(item.id)} className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: "#3F7D5C" }}>
+                  <button
+                    onClick={() => (item.real ? decideRealMedia(item.dbId, true) : onApproveMedia(item.id))}
+                    disabled={item.real && mediaActionId === item.dbId}
+                    className="w-8 h-8 rounded-full flex items-center justify-center"
+                    style={{ background: "#3F7D5C", opacity: item.real && mediaActionId === item.dbId ? 0.6 : 1 }}
+                  >
                     <Check size={14} className="text-white" />
                   </button>
-                  <button onClick={() => onRejectMedia(item.id)} className="w-8 h-8 rounded-full flex items-center justify-center border" style={{ borderColor: "#D9D0BA" }}>
+                  <button
+                    onClick={() => (item.real ? decideRealMedia(item.dbId, false) : onRejectMedia(item.id))}
+                    disabled={item.real && mediaActionId === item.dbId}
+                    className="w-8 h-8 rounded-full flex items-center justify-center border"
+                    style={{ borderColor: "#D9D0BA", opacity: item.real && mediaActionId === item.dbId ? 0.6 : 1 }}
+                  >
                     <X size={14} style={{ color: "#8A8368" }} />
                   </button>
                 </div>
@@ -4185,11 +7561,62 @@ function ProfileView({ onBack, onOpenAdminReports, onOpenAnalytics, onOpenModera
           <Inbox size={16} style={{ color: "#2563EB" }} />
         </div>
         <div className="flex-1">
-          <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>Destek Talepleri (Yönetim)</p>
-          <p className="text-xs" style={{ color: "#8A8368" }}>Destek asistanına bildirilen kullanıcı sorunlarını gör</p>
+          <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>{isAdmin ? "Destek Talepleri (Yönetim)" : "Destek Taleplerim"}</p>
+          <p className="text-xs" style={{ color: "#8A8368" }}>{isAdmin ? "Tüm kullanıcıların destek talepleri" : "Destek asistanına yazdığın ve bildirdiğin geçmiş talepler"}</p>
         </div>
         <ChevronRight size={16} style={{ color: "#8A8368" }} />
       </button>
+
+      {isAdmin && (
+        <button
+          onClick={onOpenUserReports}
+          className="w-full rounded-xl border p-5 mb-4 text-left flex items-center gap-3 hover:shadow-sm transition-shadow"
+          style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}
+        >
+          <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: "rgba(156,74,60,0.12)" }}>
+            <ShieldCheck size={16} style={{ color: "#9C4A3C" }} />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>Kullanıcı Şikayetleri (Yönetim)</p>
+            <p className="text-xs" style={{ color: "#8A8368" }}>Mesajlaşmadan bildirilen kullanıcı şikayetlerini incele</p>
+          </div>
+          <ChevronRight size={16} style={{ color: "#8A8368" }} />
+        </button>
+      )}
+
+      {isAdmin && (
+        <button
+          onClick={onOpenListingReports}
+          className="w-full rounded-xl border p-5 mb-4 text-left flex items-center gap-3 hover:shadow-sm transition-shadow"
+          style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}
+        >
+          <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: "rgba(156,74,60,0.12)" }}>
+            <AlertCircle size={16} style={{ color: "#9C4A3C" }} />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>İlan Şikayetleri (Yönetim)</p>
+            <p className="text-xs" style={{ color: "#8A8368" }}>Vitrin/iş ilanları için bildirilen şikayetleri incele</p>
+          </div>
+          <ChevronRight size={16} style={{ color: "#8A8368" }} />
+        </button>
+      )}
+
+      {isAdmin && (
+        <button
+          onClick={onOpenContentFlags}
+          className="w-full rounded-xl border p-5 mb-4 text-left flex items-center gap-3 hover:shadow-sm transition-shadow"
+          style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}
+        >
+          <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: "rgba(156,74,60,0.12)" }}>
+            <ShieldCheck size={16} style={{ color: "#9C4A3C" }} />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>İçerik Uyarıları (Yönetim)</p>
+            <p className="text-xs" style={{ color: "#8A8368" }}>AI'nin şüpheli bulduğu mesaj/vitrin/iş ilanı metinleri</p>
+          </div>
+          <ChevronRight size={16} style={{ color: "#8A8368" }} />
+        </button>
+      )}
 
       <button
         onClick={onOpenModeration}
@@ -4228,18 +7655,873 @@ function ProfileView({ onBack, onOpenAdminReports, onOpenAnalytics, onOpenModera
   );
 }
 
-export default function IsinnPrototype() {
-  const [view, setView] = useState("home");
+// Vitrine özel medya yönetimi — kullanıcının kendi tabiriyle "iki farklı
+// Instagram hesabında gezinmek gibi": her vitrinin kendi video tanıtımı,
+// portföyü, sertifika/belgeleri ve CV'si var (bkz. supabase/vitrin_media.sql).
+// Paylaşılan kalan tek şey profil fotoğrafı (avatar) — ProfileView'da yönetiliyor.
+function VitrinMediaView({ userId, service, onBack, onListingsChanged }) {
+  const [certificates, setCertificates] = useState([]);
+  const [cv, setCv] = useState(null);
+  const [portfolio, setPortfolio] = useState([]);
+  const [videoIntro, setVideoIntro] = useState(null);
+  const [lightbox, setLightbox] = useState(null);
+  const [docViewer, setDocViewer] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [videoUploading, setVideoUploading] = useState(false);
+  const [videoError, setVideoError] = useState("");
+  const [portfolioUploading, setPortfolioUploading] = useState(false);
+  const [portfolioError, setPortfolioError] = useState("");
+  const [certUploading, setCertUploading] = useState(false);
+  const [certError, setCertError] = useState("");
+  const [cvUploading, setCvUploading] = useState(false);
+  const [cvError, setCvError] = useState("");
+  // Bu vitrinin değerlendirmeleri diğer vitrinlerle birleşsin mi, yoksa ayrı mı
+  // kalsın — sahibi (müşterimiz) kendi kararını veriyor (bkz. ratings.service_id).
+  const [shareReviews, setShareReviews] = useState(true);
+  const [shareReviewsSaving, setShareReviewsSaving] = useState(false);
+
+  // Vitrin performansı — gerçek, ölçülebilen sinyallerle: kaç görüşme
+  // başladı, kaçı tamamlandı, ortalama puan, kaç kişi favoriledi. "Kaç kişi
+  // baktı" gibi bir görüntülenme sayısı YOK burada — hiçbir yerde
+  // izlenmiyor, var olmayan bir veriyi uydurmamak için o metrik hiç
+  // gösterilmiyor.
+  const [stats, setStats] = useState(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+
+  const serviceId = service?.dbId || service?.id;
+
+  useEffect(() => {
+    if (!userId || !serviceId) { setLoading(false); return; }
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      const [{ data: serviceRow }, { data: docs }, { data: items }] = await Promise.all([
+        supabase.from("services").select("video_intro_url, video_intro_name, share_profile_reviews").eq("id", serviceId).maybeSingle(),
+        supabase.from("provider_documents").select("*").eq("service_id", serviceId).order("created_at", { ascending: false }),
+        supabase.from("portfolio_items").select("*").eq("service_id", serviceId).order("created_at", { ascending: true }),
+      ]);
+      if (cancelled) return;
+      if (serviceRow?.video_intro_url) setVideoIntro({ url: serviceRow.video_intro_url, name: serviceRow.video_intro_name || "Tanıtım Videosu" });
+      setShareReviews(serviceRow?.share_profile_reviews ?? true);
+
+      const docRows = docs || [];
+      const certs = docRows.filter((d) => d.doc_type === "certificate");
+      const cvDoc = docRows.find((d) => d.doc_type === "cv");
+      const certsWithUrls = await Promise.all(certs.map(async (d) => {
+        const { data: signed } = await supabase.storage.from("provider-documents").createSignedUrl(d.file_url, 3600);
+        return { id: d.id, name: d.file_name || d.label || "Belge", url: signed?.signedUrl || "", isPdf: (d.file_name || "").toLowerCase().endsWith(".pdf") };
+      }));
+      if (cancelled) return;
+      setCertificates(certsWithUrls);
+      if (cvDoc) {
+        const { data: signed } = await supabase.storage.from("provider-documents").createSignedUrl(cvDoc.file_url, 3600);
+        setCv({ id: cvDoc.id, path: cvDoc.file_url, name: cvDoc.file_name || "CV", url: signed?.signedUrl || "" });
+      } else {
+        setCv(null);
+      }
+      setPortfolio((items || []).map((p) => ({ id: p.id, type: p.media_type, url: p.url, name: p.file_name })));
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [userId, serviceId]);
+
+  useEffect(() => {
+    if (!serviceId) { setStatsLoading(false); return; }
+    let cancelled = false;
+    (async () => {
+      setStatsLoading(true);
+      const [{ data: jobsData }, { data: ratingsData }, { count: favCount }] = await Promise.all([
+        supabase.from("jobs").select("id, state").eq("service_id", serviceId),
+        supabase.from("ratings").select("value").eq("service_id", serviceId),
+        supabase.from("favorites").select("id", { count: "exact", head: true }).eq("service_id", serviceId),
+      ]);
+      if (cancelled) return;
+      const jobs = jobsData || [];
+      const ratings = ratingsData || [];
+      setStats({
+        conversations: jobs.length,
+        completed: jobs.filter((j) => j.state === "delivered").length,
+        avgRating: ratings.length > 0 ? (ratings.reduce((s, r) => s + r.value, 0) / ratings.length).toFixed(1) : null,
+        reviewCount: ratings.length,
+        favorites: favCount || 0,
+      });
+      setStatsLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [serviceId]);
+
+  const uploadToProfileMedia = async (file, prefix) => {
+    const ext = (file.name.split(".").pop() || "bin").toLowerCase();
+    const path = `${userId}/${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const { error: uploadError } = await supabase.storage.from("profile-media").upload(path, file);
+    if (uploadError) throw uploadError;
+    const { data } = supabase.storage.from("profile-media").getPublicUrl(path);
+    return { path, publicUrl: data.publicUrl };
+  };
+
+  const toggleShareReviews = async (val) => {
+    setShareReviewsSaving(true);
+    setShareReviews(val);
+    await supabase.from("services").update({ share_profile_reviews: val }).eq("id", serviceId);
+    setShareReviewsSaving(false);
+  };
+
+  const handleVideoAdd = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !userId) return;
+    setVideoError("");
+    setVideoUploading(true);
+    try {
+      const { publicUrl } = await uploadToProfileMedia(file, "video-intro");
+      const { error } = await supabase.from("services").update({ video_intro_url: publicUrl, video_intro_name: file.name }).eq("id", serviceId);
+      if (error) throw error;
+      setVideoIntro({ url: publicUrl, name: file.name });
+    } catch (err) {
+      setVideoError(`Yüklenemedi: ${err.message}`);
+    } finally {
+      setVideoUploading(false);
+    }
+  };
+
+  const removeVideoIntro = async () => {
+    await supabase.from("services").update({ video_intro_url: null, video_intro_name: null }).eq("id", serviceId);
+    setVideoIntro(null);
+  };
+
+  const handlePortfolioAdd = async (e) => {
+    const files = Array.from(e.target.files || []).slice(0, 9 - portfolio.length);
+    e.target.value = "";
+    if (!userId || files.length === 0) return;
+    setPortfolioError("");
+    setPortfolioUploading(true);
+    try {
+      for (const file of files) {
+        const type = file.type.startsWith("video/") ? "video" : "image";
+        const { publicUrl } = await uploadToProfileMedia(file, "portfolio");
+        const { data: row, error } = await supabase
+          .from("portfolio_items")
+          .insert({ profile_id: userId, service_id: serviceId, media_type: type, url: publicUrl, file_name: file.name })
+          .select()
+          .single();
+        if (error) throw error;
+        setPortfolio((prev) => [...prev, { id: row.id, type, url: publicUrl, name: file.name }].slice(0, 9));
+      }
+    } catch (err) {
+      setPortfolioError(`Yüklenemedi: ${err.message}`);
+    } finally {
+      setPortfolioUploading(false);
+    }
+  };
+
+  const removePortfolioItem = async (item, idx) => {
+    setPortfolio((prev) => prev.filter((_, i) => i !== idx));
+    if (item.id) await supabase.from("portfolio_items").delete().eq("id", item.id);
+  };
+
+  const handleCertAdd = async (e) => {
+    const files = Array.from(e.target.files || []).slice(0, 5 - certificates.length);
+    e.target.value = "";
+    if (!userId || files.length === 0) return;
+    setCertError("");
+    setCertUploading(true);
+    try {
+      for (const file of files) {
+        const ext = (file.name.split(".").pop() || "bin").toLowerCase();
+        const path = `${userId}/cert-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+        const { error: upErr } = await supabase.storage.from("provider-documents").upload(path, file);
+        if (upErr) throw upErr;
+        const { data: docRow, error: insErr } = await supabase
+          .from("provider_documents")
+          .insert({ profile_id: userId, service_id: serviceId, doc_type: "certificate", file_url: path, file_name: file.name })
+          .select()
+          .single();
+        if (insErr) throw insErr;
+        const { data: signed } = await supabase.storage.from("provider-documents").createSignedUrl(path, 3600);
+        setCertificates((prev) => [...prev, { id: docRow.id, name: file.name, url: signed?.signedUrl || "", isPdf: file.type === "application/pdf" }].slice(0, 5));
+      }
+      onListingsChanged?.(); // has_certificates güncellendi, listeleri tazele
+    } catch (err) {
+      setCertError(`Yüklenemedi: ${err.message}`);
+    } finally {
+      setCertUploading(false);
+    }
+  };
+
+  const removeCertificate = async (item, idx) => {
+    setCertificates((prev) => prev.filter((_, i) => i !== idx));
+    if (item.id) await supabase.from("provider_documents").delete().eq("id", item.id);
+    onListingsChanged?.();
+  };
+
+  const handleCvAdd = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !userId) return;
+    setCvError("");
+    setCvUploading(true);
+    try {
+      const ext = (file.name.split(".").pop() || "pdf").toLowerCase();
+      const path = `${userId}/cv-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("provider-documents").upload(path, file);
+      if (upErr) throw upErr;
+      const { data: signed } = await supabase.storage.from("provider-documents").createSignedUrl(path, 3600);
+      if (cv?.id) {
+        const { error: updErr } = await supabase.from("provider_documents").update({ file_url: path, file_name: file.name }).eq("id", cv.id);
+        if (updErr) throw updErr;
+        setCv({ id: cv.id, path, name: file.name, url: signed?.signedUrl || "" });
+      } else {
+        const { data: docRow, error: insErr } = await supabase
+          .from("provider_documents")
+          .insert({ profile_id: userId, service_id: serviceId, doc_type: "cv", file_url: path, file_name: file.name })
+          .select()
+          .single();
+        if (insErr) throw insErr;
+        setCv({ id: docRow.id, path, name: file.name, url: signed?.signedUrl || "" });
+      }
+    } catch (err) {
+      setCvError(`Yüklenemedi: ${err.message}`);
+    } finally {
+      setCvUploading(false);
+    }
+  };
+
+  const removeCv = async () => {
+    if (cv?.id) await supabase.from("provider_documents").delete().eq("id", cv.id);
+    setCv(null);
+  };
+
+  if (!service) return null;
+
+  return (
+    <div className="max-w-2xl mx-auto px-5 py-10">
+      <button onClick={onBack} className="flex items-center gap-1 text-sm mb-5" style={{ color: "#5C5744" }}>
+        <ChevronLeft size={16} /> Vitrinlerime dön
+      </button>
+      <div className="flex items-center gap-2 mb-1">
+        <Grid3x3 size={18} style={{ color: "#3F7D5C" }} />
+        <h1 className="font-serif text-xl" style={{ color: "#1B2B24" }}>{service.title}</h1>
+      </div>
+      <p className="text-xs mb-6" style={{ color: "#8A8368" }}>
+        Bu vitrine özel video, portföy ve belgeler — diğer vitrinlerinle paylaşılmaz, her biri kendi kimliğini taşır.
+      </p>
+
+      <div className="rounded-xl border p-5 mb-8" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
+        <div className="flex items-center gap-2 mb-3">
+          <Activity size={16} style={{ color: "#3F7D5C" }} />
+          <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>Vitrin Performansı</h2>
+        </div>
+        {statsLoading ? (
+          <p className="text-xs" style={{ color: "#8A8368" }}>Yükleniyor...</p>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div>
+              <p className="font-serif text-2xl" style={{ color: "#1B2B24" }}>{stats?.conversations ?? 0}</p>
+              <p className="text-[11px]" style={{ color: "#8A8368" }}>Görüşme başladı</p>
+            </div>
+            <div>
+              <p className="font-serif text-2xl" style={{ color: "#1B2B24" }}>{stats?.completed ?? 0}</p>
+              <p className="text-[11px]" style={{ color: "#8A8368" }}>İş tamamlandı</p>
+            </div>
+            <div>
+              <p className="font-serif text-2xl" style={{ color: "#1B2B24" }}>{stats?.avgRating ?? "—"}{stats?.reviewCount ? ` (${stats.reviewCount})` : ""}</p>
+              <p className="text-[11px]" style={{ color: "#8A8368" }}>Ortalama puan</p>
+            </div>
+            <div>
+              <p className="font-serif text-2xl" style={{ color: "#1B2B24" }}>{stats?.favorites ?? 0}</p>
+              <p className="text-[11px]" style={{ color: "#8A8368" }}>Favoriye eklendi</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>Değerlendirmeler</p>
+            <p className="text-xs mt-0.5" style={{ color: "#8A8368" }}>
+              {shareReviews
+                ? "Diğer vitrinlerinle birleşik — genel güvenilirliğin burada da görünür."
+                : "Bu vitrine özel — sadece bu vitrin için gelen değerlendirmeler sayılır."}
+            </p>
+          </div>
+          <label className="flex items-center gap-2 text-xs shrink-0 cursor-pointer" style={{ color: "#5C5744" }}>
+            {shareReviewsSaving && <Loader2 size={12} className="animate-spin" />}
+            <input type="checkbox" checked={shareReviews} onChange={(e) => toggleShareReviews(e.target.checked)} />
+            Birleştir
+          </label>
+        </div>
+      </div>
+
+      {loading ? (
+        <p className="text-xs" style={{ color: "#8A8368" }}>Yükleniyor...</p>
+      ) : (
+        <>
+          <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
+            <div className="flex items-center gap-2 mb-1">
+              <PlayCircle size={16} style={{ color: "#2FBF71" }} />
+              <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>Tanıtım Videosu</h2>
+            </div>
+            <p className="text-xs mb-4" style={{ color: "#8A8368" }}>
+              Bu vitrini kısa bir videoyla tanıt. Vitrin sayfasında en üstte, tek ve öne çıkan video olarak görünür.
+            </p>
+            {videoError && (
+              <p className="text-xs mb-3 px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{videoError}</p>
+            )}
+            {videoIntro ? (
+              <div>
+                <video controls playsInline className="w-full rounded-lg bg-black mb-2" style={{ maxHeight: "240px" }}>
+                  <source src={videoIntro.url} />
+                </video>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs truncate" style={{ color: "#5C5744" }}>{videoIntro.name}</span>
+                  <button onClick={removeVideoIntro} className="text-xs font-medium flex items-center gap-1" style={{ color: "#9C4A3C" }}>
+                    <Trash2 size={12} /> Kaldır
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <label
+                className="flex items-center justify-center gap-2 py-6 rounded-lg border-2 border-dashed text-xs font-medium cursor-pointer"
+                style={{ borderColor: "#D9D0BA", color: "#5C5744", opacity: videoUploading ? 0.6 : 1 }}
+              >
+                {videoUploading ? <Loader2 size={16} className="animate-spin" /> : <UploadCloud size={16} />}
+                {videoUploading ? "Yükleniyor..." : "Tanıtım Videosu Yükle (en fazla 60 saniye önerilir)"}
+                <input type="file" accept="video/*" className="hidden" onChange={handleVideoAdd} disabled={videoUploading} />
+              </label>
+            )}
+          </div>
+
+          <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
+            <div className="flex items-center gap-2 mb-1">
+              <Grid3x3 size={16} style={{ color: "#2FBF71" }} />
+              <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>Portföy — İş Başında</h2>
+            </div>
+            <p className="text-xs mb-4" style={{ color: "#8A8368" }}>
+              Bu vitrindeki hizmeti verirken çekilmiş fotoğraf/videolar. Instagram tarzı bir ızgarada görünür.
+            </p>
+            {portfolioError && (
+              <p className="text-xs mb-3 px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{portfolioError}</p>
+            )}
+            <div className="grid grid-cols-3 gap-1.5">
+              {portfolio.map((item, i) => (
+                <div key={item.id || i} className="relative aspect-square rounded-lg overflow-hidden group">
+                  <button onClick={() => setLightbox({ media: portfolio, index: i })} className="w-full h-full block">
+                    {item.type === "video" ? (
+                      <video muted playsInline className="w-full h-full object-cover">
+                        <source src={item.url} />
+                      </video>
+                    ) : (
+                      <img src={item.url} alt="" className="w-full h-full object-cover" />
+                    )}
+                    {item.type === "video" && (
+                      <div className="absolute inset-0 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.15)" }}>
+                        <PlayCircle size={22} className="text-white" />
+                      </div>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => removePortfolioItem(item, i)}
+                    className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <X size={11} className="text-white" />
+                  </button>
+                </div>
+              ))}
+              {portfolio.length < 9 && (
+                <label className="aspect-square rounded-lg border-2 border-dashed flex flex-col items-center justify-center cursor-pointer gap-1" style={{ borderColor: "#D9D0BA", color: "#8A8368", opacity: portfolioUploading ? 0.6 : 1 }}>
+                  {portfolioUploading ? <Loader2 size={18} className="animate-spin" /> : <UploadCloud size={18} />}
+                  <span className="text-[10px] font-medium">{portfolioUploading ? "Yükleniyor..." : "Ekle"}</span>
+                  <input type="file" accept="image/*,video/*" multiple className="hidden" onChange={handlePortfolioAdd} disabled={portfolioUploading} />
+                </label>
+              )}
+            </div>
+          </div>
+
+          {lightbox && (
+            <MediaLightbox
+              media={lightbox.media}
+              index={lightbox.index}
+              onClose={() => setLightbox(null)}
+              onNav={(i) => setLightbox({ ...lightbox, index: i })}
+            />
+          )}
+
+          {docViewer && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center p-4"
+              style={{ background: "rgba(0,0,0,0.8)" }}
+              onClick={() => setDocViewer(null)}
+            >
+              <div
+                className="rounded-xl overflow-hidden w-full max-w-2xl flex flex-col"
+                style={{ background: "#FFFFFF", height: "85vh" }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between px-4 py-3 border-b shrink-0" style={{ borderColor: "#F0F0F0" }}>
+                  <p className="text-sm font-medium truncate" style={{ color: "#1B2B24" }}>{docViewer.name}</p>
+                  <button onClick={() => setDocViewer(null)} className="shrink-0 ml-3">
+                    <X size={18} style={{ color: "#5C5744" }} />
+                  </button>
+                </div>
+                <div className="flex-1 overflow-auto" style={{ background: "#F7F7F8" }}>
+                  {docViewer.isPdf ? (
+                    <iframe src={docViewer.url} title={docViewer.name} className="w-full h-full border-0" />
+                  ) : /\.(png|jpe?g|webp|gif)$/i.test(docViewer.name || "") ? (
+                    <img src={docViewer.url} alt={docViewer.name} className="w-full h-full object-contain" />
+                  ) : (
+                    <div className="h-full flex items-center justify-center p-6 text-center">
+                      <p className="text-sm" style={{ color: "#5C5744" }}>Bu dosya türü tarayıcı içinde önizlenemiyor.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
+            <div className="flex items-center gap-2 mb-1">
+              <Award size={16} style={{ color: "#C2872B" }} />
+              <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>Sertifika & Belgeler</h2>
+            </div>
+            <p className="text-xs mb-4" style={{ color: "#8A8368" }}>
+              Bu vitrinle ilgili diploma, ustalık belgesi, lisans veya sertifikaları ekle — bu vitrinde "Doğrulanmış" rozeti olarak görünür.
+            </p>
+            {certError && (
+              <p className="text-xs mb-3 px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{certError}</p>
+            )}
+            <div className="space-y-2 mb-3">
+              {certificates.map((c, i) => (
+                <div key={c.id || i} className="flex items-center gap-2.5 p-2.5 rounded-lg" style={{ background: "#EFE8D8" }}>
+                  <button onClick={() => setDocViewer({ url: c.url, name: c.name, isPdf: c.isPdf })} className="flex items-center gap-2.5 flex-1 min-w-0 text-left">
+                    {c.isPdf ? (
+                      <FileText size={16} style={{ color: "#3A5BA0" }} className="shrink-0" />
+                    ) : (
+                      <img src={c.url} alt="" className="w-9 h-9 rounded object-cover shrink-0" />
+                    )}
+                    <span className="text-xs flex-1 truncate underline decoration-dotted" style={{ color: "#1B2B24" }}>{c.name}</span>
+                  </button>
+                  <button onClick={() => removeCertificate(c, i)} className="shrink-0">
+                    <Trash2 size={14} style={{ color: "#9C4A3C" }} />
+                  </button>
+                </div>
+              ))}
+            </div>
+            {certificates.length < 5 && (
+              <label
+                className="flex items-center justify-center gap-2 py-2.5 rounded-lg border-2 border-dashed text-xs font-medium cursor-pointer"
+                style={{ borderColor: "#D9D0BA", color: "#5C5744", opacity: certUploading ? 0.6 : 1 }}
+              >
+                {certUploading ? <Loader2 size={14} className="animate-spin" /> : <UploadCloud size={14} />}
+                {certUploading ? "Yükleniyor..." : "Sertifika/Belge Ekle (PDF veya görsel)"}
+                <input type="file" accept="image/*,application/pdf" multiple className="hidden" onChange={handleCertAdd} disabled={certUploading} />
+              </label>
+            )}
+          </div>
+
+          <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
+            <div className="flex items-center gap-2 mb-1">
+              <FileText size={16} style={{ color: "#3A5BA0" }} />
+              <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>CV / Özgeçmiş</h2>
+            </div>
+            <p className="text-xs mb-4" style={{ color: "#8A8368" }}>
+              Bu vitrinle ilgili özgeçmişini ekle (özellikle Mühendis, Öğretmen gibi kategorilerde önerilir).
+            </p>
+            {cvError && (
+              <p className="text-xs mb-3 px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{cvError}</p>
+            )}
+            {cv ? (
+              <div className="flex items-center gap-2.5 p-2.5 rounded-lg" style={{ background: "#EFE8D8" }}>
+                <button
+                  onClick={() => setDocViewer({ url: cv.url, name: cv.name, isPdf: (cv.name || "").toLowerCase().endsWith(".pdf") })}
+                  className="flex items-center gap-2.5 flex-1 min-w-0 text-left"
+                >
+                  <FileText size={16} style={{ color: "#3A5BA0" }} className="shrink-0" />
+                  <span className="text-xs flex-1 truncate underline decoration-dotted" style={{ color: "#1B2B24" }}>{cv.name}</span>
+                </button>
+                <button onClick={removeCv} className="shrink-0">
+                  <Trash2 size={14} style={{ color: "#9C4A3C" }} />
+                </button>
+              </div>
+            ) : (
+              <label
+                className="flex items-center justify-center gap-2 py-2.5 rounded-lg border-2 border-dashed text-xs font-medium cursor-pointer"
+                style={{ borderColor: "#D9D0BA", color: "#5C5744", opacity: cvUploading ? 0.6 : 1 }}
+              >
+                {cvUploading ? <Loader2 size={14} className="animate-spin" /> : <UploadCloud size={14} />}
+                {cvUploading ? "Yükleniyor..." : "CV Yükle (PDF, Word veya görsel — hangi formattaysa)"}
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/jpeg,image/png"
+                  className="hidden"
+                  onChange={handleCvAdd}
+                  disabled={cvUploading}
+                />
+              </label>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// Sayfa yenilenince (F5) hangi görünümde kaldığımızı hatırlamak için URL'e
+// yazıyoruz. "detail"/"offers"/"aimatch" gibi görünümler, sadece bu oturumda
+// var olan bir nesneye (seçili ilan, son iş ilanı) ihtiyaç duyduğu için
+// yenilemeden sonra yeniden kurulamıyor — o yüzden hatırlanan görünümler bu
+// listeyle sınırlı, diğerleri yenilenince ana sayfaya düşer.
+const RESTORABLE_VIEWS = new Set([
+  "home", "profile", "createListing", "map", "post", "pricing", "messages",
+  "search", "nailart", "support", "adminReports", "adminModeration", "adminAnalytics", "favorites",
+]);
+
+function getInitialView() {
+  if (typeof window === "undefined") return "home";
+  const v = new URLSearchParams(window.location.search).get("view");
+  return v && RESTORABLE_VIEWS.has(v) ? v : "home";
+}
+
+// Yüzen "Destek Asistanı" butonu — sürüklenip her ekranda başka bir şeyin
+// (örn. mesajlaşma ekranındaki gönder butonunun) üzerine denk gelmeyecek bir
+// yere taşınabilsin diye. Konumu localStorage'da tutulur (per-viewer, sunucuya
+// gitmez) — bir kere taşındıktan sonra sayfa/görünüm değişse de aynı yerde kalır.
+// Pointer Events (mouse+dokunma tek API) kullanılıyor, touchAction:"none" ile
+// mobilde sürüklerken sayfanın kaymasını engelliyoruz.
+function DraggableSupportButton({ onClick }) {
+  const [pos, setPos] = useState(null); // { x, y } — null = varsayılan sağ-alt köşe
+  const draggingRef = useRef(false);
+  const movedRef = useRef(false);
+  const startRef = useRef({ x: 0, y: 0, posX: 0, posY: 0 });
+  const BTN = 56;
+  const MARGIN = 20;
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("isinn_support_btn_pos");
+      if (saved) setPos(JSON.parse(saved));
+    } catch {}
+  }, []);
+
+  const getCurrentPos = () =>
+    pos || { x: window.innerWidth - BTN - MARGIN, y: window.innerHeight - BTN - MARGIN };
+
+  const onPointerDown = (e) => {
+    draggingRef.current = true;
+    movedRef.current = false;
+    const current = getCurrentPos();
+    startRef.current = { x: e.clientX, y: e.clientY, posX: current.x, posY: current.y };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+
+  const onPointerMove = (e) => {
+    if (!draggingRef.current) return;
+    const dx = e.clientX - startRef.current.x;
+    const dy = e.clientY - startRef.current.y;
+    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) movedRef.current = true;
+    const nx = Math.max(4, Math.min(window.innerWidth - BTN - 4, startRef.current.posX + dx));
+    const ny = Math.max(4, Math.min(window.innerHeight - BTN - 4, startRef.current.posY + dy));
+    setPos({ x: nx, y: ny });
+  };
+
+  const onPointerUp = () => {
+    if (!draggingRef.current) return;
+    draggingRef.current = false;
+    if (movedRef.current) {
+      const current = getCurrentPos();
+      try { localStorage.setItem("isinn_support_btn_pos", JSON.stringify(current)); } catch {}
+    }
+  };
+
+  const handleClick = () => {
+    if (movedRef.current) { movedRef.current = false; return; } // sürüklemeydi, tıklama sayılmasın
+    onClick();
+  };
+
+  const current = pos;
+  const style = current
+    ? { position: "fixed", left: current.x, top: current.y, touchAction: "none" }
+    : { position: "fixed", bottom: MARGIN, right: MARGIN, touchAction: "none" };
+
+  return (
+    <button
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerUp}
+      onClick={handleClick}
+      className="z-40 w-14 h-14 rounded-full flex items-center justify-center text-white shadow-2xl hover:scale-105 transition-transform"
+      style={{ ...style, background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)" }}
+    >
+      <LifeBuoy size={22} />
+    </button>
+  );
+}
+
+export default function IsinnPrototype({ session, onRequireAuth }) {
+  const [view, setView] = useState(getInitialView);
   const [selected, setSelected] = useState(null);
+  const [selectedJob, setSelectedJob] = useState(null);
+  const [editingListing, setEditingListing] = useState(null); // Düzenle ile açılan ilan (CreateListingView)
+  const [managingVitrin, setManagingVitrin] = useState(null); // Medya yönetimi açılan vitrin (VitrinMediaView)
+  const [favoriteIds, setFavoriteIds] = useState(new Set()); // gerçek, kalıcı favoriler (favorites tablosu)
+  const [trialBanner, setTrialBanner] = useState(null); // { status, planName, daysLeft } — provider_subscriptions'tan
+  const [trialBannerDismissed, setTrialBannerDismissed] = useState(false);
   const [filter, setFilter] = useState("local");
   const [query, setQuery] = useState("");
   const [lastJob, setLastJob] = useState(null);
   const [messageContact, setMessageContact] = useState(null);
-  const [userListings, setUserListings] = useState([]);
+  const [realListings, setRealListings] = useState([]); // services tablosundan gelen gerçek ilanlar
+  const [listingsLoading, setListingsLoading] = useState(true);
+  const [realJobs, setRealJobs] = useState([]); // jobs tablosundan gelen gerçek iş ilanları ("İlan Ver")
+  // Ana sayfa hero'sundaki "12.400+ Sağlayıcı" gibi rakamlar eskiden sabit,
+  // sahte sayılardı — platformda o kadar gerçek kullanıcı yokken bu yanıltıcı
+  // bir sosyal kanıt iddiasıydı. Artık gerçek sayılara bağlı (küçük olsalar
+  // bile dürüst).
+  const [platformStats, setPlatformStats] = useState({ providers: 0, completedJobs: 0, avgRating: null });
   const [adminReports, setAdminReports] = useState([]);
   const [userReviews, setUserReviews] = useState([]);
   const [pendingMediaApprovals, setPendingMediaApprovals] = useState([]); // sağlayıcının kendi kimlik onayı kuyruğu
   const [staffModerationQueue, setStaffModerationQueue] = useState([]); // platform çalışanının içerik güvenliği kuyruğu (şu an sadece video)
+
+  const userId = session?.user?.id;
+
+  // Gerçek bir admin rolü — bkz. supabase/admin_role.sql. Tam bir rol/izin
+  // sistemi değil, tek bir bayrak: kullanıcının kendi hesabını (profiles.
+  // is_admin) admin işaretledik. Destek Talepleri ve Kullanıcı Şikayetleri
+  // ekranları buna göre "sadece kendim" / "hepsi" arasında geçiş yapıyor.
+  const [isAdmin, setIsAdmin] = useState(false);
+  useEffect(() => {
+    if (!userId) { setIsAdmin(false); return; }
+    let cancelled = false;
+    supabase.from("profiles").select("is_admin").eq("id", userId).maybeSingle().then(({ data }) => {
+      if (!cancelled) setIsAdmin(!!data?.is_admin);
+    });
+    return () => { cancelled = true; };
+  }, [userId]);
+
+  // Gerçek, kalıcı favoriler (favorites tablosu — schema (3).sql'de zaten
+  // vardı, hem vitrin hem iş ilanı favorileyebilecek şekilde, ama hiç
+  // kullanılmıyordu). Demo/sabit LISTINGS/JOB_POSTINGS için kalıcılık anlamlı
+  // değil (gerçek satır değiller), o yüzden sadece gerçek olanlar (isReal)
+  // favorilenebiliyor. service_id ve job_id UUID'leri farklı tablolardan
+  // geldiği için asla çakışmaz — tek bir favoriteIds Set'inde birlikte
+  // tutuluyor, hangi tablodan geldiği FavoritesView'da realListings/realJobs
+  // üzerinden ayrıştırılıyor (bkz. o bileşen).
+  const loadFavorites = async () => {
+    if (!userId) { setFavoriteIds(new Set()); return; }
+    const { data } = await supabase.from("favorites").select("service_id, job_id").eq("profile_id", userId);
+    const ids = (data || []).map((f) => f.service_id || f.job_id).filter(Boolean);
+    setFavoriteIds(new Set(ids));
+  };
+  useEffect(() => { loadFavorites(); }, [userId]);
+
+  // Deneme/üyelik bitişine kalan gün — kullanıcı gerçek e-posta/SMS hatırlatma
+  // istemedi ("sadece uygulamada bildirim verelim, aktif kullanıcı zaten
+  // fark eder") — bu yüzden bunu tüm sayfalarda görünen, Header'ın altındaki
+  // global bir banner olarak gösteriyoruz, sadece Profil sayfasına gömülü değil.
+  // Gerçek otomatik faturalama da yok — uygulama her açıldığında dönemi bitmiş
+  // ama hâlâ 'active' bir üyelik varsa "yenilenmiş" sayılır (bkz.
+  // supabase/pro_boost_recurring.sql) — Pro'da bu, 7 günlük öne çıkarma
+  // hediyesinin gerçekten ay ay tekrar açılmasını sağlıyor.
+  const loadTrialInfo = async () => {
+    if (!userId) { setTrialBanner(null); return; }
+    await supabase.rpc("sync_subscription_period"); // hata döner (throw etmez), sonucu zaten kullanmıyoruz
+    const { data } = await supabase
+      .from("provider_subscriptions")
+      .select("status, current_period_end, billing_cycle, subscription_plans(name, slug)")
+      .eq("profile_id", userId)
+      .in("status", ["active", "trialing"])
+      .maybeSingle();
+    if (!data) { setTrialBanner(null); return; }
+    const daysLeft = Math.ceil((new Date(data.current_period_end) - new Date()) / (1000 * 60 * 60 * 24));
+    const planSlug = data.subscription_plans?.slug || "standart";
+    // Banner eskiden hep "159₺/ay" diyordu — Pro'daki ya da yıllık ödemeyi
+    // seçmiş biri için yanlıştı (gerçek bir hataydı, fark edildi). Artık
+    // gerçek plan+döngüye göre doğru fiyatı gösteriyor.
+    const isYearly = data.billing_cycle === "yearly";
+    const priceLabel = planSlug === "pro"
+      ? (isYearly ? `${PRO_PACKAGE.priceYearly}₺/yıl` : `${PRO_PACKAGE.priceMonthly}₺/ay`)
+      : (isYearly ? `${PLANS[0].priceYearly}₺/yıl` : `${PLANS[0].priceMonthly}₺/ay`);
+    setTrialBanner({
+      status: data.status,
+      planName: data.subscription_plans?.name || "Standart Üyelik",
+      planSlug,
+      priceLabel,
+      daysLeft,
+    });
+  };
+  useEffect(() => { loadTrialInfo(); setTrialBannerDismissed(false); }, [userId]);
+
+  const toggleFavorite = async (item, kind = "service") => {
+    if (!item?.isReal || !item.dbId) return;
+    if (!userId) { onRequireAuth?.(); return; }
+    const has = favoriteIds.has(item.dbId);
+    setFavoriteIds((prev) => {
+      const next = new Set(prev);
+      has ? next.delete(item.dbId) : next.add(item.dbId);
+      return next;
+    });
+    const column = kind === "job" ? "job_id" : "service_id";
+    if (has) await supabase.from("favorites").delete().eq("profile_id", userId).eq(column, item.dbId);
+    else await supabase.from("favorites").insert({ profile_id: userId, [column]: item.dbId });
+  };
+
+  // Gerçek ilanları services tablosundan çeker. Hem ilk yüklemede hem de yeni
+  // bir ilan yayınlandıktan sonra çağrılıyor — böylece "sayfayı yenile, hâlâ
+  // görünüyor mu" testi gerçekten kalıcılığı sınıyor (local state değil).
+  const fetchListings = async () => {
+    const { data, error } = await supabase
+      .from("services")
+      .select("*, profiles(*), categories(*)")
+      .eq("active", true)
+      .order("created_at", { ascending: false });
+    if (!error && data) {
+      const mapped = data.map(mapServiceRowToListing);
+      // Gerçek ortalama puan/yorum sayısını da kartlara yansıtıyoruz — ratings
+      // sağlayıcıya bağlı (bkz. schema), o yüzden tek sorguda tüm gerçek
+      // ilanların sağlayıcıları için toplu çekip client tarafında topluyoruz.
+      const providerIds = [...new Set(mapped.map((l) => l.providerId).filter(Boolean))];
+      if (providerIds.length > 0) {
+        const { data: ratingsData } = await supabase.from("ratings").select("rated_profile_id, service_id, value").in("rated_profile_id", providerIds);
+        const byProvider = {};
+        const byService = {};
+        (ratingsData || []).forEach((r) => {
+          if (!byProvider[r.rated_profile_id]) byProvider[r.rated_profile_id] = [];
+          byProvider[r.rated_profile_id].push(r.value);
+          if (r.service_id) {
+            if (!byService[r.service_id]) byService[r.service_id] = [];
+            byService[r.service_id].push(r.value);
+          }
+        });
+        mapped.forEach((l) => {
+          // "Ayrı tut" diyen vitrinler sadece kendi service_id'sine bırakılan
+          // değerlendirmeleri sayar; "Birleştir" (varsayılan) diyenler kişiye
+          // bağlı tüm değerlendirmeleri (bkz. VitrinMediaView).
+          const values = l.shareProfileReviews ? byProvider[l.providerId] : byService[l.dbId];
+          if (values && values.length > 0) {
+            l.rating = Number((values.reduce((s, v) => s + v, 0) / values.length).toFixed(1));
+            l.reviewCount = values.length;
+          }
+        });
+
+        // Aktif "Öne Çıkarma Paketi" (provider_addons, sağlayıcı bazlı — belirli
+        // bir vitrine değil) sahibi olan sağlayıcıları işaretliyoruz. Sıralama/
+        // "Öne Çıkan" mantığı bunu computeVisibilityScore ve seededDailyShuffle
+        // ile sınırlı, adil bir bonusa çeviriyor (bkz. o fonksiyonların üstündeki not).
+        const { data: addonRows } = await supabase
+          .from("provider_addons")
+          .select("profile_id, current_period_end, addon_products!inner(slug)")
+          .in("profile_id", providerIds)
+          .eq("status", "active")
+          .eq("addon_products.slug", "one-cikarma");
+        const boostedIds = new Set(
+          (addonRows || [])
+            .filter((r) => new Date(r.current_period_end) > new Date())
+            .map((r) => r.profile_id)
+        );
+        if (boostedIds.size > 0) {
+          mapped.forEach((l) => { l.isBoosted = boostedIds.has(l.providerId); });
+        }
+
+        // Seviye rozeti (Yeni Satıcı/Level 1/Level 2/Top Rated) — eskiden
+        // gerçek vitrinlerde her zaman sabit "new" idi, mapServiceRowToListing
+        // hiç gerçek performansa bakmıyordu (aramızda konuşuldu, kullanıcı
+        // "sağlıklı kur" dedi). Tamamlanan iş sayısı (jobs.state='delivered')
+        // + puan + yorum sayısına göre otomatik hesaplanıyor, kimse manuel
+        // atamıyor — bkz. computeProviderLevel.
+        const serviceIds = mapped.map((l) => l.dbId).filter(Boolean);
+        if (serviceIds.length > 0) {
+          const { data: deliveredJobs } = await supabase
+            .from("jobs")
+            .select("service_id")
+            .eq("state", "delivered")
+            .in("service_id", serviceIds);
+          const completedByService = {};
+          (deliveredJobs || []).forEach((j) => {
+            if (j.service_id) completedByService[j.service_id] = (completedByService[j.service_id] || 0) + 1;
+          });
+          const serviceIdsByProvider = {};
+          mapped.forEach((l) => {
+            if (!l.providerId || !l.dbId) return;
+            (serviceIdsByProvider[l.providerId] = serviceIdsByProvider[l.providerId] || []).push(l.dbId);
+          });
+          mapped.forEach((l) => {
+            // Değerlendirmelerdeki "Birleştir/Ayrı tut" tercihiyle tutarlı:
+            // birleştirenler kişinin TÜM vitrinlerindeki tamamlanan işleri
+            // sayar, ayrı tutanlar sadece bu vitrini.
+            const completedJobs = l.shareProfileReviews
+              ? (serviceIdsByProvider[l.providerId] || []).reduce((sum, sid) => sum + (completedByService[sid] || 0), 0)
+              : (completedByService[l.dbId] || 0);
+            l.level = computeProviderLevel(completedJobs, l.rating, l.reviewCount);
+          });
+        }
+      }
+      setRealListings(mapped);
+    }
+    setListingsLoading(false);
+  };
+
+  useEffect(() => {
+    fetchListings();
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      const [{ data: providerRows }, { count: completedCount }, { data: ratingsData }] = await Promise.all([
+        supabase.from("services").select("provider_id").eq("active", true),
+        supabase.from("jobs").select("id", { count: "exact", head: true }).eq("state", "delivered"),
+        supabase.from("ratings").select("value"),
+      ]);
+      const distinctProviders = new Set((providerRows || []).map((r) => r.provider_id)).size;
+      const ratings = ratingsData || [];
+      const avgRating = ratings.length > 0 ? Number((ratings.reduce((s, r) => s + r.value, 0) / ratings.length).toFixed(1)) : null;
+      setPlatformStats({ providers: distinctProviders, completedJobs: completedCount || 0, avgRating });
+    })();
+  }, []);
+
+  const fetchJobs = async () => {
+    const { data, error } = await supabase
+      .from("jobs")
+      .select("*, profiles(*), categories(*)")
+      .eq("active", true)
+      .order("bumped_at", { ascending: false });
+    if (!error && data) {
+      setRealJobs(data.map(mapJobRowToPosting));
+    }
+  };
+
+  useEffect(() => {
+    fetchJobs();
+  }, []);
+
+  // view her değiştiğinde URL'e yaz (?view=profile gibi) — F5 ile yenilenince
+  // getInitialView bunu okuyup kaldığın yerden başlatabilsin diye.
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (view === "home") url.searchParams.delete("view");
+    else url.searchParams.set("view", view);
+    window.history.replaceState({}, "", url);
+  }, [view]);
+
+  // Kayıt olurken e-posta onayı gerekiyorsa (AuthView.jsx), auth.uid() henüz
+  // set olmadığı için o an profiles satırı oluşturulamıyor — kullanıcı sonradan
+  // giriş yapınca profil satırı hiç yoktur. services.provider_id gibi alanlar
+  // profiles(id)'e referans verdiği için (foreign key) bu eksik satır, ilan
+  // oluşturmayı da profil sayfasını da bozar. Burada eksikse tamamlıyoruz.
+  useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
+    (async () => {
+      const { data: existing } = await supabase.from("profiles").select("id").eq("id", userId).maybeSingle();
+      if (cancelled || existing) return;
+      const fallbackName =
+        session?.user?.user_metadata?.full_name ||
+        (session?.user?.email ? session.user.email.split("@")[0] : "Kullanıcı");
+      await supabase.from("profiles").insert({ id: userId, full_name: fallbackName });
+    })();
+    return () => { cancelled = true; };
+  }, [userId]);
 
   const runSearch = (q) => {
     const normalized = q.trim().toLocaleLowerCase("tr-TR");
@@ -4251,18 +8533,101 @@ export default function IsinnPrototype() {
     setView("search");
   };
 
+  // Bir iş ilanına "Teklif Ver" — gerçek bir ilansa (posterId/categoryDbId
+  // varsa) gerçek mesajlaşmaya bağlanır (bkz. MessagesView'daki existingJobId
+  // desteği), demo/sabit ilanlarda eski local-only sohbet akışı çalışır.
+  // Bildirim panelinden bir bildirime tıklayınca ilgili yere götürür —
+  // bkz. NotificationBell/notifications_center.sql.
+  const handleNotificationClick = async (n) => {
+    if (n.type === "new_message" || n.type === "job_delivered") {
+      setView("messages");
+      return;
+    }
+    if (n.type === "pending_media_approval") {
+      setView("profile");
+      return;
+    }
+    if ((n.type === "media_approved" || n.type === "media_rejected" || n.type === "saved_search_match") && n.related_service_id) {
+      const { data } = await supabase.from("services").select("*, profiles(*), categories(*)").eq("id", n.related_service_id).maybeSingle();
+      if (data) { setSelected(mapServiceRowToListing(data)); setView("detail"); return; }
+    }
+    setView("home");
+  };
+
+  const openJobContact = (job) => {
+    if (!userId) { onRequireAuth?.(); return; }
+    setMessageContact({
+      name: job.posterName,
+      listingTitle: job.title,
+      providerId: job.posterId,
+      categoryId: job.categoryDbId,
+      existingJobId: job.dbId,
+    });
+    setView("messages");
+  };
+
+  // Gezinme (ilan/vitrin/profil görüntüleme) herkese açık — sadece eylem
+  // gerektiren ekranlara (vitrin/iş ilanı oluşturma, mesajlaşma, kendi profilin)
+  // giriş yapmadan gidilemiyor; o durumda view değişmez, giriş ekranı açılır
+  // (bkz. app/page.js'deki onRequireAuth). "auth" değeri Header'daki "Giriş
+  // Yap" butonundan geliyor.
+  const GATED_VIEWS = new Set(["createListing", "post", "messages", "profile", "favorites", "vitrinMedia"]);
+  const handleNav = (v) => {
+    if (v === "auth") { onRequireAuth?.(); return; }
+    if (!userId && GATED_VIEWS.has(v)) { onRequireAuth?.(); return; }
+    setView(v);
+    setSelected(null);
+    setEditingListing(null);
+    if (v !== "messages") setMessageContact(null);
+  };
+
+  // ?view=profile gibi bir URL'den (F5 sonrası restore) doğrudan gated bir
+  // ekrana düşülmüş olabilir — session yoksa geri Ana Sayfa'ya al, giriş ekranını
+  // aç. handleNav'daki kontrolün aynısı, sadece ilk yüklemede de çalışsın diye.
+  useEffect(() => {
+    if (!userId && GATED_VIEWS.has(view)) {
+      setView("home");
+      onRequireAuth?.();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
+
   return (
     <div className="min-h-screen" style={{ background: "#FFFFFF", fontFamily: "ui-sans-serif, system-ui" }}>
-      <Header onNav={(v) => { setView(v); setSelected(null); if (v !== "messages") setMessageContact(null); }} onSearch={runSearch} pendingCount={pendingMediaApprovals.length + staffModerationQueue.length} />
+      <Header onNav={handleNav} onSearch={runSearch} pendingCount={pendingMediaApprovals.length + staffModerationQueue.length} session={session} onNotificationClick={handleNotificationClick} />
+      {!trialBannerDismissed && trialBanner?.status === "trialing" && trialBanner.daysLeft <= 7 && (
+        <div className="flex items-center gap-3 px-5 py-2.5" style={{ background: "#FFFBEB", borderBottom: "1px solid #F0E4C4" }}>
+          <AlertCircle size={15} style={{ color: "#C2872B" }} className="shrink-0" />
+          <p className="text-xs flex-1" style={{ color: "#5C5744" }}>
+            {trialBanner.daysLeft <= 0
+              ? "Ücretsiz deneme süren bugün doluyor."
+              : trialBanner.daysLeft === 1
+              ? "Ücretsiz deneme süren yarın doluyor."
+              : `Ücretsiz deneme süren ${trialBanner.daysLeft} gün sonra doluyor.`}{" "}
+            Sonrasında {trialBanner.planName} {trialBanner.priceLabel} olarak devam eder — istediğin zaman iptal edebilirsin.
+          </p>
+          <button onClick={() => handleNav("pricing")} className="text-xs font-bold shrink-0" style={{ color: "#C2872B" }}>Planlar</button>
+          <button onClick={() => setTrialBannerDismissed(true)} className="shrink-0">
+            <X size={14} style={{ color: "#8A8368" }} />
+          </button>
+        </div>
+      )}
       {view === "home" && (
         <HomeView
           onSelectListing={(l) => { setSelected(l); setView("detail"); }}
-          onNav={setView}
+          onNav={handleNav}
           filter={filter}
           setFilter={setFilter}
           onSearch={runSearch}
-          onApplyJob={(job) => { setMessageContact({ name: job.posterName, listingTitle: job.title }); setView("messages"); }}
-          userListings={userListings}
+          onOpenJob={(job) => { setSelectedJob(job); setView("jobDetail"); }}
+          onApplyJob={openJobContact}
+          realListings={realListings}
+          listingsLoading={listingsLoading}
+          realJobs={realJobs}
+          favoriteIds={favoriteIds}
+          onToggleFavorite={toggleFavorite}
+          onToggleJobFavorite={(job) => toggleFavorite(job, "job")}
+          platformStats={platformStats}
         />
       )}
       {view === "search" && (
@@ -4270,24 +8635,40 @@ export default function IsinnPrototype() {
           query={query}
           onBack={() => setView("home")}
           onSelectListing={(l) => { setSelected(l); setView("detail"); }}
-          userListings={userListings}
+          realListings={realListings}
+          currentUserId={userId}
         />
       )}
       {view === "createListing" && (
         <CreateListingView
-          onBack={() => setView("home")}
-          onCreated={(listing) => setUserListings((prev) => [listing, ...prev])}
+          onBack={() => { setEditingListing(null); setView("home"); }}
+          onCreated={() => fetchListings()}
+          userId={userId}
+          editingListing={editingListing}
         />
       )}
       {view === "detail" && selected && (
         <ListingDetail
           listing={selected}
           onBack={() => setView("home")}
-          onContact={() => { setMessageContact({ name: selected.provider, listingTitle: selected.title }); setView("messages"); }}
+          onContact={() => {
+            if (!userId) { onRequireAuth?.(); return; }
+            setMessageContact({
+              name: selected.provider,
+              listingTitle: selected.title,
+              providerId: selected.providerId,
+              categoryId: selected.categoryDbId,
+              listingId: selected.dbId,
+            });
+            setView("messages");
+          }}
           userReviews={userReviews}
           onAddReview={(review) => setUserReviews((prev) => [review, ...prev])}
           onSubmitPendingMedia={(item) => setPendingMediaApprovals((prev) => [item, ...prev])}
           onSubmitStaffReview={(item) => setStaffModerationQueue((prev) => [item, ...prev])}
+          currentUserId={userId}
+          favoriteIds={favoriteIds}
+          onToggleFavorite={toggleFavorite}
         />
       )}
       {view === "post" && (
@@ -4296,16 +8677,29 @@ export default function IsinnPrototype() {
           onSubmitted={() => setView("home")}
           onViewOffers={(job) => { setLastJob(job); setView("offers"); }}
           onMatchAI={(job) => { setLastJob(job); setView("aimatch"); }}
+          userId={userId}
+          onJobPosted={() => fetchJobs()}
         />
       )}
       {view === "map" && (
         <MapView
           onBack={() => setView("home")}
+          realListings={realListings}
+          realJobs={realJobs}
           onSelectProvider={(p) => {
-            const matched = LISTINGS.find((l) => l.provider === p.name) || LISTINGS[0];
+            const matched = p.listing || LISTINGS.find((l) => l.provider === p.name) || LISTINGS[0];
             setSelected(matched);
             setView("detail");
           }}
+          onSelectJob={openJobContact}
+        />
+      )}
+      {view === "jobDetail" && selectedJob && (
+        <JobDetailView
+          job={selectedJob}
+          onBack={() => setView("home")}
+          onContact={() => openJobContact(selectedJob)}
+          currentUserId={userId}
         />
       )}
       {view === "offers" && <OffersView onBack={() => setView("home")} job={lastJob} />}
@@ -4314,22 +8708,50 @@ export default function IsinnPrototype() {
           job={lastJob}
           onBack={() => setView("home")}
           onSelectListing={(l) => { setSelected(l); setView("detail"); }}
+          realListings={realListings}
         />
       )}
       {view === "nailart" && (
         <NailArtView
           onBack={() => setView("home")}
-          onContact={(contact) => { setMessageContact(contact); setView("messages"); }}
+          onContact={(contact) => { if (!userId) { onRequireAuth?.(); return; } setMessageContact(contact); setView("messages"); }}
         />
       )}
-      {view === "messages" && <MessagesView onBack={() => setView("home")} initialContact={messageContact} />}
-      {view === "pricing" && <PricingView onBack={() => setView("home")} onJoined={() => setView("createListing")} />}
+      {view === "messages" && (
+        <MessagesView
+          onBack={() => setView("home")}
+          initialContact={messageContact}
+          currentUserId={userId}
+          onOpenListing={(l) => { setSelected(l); setView("detail"); }}
+        />
+      )}
+      {view === "pricing" && <PricingView onBack={() => setView("home")} onJoined={() => setView("profile")} userId={userId} />}
+      {view === "favorites" && (
+        <FavoritesView
+          onBack={() => setView("home")}
+          onSelectListing={(l) => { setSelected(l); setView("detail"); }}
+          onOpenJob={(job) => { setSelectedJob(job); setView("jobDetail"); }}
+          realListings={realListings}
+          realJobs={realJobs}
+          favoriteIds={favoriteIds}
+          onToggleFavorite={toggleFavorite}
+          onToggleJobFavorite={(job) => toggleFavorite(job, "job")}
+        />
+      )}
       {view === "profile" && (
         <ProfileView
+          userId={userId}
+          onListingsChanged={fetchListings}
+          onJobsChanged={fetchJobs}
+          onEditListing={(l) => { setEditingListing(l); setView("createListing"); }}
           onBack={() => setView("home")}
           onOpenAdminReports={() => setView("adminReports")}
           onOpenAnalytics={() => setView("adminAnalytics")}
           onOpenModeration={() => setView("adminModeration")}
+          onOpenUserReports={() => setView("adminUserReports")}
+          onOpenListingReports={() => setView("adminListingReports")}
+          onOpenContentFlags={() => setView("adminContentFlags")}
+          isAdmin={isAdmin}
           pendingMediaApprovals={pendingMediaApprovals}
           onApproveMedia={(id) => {
             const item = pendingMediaApprovals.find((p) => p.id === id);
@@ -4339,15 +8761,28 @@ export default function IsinnPrototype() {
             setPendingMediaApprovals((prev) => prev.filter((p) => p.id !== id));
           }}
           onRejectMedia={(id) => setPendingMediaApprovals((prev) => prev.filter((p) => p.id !== id))}
+          onOpenVitrinMedia={(l) => { setManagingVitrin(l); setView("vitrinMedia"); }}
+        />
+      )}
+      {view === "vitrinMedia" && (
+        <VitrinMediaView
+          userId={userId}
+          service={managingVitrin}
+          onBack={() => setView("profile")}
+          onListingsChanged={fetchListings}
         />
       )}
       {view === "support" && (
         <SupportChatView
           onBack={() => setView("home")}
           onReport={(report) => setAdminReports((prev) => [report, ...prev])}
+          currentUserId={userId}
         />
       )}
-      {view === "adminReports" && <AdminReportsView onBack={() => setView("home")} reports={adminReports} />}
+      {view === "adminReports" && <AdminReportsView onBack={() => setView("home")} reports={adminReports} userId={userId} isAdmin={isAdmin} />}
+      {view === "adminUserReports" && isAdmin && <AdminUserReportsView onBack={() => setView("home")} />}
+      {view === "adminListingReports" && isAdmin && <AdminListingReportsView onBack={() => setView("home")} />}
+      {view === "adminContentFlags" && isAdmin && <AdminContentFlagsView onBack={() => setView("home")} />}
       {view === "adminModeration" && (
         <AdminModerationQueueView
           onBack={() => setView("home")}
@@ -4364,15 +8799,7 @@ export default function IsinnPrototype() {
       )}
       {view === "adminAnalytics" && <AdminAnalyticsView onBack={() => setView("home")} />}
 
-      {view !== "support" && (
-        <button
-          onClick={() => setView("support")}
-          className="fixed bottom-5 right-5 z-40 w-14 h-14 rounded-full flex items-center justify-center text-white shadow-2xl hover:scale-105 transition-transform"
-          style={{ background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)" }}
-        >
-          <LifeBuoy size={22} />
-        </button>
-      )}
+      {view !== "support" && <DraggableSupportButton onClick={() => setView("support")} />}
     </div>
   );
 }

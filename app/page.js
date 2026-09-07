@@ -6,6 +6,11 @@ import IsinnApp from "../components/IsinnApp";
 
 export default function Page() {
   const [session, setSession] = useState(undefined); // undefined = still checking, null = signed out
+  // Fiverr modeli: gezinme (ana sayfa, vitrinler, ilanlar, haritada gör,
+  // profil görüntüleme) session'sız da açık — giriş ekranı sadece bu bayrak
+  // true olunca (Header'daki "Giriş Yap" butonu veya kilitli bir eyleme
+  // dokununca, bkz. IsinnApp'teki handleNav/onRequireAuth) üstte açılıyor.
+  const [showAuth, setShowAuth] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -15,6 +20,7 @@ export default function Page() {
     // linger in this tab's state after a real sign-out elsewhere.
     const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
       setSession(newSession);
+      if (newSession) setShowAuth(false);
     });
     return () => listener.subscription.unsubscribe();
   }, []);
@@ -27,20 +33,13 @@ export default function Page() {
     );
   }
 
-  if (!session) {
-    return <AuthView onAuthenticated={setSession} />;
+  if (!session && showAuth) {
+    return <AuthView onAuthenticated={(s) => { setSession(s); setShowAuth(false); }} onCancel={() => setShowAuth(false)} />;
   }
 
   return (
     <div className="relative">
-      <button
-        onClick={() => supabase.auth.signOut()}
-        className="fixed bottom-5 left-5 z-50 text-xs font-bold px-3.5 py-2 rounded-full text-white shadow-lg"
-        style={{ background: "#0F1115" }}
-      >
-        Çıkış Yap
-      </button>
-      <IsinnApp session={session} />
+      <IsinnApp session={session} onRequireAuth={() => setShowAuth(true)} />
     </div>
   );
 }
