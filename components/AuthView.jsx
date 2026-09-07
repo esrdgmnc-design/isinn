@@ -2,11 +2,18 @@
 import { useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 
+// Kayıt sırasında hangi yasal metin sürümüne onay verildiğini işaretlemek
+// için — metinler (bkz. legal/ klasörü, /kvkk-aydinlatma-metni vb.) ileride
+// güncellenirse bu değer de güncellenmeli, böylece "kim hangi versiyona
+// onay verdi" sorusu her zaman cevaplanabilir kalır.
+const TERMS_VERSION = "2026-09-07-taslak";
+
 export default function AuthView({ onAuthenticated, onCancel }) {
   const [mode, setMode] = useState("login"); // login | signup
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [signupDone, setSignupDone] = useState(false);
@@ -22,9 +29,20 @@ export default function AuthView({ onAuthenticated, onCancel }) {
         setLoading(false);
         return;
       }
+      if (!agreedToTerms) {
+        setError("Devam edebilmek için KVKK Aydınlatma Metni, Gizlilik Politikası ve Kullanım Şartları'nı kabul etmelisin.");
+        setLoading(false);
+        return;
+      }
+      const termsAcceptedAt = new Date().toISOString();
       const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
+        // E-posta onayı beklenen durumlarda (session henüz yok) profiles
+        // satırı hemen oluşturulamıyor — bu bilgiyi user_metadata'da
+        // taşıyoruz, satır ne zaman oluşursa oluşsun (bkz. IsinnApp.jsx'teki
+        // "eksikse tamamlıyoruz" fallback'i) oradan okunup kaydediliyor.
+        options: { data: { full_name: fullName.trim(), terms_accepted_at: termsAcceptedAt, terms_version: TERMS_VERSION } },
       });
       if (signUpError) {
         setError(signUpError.message);
@@ -42,6 +60,8 @@ export default function AuthView({ onAuthenticated, onCancel }) {
         await supabase.from("profiles").insert({
           id: data.user.id,
           full_name: fullName.trim(),
+          terms_accepted_at: termsAcceptedAt,
+          terms_version: TERMS_VERSION,
         });
         onAuthenticated(data.session);
       } else {
@@ -136,6 +156,22 @@ export default function AuthView({ onAuthenticated, onCancel }) {
           style={{ borderColor: "#E5E7EB", background: "#F9FAFB", color: "#0F1115" }}
         />
 
+        {mode === "signup" && (
+          <label className="flex items-start gap-2 mb-4 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={agreedToTerms}
+              onChange={(e) => setAgreedToTerms(e.target.checked)}
+              className="mt-0.5 shrink-0"
+            />
+            <span className="text-xs leading-relaxed" style={{ color: "#6B7280" }}>
+              <a href="/kvkk-aydinlatma-metni" target="_blank" rel="noopener noreferrer" className="underline" style={{ color: "#2563EB" }}>KVKK Aydınlatma Metni</a>,{" "}
+              <a href="/gizlilik-politikasi" target="_blank" rel="noopener noreferrer" className="underline" style={{ color: "#2563EB" }}>Gizlilik Politikası</a> ve{" "}
+              <a href="/kullanim-sartlari" target="_blank" rel="noopener noreferrer" className="underline" style={{ color: "#2563EB" }}>Kullanım Şartları</a>'nı okudum, kabul ediyorum.
+            </span>
+          </label>
+        )}
+
         {error && (
           <p className="text-xs mb-4 px-3 py-2 rounded-lg" style={{ background: "#FEF2F2", color: "#9C4A3C" }}>
             {error}
@@ -144,9 +180,9 @@ export default function AuthView({ onAuthenticated, onCancel }) {
 
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || (mode === "signup" && !agreedToTerms)}
           className="w-full py-3 rounded-full text-sm font-bold text-white mb-4"
-          style={{ background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)", opacity: loading ? 0.7 : 1 }}
+          style={{ background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)", opacity: loading || (mode === "signup" && !agreedToTerms) ? 0.6 : 1 }}
         >
           {loading ? "Bekleyin..." : mode === "login" ? "Giriş Yap" : "Kayıt Ol"}
         </button>

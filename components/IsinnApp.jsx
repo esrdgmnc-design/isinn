@@ -8518,7 +8518,16 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
       const fallbackName =
         session?.user?.user_metadata?.full_name ||
         (session?.user?.email ? session.user.email.split("@")[0] : "Kullanıcı");
-      await supabase.from("profiles").insert({ id: userId, full_name: fallbackName });
+      // KVKK/Gizlilik/Kullanım Şartları onayı kayıt formunda (AuthView)
+      // verildi — e-posta onayı bekleyen hesaplarda profil satırı o an
+      // oluşturulamadığı için bu bilgi user_metadata'da taşınmıştı, satır
+      // burada oluşurken kaydediliyor.
+      await supabase.from("profiles").insert({
+        id: userId,
+        full_name: fallbackName,
+        terms_accepted_at: session?.user?.user_metadata?.terms_accepted_at || null,
+        terms_version: session?.user?.user_metadata?.terms_version || null,
+      });
     })();
     return () => { cancelled = true; };
   }, [userId]);
