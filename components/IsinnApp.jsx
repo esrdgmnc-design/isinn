@@ -1682,7 +1682,8 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
           className="absolute top-1/3 right-1/4 w-40 h-40 rounded-full blur-3xl opacity-20"
           style={{ background: "#F59E0B" }}
         />
-        <div className="max-w-6xl mx-auto relative">
+        <div className="max-w-6xl mx-auto relative lg:flex lg:items-center lg:justify-between lg:gap-10">
+        <div className="relative">
           <h1 className="font-sans text-5xl md:text-7xl font-black leading-[0.98] max-w-3xl tracking-tight" style={{ color: "#FFFFFF" }}>
             İhtiyacın olan şeyi<br />
             <span className="inline-block relative">
@@ -1730,6 +1731,61 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
               </div>
             ))}
           </div>
+        </div>
+
+        {/* Hero'nun sağ tarafı (metnin simetriği) boş kalıyordu — gerçek
+            veriden beslenen, yüzen kartlar ekledik. Öne Çıkan kart bilerek en
+            üstte/en belirgin: hem gerçek bir vitrini sergiliyor hem Öne
+            Çıkarma Paketi'nin "böyle görüneceksin" vaadini dolaylı yoldan
+            gösteriyor (kullanıcının isteği — "öne çıkanlar için heveslendirici dursun"). */}
+        {featured.length > 0 && (
+          <div className="hidden lg:block relative w-full max-w-xs shrink-0">
+            <button
+              onClick={() => onSelectListing(featured[featuredIndex])}
+              className="w-full text-left rounded-2xl p-4 shadow-2xl hover:-translate-y-1 transition-transform"
+              style={{ background: "rgba(255,255,255,0.08)", backdropFilter: "blur(16px)", border: "1px solid rgba(255,255,255,0.14)", transform: "rotate(-2deg)" }}
+            >
+              <span
+                className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full text-white mb-2.5"
+                style={{ background: "linear-gradient(135deg, #F59E0B 0%, #D97706 100%)" }}
+              >
+                <Sparkles size={10} /> Öne Çıkan
+              </span>
+              <div className="flex items-center gap-2.5 mb-2">
+                <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0" style={{ background: "linear-gradient(135deg, #8B5CF6, #6D28D9)" }}>
+                  {featured[featuredIndex].provider.split(" ").map((w) => w[0]).join("").slice(0, 2)}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-bold truncate" style={{ color: "#FFFFFF" }}>{featured[featuredIndex].provider}</p>
+                  <div className="flex items-center gap-1">
+                    <Stars value={featured[featuredIndex].rating} size={11} />
+                    <span className="text-[11px]" style={{ color: "#9CA3AF" }}>{featured[featuredIndex].rating} ({featured[featuredIndex].reviewCount})</span>
+                  </div>
+                </div>
+              </div>
+              <p className="text-xs leading-relaxed line-clamp-2" style={{ color: "#D1D5DB" }}>{featured[featuredIndex].title}</p>
+            </button>
+
+            <div
+              className="rounded-2xl p-4 shadow-2xl mt-4 ml-10"
+              style={{ background: "rgba(255,255,255,0.08)", backdropFilter: "blur(16px)", border: "1px solid rgba(255,255,255,0.14)", transform: "rotate(2deg)", maxWidth: "220px" }}
+            >
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: "rgba(47,191,113,0.18)" }}>
+                  <Check size={15} style={{ color: "#2FBF71" }} />
+                </div>
+                <div>
+                  <p className="text-sm font-black" style={{ color: "#FFFFFF" }}>{platformStats?.completedJobs ?? 0} iş</p>
+                  <p className="text-[11px]" style={{ color: "#9CA3AF" }}>gerçekten tamamlandı</p>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-[11px] mt-3 ml-10" style={{ color: "#6B7280" }}>
+              Sen de <span style={{ color: "#F59E0B", fontWeight: 700 }}>Öne Çıkarma Paketi</span> ile burada görün.
+            </p>
+          </div>
+        )}
         </div>
       </section>
       <div className="h-12" style={{ background: "linear-gradient(180deg, #0F1115 0%, #FFFFFF 100%)" }} />
