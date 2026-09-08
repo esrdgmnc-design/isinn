@@ -1698,7 +1698,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
           </h1>
           <style>{`@keyframes fadeSlide { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }`}</style>
           <p className="mt-5 max-w-md text-base" style={{ color: "#B8BCC4" }}>
-            Mahallendeki ustadan güvenilir bakıcıya, bugün ihtiyacın olan kişi 5 dakikada teklif göndersin.
+            En yakınındaki ustadan güvenilir bakıcıya, uzaktaki yazılımcıdan, salondaki tırnakçıya — ihtiyacın olan herkes burada.
           </p>
           <div className="mt-9 flex items-center gap-2 max-w-lg bg-white rounded-full p-1.5 pl-4 shadow-2xl">
             <Search size={16} style={{ color: "#9CA3AF" }} />
