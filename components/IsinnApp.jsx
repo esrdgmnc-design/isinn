@@ -1742,12 +1742,14 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
           <div className="hidden lg:block relative w-full max-w-sm shrink-0">
             {/* Aşağıdaki "Öne Çıkan Sağlayıcılar" şeridindeki fotoğraflı kartla
                 aynı görsel dil — kullanıcının isteği, ikisi de aynı hissi versin. */}
+            <style>{`@keyframes cardPop { from { opacity: 0; transform: scale(0.9) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }`}</style>
             <button
+              key={featuredIndex}
               onClick={() => onSelectListing(featured[featuredIndex])}
-              className="w-full text-left rounded-2xl overflow-hidden shadow-2xl hover:-translate-y-1 transition-transform"
+              className="w-full text-left rounded-2xl overflow-hidden shadow-2xl hover:-translate-y-1 transition-transform animate-[cardPop_0.5s_cubic-bezier(0.34,1.56,0.64,1)]"
               style={{ background: "rgba(255,255,255,0.08)", backdropFilter: "blur(16px)", border: "1px solid rgba(255,255,255,0.14)" }}
             >
-              <div className="relative h-36 overflow-hidden">
+              <div className="relative aspect-square overflow-hidden">
                 <img src={featured[featuredIndex].img} alt="" className="w-full h-full object-cover" />
                 <span
                   className="absolute top-2.5 left-2.5 text-[10px] font-bold px-2 py-0.5 rounded-full text-white flex items-center gap-1"
