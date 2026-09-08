@@ -1625,29 +1625,45 @@ const JOB_POSTINGS = [
 const ROTATING_WORDS = ["çilingire", "temizlikçiye", "hemşireye", "bakıcıya", "tırnakçıya", "fizyoterapiste"];
 
 const CATEGORY_TILE_COLORS = ["#2563EB", "#14B8A6", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899", "#3B82F6", "#F97316"];
+// Her rengin canlı-koyu çift ucu — kartın tamamını dolduran gradyan için.
+// Önceki denemede (tek düz #16321F fon + soluk alt panel) kullanıcı
+// "renkleri sevmedim, daha canlı ve ilgi çekici olsun" dedi — bu yüzden artık
+// her kategori kendi doygun rengiyle tüm kartı kaplıyor, aynı sırayla eşleşiyor.
+const CATEGORY_TILE_GRADIENTS = [
+  ["#3B82F6", "#1D4ED8"], // mavi
+  ["#2DD4BF", "#0F766E"], // turkuaz
+  ["#FBBF24", "#B45309"], // amber
+  ["#F87171", "#B91C1C"], // kırmızı
+  ["#A78BFA", "#6D28D9"], // mor
+  ["#F472B6", "#BE185D"], // pembe
+  ["#60A5FA", "#1E40AF"], // gök mavisi
+  ["#FB923C", "#C2410C"], // turuncu
+];
 
 // Sayfanın en altındaki "Aradığını bulamadın mı?" kategori kartları — Fiverr'ın
-// "Popular services" bölümünden ilham (koyu üst + renkli alt panel). #16321F
-// hero'daki koyu yeşille aynı, marka tutarlılığı için (bkz. HomeView'daki
-// radial-gradient arka plan).
+// "Popular services" bölümünden ilham (bkz. HomeView'daki hero). Kartın tamamı
+// kategoriye özel canlı bir gradyan, ikon sağ üstte büyük ve yarı saydam,
+// başlık altta koyu bir gölge üzerinde — beyaz kutucuklara göre çok daha
+// dikkat çekici.
 function CategoryTile({ c, i, onClick }) {
   const Icon = c.icon;
-  const tileColor = CATEGORY_TILE_COLORS[i % CATEGORY_TILE_COLORS.length];
+  const [from, to] = CATEGORY_TILE_GRADIENTS[i % CATEGORY_TILE_GRADIENTS.length];
   return (
     <button
       onClick={onClick}
-      className="group relative flex flex-col overflow-hidden rounded-2xl text-left hover:-translate-y-1.5 transition-all duration-300 shadow-sm hover:shadow-xl"
-      style={{ background: "#16321F" }}
+      className="group relative flex flex-col justify-end overflow-hidden rounded-2xl text-left hover:-translate-y-1.5 hover:scale-[1.03] transition-all duration-300 shadow-sm hover:shadow-xl"
+      style={{ minHeight: "128px", background: `linear-gradient(150deg, ${from} 0%, ${to} 100%)` }}
     >
-      <span className="text-[13px] font-bold text-white leading-snug px-3.5 pt-3.5 pb-2 relative z-10">
+      <Icon
+        size={40}
+        className="absolute -top-1.5 -right-1.5 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6"
+        style={{ color: "rgba(255,255,255,0.35)" }}
+      />
+      <Icon size={22} className="relative z-10 mb-auto mt-3.5 ml-3.5" style={{ color: "#FFFFFF" }} />
+      <div className="absolute inset-x-0 bottom-0 h-14" style={{ background: "linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.32) 100%)" }} />
+      <span className="relative z-10 text-[13px] font-bold text-white leading-snug px-3.5 pb-3">
         {c.name}
       </span>
-      <div
-        className="mt-auto h-16 flex items-center justify-center transition-transform duration-300 group-hover:scale-105"
-        style={{ background: `linear-gradient(160deg, ${tileColor}22 0%, ${tileColor}55 100%)` }}
-      >
-        <Icon size={26} style={{ color: tileColor }} />
-      </div>
     </button>
   );
 }
