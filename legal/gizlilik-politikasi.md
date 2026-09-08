@@ -1,6 +1,9 @@
 # İşinn — Gizlilik Politikası (TASLAK — yayınlanmadan önce mutlaka bir avukata kontrol ettir)
 
-> **Bu bir taslaktır, henüz uygulamaya eklenmedi.** KVKK Aydınlatma Metni'nden farkı: bu belge daha genel, kullanıcıya yönelik, "verilerinizle ne yapıyoruz" anlatan bir metin — Aydınlatma Metni ise KVKK'nın zorunlu kıldığı belirli maddeleri içeren resmi metin. İkisi birlikte kullanılır, çoğu bilgi örtüşür.
+> **Bu bir taslaktır.** Şirket bilgileri dolduruldu, ama bir avukat tarafından henüz onaylanmadı. KVKK
+> Aydınlatma Metni'nden farkı: bu belge daha genel, kullanıcıya yönelik, "verilerinizle ne yapıyoruz" anlatan
+> bir metin — Aydınlatma Metni ise KVKK'nın zorunlu kıldığı belirli maddeleri içeren resmi metin. İkisi
+> birlikte kullanılır, çoğu bilgi örtüşür.
 
 ## Hangi verileri topluyoruz?
 
@@ -18,8 +21,8 @@ Verilerinizi **satmıyoruz**. Aşağıdaki hizmet sağlayıcılarla, yalnızca h
 
 - **Supabase** — tüm verilerinizin saklandığı veritabanı/depolama altyapısı
 - **Anthropic (Claude AI)** — fotoğraf uygunluk kontrolü, akıllı arama, yazım yardımı gibi özellikler için ilgili metin/görsel bu sağlayıcıya işlenir
-- **[PayTR]** — ödeme işlemleri (kart bilgileriniz bizim sunucularımıza hiçbir zaman uğramaz, doğrudan PayTR'ye gider)
-- **[Netgsm]** — telefon doğrulama SMS'i
+- **PayTR** — ödeme işlemleri (kart bilgileriniz bizim sunucularımıza hiçbir zaman uğramaz, doğrudan PayTR'ye gider)
+- **Netgsm** — telefon doğrulama SMS'i
 
 ## Diğer kullanıcılar sizin hakkınızda ne görebilir?
 
@@ -29,7 +32,7 @@ Verilerinizi **satmıyoruz**. Aşağıdaki hizmet sağlayıcılarla, yalnızca h
 
 ## Verilerinizi nasıl silebilirsiniz?
 
-Hesabınızı silmek istediğinizde **[e-posta adresi]** üzerinden bize ulaşabilirsiniz. Hesap silindiğinde profil, vitrin ve belgeleriniz kaldırılır; yasal saklama yükümlülüğü olan kayıtlar (ör. tamamlanmış işlemlere dair asgari kayıtlar) mevzuatın öngördüğü süre kadar saklanabilir.
+Hesabınızı silmek istediğinizde **esra.gunes@codegtechnology.com** üzerinden bize ulaşabilirsiniz. Hesap silindiğinde profil, vitrin ve belgeleriniz kaldırılır; yasal saklama yükümlülüğü olan kayıtlar (ör. tamamlanmış işlemlere dair asgari kayıtlar) mevzuatın öngördüğü süre kadar saklanabilir.
 
 ## Çerezler (Cookies)
 
@@ -37,4 +40,4 @@ Hesabınızı silmek istediğinizde **[e-posta adresi]** üzerinden bize ulaşab
 
 ## İletişim
 
-Gizlilikle ilgili sorularınız için: **[e-posta adresi]**
+Gizlilikle ilgili sorularınız için: **esra.gunes@codegtechnology.com**

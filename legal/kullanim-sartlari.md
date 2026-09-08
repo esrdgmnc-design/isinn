@@ -1,10 +1,12 @@
 # İşinn — Kullanım Şartları (TASLAK — yayınlanmadan önce mutlaka bir avukata kontrol ettir)
 
-> **Bu bir taslaktır, henüz uygulamaya eklenmedi.** Aşağıdaki maddeler İşinn'in gerçek iş modelini (sıfır komisyon, işlem aracılığı yapmama) yansıtacak şekilde yazıldı ama bağlayıcı bir sözleşme olarak kullanılmadan önce mutlaka bir avukat tarafından incelenmelidir.
+> **Bu bir taslaktır.** Şirket bilgileri dolduruldu, ama özellikle 8. ve 11. maddeler (sorumluluk
+> sınırlandırması, uygulanacak hukuk) bir avukat tarafından henüz onaylanmadı — bağlayıcı bir sözleşme
+> olarak kullanılmadan önce mutlaka avukat incelemesinden geçmelidir.
 
 ## 1. Taraflar ve Kabul
 
-Bu Kullanım Şartları, İşinn platformunu ("Platform") kullanan tüm kullanıcılar ("Kullanıcı") ile **[şirket/şahıs unvanı]** ("İşinn") arasındaki ilişkiyi düzenler. Platforma kayıt olarak bu şartları kabul etmiş sayılırsınız.
+Bu Kullanım Şartları, İşinn platformunu ("Platform") kullanan tüm kullanıcılar ("Kullanıcı") ile **Code G Teknoloji ve Ticaret Limited Şirketi** ("İşinn") arasındaki ilişkiyi düzenler. Platforma kayıt olarak bu şartları kabul etmiş sayılırsınız.
 
 ## 2. Platformun Niteliği — Önemli
 
@@ -39,6 +41,7 @@ Değerlendirmeler yalnızca gerçekleşmiş, karşı tarafça "hizmeti aldım" o
 - Standart ve Pro üyelik ücretleri, seçtiğiniz plana göre aylık/yıllık tahsil edilir.
 - İstediğiniz zaman iptal edebilirsiniz; iptal, mevcut faturalama döneminin sonunda geçerli olur.
 - Ücretler, kazandığınız gelirden bağımsızdır — İşinn işlemlerinizden komisyon **almaz**.
+- Satın alma, iptal ve iade koşullarının detayı için: Mesafeli Satış Sözleşmesi ve İptal, İade ve Geri Ödeme Koşulları.
 
 ## 7. Fikri Mülkiyet
 
@@ -62,4 +65,4 @@ Bu şartlar Türkiye Cumhuriyeti kanunlarına tabidir. **[Yetkili mahkeme/tahkim
 
 ## İletişim
 
-Sorularınız için: **[e-posta adresi]**
+Sorularınız için: **esra.gunes@codegtechnology.com**

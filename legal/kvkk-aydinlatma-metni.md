@@ -1,15 +1,18 @@
 # İşinn — KVKK Aydınlatma Metni (TASLAK — yayınlanmadan önce mutlaka bir avukata/KVKK danışmanına kontrol ettir)
 
-> **Bu bir taslaktır, henüz uygulamaya eklenmedi.** 6698 sayılı Kişisel Verilerin Korunması Kanunu (KVKK) kapsamında hazırlanmıştır ama gerçek bir hukuki belge olarak kullanılmadan önce mutlaka bir avukat/KVKK danışmanı tarafından gözden geçirilmelidir. Köşeli parantez `[...]` içindeki alanlar sizin doldurmanız gereken yerlerdir.
+> **Bu bir taslaktır.** Şirket bilgileri dolduruldu, ama gerçek bir hukuki belge olarak kullanılmadan önce
+> mutlaka bir avukat/KVKK danışmanı tarafından gözden geçirilmelidir — özellikle **4. madde** (yurt dışına
+> veri aktarımı). Köşeli parantez `[...]` içinde kalan tek yer, avukat onayı gereken o maddedir.
 
 ## 1. Veri Sorumlusu
 
-**[Şirket/şahıs unvanı]** ("İşinn", "biz") olarak, 6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") uyarınca veri sorumlusu sıfatıyla, aşağıda açıklanan kapsamda kişisel verilerinizi işlemekteyiz.
+**Code G Teknoloji ve Ticaret Limited Şirketi** ("İşinn", "biz") olarak, 6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") uyarınca veri sorumlusu sıfatıyla, aşağıda açıklanan kapsamda kişisel verilerinizi işlemekteyiz.
 
-- Unvan: **[doldurulacak — şahıs şirketi ise ad-soyad, ltd/A.Ş. ise ticari unvan]**
-- Adres: **[doldurulacak]**
-- Vergi No / T.C. Kimlik No: **[doldurulacak]**
-- E-posta: **[doldurulacak — örn. destek@isinn.com]**
+- Unvan: Code G Teknoloji ve Ticaret Limited Şirketi
+- Adres: Şişli, İstanbul
+- Vergi No: 2111455428
+- E-posta: esra.gunes@codegtechnology.com
+- Telefon: 0536 460 36 82
 
 ## 2. İşlenen Kişisel Veri Kategorileri
 
@@ -42,8 +45,8 @@ Kişisel verileriniz, hizmetin sunulabilmesi için aşağıdaki hizmet sağlayı
 
 - **Supabase Inc.** — veritabanı ve depolama altyapısı (profil bilgileri, mesajlar, belgeler, fotoğraf/video dosyaları)
 - **Anthropic PBC (Claude AI)** — bazı özelliklerin (fotoğraf/içerik uygunluk ön kontrolü, değerlendirme özetleri, arama, yazım yardımı) çalışabilmesi için ilgili metin/görsel içerik bu sağlayıcıya işlenmek üzere gönderilir. Bu şirketler **yurt dışında** yerleşiktir; KVKK'nın yurt dışına veri aktarımına ilişkin hükümleri (md. 9) bu aktarımlar için geçerlidir — **[avukatınızla açık rıza metni/uygun aktarım mekanizması gerekip gerekmediğini teyit edin]**.
-- **[PayTR]** — abonelik ödemelerinin işlenmesi (entegrasyon tamamlandığında)
-- **[Netgsm]** — telefon numarası doğrulama SMS gönderimi (entegrasyon tamamlandığında)
+- **PayTR** — abonelik ödemelerinin işlenmesi
+- **Netgsm** — telefon numarası doğrulama SMS gönderimi (entegrasyon tamamlandığında)
 - Yetkili kamu kurum ve kuruluşları — yasal bir talep olması halinde
 
 ## 5. Hukuki Sebep
@@ -63,4 +66,4 @@ Kişisel verisi işlenen herkes, veri sorumlusuna başvurarak:
 - İşlenen verilerin münhasıran otomatik sistemlerle analiz edilmesi suretiyle aleyhine bir sonucun ortaya çıkmasına itiraz etme,
 - Kanuna aykırı işlenme nedeniyle zarara uğraması halinde zararın giderilmesini talep etme
 
-haklarına sahiptir. Başvurularınızı **[e-posta adresi]** üzerinden iletebilirsiniz.
+haklarına sahiptir. Başvurularınızı **esra.gunes@codegtechnology.com** üzerinden iletebilirsiniz.
