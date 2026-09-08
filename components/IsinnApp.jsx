@@ -76,6 +76,15 @@ const CATEGORIES = [
   { id: "sanal-asistan", name: "Sanal Asistan", mode: "remote", icon: ClipboardList },
 ];
 
+// Sabit listede olmayan bir kategori isteyen kullanıcı için — CATEGORIES'e
+// bilerek eklenmedi (homepage'deki kategori ızgaralarında normal bir
+// kategoriymiş gibi görünmesini istemiyoruz), sadece Hizmet Ekle/İlan Ver
+// formlarındaki <select>'e elle eklenen ayrı bir seçenek. Seçilince kullanıcı
+// serbest bir etiket yazıyor, "diger" (bkz. supabase/custom_category_requests.sql)
+// kategorisi altında kaydediliyor ve bir destek bileti düşüyor (kategori
+// talebi) — bkz. CreateListingView/PostJobView handleSubmit.
+const CUSTOM_CATEGORY_ID = "diger-ozel";
+
 const PARENT_CATEGORIES = [
   { id: "ev-hizmetleri", name: "Ev Hizmetleri", icon: Home, categoryIds: ["temizlik", "nakliye", "tadilat", "cilingir", "terzi", "elektrikci", "su-tesisatcisi", "hali-yikama", "yemek", "boya-badana", "klima-beyaz-esya"] },
   { id: "guzellik-bakim", name: "Güzellik & Bakım", icon: Wand2, categoryIds: ["tirnakci", "makyaj", "bakim", "kuafor-berber"] },
@@ -843,6 +852,7 @@ function mapServiceRowToListing(row) {
     isReal: true,
     category: category?.slug || "",
     categoryDbId: row.category_id,
+    customCategoryLabel: row.custom_category_label || "", // bkz. CUSTOM_CATEGORY_ID
     mode: row.is_remote ? "remote" : "local",
     title: row.title,
     provider,
@@ -1795,18 +1805,15 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
               Ara
             </button>
           </div>
-          <div className="flex gap-5 mt-8 flex-wrap">
-            {[
-              [String(platformStats?.providers ?? 0), "Sağlayıcı"],
-              [String(platformStats?.completedJobs ?? 0), "Tamamlanan iş"],
-              [platformStats?.avgRating != null ? `${platformStats.avgRating} ★` : "—", "Ortalama puan"],
-            ].map(([val, label]) => (
-              <div key={label} className="flex items-baseline gap-1.5">
-                <span className="font-sans text-xl font-black" style={{ color: "#FFFFFF" }}>{val}</span>
-                <span className="text-xs font-medium" style={{ color: "#7A7F8A" }}>{label}</span>
-              </div>
-            ))}
-          </div>
+          {/* Küçük platform istatistikleri ("1 Sağlayıcı, 1 Tamamlanan iş...")
+              kullanıcıya amaçsız/zayıf geldi (platform henüz küçükken sayılar
+              güven vermek yerine tam tersi izlenim veriyordu) — yerine kısa
+              bir slogan koyduk. */}
+          <p className="mt-8 flex items-center gap-2 text-sm font-bold tracking-wide">
+            <Sparkles size={14} style={{ color: "#F59E0B" }} />
+            <span style={{ color: "#FFFFFF" }}>İşin gücün</span>
+            <span style={{ color: "#9CA3AF" }}>burada!</span>
+          </p>
         </div>
 
         {/* Hero'nun sağ tarafı (metnin simetriği) boş kalıyordu — gerçek
@@ -4153,6 +4160,7 @@ function PostJobView({ onBack, onSubmitted, onViewOffers, onMatchAI, userId, onJ
   const [step, setStep] = useState("form"); // form | success
   const [title, setTitle] = useState("");
   const [categoryId, setCategoryId] = useState("");
+  const [customCategoryLabel, setCustomCategoryLabel] = useState(""); // categoryId === CUSTOM_CATEGORY_ID iken
   const [desc, setDesc] = useState("");
   const [cityId, setCityId] = useState("istanbul");
   const [district, setDistrict] = useState("");
@@ -4202,7 +4210,7 @@ function PostJobView({ onBack, onSubmitted, onViewOffers, onMatchAI, userId, onJ
     setAiWriting(true);
     setError("");
     try {
-      const catName = CATEGORIES.find((c) => c.id === categoryId)?.name || "";
+      const catName = categoryId === CUSTOM_CATEGORY_ID ? customCategoryLabel.trim() : CATEGORIES.find((c) => c.id === categoryId)?.name || "";
       const prompt = `Bir hizmet pazaryeri uygulamasında bir MÜŞTERİ, ihtiyacı olan işi anlatan bir ilan yazıyor (bir sağlayıcı değil). Kategori: "${catName}". ${title.trim() || desc.trim() ? `Kullanıcının notu: "${title.trim()} ${desc.trim()}"` : "Kullanıcı henüz bir şey yazmadı, kategoriye uygun genel ve gerçekçi bir müşteri ihtiyacı metni üret."}
 SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
 {"title": "kısa, net bir ilan başlığı (en fazla 8 kelime)", "desc": "2-3 cümlelik, ihtiyacı ve beklentiyi anlatan bir açıklama"}`;
@@ -4227,9 +4235,12 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
   const handleSubmit = async () => {
     if (!title.trim()) { setError("Bir başlık yazmalısın."); return; }
     if (!categoryId) { setError("Bir kategori seçmelisin."); return; }
+    if (categoryId === CUSTOM_CATEGORY_ID && !customCategoryLabel.trim()) { setError("Hangi hizmet olduğunu yazmalısın."); return; }
     if (!desc.trim()) { setError("İşin ne olduğunu kısaca anlat."); return; }
     if (!userId) { setError("İlan vermek için giriş yapmış olmalısın."); return; }
-    const categoryDbId = categoryIdBySlug[categoryId];
+    // "Diğer" seçilince gerçek FK hedefi hep "diger" kategorisi — kullanıcının
+    // yazdığı serbest metin ayrı bir kolonda duruyor (bkz. custom_category_label).
+    const categoryDbId = categoryId === CUSTOM_CATEGORY_ID ? categoryIdBySlug["diger"] : categoryIdBySlug[categoryId];
     if (!categoryDbId) { setError("Bu kategori veritabanında henüz tanımlı değil."); return; }
     setError("");
     setSubmitting(true);
@@ -4258,6 +4269,7 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
         location: mode === "local" ? cityToLocationEwkt(cityId) : null,
         state: "new_offer",
         active: true,
+        custom_category_label: categoryId === CUSTOM_CATEGORY_ID ? customCategoryLabel.trim() : null,
       })
       .select()
       .single();
@@ -4272,6 +4284,16 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
     setStep("success");
     // Şüpheli içerik taraması — sessiz, engellemeyen.
     checkAndFlagContent("job", data.id, `${title} ${desc}`.trim(), userId);
+    // Listede olmayan bir kategori istendiyse, gerçekten görülmesi için
+    // destek talebi kuyruğuna düşürüyoruz — sessiz, engellemeyen (bkz. üstteki desen).
+    if (categoryId === CUSTOM_CATEGORY_ID) {
+      supabase.from("support_tickets").insert({
+        reporter_id: userId,
+        title: `Yeni kategori talebi: ${customCategoryLabel.trim()}`,
+        category: "istek",
+        summary: `İlan Ver formunda "${customCategoryLabel.trim()}" kategorisi listede yoktu, kullanıcı "Diğer" ile devam etti. İlan başlığı: "${title.trim()}".`,
+      }).then(() => {});
+    }
   };
 
   if (step === "success") {
@@ -4350,13 +4372,29 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
                 </optgroup>
               );
             })}
+            {/* Listede aradığını bulamayan için — bkz. CUSTOM_CATEGORY_ID notu. */}
+            <option value={CUSTOM_CATEGORY_ID}>Diğer (belirtiniz)</option>
           </select>
-          {categoryId && (
+          {categoryId && categoryId !== CUSTOM_CATEGORY_ID && (
             <p className="text-xs mt-1.5" style={{ color: "#3F7D5C" }}>
               {mode === "local"
                 ? `${cityName}'de bu kategoride ${nearbyCount} kayıtlı sağlayıcı var`
                 : `Bu kategoride ${nearbyCount > 0 ? nearbyCount : "çok sayıda"} uzaktan çalışan sağlayıcı var`}
             </p>
+          )}
+          {categoryId === CUSTOM_CATEGORY_ID && (
+            <div className="mt-2.5">
+              <input
+                value={customCategoryLabel}
+                onChange={(e) => setCustomCategoryLabel(e.target.value)}
+                placeholder="Hangi hizmet? Örn. Halı saha kurulumu"
+                className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
+                style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
+              />
+              <p className="text-xs mt-1.5" style={{ color: "#8A8368" }}>
+                Bu kategori henüz listede yok — ilanın "Diğer" altında yayınlanır ve ekibimize bir kategori talebi olarak iletilir.
+              </p>
+            </div>
           )}
         </div>
 
@@ -5476,7 +5514,11 @@ function CreateListingView({ onBack, onCreated, userId, editingListing }) {
   const isEditing = !!editingListing;
   const [mode, setMode] = useState(editingListing?.mode || "local");
   const [providerName, setProviderName] = useState(editingListing?.provider || "");
-  const [categoryId, setCategoryId] = useState(editingListing?.category || "");
+  // "diger" (gerçek DB slug'ı) düzenlemede CUSTOM_CATEGORY_ID'ye ("diger-ozel",
+  // sadece bu formun <select>'inde var olan sahte id) çeviriyoruz — yoksa
+  // düzenlerken kategori seçili görünmez, serbest metin kutusu da açılmaz.
+  const [categoryId, setCategoryId] = useState(editingListing?.category === "diger" ? CUSTOM_CATEGORY_ID : editingListing?.category || "");
+  const [customCategoryLabel, setCustomCategoryLabel] = useState(editingListing?.customCategoryLabel || "");
   const [title, setTitle] = useState(editingListing?.title || "");
   const [desc, setDesc] = useState(editingListing?.desc || "");
   const [cityId, setCityId] = useState(() => deriveCityIdFromLabel(editingListing?.city) || "istanbul");
@@ -5566,7 +5608,7 @@ function CreateListingView({ onBack, onCreated, userId, editingListing }) {
     setAiWriting(true);
     setError("");
     try {
-      const catName = CATEGORIES.find((c) => c.id === categoryId)?.name || "";
+      const catName = categoryId === CUSTOM_CATEGORY_ID ? customCategoryLabel.trim() : CATEGORIES.find((c) => c.id === categoryId)?.name || "";
       const prompt = `Bir hizmet pazaryeri uygulaması için ilan metni yaz. Kategori: "${catName}". ${title.trim() ? `Kullanıcının notu: "${title.trim()} ${desc.trim()}"` : "Kullanıcı henüz bir şey yazmadı, kategoriye uygun genel ve inandırıcı bir metin üret."}
 SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
 {"title": "çekici, kısa bir ilan başlığı (en fazla 8 kelime)", "desc": "2-3 cümlelik, samimi ve profesyonel bir hizmet açıklaması"}`;
@@ -5679,13 +5721,16 @@ SADECE şu JSON formatında yanıt ver: {"approved": true veya false, "reason": 
   const handleSubmit = async () => {
     if (!providerName.trim()) { setError("Görünecek isim/işletme adını yaz."); return; }
     if (!categoryId) { setError("Bir kategori seçmelisin."); return; }
+    if (categoryId === CUSTOM_CATEGORY_ID && !customCategoryLabel.trim()) { setError("Hangi hizmet olduğunu yazmalısın."); return; }
     if (!title.trim()) { setError("Vitrin başlığı yazmalısın."); return; }
     if (!desc.trim()) { setError("Sunduğun hizmeti kısaca anlat."); return; }
     if (!price.trim()) { setError("Bir fiyat belirtmelisin."); return; }
     if (moderation?.status === "checking") { setError("Fotoğraf içerik kontrolü bitene kadar bekle."); return; }
     if (moderation?.status === "flagged") { setError("Kapak fotoğrafın incelemeye alındı, vitrini yayınlamadan önce fotoğrafı kaldır ya da değiştir."); return; }
     if (!userId) { setError("Vitrin yayınlamak için giriş yapmış olmalısın."); return; }
-    const categoryDbId = categoryIdBySlug[categoryId];
+    // "Diğer" seçilince gerçek FK hedefi hep "diger" kategorisi — kullanıcının
+    // yazdığı serbest metin ayrı bir kolonda duruyor (bkz. custom_category_label).
+    const categoryDbId = categoryId === CUSTOM_CATEGORY_ID ? categoryIdBySlug["diger"] : categoryIdBySlug[categoryId];
     if (!categoryDbId) {
       setError("Bu kategori veritabanında henüz tanımlı değil (supabase/categories_seed.sql çalıştırıldı mı?).");
       return;
@@ -5723,6 +5768,7 @@ SADECE şu JSON formatında yanıt ver: {"approved": true veya false, "reason": 
       // bir seçimdi.
       home_service_type: mode === "local" ? homeServiceVal : null,
       images: photo?.url ? [photo.url] : null,
+      custom_category_label: categoryId === CUSTOM_CATEGORY_ID ? customCategoryLabel.trim() : null,
     };
 
     const { data, error: dbError } = isEditing
@@ -5752,6 +5798,18 @@ SADECE şu JSON formatında yanıt ver: {"approved": true veya false, "reason": 
 
     // Şüpheli içerik taraması — sessiz, engellemeyen.
     checkAndFlagContent("service", data.id, `${title} ${desc}`.trim(), userId);
+
+    // Listede olmayan bir kategori istendiyse, gerçekten görülmesi için
+    // destek talebi kuyruğuna düşürüyoruz — sessiz, engellemeyen. Sadece yeni
+    // vitrin açılışında (düzenlemede tekrar tekrar bilet açmayalım).
+    if (!isEditing && categoryId === CUSTOM_CATEGORY_ID) {
+      supabase.from("support_tickets").insert({
+        reporter_id: userId,
+        title: `Yeni kategori talebi: ${customCategoryLabel.trim()}`,
+        category: "istek",
+        summary: `Hizmet Ekle formunda "${customCategoryLabel.trim()}" kategorisi listede yoktu, kullanıcı "Diğer" ile devam etti. Vitrin başlığı: "${title.trim()}".`,
+      }).then(() => {});
+    }
 
     const listing = mapServiceRowToListing(data);
     setSubmitting(false);
@@ -5907,7 +5965,23 @@ SADECE şu JSON formatında yanıt ver: {"approved": true veya false, "reason": 
                 </optgroup>
               );
             })}
+            {/* Listede aradığını bulamayan için — bkz. CUSTOM_CATEGORY_ID notu. */}
+            <option value={CUSTOM_CATEGORY_ID}>Diğer (belirtiniz)</option>
           </select>
+          {categoryId === CUSTOM_CATEGORY_ID && (
+            <div className="mt-2.5">
+              <input
+                value={customCategoryLabel}
+                onChange={(e) => setCustomCategoryLabel(e.target.value)}
+                placeholder="Ne sunuyorsun? Örn. Halı saha kurulumu"
+                className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
+                style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
+              />
+              <p className="text-xs mt-1.5" style={{ color: "#8A8368" }}>
+                Bu kategori henüz listede yok — vitrinin "Diğer" altında yayınlanır ve ekibimize bir kategori talebi olarak iletilir.
+              </p>
+            </div>
+          )}
         </div>
 
         <div>
