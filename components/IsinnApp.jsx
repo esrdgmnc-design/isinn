@@ -1745,7 +1745,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
             <button
               onClick={() => onSelectListing(featured[featuredIndex])}
               className="w-full text-left rounded-2xl overflow-hidden shadow-2xl hover:-translate-y-1 transition-transform"
-              style={{ background: "rgba(255,255,255,0.08)", backdropFilter: "blur(16px)", border: "1px solid rgba(255,255,255,0.14)", transform: "rotate(-1.5deg)" }}
+              style={{ background: "rgba(255,255,255,0.08)", backdropFilter: "blur(16px)", border: "1px solid rgba(255,255,255,0.14)" }}
             >
               <div className="relative h-36 overflow-hidden">
                 <img src={featured[featuredIndex].img} alt="" className="w-full h-full object-cover" />
@@ -1770,22 +1770,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
               </div>
             </button>
 
-            <div
-              className="rounded-2xl p-4 shadow-2xl mt-4 ml-10 inline-flex"
-              style={{ background: "rgba(255,255,255,0.08)", backdropFilter: "blur(16px)", border: "1px solid rgba(255,255,255,0.14)", transform: "rotate(2deg)" }}
-            >
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: "rgba(47,191,113,0.18)" }}>
-                  <Check size={15} style={{ color: "#2FBF71" }} />
-                </div>
-                <div>
-                  <p className="text-sm font-black" style={{ color: "#FFFFFF" }}>{platformStats?.completedJobs ?? 0} iş</p>
-                  <p className="text-[11px]" style={{ color: "#9CA3AF" }}>gerçekten tamamlandı</p>
-                </div>
-              </div>
-            </div>
-
-            <p className="text-[11px] mt-3 ml-10" style={{ color: "#6B7280" }}>
+            <p className="text-[11px] mt-3 text-center" style={{ color: "#6B7280" }}>
               Sen de <span style={{ color: "#F59E0B", fontWeight: 700 }}>Öne Çıkarma Paketi</span> ile burada görün.
             </p>
           </div>
