@@ -1625,10 +1625,7 @@ const JOB_POSTINGS = [
 const ROTATING_WORDS = ["çilingire", "temizlikçiye", "hemşireye", "bakıcıya", "tırnakçıya", "fizyoterapiste"];
 
 const CATEGORY_TILE_COLORS = ["#2563EB", "#14B8A6", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899", "#3B82F6", "#F97316"];
-// Her rengin canlı-koyu çift ucu — kartın tamamını dolduran gradyan için.
-// Önceki denemede (tek düz #16321F fon + soluk alt panel) kullanıcı
-// "renkleri sevmedim, daha canlı ve ilgi çekici olsun" dedi — bu yüzden artık
-// her kategori kendi doygun rengiyle tüm kartı kaplıyor, aynı sırayla eşleşiyor.
+// Her rengin canlı-koyu çift ucu — rozet gradyanı için (bkz. CategoryTile).
 const CATEGORY_TILE_GRADIENTS = [
   ["#3B82F6", "#1D4ED8"], // mavi
   ["#2DD4BF", "#0F766E"], // turkuaz
@@ -1640,28 +1637,45 @@ const CATEGORY_TILE_GRADIENTS = [
   ["#FB923C", "#C2410C"], // turuncu
 ];
 
-// Sayfanın en altındaki "Aradığını bulamadın mı?" kategori kartları — Fiverr'ın
-// "Popular services" bölümünden ilham (bkz. HomeView'daki hero). Kartın tamamı
-// kategoriye özel canlı bir gradyan, ikon sağ üstte büyük ve yarı saydam,
-// başlık altta koyu bir gölge üzerinde — beyaz kutucuklara göre çok daha
-// dikkat çekici.
+// Kategori başına küçük, "sevimli" bir görsel — özel illüstrasyon yerine emoji
+// (asset üretmeden en hızlı gerçek çözüm). Kullanıcının verdiği örnekler
+// (yemek, tadilat) dahil hepsi kendi görseline sahip.
+const CATEGORY_EMOJI = {
+  temizlik: "🧹", nakliye: "🚚", tadilat: "🛠️", cilingir: "🔑", ogretmen: "📚",
+  bakici: "👶", "hasta-bakici": "🩺", hemsire: "💉", fizyoterapist: "🦴",
+  "yoga-koc": "🧘", "spor-egitmeni": "🏋️", tirnakci: "💅", makyaj: "💄",
+  bakim: "🧴", terzi: "🧵", yemek: "🍲", muhendis: "👷", tasarim: "🎨",
+  yazilim: "💻", "sosyal-medya": "📱", dijital: "📈", diyetisyen: "🥗",
+  psikolog: "🧠", "logusa-bakicisi": "🤱", "emzirme-danismani": "🍼",
+  elektrikci: "💡", "su-tesisatcisi": "🚰", "hali-yikama": "🧽",
+  "etkinlik-organizatoru": "🎉", "bahce-bakim": "🌱", "profesyonel-fotograf": "📸",
+  "boya-badana": "🪣", "klima-beyaz-esya": "❄️", "kuafor-berber": "💇",
+  "evcil-hayvan": "🐾", "muzik-egitmeni": "🎵", muhasebe: "🧮", ceviri: "🌐",
+};
+
+// Sayfanın en altındaki "Aradığını bulamadın mı?" kategori kartları. Üç deneme
+// oldu: önce koyu yeşil kart ("renkleri sevmedim"), sonra kartın tamamını
+// kaplayan doygun gradyan ("alt kısmı yine sevmedim, mini sevimli görseller
+// olsun") — bu üçüncüsü: sade beyaz kart + yumuşak pastel bir rozet içinde
+// kategoriye özel emoji, aşırı renk değil zarif bir vurgu ("daha zevli, daha
+// stil sahibi" isteği). Rozet gradyanı hâlâ canlı ama küçük bir alanda,
+// kartın geneli site genelindeki temiz beyaz dille uyumlu kalıyor.
 function CategoryTile({ c, i, onClick }) {
-  const Icon = c.icon;
   const [from, to] = CATEGORY_TILE_GRADIENTS[i % CATEGORY_TILE_GRADIENTS.length];
+  const emoji = CATEGORY_EMOJI[c.id] || "✨";
   return (
     <button
       onClick={onClick}
-      className="group relative flex flex-col justify-end overflow-hidden rounded-2xl text-left hover:-translate-y-1.5 hover:scale-[1.03] transition-all duration-300 shadow-sm hover:shadow-xl"
-      style={{ minHeight: "128px", background: `linear-gradient(150deg, ${from} 0%, ${to} 100%)` }}
+      className="group relative flex flex-col items-center gap-3 p-4 pt-5 rounded-2xl text-center hover:-translate-y-1 transition-all duration-300 shadow-sm hover:shadow-lg"
+      style={{ background: "#FFFFFF", border: "1px solid #EFEDE7" }}
     >
-      <Icon
-        size={40}
-        className="absolute -top-1.5 -right-1.5 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6"
-        style={{ color: "rgba(255,255,255,0.35)" }}
-      />
-      <Icon size={22} className="relative z-10 mb-auto mt-3.5 ml-3.5" style={{ color: "#FFFFFF" }} />
-      <div className="absolute inset-x-0 bottom-0 h-14" style={{ background: "linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.32) 100%)" }} />
-      <span className="relative z-10 text-[13px] font-bold text-white leading-snug px-3.5 pb-3">
+      <div
+        className="w-14 h-14 rounded-full flex items-center justify-center text-2xl transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3"
+        style={{ background: `linear-gradient(150deg, ${from}26 0%, ${to}26 100%)` }}
+      >
+        <span style={{ filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.08))" }}>{emoji}</span>
+      </div>
+      <span className="text-xs font-semibold leading-snug" style={{ color: "#0F1115" }}>
         {c.name}
       </span>
     </button>
@@ -1726,7 +1740,9 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
         />
         <div className="max-w-6xl mx-auto relative lg:flex lg:items-center lg:justify-between lg:gap-10">
         <div className="relative">
-          <h1 className="font-sans text-5xl md:text-7xl font-black leading-[0.98] max-w-3xl tracking-tight" style={{ color: "#FFFFFF" }}>
+          {/* leading-[0.98] önceden "ç"/"y" gibi alt uzantılı (descender)
+              harfleri kırpıyordu (kullanıcı fark etti) — 1.05'e gevşetildi. */}
+          <h1 className="font-sans text-5xl md:text-7xl font-black leading-[1.05] max-w-3xl tracking-tight" style={{ color: "#FFFFFF" }}>
             İhtiyacın olan şeyi<br />
             <span className="inline-block relative">
               <span
@@ -1740,7 +1756,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
             anlat!
           </h1>
           <style>{`@keyframes fadeSlide { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }`}</style>
-          <p className="mt-5 max-w-md text-base" style={{ color: "#B8BCC4" }}>
+          <p className="mt-8 max-w-md text-base" style={{ color: "#B8BCC4" }}>
             En yakınındaki ustadan güvenilir bakıcıya, uzaktaki yazılımcıdan, salondaki tırnakçıya — ihtiyacın olan herkes burada.
           </p>
           <div className="mt-9 flex items-center gap-2 max-w-lg bg-white rounded-full p-1.5 pl-4 shadow-2xl">
@@ -1781,22 +1797,29 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
             Çıkarma Paketi'nin "böyle görüneceksin" vaadini dolaylı yoldan
             gösteriyor (kullanıcının isteği — "öne çıkanlar için heveslendirici dursun"). */}
         {featured.length > 0 && (
-          <div className="hidden lg:block relative w-full max-w-lg shrink-0">
+          // max-w-sm — ilk halinin genişliği. max-w-lg'ye çıkarınca sol
+          // taraftaki başlık daralıp 4 satıra düşüyordu (kullanıcı fark etti,
+          // "yazı yine ilk hali ile kalsın" dedi) — o yüzden sağ tarafı bu
+          // genişliğe göre küçülttük, geniş bırakmadık.
+          <div className="hidden lg:block relative w-full max-w-sm shrink-0">
             {/* Fiverr'ın "AI Director" hero'sundaki fanlanmış kart destesi
                 stilinde — ama bizde her kart gerçek bir vitrin (sabit
                 illüstrasyon değil), kullanıcının verdiği referansa göre.
                 Deste, featuredIndex'in ilerlediği her an (aşağıdaki
-                useEffect, 4.5sn'de bir) bambaşka bir 5'liye "kayıyor" —
-                sadece ortadaki kart değil, tüm deste tazeleniyor. */}
+                useEffect, 4.5sn'de bir) bambaşka bir 3'lüye "kayıyor".
+                Önce 5 kart vardı — kullanıcıya kalabalık/dağınık geldi ve
+                ortadaki "öne çıkan" belli olmuyordu; 3'e indirip ortadakine
+                amber bir çerçeve/glow verdik, yanlardakileri de koyu bir
+                örtüyle geri plana ittik. */}
             <style>{`
               @keyframes cardPop { from { opacity: 0; transform: scale(0.85) translateY(16px); } to { opacity: 1; transform: scale(1) translateY(0); } }
             `}</style>
             <div className="flex items-end justify-center" style={{ paddingTop: "24px" }}>
-              {Array.from({ length: Math.min(5, featured.length) }, (_, k) => featured[(featuredIndex + k) % featured.length]).map((l, i, arr) => {
+              {Array.from({ length: Math.min(3, featured.length) }, (_, k) => featured[(featuredIndex + k) % featured.length]).map((l, i, arr) => {
                 const mid = (arr.length - 1) / 2;
-                const offset = i - mid; // -2..-1..0..1..2 gibi
+                const offset = i - mid; // -1..0..1
                 const isCenter = Math.abs(offset) < 0.5;
-                const rotation = offset * 8;
+                const rotation = offset * 9;
                 return (
                   // Dıştaki div sadece SABİT rotasyonu taşıyor (asla animasyonlu
                   // değil) — pop-in animasyonu (opacity+scale+translateY) içteki
@@ -1809,11 +1832,11 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
                     key={`${featuredIndex}-${l.id}`}
                     className="shrink-0"
                     style={{
-                      width: isCenter ? "138px" : "108px",
-                      height: isCenter ? "206px" : "168px",
+                      width: isCenter ? "156px" : "100px",
+                      height: isCenter ? "234px" : "150px",
                       transform: `rotate(${rotation}deg)`,
-                      marginLeft: i === 0 ? 0 : "-22px",
-                      zIndex: 10 - Math.abs(offset),
+                      marginLeft: i === 0 ? 0 : "-20px",
+                      zIndex: isCenter ? 20 : 10 - Math.abs(offset),
                     }}
                   >
                     <button
@@ -1828,22 +1851,22 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
                       // tetikliyor) aynı string yeniden style'a yazılınca
                       // animasyon baştan sarıyordu. Statik class re-render'lar
                       // arasında değişmediği için bu sorunu yaşamıyor.
-                      className="relative w-full h-full rounded-2xl overflow-hidden hover:z-20 hover:-translate-y-3 hover:scale-105 transition-transform shadow-2xl block animate-[cardPop_0.6s_cubic-bezier(0.34,1.56,0.64,1)_both]"
+                      className={`relative w-full h-full rounded-2xl overflow-hidden hover:z-20 hover:-translate-y-3 hover:scale-105 transition-transform block animate-[cardPop_0.6s_cubic-bezier(0.34,1.56,0.64,1)_both] ${isCenter ? "shadow-[0_0_0_3px_#F59E0B,0_20px_45px_rgba(0,0,0,0.55)]" : "shadow-xl"}`}
                       style={{
-                        border: "2px solid rgba(255,255,255,0.18)",
+                        border: isCenter ? "2px solid rgba(255,255,255,0.9)" : "2px solid rgba(255,255,255,0.12)",
                         animationDelay: `${i * 70}ms`,
                       }}
                     >
-                      <img src={l.img} alt="" className="w-full h-full object-cover" />
+                      <img src={l.img} alt="" className="w-full h-full object-cover" style={isCenter ? {} : { filter: "brightness(0.55) saturate(0.85)" }} />
                       <div className="absolute inset-x-0 bottom-0 p-2 pt-7" style={{ background: "linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.88) 100%)" }}>
-                        <p className="text-[11px] font-bold text-white truncate">{l.provider}</p>
+                        <p className={`font-bold text-white truncate ${isCenter ? "text-xs" : "text-[10px]"}`}>{l.provider}</p>
                       </div>
                       {isCenter && (
                         <span
-                          className="absolute top-1.5 left-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full text-white flex items-center gap-0.5"
+                          className="absolute top-2 left-2 text-[10px] font-bold px-2 py-0.5 rounded-full text-white flex items-center gap-1"
                           style={{ background: "linear-gradient(135deg, #F59E0B 0%, #D97706 100%)" }}
                         >
-                          <Sparkles size={8} /> Öne Çıkan
+                          <Sparkles size={9} /> Öne Çıkan
                         </span>
                       )}
                     </button>
