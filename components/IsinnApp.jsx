@@ -1739,36 +1739,40 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
             Çıkarma Paketi'nin "böyle görüneceksin" vaadini dolaylı yoldan
             gösteriyor (kullanıcının isteği — "öne çıkanlar için heveslendirici dursun"). */}
         {featured.length > 0 && (
-          <div className="hidden lg:block relative w-full max-w-xs shrink-0">
+          <div className="hidden lg:block relative w-full max-w-sm shrink-0">
+            {/* Aşağıdaki "Öne Çıkan Sağlayıcılar" şeridindeki fotoğraflı kartla
+                aynı görsel dil — kullanıcının isteği, ikisi de aynı hissi versin. */}
             <button
               onClick={() => onSelectListing(featured[featuredIndex])}
-              className="w-full text-left rounded-2xl p-4 shadow-2xl hover:-translate-y-1 transition-transform"
-              style={{ background: "rgba(255,255,255,0.08)", backdropFilter: "blur(16px)", border: "1px solid rgba(255,255,255,0.14)", transform: "rotate(-2deg)" }}
+              className="w-full text-left rounded-2xl overflow-hidden shadow-2xl hover:-translate-y-1 transition-transform"
+              style={{ background: "rgba(255,255,255,0.08)", backdropFilter: "blur(16px)", border: "1px solid rgba(255,255,255,0.14)", transform: "rotate(-1.5deg)" }}
             >
-              <span
-                className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full text-white mb-2.5"
-                style={{ background: "linear-gradient(135deg, #F59E0B 0%, #D97706 100%)" }}
-              >
-                <Sparkles size={10} /> Öne Çıkan
-              </span>
-              <div className="flex items-center gap-2.5 mb-2">
-                <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0" style={{ background: "linear-gradient(135deg, #8B5CF6, #6D28D9)" }}>
-                  {featured[featuredIndex].provider.split(" ").map((w) => w[0]).join("").slice(0, 2)}
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-bold truncate" style={{ color: "#FFFFFF" }}>{featured[featuredIndex].provider}</p>
-                  <div className="flex items-center gap-1">
-                    <Stars value={featured[featuredIndex].rating} size={11} />
-                    <span className="text-[11px]" style={{ color: "#9CA3AF" }}>{featured[featuredIndex].rating} ({featured[featuredIndex].reviewCount})</span>
-                  </div>
+              <div className="relative h-36 overflow-hidden">
+                <img src={featured[featuredIndex].img} alt="" className="w-full h-full object-cover" />
+                <span
+                  className="absolute top-2.5 left-2.5 text-[10px] font-bold px-2 py-0.5 rounded-full text-white flex items-center gap-1"
+                  style={{ background: "linear-gradient(135deg, #F59E0B 0%, #D97706 100%)" }}
+                >
+                  <Sparkles size={10} /> Öne Çıkan
+                </span>
+                <span className="absolute top-2.5 right-2.5">
+                  <ModeTag mode={featured[featuredIndex].mode} />
+                </span>
+              </div>
+              <div className="p-3.5">
+                <p className="text-sm font-bold leading-snug line-clamp-1" style={{ color: "#FFFFFF" }}>{featured[featuredIndex].title}</p>
+                <p className="text-xs mt-0.5 truncate" style={{ color: "#9CA3AF" }}>{featured[featuredIndex].provider}</p>
+                <div className="flex items-center gap-1 mt-1.5">
+                  <Stars value={featured[featuredIndex].rating} size={12} />
+                  <span className="text-xs font-bold" style={{ color: "#FFFFFF" }}>{featured[featuredIndex].rating}</span>
+                  <span className="text-[11px]" style={{ color: "#9CA3AF" }}>({featured[featuredIndex].reviewCount})</span>
                 </div>
               </div>
-              <p className="text-xs leading-relaxed line-clamp-2" style={{ color: "#D1D5DB" }}>{featured[featuredIndex].title}</p>
             </button>
 
             <div
-              className="rounded-2xl p-4 shadow-2xl mt-4 ml-10"
-              style={{ background: "rgba(255,255,255,0.08)", backdropFilter: "blur(16px)", border: "1px solid rgba(255,255,255,0.14)", transform: "rotate(2deg)", maxWidth: "220px" }}
+              className="rounded-2xl p-4 shadow-2xl mt-4 ml-10 inline-flex"
+              style={{ background: "rgba(255,255,255,0.08)", backdropFilter: "blur(16px)", border: "1px solid rgba(255,255,255,0.14)", transform: "rotate(2deg)" }}
             >
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: "rgba(47,191,113,0.18)" }}>
