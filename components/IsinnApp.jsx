@@ -1626,6 +1626,32 @@ const ROTATING_WORDS = ["çilingire", "temizlikçiye", "hemşireye", "bakıcıya
 
 const CATEGORY_TILE_COLORS = ["#2563EB", "#14B8A6", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899", "#3B82F6", "#F97316"];
 
+// Sayfanın en altındaki "Aradığını bulamadın mı?" kategori kartları — Fiverr'ın
+// "Popular services" bölümünden ilham (koyu üst + renkli alt panel). #16321F
+// hero'daki koyu yeşille aynı, marka tutarlılığı için (bkz. HomeView'daki
+// radial-gradient arka plan).
+function CategoryTile({ c, i, onClick }) {
+  const Icon = c.icon;
+  const tileColor = CATEGORY_TILE_COLORS[i % CATEGORY_TILE_COLORS.length];
+  return (
+    <button
+      onClick={onClick}
+      className="group relative flex flex-col overflow-hidden rounded-2xl text-left hover:-translate-y-1.5 transition-all duration-300 shadow-sm hover:shadow-xl"
+      style={{ background: "#16321F" }}
+    >
+      <span className="text-[13px] font-bold text-white leading-snug px-3.5 pt-3.5 pb-2 relative z-10">
+        {c.name}
+      </span>
+      <div
+        className="mt-auto h-16 flex items-center justify-center transition-transform duration-300 group-hover:scale-105"
+        style={{ background: `linear-gradient(160deg, ${tileColor}22 0%, ${tileColor}55 100%)` }}
+      >
+        <Icon size={26} style={{ color: tileColor }} />
+      </div>
+    </button>
+  );
+}
+
 const FEATURED_PROFILE_CARDS = [
   { listingId: 11, bg: "#1F3A2E", specialties: ["0-6 Yaş Bakım", "İlk Yardım Sertifikalı", "Ev İçi Destek"] },
   { listingId: 19, bg: "#3D2B1F", specialties: ["Saç Kesimi & Boya", "Kaş Tasarımı", "Çocuklu Aileler İçin Uygun"] },
@@ -1739,40 +1765,78 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
             Çıkarma Paketi'nin "böyle görüneceksin" vaadini dolaylı yoldan
             gösteriyor (kullanıcının isteği — "öne çıkanlar için heveslendirici dursun"). */}
         {featured.length > 0 && (
-          <div className="hidden lg:block relative w-full max-w-sm shrink-0">
-            {/* Aşağıdaki "Öne Çıkan Sağlayıcılar" şeridindeki fotoğraflı kartla
-                aynı görsel dil — kullanıcının isteği, ikisi de aynı hissi versin. */}
-            <style>{`@keyframes cardPop { from { opacity: 0; transform: scale(0.9) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }`}</style>
-            <button
-              key={featuredIndex}
-              onClick={() => onSelectListing(featured[featuredIndex])}
-              className="w-full text-left rounded-2xl overflow-hidden shadow-2xl hover:-translate-y-1 transition-transform animate-[cardPop_0.5s_cubic-bezier(0.34,1.56,0.64,1)]"
-              style={{ background: "rgba(255,255,255,0.08)", backdropFilter: "blur(16px)", border: "1px solid rgba(255,255,255,0.14)" }}
-            >
-              <div className="relative aspect-square overflow-hidden">
-                <img src={featured[featuredIndex].img} alt="" className="w-full h-full object-cover" />
-                <span
-                  className="absolute top-2.5 left-2.5 text-[10px] font-bold px-2 py-0.5 rounded-full text-white flex items-center gap-1"
-                  style={{ background: "linear-gradient(135deg, #F59E0B 0%, #D97706 100%)" }}
-                >
-                  <Sparkles size={10} /> Öne Çıkan
-                </span>
-                <span className="absolute top-2.5 right-2.5">
-                  <ModeTag mode={featured[featuredIndex].mode} />
-                </span>
-              </div>
-              <div className="p-3.5">
-                <p className="text-sm font-bold leading-snug line-clamp-1" style={{ color: "#FFFFFF" }}>{featured[featuredIndex].title}</p>
-                <p className="text-xs mt-0.5 truncate" style={{ color: "#9CA3AF" }}>{featured[featuredIndex].provider}</p>
-                <div className="flex items-center gap-1 mt-1.5">
-                  <Stars value={featured[featuredIndex].rating} size={12} />
-                  <span className="text-xs font-bold" style={{ color: "#FFFFFF" }}>{featured[featuredIndex].rating}</span>
-                  <span className="text-[11px]" style={{ color: "#9CA3AF" }}>({featured[featuredIndex].reviewCount})</span>
-                </div>
-              </div>
-            </button>
+          <div className="hidden lg:block relative w-full max-w-lg shrink-0">
+            {/* Fiverr'ın "AI Director" hero'sundaki fanlanmış kart destesi
+                stilinde — ama bizde her kart gerçek bir vitrin (sabit
+                illüstrasyon değil), kullanıcının verdiği referansa göre.
+                Deste, featuredIndex'in ilerlediği her an (aşağıdaki
+                useEffect, 4.5sn'de bir) bambaşka bir 5'liye "kayıyor" —
+                sadece ortadaki kart değil, tüm deste tazeleniyor. */}
+            <style>{`
+              @keyframes cardPop { from { opacity: 0; transform: scale(0.85) translateY(16px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+            `}</style>
+            <div className="flex items-end justify-center" style={{ paddingTop: "24px" }}>
+              {Array.from({ length: Math.min(5, featured.length) }, (_, k) => featured[(featuredIndex + k) % featured.length]).map((l, i, arr) => {
+                const mid = (arr.length - 1) / 2;
+                const offset = i - mid; // -2..-1..0..1..2 gibi
+                const isCenter = Math.abs(offset) < 0.5;
+                const rotation = offset * 8;
+                return (
+                  // Dıştaki div sadece SABİT rotasyonu taşıyor (asla animasyonlu
+                  // değil) — pop-in animasyonu (opacity+scale+translateY) içteki
+                  // butonda ayrı bir katmanda. İkisini aynı transform'da
+                  // birleştirip bir CSS custom property (--rot) ile keyframe'e
+                  // geçirmeye çalışmıştık — kartlar opacity:0'da hiç ilerlemeden
+                  // kalıyordu, canlı DOM'dan doğrulandı. Katmanları ayırmak
+                  // sorunu kökten çözüyor.
+                  <div
+                    key={`${featuredIndex}-${l.id}`}
+                    className="shrink-0"
+                    style={{
+                      width: isCenter ? "138px" : "108px",
+                      height: isCenter ? "206px" : "168px",
+                      transform: `rotate(${rotation}deg)`,
+                      marginLeft: i === 0 ? 0 : "-22px",
+                      zIndex: 10 - Math.abs(offset),
+                    }}
+                  >
+                    <button
+                      onClick={() => onSelectListing(l)}
+                      // NOT: animasyonu inline style.animation yerine Tailwind'in
+                      // statik animate-[...] class'ıyla veriyoruz — dosyada aynı
+                      // ihtiyaç için zaten kanıtlanmış çalışan tek örnek buydu
+                      // (yukarıdaki dönen kelime, satır ~1692). İlk denemede
+                      // inline style.animation kullanmıştık ve kartlar canlı
+                      // DOM'da doğrulandığı üzere opacity:0'da donup kalıyordu —
+                      // muhtemelen her re-render'da (wordIndex her ~1.8sn'de bir
+                      // tetikliyor) aynı string yeniden style'a yazılınca
+                      // animasyon baştan sarıyordu. Statik class re-render'lar
+                      // arasında değişmediği için bu sorunu yaşamıyor.
+                      className="relative w-full h-full rounded-2xl overflow-hidden hover:z-20 hover:-translate-y-3 hover:scale-105 transition-transform shadow-2xl block animate-[cardPop_0.6s_cubic-bezier(0.34,1.56,0.64,1)_both]"
+                      style={{
+                        border: "2px solid rgba(255,255,255,0.18)",
+                        animationDelay: `${i * 70}ms`,
+                      }}
+                    >
+                      <img src={l.img} alt="" className="w-full h-full object-cover" />
+                      <div className="absolute inset-x-0 bottom-0 p-2 pt-7" style={{ background: "linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.88) 100%)" }}>
+                        <p className="text-[11px] font-bold text-white truncate">{l.provider}</p>
+                      </div>
+                      {isCenter && (
+                        <span
+                          className="absolute top-1.5 left-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full text-white flex items-center gap-0.5"
+                          style={{ background: "linear-gradient(135deg, #F59E0B 0%, #D97706 100%)" }}
+                        >
+                          <Sparkles size={8} /> Öne Çıkan
+                        </span>
+                      )}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
 
-            <p className="text-[11px] mt-3 text-center" style={{ color: "#6B7280" }}>
+            <p className="text-[11px] mt-4 text-center" style={{ color: "#6B7280" }}>
               Sen de <span style={{ color: "#F59E0B", fontWeight: 700 }}>Öne Çıkarma Paketi</span> ile burada görün.
             </p>
           </div>
@@ -2113,27 +2177,10 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
                 <GroupIcon size={16} style={{ color: "#1D4ED8" }} />
                 <h3 className="text-sm font-bold tracking-wide" style={{ color: "#374151" }}>{group.name}</h3>
               </div>
-              <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
-                {groupCategories.map((c, i) => {
-                  const Icon = c.icon;
-                  const tileColor = CATEGORY_TILE_COLORS[i % CATEGORY_TILE_COLORS.length];
-                  return (
-                    <button
-                      key={c.id}
-                      onClick={() => (c.id === "tirnakci" ? onNav("nailart") : onSearch(c.name))}
-                      className="flex flex-col items-center gap-2.5 p-4 rounded-2xl hover:-translate-y-1 transition-all shadow-sm hover:shadow-lg"
-                      style={{ background: "#FFFFFF", border: "1px solid #F5F5F5" }}
-                    >
-                      <div
-                        className="w-11 h-11 rounded-xl flex items-center justify-center"
-                        style={{ background: `${tileColor}18` }}
-                      >
-                        <Icon size={20} style={{ color: tileColor }} />
-                      </div>
-                      <span className="text-xs font-semibold text-center" style={{ color: "#0F1115" }}>{c.name}</span>
-                    </button>
-                  );
-                })}
+              <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+                {groupCategories.map((c, i) => (
+                  <CategoryTile key={c.id} c={c} i={i} onClick={() => (c.id === "tirnakci" ? onNav("nailart") : onSearch(c.name))} />
+                ))}
               </div>
             </div>
           );
@@ -2159,24 +2206,10 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
                   <h3 className="text-sm font-bold tracking-wide" style={{ color: "#374151" }}>{group.name}</h3>
                   <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "#EFF6FF", color: "#3B82F6" }}>Uzaktan</span>
                 </div>
-                <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
-                  {groupCategories.map((c, i) => {
-                    const Icon = c.icon;
-                    const tileColor = CATEGORY_TILE_COLORS[i % CATEGORY_TILE_COLORS.length];
-                    return (
-                      <button
-                        key={c.id}
-                        onClick={() => onSearch(c.name)}
-                        className="flex flex-col items-center gap-2.5 p-4 rounded-2xl hover:-translate-y-1 transition-all shadow-sm hover:shadow-lg"
-                        style={{ background: "#FFFFFF", border: "1px solid #F5F5F5" }}
-                      >
-                        <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: `${tileColor}18` }}>
-                          <Icon size={20} style={{ color: tileColor }} />
-                        </div>
-                        <span className="text-xs font-semibold text-center" style={{ color: "#0F1115" }}>{c.name}</span>
-                      </button>
-                    );
-                  })}
+                <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+                  {groupCategories.map((c, i) => (
+                    <CategoryTile key={c.id} c={c} i={i} onClick={() => onSearch(c.name)} />
+                  ))}
                 </div>
               </div>
             );
