@@ -10,8 +10,7 @@ export default function GizlilikPage() {
   return (
     <LegalPageLayout title="Gizlilik Politikası" updatedLabel="Taslak — henüz yürürlükte değil">
       <div style={note}>
-        Bu metin taslaktır. <span style={fill}>[köşeli parantez]</span> içindeki alanlar doldurulmadan ve bir
-        avukat tarafından onaylanmadan yürürlüğe girmemiştir.
+        Bu metin taslaktır. Şirket bilgileri dolduruldu, ama bir avukat tarafından henüz onaylanmadı.
       </div>
 
       <h2 style={h2}>Hangi verileri topluyoruz?</h2>
@@ -30,8 +29,8 @@ export default function GizlilikPage() {
       <ul style={{ listStyle: "disc", paddingLeft: "1.25rem" }}>
         <li style={li}><b>Supabase</b> — tüm verilerin saklandığı veritabanı/depolama altyapısı</li>
         <li style={li}><b>Anthropic (Claude AI)</b> — fotoğraf uygunluk kontrolü, akıllı arama, yazım yardımı gibi özellikler</li>
-        <li style={li}><span style={fill}>[PayTR]</span> — ödeme işlemleri (kart bilgileriniz bizim sunucularımıza hiç uğramaz)</li>
-        <li style={li}><span style={fill}>[Netgsm]</span> — telefon doğrulama SMS'i</li>
+        <li style={li}><b>PayTR</b> — ödeme işlemleri (kart bilgileriniz bizim sunucularımıza hiç uğramaz)</li>
+        <li style={li}><b>Netgsm</b> — telefon doğrulama SMS'i</li>
       </ul>
 
       <h2 style={h2}>Diğer kullanıcılar sizin hakkınızda ne görebilir?</h2>
@@ -41,7 +40,7 @@ export default function GizlilikPage() {
 
       <h2 style={h2}>Verilerinizi nasıl silebilirsiniz?</h2>
       <p style={p}>
-        Hesabınızı silmek için <span style={fill}>[e-posta adresi]</span> üzerinden bize ulaşabilirsiniz. Hesap
+        Hesabınızı silmek için esra.gunes@codegtechnology.com üzerinden bize ulaşabilirsiniz. Hesap
         silindiğinde profil, vitrin ve belgeleriniz kaldırılır; yasal saklama yükümlülüğü olan kayıtlar mevzuatın
         öngördüğü süre kadar saklanabilir.
       </p>
@@ -50,7 +49,7 @@ export default function GizlilikPage() {
       <p style={p}>İşinn pazarlama/takip çerezi kullanmıyor — yalnızca oturumunuzu açık tutmak için teknik olarak zorunlu bir oturum belirteci tarayıcınızda tutulur.</p>
 
       <h2 style={h2}>İletişim</h2>
-      <p style={p}>Gizlilikle ilgili sorularınız için: <span style={fill}>[e-posta adresi]</span></p>
+      <p style={p}>Gizlilikle ilgili sorularınız için: esra.gunes@codegtechnology.com</p>
     </LegalPageLayout>
   );
 }

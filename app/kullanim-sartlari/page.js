@@ -10,14 +10,14 @@ export default function KullanimSartlariPage() {
   return (
     <LegalPageLayout title="Kullanım Şartları" updatedLabel="Taslak — henüz yürürlükte değil">
       <div style={note}>
-        Bu metin taslaktır. <span style={fill}>[köşeli parantez]</span> içindeki alanlar doldurulmadan ve bir
-        avukat tarafından onaylanmadan yürürlüğe girmemiştir.
+        Bu metin taslaktır. Şirket bilgileri dolduruldu, ama özellikle 8. ve 11. maddeler (sorumluluk
+        sınırlandırması, uygulanacak hukuk) bir avukat tarafından henüz onaylanmadı.
       </div>
 
       <h2 style={h2}>1. Taraflar ve Kabul</h2>
       <p style={p}>
         Bu Kullanım Şartları, İşinn platformunu ("Platform") kullanan tüm kullanıcılar ile{" "}
-        <span style={fill}>[şirket/şahıs unvanı]</span> ("İşinn") arasındaki ilişkiyi düzenler. Platforma kayıt
+        Code G Teknoloji ve Ticaret Limited Şirketi ("İşinn") arasındaki ilişkiyi düzenler. Platforma kayıt
         olarak bu şartları kabul etmiş sayılırsınız.
       </p>
 
@@ -54,6 +54,7 @@ export default function KullanimSartlariPage() {
         <li style={li}>Standart ve Pro üyelik ücretleri, seçtiğiniz plana göre aylık/yıllık tahsil edilir.</li>
         <li style={li}>İstediğiniz zaman iptal edebilirsiniz; iptal, mevcut faturalama döneminin sonunda geçerli olur.</li>
         <li style={li}>Ücretler kazandığınız gelirden bağımsızdır — İşinn işlemlerinizden komisyon <b>almaz</b>.</li>
+        <li style={li}>Satın alma, iptal ve iade koşullarının detayı için: <a href="/mesafeli-satis-sozlesmesi" style={{ color: "#2563EB" }}>Mesafeli Satış Sözleşmesi</a> ve <a href="/iptal-iade-kosullari" style={{ color: "#2563EB" }}>İptal, İade ve Geri Ödeme Koşulları</a>.</li>
       </ul>
 
       <h2 style={h2}>7. Fikri Mülkiyet</h2>
@@ -76,7 +77,7 @@ export default function KullanimSartlariPage() {
       <p style={p}>Bu şartlar Türkiye Cumhuriyeti kanunlarına tabidir. <span style={fill}>[Yetkili mahkeme/tahkim maddesi avukatla belirlenmelidir.]</span></p>
 
       <h2 style={h2}>İletişim</h2>
-      <p style={p}>Sorularınız için: <span style={fill}>[e-posta adresi]</span></p>
+      <p style={p}>Sorularınız için: esra.gunes@codegtechnology.com</p>
     </LegalPageLayout>
   );
 }

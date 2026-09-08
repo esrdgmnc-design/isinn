@@ -2431,17 +2431,23 @@ function SiteFooter({ onNav }) {
               <a href="/kvkk-aydinlatma-metni" target="_blank" rel="noopener noreferrer" className="text-xs" style={{ color: "#9CA3AF" }}>KVKK Aydınlatma Metni</a>
               <a href="/gizlilik-politikasi" target="_blank" rel="noopener noreferrer" className="text-xs" style={{ color: "#9CA3AF" }}>Gizlilik Politikası</a>
               <a href="/kullanim-sartlari" target="_blank" rel="noopener noreferrer" className="text-xs" style={{ color: "#9CA3AF" }}>Kullanım Şartları</a>
+              <a href="/mesafeli-satis-sozlesmesi" target="_blank" rel="noopener noreferrer" className="text-xs" style={{ color: "#9CA3AF" }}>Mesafeli Satış Sözleşmesi</a>
+              <a href="/iptal-iade-kosullari" target="_blank" rel="noopener noreferrer" className="text-xs" style={{ color: "#9CA3AF" }}>İptal, İade ve Geri Ödeme</a>
             </div>
           </div>
           <div>
             <p className="text-xs font-bold tracking-wide mb-3" style={{ color: "#FFFFFF" }}>İletişim</p>
             <div className="flex flex-col gap-2.5">
+              <a href="mailto:esra.gunes@codegtechnology.com" className="text-xs" style={{ color: "#9CA3AF" }}>esra.gunes@codegtechnology.com</a>
+              <a href="tel:+905364603682" className="text-xs" style={{ color: "#9CA3AF" }}>0536 460 36 82</a>
               <button onClick={() => onNav("support")} className="text-xs text-left" style={{ color: "#9CA3AF" }}>Destek Talebi Oluştur</button>
             </div>
           </div>
         </div>
         <div className="pt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2" style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}>
-          <p className="text-[11px]" style={{ color: "#5C6070" }}>© {new Date().getFullYear()} İşinn. Tüm hakları saklıdır.</p>
+          <p className="text-[11px]" style={{ color: "#5C6070" }}>
+            © {new Date().getFullYear()} Code G Teknoloji ve Ticaret Limited Şirketi — Şişli, İstanbul. Tüm hakları saklıdır.
+          </p>
           <p className="text-[11px]" style={{ color: "#5C6070" }}>İşinn bir aracı pazaryeridir; hizmetin tarafı değildir.</p>
         </div>
       </div>

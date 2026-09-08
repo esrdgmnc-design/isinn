@@ -10,21 +10,23 @@ export default function KvkkPage() {
   return (
     <LegalPageLayout title="KVKK Aydınlatma Metni" updatedLabel="Taslak — henüz yürürlükte değil">
       <div style={note}>
-        Bu metin taslaktır. <span style={fill}>[köşeli parantez]</span> içindeki alanlar doldurulmadan ve bir
-        avukat/KVKK danışmanı tarafından onaylanmadan yürürlüğe girmemiştir.
+        Bu metin taslaktır. Şirket bilgileri dolduruldu, ama bir avukat/KVKK danışmanı tarafından henüz
+        onaylanmadı — özellikle 4. madde (yurt dışına veri aktarımı) hukuki kontrolden geçmeden yürürlüğe
+        girmemiştir.
       </div>
 
       <h2 style={h2}>1. Veri Sorumlusu</h2>
       <p style={p}>
-        <span style={fill}>[Şirket/şahıs unvanı]</span> ("İşinn", "biz") olarak, 6698 sayılı Kişisel Verilerin
+        Code G Teknoloji ve Ticaret Limited Şirketi ("İşinn", "biz") olarak, 6698 sayılı Kişisel Verilerin
         Korunması Kanunu ("KVKK") uyarınca veri sorumlusu sıfatıyla, aşağıda açıklanan kapsamda kişisel
         verilerinizi işlemekteyiz.
       </p>
       <ul style={{ listStyle: "disc", paddingLeft: "1.25rem" }}>
-        <li style={li}>Unvan: <span style={fill}>[doldurulacak]</span></li>
-        <li style={li}>Adres: <span style={fill}>[doldurulacak]</span></li>
-        <li style={li}>Vergi No / T.C. Kimlik No: <span style={fill}>[doldurulacak]</span></li>
-        <li style={li}>E-posta: <span style={fill}>[doldurulacak]</span></li>
+        <li style={li}>Unvan: Code G Teknoloji ve Ticaret Limited Şirketi</li>
+        <li style={li}>Adres: Şişli, İstanbul</li>
+        <li style={li}>Vergi No: 2111455428</li>
+        <li style={li}>E-posta: esra.gunes@codegtechnology.com</li>
+        <li style={li}>Telefon: 0536 460 36 82</li>
       </ul>
 
       <h2 style={h2}>2. İşlenen Kişisel Veri Kategorileri</h2>
@@ -54,7 +56,7 @@ export default function KvkkPage() {
       <ul style={{ listStyle: "disc", paddingLeft: "1.25rem" }}>
         <li style={li}><b>Supabase Inc.</b> — veritabanı ve depolama altyapısı</li>
         <li style={li}><b>Anthropic PBC (Claude AI)</b> — fotoğraf/içerik uygunluk kontrolü, arama, yazım yardımı gibi özellikler için ilgili içerik işlenmek üzere gönderilir. <span style={fill}>Yurt dışı</span> yerleşiktir.</li>
-        <li style={li}><span style={fill}>[PayTR]</span> — abonelik ödemelerinin işlenmesi</li>
+        <li style={li}><b>PayTR</b> — abonelik ödemelerinin işlenmesi</li>
         <li style={li}><span style={fill}>[Netgsm]</span> — telefon doğrulama SMS'i</li>
         <li style={li}>Yetkili kamu kurum ve kuruluşları — yasal bir talep olması halinde</li>
       </ul>
@@ -66,7 +68,7 @@ export default function KvkkPage() {
       <p style={p}>
         Kişisel verinizin işlenip işlenmediğini öğrenme, bilgi talep etme, aktarıldığı üçüncü kişileri bilme,
         düzeltme/silme talep etme, itiraz etme ve zararın giderilmesini isteme haklarına sahipsiniz.
-        Başvurularınızı <span style={fill}>[e-posta adresi]</span> üzerinden iletebilirsiniz.
+        Başvurularınızı esra.gunes@codegtechnology.com üzerinden iletebilirsiniz.
       </p>
     </LegalPageLayout>
   );
