@@ -12,7 +12,8 @@ import {
   ChefHat, Flower, Sprout, Camera, MoreHorizontal, Dumbbell, Unlock,
   LifeBuoy, Bot, Loader2, AlertCircle, Inbox,
   UploadCloud, FileText, Trash2, Pencil, Phone, Lock, Bell,
-  PaintBucket, AirVent, PawPrint, Music2, Calculator, Languages
+  PaintBucket, AirVent, PawPrint, Music2, Calculator, Languages,
+  PenTool, Video, Mic, ClipboardList
 } from "lucide-react";
 
 // ---------------------------------------------------------------
@@ -66,6 +67,13 @@ const CATEGORIES = [
   { id: "muzik-egitmeni", name: "Müzik Eğitmeni", mode: "both", icon: Music2 },
   { id: "muhasebe", name: "Muhasebe / Mali Müşavir", mode: "both", icon: Calculator },
   { id: "ceviri", name: "Çeviri", mode: "remote", icon: Languages },
+  // "Uzaktan hizmetler" grubu sadece 5 kategoriydi, kullanıcı birkaç tane
+  // daha eklemek istedi (2026-09-08). bkz. supabase/categories_seed_v3.sql —
+  // o dosya çalıştırılmadan bu kategoriler altında gerçek vitrin açılamaz.
+  { id: "icerik-yazarligi", name: "İçerik Yazarlığı", mode: "remote", icon: PenTool },
+  { id: "video-duzenleme", name: "Video Düzenleme", mode: "remote", icon: Video },
+  { id: "seslendirme", name: "Seslendirme", mode: "remote", icon: Mic },
+  { id: "sanal-asistan", name: "Sanal Asistan", mode: "remote", icon: ClipboardList },
 ];
 
 const PARENT_CATEGORIES = [
@@ -73,7 +81,7 @@ const PARENT_CATEGORIES = [
   { id: "guzellik-bakim", name: "Güzellik & Bakım", icon: Wand2, categoryIds: ["tirnakci", "makyaj", "bakim", "kuafor-berber"] },
   { id: "saglik", name: "Sağlık", icon: HeartPulse, categoryIds: ["hasta-bakici", "hemsire", "fizyoterapist", "diyetisyen", "psikolog", "yoga-koc", "spor-egitmeni"] },
   { id: "egitim-aile", name: "Eğitim & Aile", icon: GraduationCap, categoryIds: ["ogretmen", "bakici", "logusa-bakicisi", "emzirme-danismani", "etkinlik-organizatoru", "muzik-egitmeni"] },
-  { id: "profesyonel", name: "Profesyonel Hizmetler", icon: Briefcase, categoryIds: ["tasarim", "yazilim", "dijital", "muhasebe", "ceviri"] },
+  { id: "profesyonel", name: "Profesyonel Hizmetler", icon: Briefcase, categoryIds: ["tasarim", "yazilim", "dijital", "muhasebe", "ceviri", "icerik-yazarligi", "video-duzenleme", "seslendirme", "sanal-asistan"] },
   { id: "diger", name: "Diğer", icon: MoreHorizontal, categoryIds: ["bahce-bakim", "muhendis", "sosyal-medya", "profesyonel-fotograf", "evcil-hayvan"] },
 ];
 
@@ -1651,6 +1659,7 @@ const CATEGORY_EMOJI = {
   "etkinlik-organizatoru": "🎉", "bahce-bakim": "🌱", "profesyonel-fotograf": "📸",
   "boya-badana": "🪣", "klima-beyaz-esya": "❄️", "kuafor-berber": "💇",
   "evcil-hayvan": "🐾", "muzik-egitmeni": "🎵", muhasebe: "🧮", ceviri: "🌐",
+  "icerik-yazarligi": "✍️", "video-duzenleme": "🎬", seslendirme: "🎙️", "sanal-asistan": "🗂️",
 };
 
 // Sayfanın en altındaki "Aradığını bulamadın mı?" kategori kartları. Üç deneme
@@ -1692,7 +1701,10 @@ const FEATURED_PROFILE_CARDS = [
 function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApplyJob, onOpenJob, realListings, listingsLoading, realJobs, favoriteIds, onToggleFavorite, onToggleJobFavorite, platformStats }) {
   const [heroQ, setHeroQ] = useState("");
   const [wordIndex, setWordIndex] = useState(0);
-  const [showRemote, setShowRemote] = useState(false);
+  // Önceden gizliydi, tıklayan açardı — kullanıcı "uzaktan hizmetler
+  // kısmını da görünür yap" dedi, artık varsayılan açık (istenirse
+  // gizlenebiliyor, aşağıdaki toggle hâlâ duruyor).
+  const [showRemote, setShowRemote] = useState(true);
   const [featuredIndex, setFeaturedIndex] = useState(0);
   const allListings = [...(realListings || []), ...LISTINGS];
   // Gerçek ilanlar da en az bir değerlendirmeyle 4.5+ puana ulaşınca "Öne Çıkan"a
@@ -2250,6 +2262,13 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
                   <GroupIcon size={16} style={{ color: "#1D4ED8" }} />
                   <h3 className="text-sm font-bold tracking-wide" style={{ color: "#374151" }}>{group.name}</h3>
                   <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "#EFF6FF", color: "#3B82F6" }}>Uzaktan</span>
+                  <button
+                    onClick={() => setShowRemote(false)}
+                    className="text-[11px] font-bold ml-auto"
+                    style={{ color: "#9CA3AF" }}
+                  >
+                    Gizle
+                  </button>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
                   {groupCategories.map((c, i) => (
@@ -2261,7 +2280,60 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
           })()
         )}
       </section>
+
+      <SiteFooter onNav={onNav} />
     </div>
+  );
+}
+
+// Sitede hiç footer yoktu — sözleşmelere (KVKK/Gizlilik/Kullanım Şartları,
+// zaten app/ altında sayfaları var ama hiçbir yerden linklenmiyorlardı,
+// sadece kayıt formundaki onay kutusundan erişilebiliyordu) ve iletişime
+// ulaşmanın tek yolu yoktu. Hero'daki koyu tonla bookend oluşturması için
+// aynı palet (bkz. HomeView'ın en üstündeki radial-gradient).
+function SiteFooter({ onNav }) {
+  return (
+    <footer className="px-5 pt-14 pb-8" style={{ background: "#0F1115" }}>
+      <div className="max-w-6xl mx-auto">
+        <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-10 pb-10">
+          <div>
+            <p className="font-sans text-xl font-black" style={{ color: "#FFFFFF" }}>
+              İşinn<span style={{ color: "#2563EB" }}>.</span>
+            </p>
+            <p className="text-xs mt-3 leading-relaxed max-w-[220px]" style={{ color: "#7A7F8A" }}>
+              İhtiyacın olan hizmeti bulduğun ya da kendi hizmetini sunduğun güvenilir yerel pazar yeri.
+            </p>
+          </div>
+          <div>
+            <p className="text-xs font-bold tracking-wide mb-3" style={{ color: "#FFFFFF" }}>Keşfet</p>
+            <div className="flex flex-col gap-2.5">
+              <button onClick={() => onNav("map")} className="text-xs text-left" style={{ color: "#9CA3AF" }}>Haritada Gör</button>
+              <button onClick={() => onNav("createListing")} className="text-xs text-left" style={{ color: "#9CA3AF" }}>Hizmet Ekle</button>
+              <button onClick={() => onNav("post")} className="text-xs text-left" style={{ color: "#9CA3AF" }}>İlan Ver</button>
+              <button onClick={() => onNav("pricing")} className="text-xs text-left" style={{ color: "#9CA3AF" }}>Planlar</button>
+            </div>
+          </div>
+          <div>
+            <p className="text-xs font-bold tracking-wide mb-3" style={{ color: "#FFFFFF" }}>Sözleşmeler</p>
+            <div className="flex flex-col gap-2.5">
+              <a href="/kvkk-aydinlatma-metni" target="_blank" rel="noopener noreferrer" className="text-xs" style={{ color: "#9CA3AF" }}>KVKK Aydınlatma Metni</a>
+              <a href="/gizlilik-politikasi" target="_blank" rel="noopener noreferrer" className="text-xs" style={{ color: "#9CA3AF" }}>Gizlilik Politikası</a>
+              <a href="/kullanim-sartlari" target="_blank" rel="noopener noreferrer" className="text-xs" style={{ color: "#9CA3AF" }}>Kullanım Şartları</a>
+            </div>
+          </div>
+          <div>
+            <p className="text-xs font-bold tracking-wide mb-3" style={{ color: "#FFFFFF" }}>İletişim</p>
+            <div className="flex flex-col gap-2.5">
+              <button onClick={() => onNav("support")} className="text-xs text-left" style={{ color: "#9CA3AF" }}>Destek Talebi Oluştur</button>
+            </div>
+          </div>
+        </div>
+        <div className="pt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2" style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+          <p className="text-[11px]" style={{ color: "#5C6070" }}>© {new Date().getFullYear()} İşinn. Tüm hakları saklıdır.</p>
+          <p className="text-[11px]" style={{ color: "#5C6070" }}>İşinn bir aracı pazaryeridir; hizmetin tarafı değildir.</p>
+        </div>
+      </div>
+    </footer>
   );
 }
 
