@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Cropper from "react-easy-crop";
 import { supabase } from "../lib/supabaseClient";
 import {
   Search, MapPin, Star, Heart, PlayCircle, ChevronLeft, ChevronRight,
@@ -833,6 +834,110 @@ function seededDailyShuffle(arr) {
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
+}
+
+// react-easy-crop, seçilen alanı piksel cinsinden döndürüyor (bkz.
+// PhotoCropModal'ın onCropComplete'i) — bunu gerçek, yüklenebilir bir File'a
+// çeviren canvas adımı. Kalite 0.92 JPEG'e sabit — orijinal formattan
+// bağımsız, öngörülebilir dosya boyutu için.
+async function getCroppedFile(imageSrc, cropPixels, fileName) {
+  const image = await new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = imageSrc;
+  });
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(cropPixels.width);
+  canvas.height = Math.round(cropPixels.height);
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(
+    image,
+    cropPixels.x, cropPixels.y, cropPixels.width, cropPixels.height,
+    0, 0, cropPixels.width, cropPixels.height
+  );
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.92));
+  return new File([blob], fileName, { type: "image/jpeg" });
+}
+
+// Fotoğraf yükleme alanlarına ortak kırpma adımı — kullanıcı "son olarak
+// fotoğraflara kırp/ayarla ekleyelim" dedi (2026-09-08). Dosya seçilir
+// seçilmez doğrudan yüklemek yerine, önce bu modal açılıyor; kullanıcı
+// alanı/yakınlaştırmayı ayarlayıp onaylayınca gerçek yükleme (mevcut
+// upload fonksiyonları) kırpılmış File ile çağrılıyor. Kapak fotoğrafı
+// (kare, aspect=1) ve profil fotoğrafı (kare, cropShape="round") için
+// kullanılıyor — video/sertifika gibi kırpmanın anlamsız olduğu yüklemelere
+// bilerek dokunulmadı.
+function PhotoCropModal({ imageSrc, aspect = 1, shape = "rect", fileName, onCancel, onCropped }) {
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    if (!croppedAreaPixels) return;
+    setSaving(true);
+    try {
+      const file = await getCroppedFile(imageSrc, croppedAreaPixels, fileName);
+      onCropped(file);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4" style={{ background: "rgba(15,17,21,0.82)" }}>
+      <div className="w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl" style={{ background: "#FFFFFF" }}>
+        <div className="px-4 pt-4 pb-1">
+          <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>Fotoğrafı Ayarla</p>
+        </div>
+        <div className="relative" style={{ height: 320, background: "#111" }}>
+          <Cropper
+            image={imageSrc}
+            crop={crop}
+            zoom={zoom}
+            aspect={aspect}
+            cropShape={shape}
+            showGrid={shape === "rect"}
+            onCropChange={setCrop}
+            onZoomChange={setZoom}
+            onCropComplete={(_, pixels) => setCroppedAreaPixels(pixels)}
+          />
+        </div>
+        <div className="p-4 space-y-3.5">
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-medium shrink-0" style={{ color: "#5C5744" }}>Yakınlaştır</span>
+            <input
+              type="range"
+              min={1}
+              max={3}
+              step={0.01}
+              value={zoom}
+              onChange={(e) => setZoom(Number(e.target.value))}
+              className="flex-1"
+            />
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={onCancel}
+              className="flex-1 py-2.5 rounded-lg text-sm font-medium border"
+              style={{ borderColor: "#D9D0BA", color: "#5C5744" }}
+            >
+              Vazgeç
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="flex-1 py-2.5 rounded-lg text-sm font-bold text-white"
+              style={{ background: "#2FBF71", opacity: saving ? 0.7 : 1 }}
+            >
+              {saving ? "Kaydediliyor..." : "Kırp ve Kaydet"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // supabase.from('services').select('*, profiles(*), categories(*)') sonucundaki
@@ -5687,9 +5792,19 @@ SADECE şu JSON formatında yanıt ver: {"approved": true veya false, "reason": 
     }
   };
 
-  const handlePhoto = async (e) => {
+  // Dosya seçilince artık doğrudan yüklemiyoruz — önce kırpma modalı açılıyor
+  // (bkz. PhotoCropModal), gerçek yükleme kullanıcı "Kırp ve Kaydet"e basınca
+  // uploadPhoto ile tetikleniyor.
+  const [cropSrc, setCropSrc] = useState(null); // seçilen dosyanın obje URL'i
+  const handlePhoto = (e) => {
     const file = e.target.files?.[0];
     e.target.value = "";
+    if (!file) return;
+    setCropSrc(URL.createObjectURL(file));
+  };
+
+  const uploadPhoto = async (file) => {
+    setCropSrc(null);
     if (!file || !userId) return;
     setPhotoError("");
     setPhotoUploading(true);
@@ -5914,6 +6029,15 @@ SADECE şu JSON formatında yanıt ver: {"approved": true veya false, "reason": 
 
   return (
     <div className="max-w-xl mx-auto px-5 py-10">
+      {cropSrc && (
+        <PhotoCropModal
+          imageSrc={cropSrc}
+          aspect={1}
+          fileName="kapak-fotografi.jpg"
+          onCancel={() => setCropSrc(null)}
+          onCropped={uploadPhoto}
+        />
+      )}
       <button onClick={onBack} className="flex items-center gap-1 text-sm mb-5" style={{ color: "#5C5744" }}>
         <ChevronLeft size={16} /> Geri
       </button>
@@ -7397,9 +7521,18 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenAnalytics, onOp
     ? new Date(profile.created_at).toLocaleDateString("tr-TR", { month: "long", year: "numeric" })
     : null;
 
-  const handlePhotoAdd = async (e) => {
+  // Profil fotoğrafı yuvarlak gösteriliyor (bkz. aşağıdaki rounded-full img) —
+  // kırpma modalı da cropShape="round" ile aynı önizlemeyi veriyor.
+  const [cropSrc, setCropSrc] = useState(null);
+  const handlePhotoAdd = (e) => {
     const file = e.target.files?.[0];
     e.target.value = "";
+    if (!file) return;
+    setCropSrc(URL.createObjectURL(file));
+  };
+
+  const uploadPhoto = async (file) => {
+    setCropSrc(null);
     if (!file || !userId) return;
     setPhotoError("");
     setPhotoUploading(true);
@@ -7418,6 +7551,16 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenAnalytics, onOp
 
   return (
     <div className="max-w-2xl mx-auto px-5 py-10">
+      {cropSrc && (
+        <PhotoCropModal
+          imageSrc={cropSrc}
+          aspect={1}
+          shape="round"
+          fileName="profil-fotografi.jpg"
+          onCancel={() => setCropSrc(null)}
+          onCropped={uploadPhoto}
+        />
+      )}
       <button onClick={onBack} className="flex items-center gap-1 text-sm mb-5" style={{ color: "#5C5744" }}>
         <ChevronLeft size={16} /> Geri
       </button>
