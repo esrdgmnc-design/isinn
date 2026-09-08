@@ -5574,11 +5574,16 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
 }
 
 // Lansman fiyatlandırması (esrdgmnc@gmail.com ile birlikte karara bağlandı —
-// bkz. supabase/pro_plan.sql'deki not). Yıllıkta ~%17 indirim (159×10=1590,
-// 649×10=6490 — "2 ay bedava" hissi).
+// bkz. supabase/pro_plan.sql'deki not). Yıllık fiyatlar "ilk yıla özel"
+// indirimli fiyatlar (159×12=1908 yerine 799, 649×12=7788 yerine 3999) —
+// 2. yıldan itibaren ne olacağı henüz karara bağlanmadı/kodlanmadı, şimdilik
+// sadece görünen fiyat bu (2026-09-08, kullanıcının kararı).
 const PLANS = [
   {
-    id: "standart", name: "Standart Üyelik", priceMonthly: 159, priceYearly: 1590, trialMonths: 1, currency: "₺",
+    // priceYearly: 1590 (159×10) yerine ilk yıla özel indirimli fiyat —
+    // kullanıcının kararı (2026-09-08). "İlk yıla özel" etiketi PricingView'da
+    // fiyatın yanında gösteriliyor (bkz. yearlyIntroNote).
+    id: "standart", name: "Standart Üyelik", priceMonthly: 159, priceYearly: 799, trialMonths: 1, currency: "₺",
     tagline: "Herkes için tek, basit plan",
     features: [
       "1 vitrin dahil", "Sınırsız teklif", "Tam profil sayfası (video, sertifika, CV)", "Mesajlaşma + bildirimler",
@@ -5607,7 +5612,8 @@ const BOOST_PACKAGE = {
 // döngüsünden (aylık/yıllık) bağımsız olarak (bkz. pro_boost_monthly_fix.sql
 // — eski hâli yıllık ödeyenlerde yılda bir kereye düşüyordu, gerçek bir hataydı).
 const PRO_PACKAGE = {
-  id: "pro", name: "Pro Üyelik", priceMonthly: 649, priceYearly: 6490, currency: "₺",
+  // priceYearly: 6490 (649×10) yerine ilk yıla özel indirimli fiyat — bkz. PLANS'taki aynı not.
+  id: "pro", name: "Pro Üyelik", priceMonthly: 649, priceYearly: 3999, currency: "₺",
   tagline: "Birden fazla vitrin açmak isteyenler için",
   features: [
     "3 vitrin hakkı (Standart'ta 1)", "Sınırsız teklif",
@@ -7048,7 +7054,7 @@ function PricingView({ onBack, onJoined, userId }) {
           İlk {plan.trialMonths} ayın tamamen ücretsiz — hiçbir kart çekimi olmayacak.
         </p>
         <p className="text-sm mb-6" style={{ color: "#5C5744" }}>
-          Deneme süresi bitince {cycle === "monthly" ? `ayda ${total}₺` : `yılda ${total}₺ (~%17 indirimli)`} olarak faturalandırılacaksın{boostSelected ? " (Standart Üyelik + Öne Çıkarma Paketi)" : ""}. İstediğin zaman iptal edebilirsin, kazandığından hiçbir komisyon kesilmez.
+          Deneme süresi bitince {cycle === "monthly" ? `ayda ${total}₺` : `yılda ${total}₺ (ilk yıla özel fiyat)`} olarak faturalandırılacaksın{boostSelected ? " (Standart Üyelik + Öne Çıkarma Paketi)" : ""}. İstediğin zaman iptal edebilirsin, kazandığından hiçbir komisyon kesilmez.
         </p>
         <div className="flex gap-2 justify-center">
           <button onClick={onJoined} className="px-5 py-2.5 rounded-full text-sm font-medium text-white" style={{ background: "#2563EB" }}>Profilini Tamamla</button>
@@ -7086,7 +7092,7 @@ function PricingView({ onBack, onJoined, userId }) {
               className="text-sm font-bold px-4 py-1.5 rounded-full transition-all"
               style={cycle === key ? { background: "#2563EB", color: "#FFFFFF" } : { color: "#8A8368" }}
             >
-              {label} {key === "yearly" && <span className="text-[10px]" style={{ color: cycle === key ? "#DBEAFE" : "#2563EB" }}>~2 ay bedava</span>}
+              {label} {key === "yearly" && <span className="text-[10px]" style={{ color: cycle === key ? "#DBEAFE" : "#2563EB" }}>İlk yıla özel</span>}
             </button>
           ))}
         </div>
@@ -7098,6 +7104,9 @@ function PricingView({ onBack, onJoined, userId }) {
         <div className="mb-1 flex items-baseline gap-1">
           <span className="font-serif text-4xl" style={{ color: "#1B2B24" }}>{basePrice}₺</span>
           <span className="text-sm" style={{ color: "#8A8368" }}>{period}</span>
+          {cycle === "yearly" && (
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "#DBEAFE", color: "#1D4ED8" }}>İlk yıla özel</span>
+          )}
         </div>
         <p className="text-xs font-medium mb-4" style={{ color: "#059669" }}>İlk {plan.trialMonths} ay ücretsiz, sonra bu fiyattan devam eder</p>
         <div className="space-y-2.5">
@@ -7110,6 +7119,51 @@ function PricingView({ onBack, onJoined, userId }) {
         </div>
       </div>
 
+      {/* Pro Üyelik artık her zaman görünür bir kart — önceden lansmanın ilk
+          ayında kimseye zorla satmamak için küçük, tıklanmadan açılmayan bir
+          nota gizlenmişti; artık Ek Vitrin Paketi de var, Pro'nun değeri daha
+          net olduğu için tam kart olarak gösteriliyor (kullanıcının kararı). */}
+      <div className="rounded-2xl border-2 p-6 flex flex-col mb-6" style={{ borderColor: proJoined ? "#2FBF71" : "#8B5CF6", background: "#F8F4E9" }}>
+        <div className="flex items-center justify-between mb-1">
+          <p className="font-serif text-lg" style={{ color: "#1B2B24" }}>{PRO_PACKAGE.name}</p>
+          {proJoined && (
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: "#2FBF71" }}>Aktif</span>
+          )}
+        </div>
+        <p className="text-xs mb-4" style={{ color: "#8A8368" }}>{PRO_PACKAGE.tagline} — deneme kapsamında değil, doğrudan üyelik</p>
+        <div className="mb-4 flex items-baseline gap-1">
+          <span className="font-serif text-2xl" style={{ color: "#1B2B24" }}>{proPrice}₺</span>
+          <span className="text-sm" style={{ color: "#8A8368" }}>{period}</span>
+          {cycle === "yearly" && (
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "#EDE9FE", color: "#6D28D9" }}>İlk yıla özel</span>
+          )}
+        </div>
+        <div className="space-y-2 mb-4">
+          {PRO_PACKAGE.features.map((f, i) => (
+            <div key={i} className="flex items-start gap-2 text-xs" style={{ color: "#3D3B30" }}>
+              <Sparkles size={13} style={{ color: "#8B5CF6" }} className="mt-0.5 shrink-0" />
+              {f}
+            </div>
+          ))}
+        </div>
+        {proError && (
+          <p className="text-xs mb-3 px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{proError}</p>
+        )}
+        <button
+          onClick={joinPro}
+          disabled={proJoining || proJoined}
+          className="w-full py-2.5 rounded-full text-sm font-medium text-white flex items-center justify-center gap-1.5"
+          style={{ background: "#8B5CF6", opacity: proJoining ? 0.7 : proJoined ? 0.6 : 1 }}
+        >
+          {proJoining && <Loader2 size={13} className="animate-spin" />}
+          {proJoined ? "Pro Üyeliğe geçtin ✓" : "Pro Üyelik'e Geç"}
+        </button>
+      </div>
+
+      {/* Öne Çıkarma Paketi bilerek en altta — kullanıcının kararı (2026-09-08):
+          önce iki asıl üyelik seçilsin, bu ikisine eklenen isteğe bağlı bir
+          ek olarak en sonda dursun. Aylık/yıllık döngüden bağımsız (kendi
+          fiyatı hep aylık), o yüzden iki görünümde de aynı yerde kalıyor. */}
       <button
         onClick={() => setBoostSelected(!boostSelected)}
         className="w-full rounded-2xl border-2 p-6 flex flex-col text-left mb-6 transition-colors"
@@ -7138,44 +7192,6 @@ function PricingView({ onBack, onJoined, userId }) {
           ))}
         </div>
       </button>
-
-      {/* Pro Üyelik artık her zaman görünür bir kart — önceden lansmanın ilk
-          ayında kimseye zorla satmamak için küçük, tıklanmadan açılmayan bir
-          nota gizlenmişti; artık Ek Vitrin Paketi de var, Pro'nun değeri daha
-          net olduğu için tam kart olarak gösteriliyor (kullanıcının kararı). */}
-      <div className="rounded-2xl border-2 p-6 flex flex-col mb-6" style={{ borderColor: proJoined ? "#2FBF71" : "#8B5CF6", background: "#F8F4E9" }}>
-        <div className="flex items-center justify-between mb-1">
-          <p className="font-serif text-lg" style={{ color: "#1B2B24" }}>{PRO_PACKAGE.name}</p>
-          {proJoined && (
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: "#2FBF71" }}>Aktif</span>
-          )}
-        </div>
-        <p className="text-xs mb-4" style={{ color: "#8A8368" }}>{PRO_PACKAGE.tagline} — deneme kapsamında değil, doğrudan üyelik</p>
-        <div className="mb-4 flex items-baseline gap-1">
-          <span className="font-serif text-2xl" style={{ color: "#1B2B24" }}>{proPrice}₺</span>
-          <span className="text-sm" style={{ color: "#8A8368" }}>{period}</span>
-        </div>
-        <div className="space-y-2 mb-4">
-          {PRO_PACKAGE.features.map((f, i) => (
-            <div key={i} className="flex items-start gap-2 text-xs" style={{ color: "#3D3B30" }}>
-              <Sparkles size={13} style={{ color: "#8B5CF6" }} className="mt-0.5 shrink-0" />
-              {f}
-            </div>
-          ))}
-        </div>
-        {proError && (
-          <p className="text-xs mb-3 px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{proError}</p>
-        )}
-        <button
-          onClick={joinPro}
-          disabled={proJoining || proJoined}
-          className="w-full py-2.5 rounded-full text-sm font-medium text-white flex items-center justify-center gap-1.5"
-          style={{ background: "#8B5CF6", opacity: proJoining ? 0.7 : proJoined ? 0.6 : 1 }}
-        >
-          {proJoining && <Loader2 size={13} className="animate-spin" />}
-          {proJoined ? "Pro Üyeliğe geçtin ✓" : "Pro Üyelik'e Geç"}
-        </button>
-      </div>
 
       <div className="rounded-xl p-4 mb-4 flex items-center justify-between" style={{ background: "#0F1115" }}>
         <div>
