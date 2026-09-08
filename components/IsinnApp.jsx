@@ -1740,14 +1740,20 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
         />
         <div className="max-w-6xl mx-auto relative lg:flex lg:items-center lg:justify-between lg:gap-10">
         <div className="relative">
-          {/* leading-[0.98] önceden "ç"/"y" gibi alt uzantılı (descender)
-              harfleri kırpıyordu (kullanıcı fark etti) — 1.05'e gevşetildi. */}
-          <h1 className="font-sans text-5xl md:text-7xl font-black leading-[1.05] max-w-3xl tracking-tight" style={{ color: "#FFFFFF" }}>
+          {/* leading-[0.98], sonra 1.05 — ikisi de "ç"/"y" gibi alt uzantılı
+              (descender) harfleri kırpmaya devam etti (kullanıcı ekran
+              görüntüsüyle doğruladı). Asıl sebep muhtemelen bg-clip-text +
+              inline-block birleşimi — bu ikili, satır kutusunu (line-height)
+              normalden daha sıkı yorumluyor ve gradyanla "boyanan" metnin alt
+              kısmını kesebiliyor. leading'i iyice gevşettik (1.15) VE
+              kırpılan tam da o gradyanlı span olduğu için ona ayrıca
+              pb-1.5 (alt boşluk) verdik. */}
+          <h1 className="font-sans text-5xl md:text-7xl font-black leading-[1.15] max-w-3xl tracking-tight" style={{ color: "#FFFFFF" }}>
             İhtiyacın olan şeyi<br />
             <span className="inline-block relative">
               <span
                 key={wordIndex}
-                className="inline-block animate-[fadeSlide_0.4s_ease] bg-clip-text text-transparent"
+                className="inline-block pb-1.5 animate-[fadeSlide_0.4s_ease] bg-clip-text text-transparent"
                 style={{ backgroundImage: "linear-gradient(90deg, #2563EB, #60A5FA)" }}
               >
                 {ROTATING_WORDS[wordIndex]}
