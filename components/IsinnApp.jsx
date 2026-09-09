@@ -4479,7 +4479,21 @@ function PostJobView({ onBack, onSubmitted, onViewOffers, onMatchAI, userId, onJ
       if (!profileGate.ok) { setGateCheck({ checking: false, ok: false, reason: profileGate.reason }); return; }
       const phoneGate = await checkPhoneGate(userId);
       if (cancelled) return;
-      setGateCheck({ checking: false, ok: phoneGate.ok, reason: phoneGate.ok ? "" : phoneGate.reason });
+      if (!phoneGate.ok) { setGateCheck({ checking: false, ok: false, reason: phoneGate.reason }); return; }
+      // Güvenlik amaçlı ilan tavanı — plana göre (Standart 5, Pro 10) aktif
+      // ilan sayısı (bkz. supabase/job_posting_cap.sql, aynı kural DB'de de
+      // zorlanıyor). getVitrinCapInfo'daki plan-lookup deseniyle aynı.
+      const [{ count }, { data: subRow }] = await Promise.all([
+        supabase.from("jobs").select("id", { count: "exact", head: true }).eq("client_id", userId).eq("active", true),
+        supabase.from("provider_subscriptions").select("subscription_plans(max_active_jobs)").eq("profile_id", userId).in("status", ["active", "trialing"]).maybeSingle(),
+      ]);
+      if (cancelled) return;
+      const jobCap = subRow?.subscription_plans?.max_active_jobs ?? 5;
+      if ((count || 0) >= jobCap) {
+        setGateCheck({ checking: false, ok: false, reason: `Aynı anda en fazla ${jobCap} aktif ilanın olabilir. Yeni bir ilan açmak için önce Profilim → İlanlarım'dan eski bir tanesini pasife al.` });
+        return;
+      }
+      setGateCheck({ checking: false, ok: true, reason: "" });
     })();
     return () => { cancelled = true; };
   }, [userId, isEditing]);
@@ -5860,7 +5874,7 @@ const PLANS = [
     id: "standart", name: "Standart Üyelik", priceMonthly: 159, priceYearly: 799, trialMonths: 1, currency: "₺",
     tagline: "Herkes için tek, basit plan",
     features: [
-      "2 vitrin dahil", "Sınırsız teklif ve ilan", "Tam profil sayfası (video, sertifika, CV)", "Mesajlaşma + bildirimler",
+      "2 vitrin dahil", "Sınırsız teklif, 5 aktif ilan hakkı", "Tam profil sayfası (video, sertifika, CV)", "Mesajlaşma + bildirimler",
       "AI eşleştirmede yer alma", "Harita ve arama görünürlüğü", "Diğer tüm ilan ve vitrinleri görüntüleme",
     ],
     notIncluded: [],
@@ -5897,7 +5911,7 @@ const PRO_PACKAGE = {
   id: "pro", name: "Pro Üyelik", priceMonthly: 649, priceYearly: 3999, currency: "₺",
   tagline: "Birden fazla vitrin açmak isteyenler için",
   features: [
-    "3 vitrin hakkı (Standart'ta 2)", "Sınırsız teklif ve ilan",
+    "3 vitrin hakkı (Standart'ta 2)", "Sınırsız teklif, geniş ilan hakkı",
     "Her ayın ilk haftası tüm vitrinlerin Öne Çıkarma Paketi hediyeli", "AI eşleştirmede öncelik",
   ],
 };
