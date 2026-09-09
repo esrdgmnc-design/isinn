@@ -2980,11 +2980,14 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
   // staff/admin inceleme ekranı yok (bkz. proje notları) — kimsenin
   // çözemeyeceği bir "pending" kaydı oluşturmaktansa şimdilik sadece
   // fotoğrafı gerçek akışa bağlıyoruz.
+  // GÜVENLİK: AI moderasyon kararı (uygunluk + kimlik/rıza) artık burada
+  // DEĞİL, sunucuda veriliyor (bkz. app/api/review-media/route.js) —
+  // tarayıcı sadece dosyayı storage'a yükleyip sonucu istiyor, approval_status
+  // gibi bir karara asla kendisi varmıyor. Eskiden bu fonksiyon AI'a kendisi
+  // soruyor, cevaba göre review_media satırını kendisi insert ediyordu —
+  // teknik bilgisi olan biri bu adımı atlayıp moderasyonu tamamen bypass
+  // edebilirdi (kontrol edilen içerik değil, kontrolü ATLAMA riski).
   const attachRealReviewMedia = async (ratingId) => {
-    const check = await checkReviewMedia(reviewMediaFile.type, reviewMediaFile.dataUrl, reviewMediaFile.mimeType);
-    if (!mountedRef.current) return null;
-    if (!check.appropriate) return "rejected";
-    if (check.showsIdentifiableChild) return "child";
     try {
       const ext = (reviewMediaFile.name || "").split(".").pop() || "jpg";
       const path = `${currentUserId}/review-${ratingId}-${Date.now()}.${ext}`;
@@ -2992,13 +2995,28 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
       const { error: uploadError } = await supabase.storage.from("profile-media").upload(path, blob, { contentType: reviewMediaFile.mimeType });
       if (uploadError) throw uploadError;
       const { data: pub } = supabase.storage.from("profile-media").getPublicUrl(path);
-      const approvalStatus = check.showsIdentifiableAdult ? "pending" : "not_required";
-      const { error: mediaErr } = await supabase.from("review_media").insert({
-        rating_id: ratingId, media_type: "image", url: pub.publicUrl,
-        contains_provider_identity: check.showsIdentifiableAdult, approval_status: approvalStatus,
+
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch("/api/review-media", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({
+          ratingId, mediaType: reviewMediaFile.type, url: pub.publicUrl, mimeType: reviewMediaFile.mimeType,
+        }),
       });
-      if (mediaErr) throw mediaErr;
-      return approvalStatus === "pending" ? "pending" : "auto";
+      const result = await res.json();
+      if (!mountedRef.current) return null;
+      if (result.error) throw new Error(result.error);
+      if (result.status === "pending" || result.status === "auto") return result.status;
+      if (result.status === "rejected") return "rejected";
+      if (result.status === "child") return "child";
+      // "review"/"pending_review_failed" gibi diğer durumlar — güvenli
+      // tarafta kal, otomatik yayınlanmadığını varsay ama kullanıcıyı da
+      // hataya düşürme (yazılı yorum zaten kaydedildi).
+      return "auto";
     } catch {
       // Görsel yüklenemese bile yazılı yorum zaten kaydedildi — metin her
       // zaman öncelikli, burada sessizce "auto" dönüp kullanıcıyı üzmüyoruz.
