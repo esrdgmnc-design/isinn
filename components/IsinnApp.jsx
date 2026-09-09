@@ -33,6 +33,12 @@ const CATEGORIES = [
   { id: "tadilat", name: "Tadilat", mode: "local", icon: Wrench },
   { id: "cilingir", name: "Çilingir", mode: "local", icon: Key },
   { id: "ogretmen", name: "Öğretmen", mode: "both", icon: GraduationCap },
+  // Kullanıcı geri bildirimi: "Öğretmen" okul müfredatı/özel ders çağrışımı
+  // yapıyor — diksiyon, el sanatları (örgü vb.), dans gibi akademik olmayan
+  // beceri/hobi eğitimi verenler için yanlış terim. "Eğitmen" daha doğru
+  // (spor-egitmeni/muzik-egitmeni'nde de zaten aynı terim kullanılıyor,
+  // burada o mantığın genel/kategori-bağımsız hali).
+  { id: "egitmen", name: "Eğitmen", mode: "both", icon: Award },
   { id: "bakici", name: "Bakıcı", mode: "local", icon: Baby },
   { id: "hasta-bakici", name: "Hasta Bakıcı", mode: "local", icon: HeartPulse },
   { id: "hemsire", name: "Hemşire", mode: "local", icon: Syringe },
@@ -90,7 +96,7 @@ const PARENT_CATEGORIES = [
   { id: "ev-hizmetleri", name: "Ev Hizmetleri", icon: Home, categoryIds: ["temizlik", "nakliye", "tadilat", "cilingir", "terzi", "elektrikci", "su-tesisatcisi", "hali-yikama", "yemek", "boya-badana", "klima-beyaz-esya"] },
   { id: "guzellik-bakim", name: "Güzellik & Bakım", icon: Wand2, categoryIds: ["tirnakci", "makyaj", "bakim", "kuafor-berber"] },
   { id: "saglik", name: "Sağlık", icon: HeartPulse, categoryIds: ["hasta-bakici", "hemsire", "fizyoterapist", "diyetisyen", "psikolog", "yoga-koc", "spor-egitmeni"] },
-  { id: "egitim-aile", name: "Eğitim & Aile", icon: GraduationCap, categoryIds: ["ogretmen", "bakici", "logusa-bakicisi", "emzirme-danismani", "etkinlik-organizatoru", "muzik-egitmeni"] },
+  { id: "egitim-aile", name: "Eğitim & Aile", icon: GraduationCap, categoryIds: ["ogretmen", "egitmen", "bakici", "logusa-bakicisi", "emzirme-danismani", "etkinlik-organizatoru", "muzik-egitmeni"] },
   { id: "profesyonel", name: "Profesyonel Hizmetler", icon: Briefcase, categoryIds: ["tasarim", "yazilim", "dijital", "muhasebe", "ceviri", "icerik-yazarligi", "video-duzenleme", "seslendirme", "sanal-asistan"] },
   { id: "diger", name: "Diğer", icon: MoreHorizontal, categoryIds: ["bahce-bakim", "muhendis", "sosyal-medya", "profesyonel-fotograf", "evcil-hayvan"] },
 ];
@@ -1818,7 +1824,7 @@ const CATEGORY_TILE_GRADIENTS = [
 // (asset üretmeden en hızlı gerçek çözüm). Kullanıcının verdiği örnekler
 // (yemek, tadilat) dahil hepsi kendi görseline sahip.
 const CATEGORY_EMOJI = {
-  temizlik: "🧹", nakliye: "🚚", tadilat: "🛠️", cilingir: "🔑", ogretmen: "📚",
+  temizlik: "🧹", nakliye: "🚚", tadilat: "🛠️", cilingir: "🔑", ogretmen: "📚", egitmen: "🏅",
   bakici: "👶", "hasta-bakici": "🩺", hemsire: "💉", fizyoterapist: "🦴",
   "yoga-koc": "🧘", "spor-egitmeni": "🏋️", tirnakci: "💅", makyaj: "💄",
   bakim: "🧴", terzi: "🧵", yemek: "🍲", muhendis: "👷", tasarim: "🎨",
@@ -3706,7 +3712,7 @@ function MapView({ onBack, onSelectProvider, onSelectJob, realListings, realJobs
 
   const city = CITIES.find((c) => c.id === cityId);
   const catColor = {
-    temizlik: "#3F7D5C", nakliye: "#3A5BA0", tadilat: "#C2872B", cilingir: "#9C4A3C", ogretmen: "#6B4FA0",
+    temizlik: "#3F7D5C", nakliye: "#3A5BA0", tadilat: "#C2872B", cilingir: "#9C4A3C", ogretmen: "#6B4FA0", egitmen: "#A67C52",
     bakici: "#C25B8E", muhendis: "#2E6B6B", "hasta-bakici": "#D14D4D", hemsire: "#2196A6", fizyoterapist: "#4C8C4A",
     makyaj: "#B8548C", bakim: "#5B9BA8", terzi: "#7A6B8F", yemek: "#B5762E",
     diyetisyen: "#5C9C4A", psikolog: "#7B5FA8", "logusa-bakicisi": "#D1706B", "emzirme-danismani": "#4A9C8C",
