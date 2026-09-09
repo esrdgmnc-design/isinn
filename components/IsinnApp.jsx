@@ -726,7 +726,7 @@ async function getVitrinCapInfo(userId) {
       .maybeSingle(),
     supabase.from("addon_products").select("id").eq("slug", "ek-vitrin").maybeSingle(),
   ]);
-  let cap = subRow?.subscription_plans?.max_active_listings ?? 1;
+  let cap = subRow?.subscription_plans?.max_active_listings ?? 2;
   const planName = subRow?.subscription_plans?.name || "Standart Üyelik";
   let hasExtraVitrinAddon = false;
   if (addonProduct?.id) {
@@ -4438,7 +4438,7 @@ function FavoritesView({ onBack, onSelectListing, onOpenJob, realListings, realJ
   );
 }
 
-function PostJobView({ onBack, onSubmitted, onViewOffers, onMatchAI, userId, onJobPosted, editingJob, onJobUpdated }) {
+function PostJobView({ onBack, onSubmitted, onViewOffers, onMatchAI, userId, onJobPosted, editingJob, onJobUpdated, onGoToProfile }) {
   // İlan verildikten sonra düzenleme yolu hiç yoktu (kullanıcının fark
   // ettiği gerçek bir eksiklik — "balkon temizliğinden bahsetmeyi unutmuş,
   // düzenleyemiyor" gibi bir durumda tek çare ilanı silip yeniden girmekti).
@@ -4462,6 +4462,27 @@ function PostJobView({ onBack, onSubmitted, onViewOffers, onMatchAI, userId, onJ
   const [categoryIdBySlug, setCategoryIdBySlug] = useState({});
   const [postedJob, setPostedJob] = useState(null); // { dbId, posterId, categoryDbId, ... } — gerçek jobs satırı
   const [aiWriting, setAiWriting] = useState(false);
+
+  // Kullanıcı geri bildirimi: profil/telefon eksikse önceden bu kontrol
+  // sadece "İlanı Yayınla"ya basınca yapılıyordu — biri tüm formu doldurup
+  // gönderdiğinde reddediliyor, formdan çıkıp profilini tamamlamaya
+  // gidince yazdığı her şey kayboluyordu. Artık form hiç açılmadan,
+  // en baştan kontrol ediliyor (CreateListingView ile aynı desen).
+  const [gateCheck, setGateCheck] = useState(isEditing ? { checking: false, ok: true } : { checking: true, ok: null });
+  useEffect(() => {
+    if (isEditing) { setGateCheck({ checking: false, ok: true }); return; }
+    if (!userId) { setGateCheck({ checking: false, ok: true }); return; }
+    let cancelled = false;
+    (async () => {
+      const profileGate = await checkProfileGate(userId);
+      if (cancelled) return;
+      if (!profileGate.ok) { setGateCheck({ checking: false, ok: false, reason: profileGate.reason }); return; }
+      const phoneGate = await checkPhoneGate(userId);
+      if (cancelled) return;
+      setGateCheck({ checking: false, ok: phoneGate.ok, reason: phoneGate.ok ? "" : phoneGate.reason });
+    })();
+    return () => { cancelled = true; };
+  }, [userId, isEditing]);
 
   useEffect(() => {
     let cancelled = false;
@@ -4618,6 +4639,30 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
         <p className="text-[11px] mt-4" style={{ color: "#8A8368" }}>
           Not: İlanın gerçekten kaydedildi. "Teklifleri Gör" ekranındaki teklifler ise henüz örnek veri — sağlayıcıların gerçek teklif göndermesi ayrı bir özellik, istersen onu da ekleyebiliriz.
         </p>
+      </div>
+    );
+  }
+
+  if (gateCheck.checking) {
+    return (
+      <div className="max-w-md mx-auto px-5 py-20 text-center">
+        <Loader2 size={20} className="animate-spin mx-auto" style={{ color: "#8A8368" }} />
+      </div>
+    );
+  }
+
+  if (!gateCheck.ok) {
+    return (
+      <div className="max-w-md mx-auto px-5 py-20 text-center">
+        <div className="w-14 h-14 rounded-full mx-auto mb-5 flex items-center justify-center" style={{ background: "rgba(194,135,43,0.15)" }}>
+          <AlertCircle size={22} style={{ color: "#C2872B" }} />
+        </div>
+        <h2 className="font-serif text-xl mb-2" style={{ color: "#1B2B24" }}>Önce profilini tamamla</h2>
+        <p className="text-sm mb-6" style={{ color: "#5C5744" }}>{gateCheck.reason}</p>
+        <div className="flex gap-2 justify-center">
+          <button onClick={onGoToProfile || onBack} className="px-5 py-2.5 rounded-full text-sm font-medium text-white" style={{ background: "#2563EB" }}>Profilime Git</button>
+          <button onClick={onBack} className="px-5 py-2.5 rounded-full text-sm font-medium border" style={{ borderColor: "#D9D0BA", color: "#1B2B24" }}>Vazgeç</button>
+        </div>
       </div>
     );
   }
@@ -5815,7 +5860,7 @@ const PLANS = [
     id: "standart", name: "Standart Üyelik", priceMonthly: 159, priceYearly: 799, trialMonths: 1, currency: "₺",
     tagline: "Herkes için tek, basit plan",
     features: [
-      "1 vitrin dahil", "Sınırsız teklif", "Tam profil sayfası (video, sertifika, CV)", "Mesajlaşma + bildirimler",
+      "2 vitrin dahil", "Sınırsız teklif", "Tam profil sayfası (video, sertifika, CV)", "Mesajlaşma + bildirimler",
       "AI eşleştirmede yer alma", "Harita ve arama görünürlüğü", "Diğer tüm ilan ve vitrinleri görüntüleme",
     ],
     notIncluded: [],
@@ -5852,12 +5897,12 @@ const PRO_PACKAGE = {
   id: "pro", name: "Pro Üyelik", priceMonthly: 649, priceYearly: 3999, currency: "₺",
   tagline: "Birden fazla vitrin açmak isteyenler için",
   features: [
-    "3 vitrin hakkı (Standart'ta 1)", "Sınırsız teklif",
+    "3 vitrin hakkı (Standart'ta 2)", "Sınırsız teklif",
     "Her ayın ilk haftası tüm vitrinlerin Öne Çıkarma Paketi hediyeli", "AI eşleştirmede öncelik",
   ],
 };
 
-function CreateListingView({ onBack, onCreated, userId, editingListing }) {
+function CreateListingView({ onBack, onCreated, userId, editingListing, onGoToProfile }) {
   const isEditing = !!editingListing;
   const [mode, setMode] = useState(editingListing?.mode || "local");
   const [providerName, setProviderName] = useState(editingListing?.provider || "");
@@ -5884,6 +5929,27 @@ function CreateListingView({ onBack, onCreated, userId, editingListing }) {
   const [moderation, setModeration] = useState(null); // { status: 'checking'|'approved'|'flagged', reason }
   const [recommendation, setRecommendation] = useState(null); // { product, pitch }
   const [recLoading, setRecLoading] = useState(false);
+
+  // Kullanıcı geri bildirimi: profil/telefon eksikse önceden bu kontrol
+  // sadece "Yayınla"ya basınca yapılıyordu — biri tüm formu doldurup
+  // gönderdiğinde reddediliyor, formdan çıkıp profilini tamamlamaya
+  // gidince (component unmount olduğu için) yazdığı her şey kayboluyordu.
+  // Artık form hiç açılmadan, en baştan kontrol ediliyor.
+  const [gateCheck, setGateCheck] = useState(isEditing ? { checking: false, ok: true } : { checking: true, ok: null });
+  useEffect(() => {
+    if (isEditing) { setGateCheck({ checking: false, ok: true }); return; }
+    if (!userId) { setGateCheck({ checking: false, ok: true }); return; } // GATED_VIEWS zaten auth'suz buraya hiç gelmeye izin vermiyor
+    let cancelled = false;
+    (async () => {
+      const profileGate = await checkProfileGate(userId);
+      if (cancelled) return;
+      if (!profileGate.ok) { setGateCheck({ checking: false, ok: false, reason: profileGate.reason }); return; }
+      const phoneGate = await checkPhoneGate(userId);
+      if (cancelled) return;
+      setGateCheck({ checking: false, ok: phoneGate.ok, reason: phoneGate.ok ? "" : phoneGate.reason });
+    })();
+    return () => { cancelled = true; };
+  }, [userId, isEditing]);
 
   // Ücretsiz vitrin sınırı: Standart Üyelik'te 1 vitrin, Pro Üyelik'te 3 vitrin
   // hakkı var (bkz. supabase/pro_plan.sql — subscription_plans.max_active_listings).
@@ -6201,6 +6267,30 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
     );
   }
 
+  if (gateCheck.checking) {
+    return (
+      <div className="max-w-md mx-auto px-5 py-20 text-center">
+        <Loader2 size={20} className="animate-spin mx-auto" style={{ color: "#8A8368" }} />
+      </div>
+    );
+  }
+
+  if (!gateCheck.ok) {
+    return (
+      <div className="max-w-md mx-auto px-5 py-20 text-center">
+        <div className="w-14 h-14 rounded-full mx-auto mb-5 flex items-center justify-center" style={{ background: "rgba(194,135,43,0.15)" }}>
+          <AlertCircle size={22} style={{ color: "#C2872B" }} />
+        </div>
+        <h2 className="font-serif text-xl mb-2" style={{ color: "#1B2B24" }}>Önce profilini tamamla</h2>
+        <p className="text-sm mb-6" style={{ color: "#5C5744" }}>{gateCheck.reason}</p>
+        <div className="flex gap-2 justify-center">
+          <button onClick={onGoToProfile || onBack} className="px-5 py-2.5 rounded-full text-sm font-medium text-white" style={{ background: "#2563EB" }}>Profilime Git</button>
+          <button onClick={onBack} className="px-5 py-2.5 rounded-full text-sm font-medium border" style={{ borderColor: "#D9D0BA", color: "#1B2B24" }}>Vazgeç</button>
+        </div>
+      </div>
+    );
+  }
+
   if (!isEditing && vitrinLimit.blocked) {
     return (
       <div className="max-w-md mx-auto px-5 py-20 text-center">
@@ -6214,7 +6304,7 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
         <p className="text-sm mb-6" style={{ color: "#5C5744" }}>
           {vitrinLimit.planName === "Pro Üyelik"
             ? `Şu an ${vitrinLimit.count} aktif vitrinin var, ${vitrinLimit.hasExtraVitrinAddon ? "Ek Vitrin Paketi'yle birlikte" : "Pro Üyelik"} en fazla ${vitrinLimit.cap} vitrin hakkı veriyor.`
-            : `Standart Üyelik'te 1 vitrin hakkın var, zaten kullandın. Pro Üyelik'e geçerek 3 vitrin açabilir, hizmetlerini (örn. mühendislik + nefes terapisi gibi ayrı alanları) ayrı ayrı vitrinlerde sergileyebilirsin.`}
+            : `Standart Üyelik'te ${vitrinLimit.cap} vitrin hakkın var, zaten kullandın. Pro Üyelik'e geçerek 3 vitrin açabilir, hizmetlerini (örn. mühendislik + nefes terapisi gibi ayrı alanları) ayrı ayrı vitrinlerde sergileyebilirsin.`}
         </p>
         {vitrinLimit.planName !== "Pro Üyelik" ? (
           <div className="rounded-2xl border-2 p-5 mb-6 text-left" style={{ borderColor: "#F59E0B", background: "#FFFBEB" }}>
@@ -7475,7 +7565,7 @@ function PricingView({ onBack, onJoined, userId }) {
   );
 }
 
-function ProfileView({ userId, onBack, onOpenAdminReports, onOpenAnalytics, onOpenModeration, onOpenUserReports, onOpenListingReports, onOpenContentFlags, isAdmin, pendingMediaApprovals, onApproveMedia, onRejectMedia, onListingsChanged, onJobsChanged, onEditListing, onOpenVitrinMedia }) {
+function ProfileView({ userId, onBack, onOpenAdminReports, onOpenAnalytics, onOpenModeration, onOpenUserReports, onOpenListingReports, onOpenContentFlags, isAdmin, pendingMediaApprovals, onApproveMedia, onRejectMedia, onListingsChanged, onJobsChanged, onEditListing, onOpenVitrinMedia, onEditJob }) {
   // Video tanıtım/portföy/sertifika/CV artık vitrine özel — bkz. VitrinMediaView
   // (supabase/vitrin_media.sql). Burada sadece paylaşılan profil fotoğrafı kalıyor
   // ("aynı kişinin gerçek yüzü her vitrinde aynı görünsün" — kullanıcının kararı).
@@ -7631,12 +7721,26 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenAnalytics, onOp
     if (!userId) return;
     const { data } = await supabase
       .from("jobs")
-      .select("id, title, city, budget_min, budget_max, is_remote, active, created_at")
+      .select("id, title, description, city, budget_min, budget_max, is_remote, active, created_at, category_id, custom_category_label, categories(slug)")
       .eq("client_id", userId)
       .eq("active", true)
       .order("created_at", { ascending: false });
     setMyJobs(data || []);
   };
+
+  // myJobs satırını PostJobView'ın "editingJob" prop'unun beklediği şekle
+  // çevirir — CreateListingView'ın toEditableListing'iyle aynı desen.
+  const toEditableJob = (j) => ({
+    dbId: j.id,
+    category: j.categories?.slug || "",
+    customCategoryLabel: j.custom_category_label || "",
+    mode: j.is_remote ? "remote" : "local",
+    title: j.title,
+    desc: j.description || "",
+    city: j.is_remote ? "" : (j.city || ""),
+    budgetMin: j.budget_min,
+    budgetMax: j.budget_max,
+  });
 
   // Gerçek puan ortalaması — "Tamamlanan İş" olarak da kaç kez değerlendirildiğini
   // (yani kaç iş için gerçek geri bildirim aldığını) kullanıyoruz, çünkü
@@ -8179,13 +8283,26 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenAnalytics, onOp
                     </button>
                   </div>
                 ) : (
-                  <button
-                    onClick={() => setConfirmDeactivateJobId(j.id)}
-                    className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
-                    title="İlanı kaldır"
-                  >
-                    <Trash2 size={14} style={{ color: "#9C4A3C" }} />
-                  </button>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {/* Düzenleme hakkı — eskiden hiç yoktu, ilanı silip yeniden
+                        girmekten başka çare yoktu (kullanıcının fark ettiği
+                        gerçek bir eksiklik: "balkon temizliğinden bahsetmeyi
+                        unutmuş, düzenleyemiyor"). */}
+                    <button
+                      onClick={() => onEditJob?.(toEditableJob(j))}
+                      className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+                      title="İlanı düzenle"
+                    >
+                      <Pencil size={14} style={{ color: "#5C5744" }} />
+                    </button>
+                    <button
+                      onClick={() => setConfirmDeactivateJobId(j.id)}
+                      className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+                      title="İlanı kaldır"
+                    >
+                      <Trash2 size={14} style={{ color: "#9C4A3C" }} />
+                    </button>
+                  </div>
                 )}
               </div>
             ))}
@@ -9003,6 +9120,7 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
   const [selected, setSelected] = useState(null);
   const [selectedJob, setSelectedJob] = useState(null);
   const [editingListing, setEditingListing] = useState(null); // Düzenle ile açılan ilan (CreateListingView)
+  const [editingJob, setEditingJob] = useState(null); // Düzenle ile açılan iş ilanı (PostJobView)
   const [managingVitrin, setManagingVitrin] = useState(null); // Medya yönetimi açılan vitrin (VitrinMediaView)
   const [favoriteIds, setFavoriteIds] = useState(new Set()); // gerçek, kalıcı favoriler (favorites tablosu)
   const [trialBanner, setTrialBanner] = useState(null); // { status, planName, daysLeft } — provider_subscriptions'tan
@@ -9416,6 +9534,7 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
       {view === "createListing" && (
         <CreateListingView
           onBack={() => { setEditingListing(null); setView("home"); }}
+          onGoToProfile={() => { setEditingListing(null); setView("profile"); }}
           onCreated={() => fetchListings()}
           userId={userId}
           editingListing={editingListing}
@@ -9447,12 +9566,15 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
       )}
       {view === "post" && (
         <PostJobView
-          onBack={() => setView("home")}
+          onBack={() => { setEditingJob(null); setView("home"); }}
+          onGoToProfile={() => { setEditingJob(null); setView("profile"); }}
           onSubmitted={() => setView("home")}
           onViewOffers={(job) => { setLastJob(job); setView("offers"); }}
           onMatchAI={(job) => { setLastJob(job); setView("aimatch"); }}
           userId={userId}
           onJobPosted={() => fetchJobs()}
+          editingJob={editingJob}
+          onJobUpdated={() => { setEditingJob(null); fetchJobs(); setView("profile"); }}
         />
       )}
       {view === "map" && (
@@ -9518,6 +9640,7 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
           onListingsChanged={fetchListings}
           onJobsChanged={fetchJobs}
           onEditListing={(l) => { setEditingListing(l); setView("createListing"); }}
+          onEditJob={(j) => { setEditingJob(j); setView("post"); }}
           onBack={() => setView("home")}
           onOpenAdminReports={() => setView("adminReports")}
           onOpenAnalytics={() => setView("adminAnalytics")}
