@@ -2654,16 +2654,29 @@ function ReviewCard({ review, onOpenMedia, isReal, currentUserId, providerId }) 
               className="text-xs font-bold px-3 py-1.5 rounded-full text-white"
               style={{ background: "#2563EB", opacity: replySubmitting ? 0.7 : 1 }}
             >
-              {replySubmitting ? "Gönderiliyor..." : "Yanıtı Yayınla"}
+              {replySubmitting ? "Gönderiliyor..." : providerReply ? "Yanıtı Güncelle" : "Yanıtı Yayınla"}
             </button>
-            <button onClick={() => setShowReplyForm(false)} className="text-xs font-medium" style={{ color: "#8A8368" }}>Vazgeç</button>
+            <button onClick={() => { setShowReplyForm(false); setReplyText(providerReply); }} className="text-xs font-medium" style={{ color: "#8A8368" }}>Vazgeç</button>
           </div>
         </div>
       )}
 
-      {providerReply && (
+      {providerReply && !showReplyForm && (
         <div className="mt-2.5 pl-3 py-2 border-l-2 rounded-r-lg" style={{ borderColor: "#3F7D5C", background: "#F8F4E9" }}>
-          <p className="text-[11px] font-bold mb-0.5" style={{ color: "#3F7D5C" }}>Sağlayıcının yanıtı</p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[11px] font-bold mb-0.5" style={{ color: "#3F7D5C" }}>Sağlayıcının yanıtı</p>
+            {/* Düzenleme hakkı — eskiden bir kere yazılan yanıt kalıcıydı,
+                düzeltme/güncelleme yolu yoktu (kullanıcının kararı: olmalı). */}
+            {isOwner && (
+              <button
+                onClick={() => { setReplyText(providerReply); setShowReplyForm(true); }}
+                className="text-[11px] font-bold shrink-0"
+                style={{ color: "#2563EB" }}
+              >
+                Düzenle
+              </button>
+            )}
+          </div>
           <p className="text-xs leading-relaxed" style={{ color: "#3D3B30" }}>{providerReply}</p>
         </div>
       )}
