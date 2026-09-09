@@ -5779,6 +5779,13 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
                 </div>
                 <span className="text-[11px] shrink-0" style={{ color: "#8A8368" }}>{c.time}</span>
               </div>
+              {/* Hangi ilan/vitrinle ilgili olduğu eskiden sadece konuşmayı
+                  AÇINCA görünüyordu — birden fazla ilanı olan biri listeye
+                  bakınca benzer mesajları karıştırabiliyordu (kullanıcının
+                  fark ettiği gerçek bir sorun). Artık listede de görünüyor. */}
+              {c.listingTitle && (
+                <p className="text-[11px] truncate font-medium" style={{ color: "#2563EB" }}>{c.listingTitle}</p>
+              )}
               <p className="text-xs truncate" style={{ color: c.unread > 0 ? "#1B2B24" : "#8A8368" }}>{c.lastMessage}</p>
             </div>
           </button>
