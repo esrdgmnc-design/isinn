@@ -8439,39 +8439,16 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenAnalytics, onOp
         </button>
       )}
 
-      <button
-        onClick={onOpenModeration}
-        className="w-full rounded-xl border p-5 mb-4 text-left flex items-center gap-3 hover:shadow-sm transition-shadow"
-        style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}
-      >
-        <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: "rgba(37,99,235,0.12)" }}>
-          <ShieldCheck size={16} style={{ color: "#2563EB" }} />
-        </div>
-        <div className="flex-1">
-          <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>Moderasyon Kuyruğu (Yönetim)</p>
-          <p className="text-xs" style={{ color: "#8A8368" }}>AI'ın kontrol edemediği video içerikleri gözden geçir</p>
-        </div>
-        <ChevronRight size={16} style={{ color: "#8A8368" }} />
-      </button>
-
-      <button
-        onClick={onOpenAnalytics}
-        className="w-full rounded-xl border p-5 mb-4 text-left flex items-center gap-3 hover:shadow-sm transition-shadow"
-        style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}
-      >
-        <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: "rgba(37,99,235,0.12)" }}>
-          <Sparkles size={16} style={{ color: "#2563EB" }} />
-        </div>
-        <div className="flex-1">
-          <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>Pazar Analizi (Yönetim)</p>
-          <p className="text-xs" style={{ color: "#8A8368" }}>AI ile üretilen sektör/talep içgörüleri</p>
-        </div>
-        <ChevronRight size={16} style={{ color: "#8A8368" }} />
-      </button>
-
-      <div className="rounded-xl border p-5 text-sm" style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#5C5744" }}>
-        Bu, prototip amaçlı örnek bir profil ekranı. Gerçek uygulamada burada iş geçmişin, aldığın değerlendirmeler ve profil ayarların da yer alacak.
-      </div>
+      {/* KRİTİK: "Moderasyon Kuyruğu" ve "Pazar Analizi" (ikisi de "(Yönetim)"
+          etiketli) burada isAdmin kontrolü OLMADAN herkese görünüyordu —
+          gerçek kullanıcı bunu gördüğünde haklı olarak "ben yönetici
+          paneline mi bakıyorum" diye endişelendi. İkisi de gerçek veri
+          göstermiyordu (staffModerationQueue tamamen session-local/boş,
+          AdminAnalyticsView sabit demo veri kullanıyor) — yani bir veri
+          sızıntısı değildi, ama kafa karıştırıcı bir prototip kalıntısıydı.
+          Altındaki "prototip amaçlı örnek profil ekranı" notuyla birlikte
+          tamamen kaldırıldı — gerçek admin (isAdmin) zaten yukarıdaki asıl
+          admin ekranlarına (Destek/Kullanıcı/İlan/İçerik) erişebiliyor. */}
     </div>
   );
 }
