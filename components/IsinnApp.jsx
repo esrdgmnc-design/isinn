@@ -7415,12 +7415,17 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenAnalytics, onOp
     setPhoneError("");
     setPhoneStage("sending");
     try {
-      const { data: code, error: rpcErr } = await supabase.rpc("request_phone_otp", { p_phone: phoneInput.trim() });
-      if (rpcErr) throw rpcErr;
+      // Kod artık istemciye hiç gelmiyor — sunucu (/api/send-otp) kendi
+      // üretiyor ve doğrudan SMS olarak yolluyor (bkz. supabase/fix_otp_leak.sql).
+      // Kimlik doğrulaması için kendi oturum token'ımızı gönderiyoruz.
+      const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch("/api/send-otp", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: phoneInput.trim(), code }),
+        headers: {
+          "Content-Type": "application/json",
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({ phone: phoneInput.trim() }),
       });
       const result = await res.json();
       if (!result.configured) {
