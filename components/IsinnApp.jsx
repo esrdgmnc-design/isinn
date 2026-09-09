@@ -2823,6 +2823,10 @@ function ListingDetail({ listing, onBack, onContact, userReviews, onAddReview, o
   // değerlendirmeler gösterilir; "Ayrı tut" derse sadece bu vitrine
   // (ratings.service_id) bırakılanlar sayılır (bkz. VitrinMediaView, vitrin_media.sql).
   const [realReviews, setRealReviews] = useState([]);
+  // Sadece bu vitrine (service_id) yazılmış yorumlar — "Birleştir" açıkken
+  // bile, gösterilen METİN listesi hiçbir zaman başka bir vitrine yazılmış
+  // bir yorumu içermez (bkz. loadRealReviews'deki not).
+  const [ownReviews, setOwnReviews] = useState([]);
   const [reviewError, setReviewError] = useState("");
   const [shareProfileReviews, setShareProfileReviews] = useState(true);
 
@@ -2832,9 +2836,20 @@ function ListingDetail({ listing, onBack, onContact, userReviews, onAddReview, o
     const shared = serviceRow?.share_profile_reviews ?? true;
     setShareProfileReviews(shared);
     let ratingsQuery = supabase.from("ratings").select("*").order("created_at", { ascending: false });
+    // GÜVENLİK/GİZLİLİK: "Birleştir" SAYIYI (ortalama puan, yorum adedi)
+    // birleştirir — ama yorumun kendi METNİNİ değil. Eskiden aynı sorgu her
+    // ikisi için de kullanılıyordu: "Birleştir" açık bir vitrinde, GERÇEKTE
+    // başka bir vitrine (örn. aynı kişinin örgü vitrinine) yazılmış bir
+    // yorumun metni burada görünüyordu — bu da iki vitrinin aynı kişiye ait
+    // olduğunu istemeden ele verebiliyordu (kullanıcının fark ettiği gerçek
+    // bir sızıntı). Aşağıda rows'un TAMAMI sayı/ortalama için kullanılıyor,
+    // ama gösterilen yorum listesi (bkz. ownRows) her zaman sadece BU
+    // vitrine (service_id) yazılmış olanlarla sınırlı — "Birleştir" açık
+    // olsa bile.
     ratingsQuery = shared ? ratingsQuery.eq("rated_profile_id", listing.providerId) : ratingsQuery.eq("service_id", listing.dbId);
     const { data: ratingsData } = await ratingsQuery;
     const rows = ratingsData || [];
+    const ownRows = shared ? rows.filter((r) => r.service_id === listing.dbId) : rows;
     const raterIds = [...new Set(rows.map((r) => r.rater_id))];
     let profilesById = {};
     if (raterIds.length > 0) {
@@ -2855,7 +2870,7 @@ function ListingDetail({ listing, onBack, onContact, userReviews, onAddReview, o
         .order("sort_order", { ascending: true });
       (mediaData || []).forEach((m) => { (mediaByRating[m.rating_id] = mediaByRating[m.rating_id] || []).push(m); });
     }
-    setRealReviews(rows.map((r) => {
+    const mapRow = (r) => {
       const p = profilesById[r.rater_id];
       const name = (p?.business_name && p.business_name.trim()) || p?.full_name || "Kullanıcı";
       return {
@@ -2871,7 +2886,12 @@ function ListingDetail({ listing, onBack, onContact, userReviews, onAddReview, o
         providerReply: r.provider_reply || "",
         providerReplyAt: r.provider_reply_at,
       };
-    }));
+    };
+    // realReviews (tüm satırlar, "Birleştir"deyken birleşik) SADECE ortalama/
+    // sayı için kullanılıyor; ownReviews (her zaman sadece bu vitrine ait)
+    // gösterilen yorum listesi ve AI özeti için kullanılıyor — bkz. yukarıdaki not.
+    setRealReviews(rows.map(mapRow));
+    setOwnReviews(ownRows.map(mapRow));
   };
 
   useEffect(() => {
@@ -2880,7 +2900,11 @@ function ListingDetail({ listing, onBack, onContact, userReviews, onAddReview, o
   }, [isRealListing, listing.providerId]);
 
   const myReviews = isRealListing ? [] : (userReviews || []).filter((r) => r.listingId === listing.id);
+  // allReviews: sadece ortalama/sayı (avg, allReviews.length) için — "Birleştir"
+  // açıkken kişiye bağlı TÜM puanları kapsar. displayReviews: gerçekten
+  // LİSTELENEN yorumlar — her zaman sadece bu vitrine ait (bkz. loadRealReviews).
   const allReviews = isRealListing ? realReviews : [...myReviews, ...REVIEWS];
+  const displayReviews = isRealListing ? ownReviews : allReviews;
   const avg = allReviews.length ? (allReviews.reduce((s, r) => s + r.value, 0) / allReviews.length).toFixed(1) : null;
 
   // Yorum özeti — sadece gerçek vitrinlerde ve yeterince (en az 3) yazılı
@@ -2891,7 +2915,9 @@ function ListingDetail({ listing, onBack, onContact, userReviews, onAddReview, o
   const summarizedCountRef = useRef(0);
   useEffect(() => {
     if (!isRealListing) return;
-    const withText = realReviews.filter((r) => r.comment && r.comment.trim().length > 0);
+    // ownReviews kullanılıyor — realReviews (birleşik) kullanılsaydı, AI özeti
+    // başka bir vitrine yazılmış yorumların içeriğinden dolaylı ipucu üretebilirdi.
+    const withText = ownReviews.filter((r) => r.comment && r.comment.trim().length > 0);
     if (withText.length < 3 || summarizedCountRef.current === withText.length) return;
     let cancelled = false;
     (async () => {
@@ -2917,7 +2943,7 @@ function ListingDetail({ listing, onBack, onContact, userReviews, onAddReview, o
       }
     })();
     return () => { cancelled = true; };
-  }, [isRealListing, realReviews]);
+  }, [isRealListing, ownReviews]);
 
   const checkReviewMedia = async (mediaType, dataUrl, mimeType) => {
     // Video: Claude'un vision API'si video işleyemiyor. Sessizce yanlış çalışmak
@@ -3473,6 +3499,15 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
               {avg ? `${avg} ortalama · ${allReviews.length} yorum` : "Henüz değerlendirme yok"}
             </span>
           </div>
+          {/* Ortalama, sağlayıcının "Birleştir" dediği durumda tüm vitrinlerini
+              kapsar ama aşağıdaki yorum METİNLERİ her zaman sadece bu vitrine
+              yazılanlardır (gizlilik) — sayılar tutmuyorsa (12 yorum ama 8
+              listeleniyor gibi) kafa karışmasın diye açıkça belirtiyoruz. */}
+          {isRealListing && shareProfileReviews && allReviews.length !== displayReviews.length && (
+            <p className="text-[11px] w-full" style={{ color: "#8A8368" }}>
+              Ortalama puan, sağlayıcının tüm vitrinlerindeki değerlendirmeleri kapsar; aşağıdaki yorumlar sadece bu vitrine yazılanlardır.
+            </p>
+          )}
           <button
             onClick={async () => {
               if (showReviewForm) { setShowReviewForm(false); return; }
@@ -3624,7 +3659,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
         )}
 
         <div>
-          {allReviews.map((r) => (
+          {displayReviews.map((r) => (
             <ReviewCard key={r.id} review={r} onOpenMedia={(media, index) => setLightbox({ media, index })} isReal={isRealListing} currentUserId={currentUserId} providerId={listing.providerId} />
           ))}
         </div>
@@ -8575,7 +8610,7 @@ function VitrinMediaView({ userId, service, onBack, onListingsChanged }) {
       // varsayılan bu) sayının/listenin herkese açık sayfadakiyle
       // tutarsız, eksik görünmesine yol açıyordu (ListingDetail'in kendi
       // loadRealReviews'i bu ayrımı zaten doğru yapıyordu, burası yapmıyordu).
-      let ratingsQuery = supabase.from("ratings").select("id, value, comment, created_at, rater_id, provider_reply, provider_reply_at").order("created_at", { ascending: false });
+      let ratingsQuery = supabase.from("ratings").select("id, value, comment, created_at, rater_id, service_id, provider_reply, provider_reply_at").order("created_at", { ascending: false });
       ratingsQuery = shareReviews ? ratingsQuery.eq("rated_profile_id", userId) : ratingsQuery.eq("service_id", serviceId);
       const [{ data: jobsData }, { data: ratingsData }, { count: favCount }] = await Promise.all([
         supabase.from("jobs").select("id, state").eq("service_id", serviceId),
@@ -8593,13 +8628,20 @@ function VitrinMediaView({ userId, service, onBack, onListingsChanged }) {
         favorites: favCount || 0,
       });
 
-      const raterIds = [...new Set(ratings.map((r) => r.rater_id))];
+      // GİZLİLİK: yukarıdaki stats (ortalama/sayı) "Birleştir"de kişiye bağlı
+      // TÜM vitrinleri kapsar — ama aşağıda LİSTELENEN yorum metinleri hep
+      // sadece BU vitrine (serviceId) yazılmış olanlarla sınırlı, aksi halde
+      // başka bir vitrine yazılmış bir yorumun metni burada (sahibin kendi
+      // yönetim ekranında bile) görünüp iki vitrinin bağlantısını ele
+      // verebilirdi (bkz. ListingDetail'deki aynı düzeltme).
+      const ownRatings = shareReviews ? ratings.filter((r) => r.service_id === serviceId) : ratings;
+      const raterIds = [...new Set(ownRatings.map((r) => r.rater_id))];
       let profilesById = {};
       if (raterIds.length > 0) {
         const { data: profilesData } = await supabase.from("profiles").select("id, full_name, business_name").in("id", raterIds);
         (profilesData || []).forEach((p) => { profilesById[p.id] = p; });
       }
-      setReviewsList(ratings.map((r) => {
+      setReviewsList(ownRatings.map((r) => {
         const p = profilesById[r.rater_id];
         const name = (p?.business_name && p.business_name.trim()) || p?.full_name || "Kullanıcı";
         return { id: r.id, name, value: r.value, comment: r.comment || "", time: formatRelativeTr(r.created_at), providerReply: r.provider_reply || "" };
