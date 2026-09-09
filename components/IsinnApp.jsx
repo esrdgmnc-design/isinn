@@ -5860,7 +5860,7 @@ const PLANS = [
     id: "standart", name: "Standart Üyelik", priceMonthly: 159, priceYearly: 799, trialMonths: 1, currency: "₺",
     tagline: "Herkes için tek, basit plan",
     features: [
-      "2 vitrin dahil", "Sınırsız teklif", "Tam profil sayfası (video, sertifika, CV)", "Mesajlaşma + bildirimler",
+      "2 vitrin dahil", "Sınırsız teklif ve ilan", "Tam profil sayfası (video, sertifika, CV)", "Mesajlaşma + bildirimler",
       "AI eşleştirmede yer alma", "Harita ve arama görünürlüğü", "Diğer tüm ilan ve vitrinleri görüntüleme",
     ],
     notIncluded: [],
@@ -5897,7 +5897,7 @@ const PRO_PACKAGE = {
   id: "pro", name: "Pro Üyelik", priceMonthly: 649, priceYearly: 3999, currency: "₺",
   tagline: "Birden fazla vitrin açmak isteyenler için",
   features: [
-    "3 vitrin hakkı (Standart'ta 2)", "Sınırsız teklif",
+    "3 vitrin hakkı (Standart'ta 2)", "Sınırsız teklif ve ilan",
     "Her ayın ilk haftası tüm vitrinlerin Öne Çıkarma Paketi hediyeli", "AI eşleştirmede öncelik",
   ],
 };
