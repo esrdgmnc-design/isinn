@@ -99,7 +99,7 @@ const LEVEL_META = {
   "top-rated": { label: "Top Rated", color: "#C2872B" },
   "level-2": { label: "Level 2", color: "#6B4FA0" },
   "level-1": { label: "Level 1", color: "#3A5BA0" },
-  "new": { label: "Yeni Satıcı", color: "#8A8368" },
+  "new": { label: "Yeni Vitrin", color: "#8A8368" },
 };
 
 // Gerçek vitrinler için seviye — tamamen otomatik, kimse manuel atamıyor
@@ -1772,38 +1772,9 @@ function Header({ onNav, onSearch, pendingCount, session, onNotificationClick })
   );
 }
 
-const JOB_POSTINGS = [
-  {
-    id: 1, category: "bakici", posterName: "Selin K.", district: "Zekeriyaköy, İstanbul",
-    title: "İngilizce Konuşan Oyun Ablası Aranıyor",
-    schedule: "Haftada 2 gün, günde 1 saat", budget: "300₺/saat", postedTime: "1 saat önce", offerCount: 4,
-  },
-  {
-    id: 2, category: "temizlik", posterName: "Merve A.", district: "Kadıköy, İstanbul",
-    title: "Haftalık Ev Temizliği İçin Güvenilir Biri Aranıyor",
-    schedule: "Haftada 1 gün, 3-4 saat", budget: "900₺", postedTime: "2 saat önce", offerCount: 7,
-  },
-  {
-    id: 3, category: "hasta-bakici", posterName: "Burak T.", district: "Çankaya, Ankara",
-    title: "Yaşlı Annem İçin Gündüz Bakıcısı Aranıyor",
-    schedule: "Hafta içi her gün, 08:00-17:00", budget: "380₺/gün", postedTime: "3 saat önce", offerCount: 3,
-  },
-  {
-    id: 4, category: "bakici", posterName: "Ece D.", district: "Beşiktaş, İstanbul",
-    title: "3 Aylık Bebeğim İçin Gece Bakıcısı Lazım",
-    schedule: "Haftada 3 gece, 22:00-07:00", budget: "450₺/gece", postedTime: "5 saat önce", offerCount: 6,
-  },
-  {
-    id: 5, category: "ogretmen", posterName: "Aylin S.", district: "Üsküdar, İstanbul",
-    title: "İlkokul 3. Sınıf İçin Haftalık İngilizce Dersi",
-    schedule: "Haftada 1 gün, 1 saat", budget: "300₺/ders", postedTime: "6 saat önce", offerCount: 5,
-  },
-  {
-    id: 6, category: "bahce-bakim", posterName: "Onur K.", district: "Karşıyaka, İzmir",
-    title: "Haftalık Bahçe ve Çim Bakımı Aranıyor",
-    schedule: "Haftada 1 gün, 2 saat", budget: "450₺", postedTime: "8 saat önce", offerCount: 2,
-  },
-];
+// Yayın öncesi kullanıcı kararı: vitrinler hariç tüm demo/örnek içerik
+// kaldırıldı — sadece gerçek "İlan Ver" kayıtları (realJobs) gösteriliyor.
+const JOB_POSTINGS = [];
 
 const ROTATING_WORDS = ["çilingire", "temizlikçiye", "hemşireye", "bakıcıya", "tırnakçıya", "fizyoterapiste"];
 
@@ -1887,7 +1858,10 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
   // gizlenebiliyor, aşağıdaki toggle hâlâ duruyor).
   const [showRemote, setShowRemote] = useState(true);
   const [featuredIndex, setFeaturedIndex] = useState(0);
-  const allListings = [...(realListings || []), ...LISTINGS];
+  // Yayın öncesi kullanıcı kararı: demo vitrin sayısı azaltıldı (sitenin
+  // gerçek trafiğine daha yakın, abartısız görünsün diye) — kaynak veri
+  // (LISTINGS) hâlâ tam, sadece gösterilen miktar sınırlı.
+  const allListings = [...(realListings || []), ...LISTINGS.slice(0, 8)];
   // Gerçek ilanlar da en az bir değerlendirmeyle 4.5+ puana ulaşınca "Öne Çıkan"a
   // girebiliyor — sabit demo listesine hapsolmuyor, gerçekten hak ederek çıkıyor.
   // "Öne Çıkan" şeridi sınırlı kapasiteli (FEATURED_SLOT_CAP) — uygun havuz
@@ -1898,7 +1872,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
   const FEATURED_SLOT_CAP = 8;
   const featuredEligible = (realListings || []).filter((l) => l.isBoosted || (l.reviewCount > 0 && l.rating >= 4.5));
   const realFeatured = seededDailyShuffle(featuredEligible).slice(0, FEATURED_SLOT_CAP);
-  const featured = [...realFeatured, ...LISTINGS.filter((l) => l.level === "top-rated")];
+  const featured = [...realFeatured, ...LISTINGS.filter((l) => l.level === "top-rated").slice(0, 8)];
   const filtered = (
     filter === "all" ? allListings :
     filter === "home" ? allListings.filter((l) => l.mode === "local" && (l.homeService === "evde" || l.homeService === "esnek")) :
@@ -3655,7 +3629,7 @@ function MapView({ onBack, onSelectProvider, onSelectJob, realListings, realJobs
   // Gerçek iş ilanları (client'ların "İlan Ver" ile girdiği ihtiyaçlar) da
   // haritada ayrı bir pin türü olarak gösteriliyor — bkz. mapJobRowToPin.
   const jobPins = (realJobs || []).map((j) => mapJobRowToPin(j)).filter(Boolean);
-  const allProviders = [...LOCAL_PROVIDERS, ...realPins, ...jobPins];
+  const allProviders = [...LOCAL_PROVIDERS.slice(0, 8), ...realPins, ...jobPins];
 
   const city = CITIES.find((c) => c.id === cityId);
   const catColor = {
@@ -4200,7 +4174,7 @@ function SearchResultsView({ query, cityFilter, onBack, onSelectListing, realLis
   // birleşik sorguları hiç yakalamıyordu. Şimdi şehir kendi başına, AND
   // mantığıyla ayrı bir filtre.
   const cityQ = (cityFilter || "").trim().toLocaleLowerCase("tr-TR");
-  const pool = [...(realListings || []), ...LISTINGS];
+  const pool = [...(realListings || []), ...LISTINGS.slice(0, 8)];
   const literalResults = pool
     .filter((l) => {
       const haystack = [l.title, l.provider, l.city, l.desc || "", CATEGORIES.find((c) => c.id === l.category)?.name || ""]
@@ -4939,7 +4913,7 @@ function AIMatchView({ job, onBack, onSelectListing, realListings }) {
   // gerçek bir sağlayıcıyı asla önermiyordu. category alanı (slug) her
   // ikisinde de aynı uzayı paylaşıyor (categories_seed.sql), o yüzden aynı
   // filtre ikisine de doğrudan uygulanabiliyor.
-  const candidates = [...LISTINGS, ...(realListings || [])].filter((l) => {
+  const candidates = [...LISTINGS.slice(0, 8), ...(realListings || [])].filter((l) => {
     const matchesCategory = l.categoryId === job?.categoryId || l.category === job?.categoryId;
     if (!matchesCategory) return false;
     if (!job?.homeServicePref || job.homeServicePref === "esnek") return true;
@@ -5173,29 +5147,12 @@ function NailArtView({ onBack, onContact }) {
   );
 }
 
-const INITIAL_CONVERSATIONS = [
-  { id: 1, name: "Hakan Y.", initials: "HY", lastMessage: "Tabii, yarın 14:00 uygun mu?", time: "10:24", unread: 0, listingTitle: "Mutfak Tadilatı ve Dolap Montajı" },
-  { id: 2, name: "TemizPark Ekibi", initials: "TP", lastMessage: "Fiyat teklifimizi ilettik, inceleyebilirsiniz.", time: "Dün", unread: 2, listingTitle: "Ofis ve Ev Derin Temizlik Hizmeti" },
-  { id: 3, name: "Elif K.", initials: "EK", lastMessage: "Proje dosyalarını paylaştım 👍", time: "Dün", unread: 0, listingTitle: "React & Node.js ile Web Uygulaması Geliştirme" },
-];
-
-const INITIAL_THREADS = {
-  1: [
-    { id: 1, sender: "them", text: "Merhaba, ilanınızı gördüm. Mutfak ölçüleri hakkında biraz bilgi alabilir miyim?", time: "09:40" },
-    { id: 2, sender: "me", text: "Merhaba, 3x4 metre bir mutfak, L şeklinde dolap düşünüyorum.", time: "09:52" },
-    { id: 3, sender: "them", text: "Anladım, yarın yerinde keşif yapabilirim.", time: "10:10" },
-    { id: 4, sender: "them", text: "Tabii, yarın 14:00 uygun mu?", time: "10:24" },
-  ],
-  2: [
-    { id: 1, sender: "them", text: "Merhaba, temizlik talebinizi aldık.", time: "Dün 15:02" },
-    { id: 2, sender: "them", text: "Fiyat teklifimizi ilettik, inceleyebilirsiniz.", time: "Dün 15:03" },
-  ],
-  3: [
-    { id: 1, sender: "me", text: "Merhaba, projeye ne zaman başlayabiliriz?", time: "Dün 11:00" },
-    { id: 2, sender: "them", text: "Bu hafta başlayabilirim, örnek dosyaları gönderiyorum.", time: "Dün 11:20" },
-    { id: 3, sender: "them", text: "Proje dosyalarını paylaştım 👍", time: "Dün 11:22" },
-  ],
-};
+// Yayın öncesi kullanıcı kararı: vitrinler hariç tüm demo/örnek içerik
+// kaldırıldı (gerçek kullanıcılar demo mesajları görüp kafası karışıyordu —
+// bkz. bugünkü "deneme mesajları onda da açık" geri bildirimi). Boş bırakmak,
+// sabit sahte konuşmalar göstermekten daha dürüst.
+const INITIAL_CONVERSATIONS = [];
+const INITIAL_THREADS = {};
 
 const AUTO_REPLIES = [
   "Merhaba, ilanınızı inceledim, birazdan dönüş yapacağım.",
