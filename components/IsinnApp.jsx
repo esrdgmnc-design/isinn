@@ -1584,6 +1584,12 @@ function NotificationBell({ userId, onNavigate }) {
 function Header({ onNav, onSearch, pendingCount, session, onNotificationClick }) {
   const [q, setQ] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
+  // KRİTİK MOBİL HATA (kullanıcı fark etti, canlıda doğrulandı): Planlar/
+  // Haritada Gör/Hizmet Ekle/İlan Ver hepsi "hidden sm:flex" ile mobilde
+  // gizleniyordu, ve sağdaki hamburger ikonunun hiçbir onClick'i yoktu —
+  // tıklanınca hiçbir şey açılmıyordu. Yani telefonda bu 4 linke ulaşmanın
+  // HİÇBİR yolu yoktu (gizli bir menüde bile değildi, gerçekten erişilemezdi).
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const emailPrefix = session?.user?.email ? session.user.email.split("@")[0] : "";
   const initials = emailPrefix ? emailPrefix.slice(0, 2).toUpperCase() : "?";
   return (
@@ -1705,9 +1711,63 @@ function Header({ onNav, onSearch, pendingCount, session, onNotificationClick })
               Giriş Yap
             </button>
           )}
-          <Menu size={20} className="sm:hidden" style={{ color: "#1B2B24" }} />
+          <button
+            onClick={() => setMobileMenuOpen((v) => !v)}
+            className="sm:hidden w-9 h-9 rounded-full flex items-center justify-center shrink-0"
+            style={{ background: "#F7F7F8", color: "#1B2B24" }}
+            aria-label="Menü"
+          >
+            {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
         </div>
       </div>
+
+      {mobileMenuOpen && (
+        <>
+          <div className="fixed inset-0 z-10 sm:hidden" onClick={() => setMobileMenuOpen(false)} />
+          <div className="sm:hidden relative z-20 border-t px-5 py-3 flex flex-col gap-1" style={{ borderColor: "#EAEAEA", background: "#FFFFFF" }}>
+            <div className="flex items-center relative mb-2">
+              <Search size={16} className="absolute left-3.5" style={{ color: "#9CA3AF" }} />
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter" && q.trim()) { onSearch(q); setMobileMenuOpen(false); } }}
+                placeholder="Hizmet veya iş ara... örn. çilingir"
+                className="w-full pl-9 pr-3 py-2.5 rounded-full text-sm outline-none border-2"
+                style={{ borderColor: "#F0F0F0", background: "#F7F7F8", color: "#0F1115" }}
+              />
+            </div>
+            <button
+              onClick={() => { setMobileMenuOpen(false); onNav("pricing"); }}
+              className="flex items-center gap-2 text-sm font-semibold px-2 py-2.5 rounded-lg text-left"
+              style={{ color: "#0F1115" }}
+            >
+              <Award size={16} /> Planlar
+            </button>
+            <button
+              onClick={() => { setMobileMenuOpen(false); onNav("map"); }}
+              className="flex items-center gap-2 text-sm font-semibold px-2 py-2.5 rounded-lg text-left"
+              style={{ color: "#0F1115" }}
+            >
+              <MapIcon size={16} /> Haritada Gör
+            </button>
+            <button
+              onClick={() => { setMobileMenuOpen(false); onNav("createListing"); }}
+              className="flex items-center gap-2 text-sm font-bold px-2 py-2.5 rounded-lg text-left"
+              style={{ color: "#2563EB" }}
+            >
+              <Sparkles size={16} /> Hizmet Ekle
+            </button>
+            <button
+              onClick={() => { setMobileMenuOpen(false); onNav("post"); }}
+              className="flex items-center gap-2 text-sm font-bold px-2 py-2.5 rounded-lg text-left"
+              style={{ color: "#0F1115" }}
+            >
+              İlan Ver
+            </button>
+          </div>
+        </>
+      )}
     </header>
   );
 }
