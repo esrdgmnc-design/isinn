@@ -5667,6 +5667,13 @@ const BOOST_PACKAGE = {
   ],
 };
 
+// Kısa süreli deneyip/kampanya yapmak isteyenler için — bilerek günlük birim
+// fiyatı aylıktan yüksek (149₺/7gün ≈ 21,3₺/gün vs 459₺/30gün ≈ 15,3₺/gün),
+// aylığa geçmeyi caydırmasın diye teşvik etsin diye. bkz. supabase/weekly_boost_addon.sql.
+const WEEKLY_BOOST_PACKAGE = {
+  id: "one-cikarma-haftalik", name: "Haftalık Öne Çıkarma", price: 149, days: 7,
+};
+
 // Birden fazla vitrin açmak isteyenler için (örn. iki ayrı uzmanlık alanını
 // ayrı vitrinlerde sergilemek) — bkz. supabase/pro_plan.sql. Artık Planlar'da
 // tam bir kart (kullanıcının kararı, bkz. sohbet geçmişi) — asıl teklif
@@ -7050,6 +7057,7 @@ function AdminContentFlagsView({ onBack }) {
 function PricingView({ onBack, onJoined, userId }) {
   const [joined, setJoined] = useState(false);
   const [boostSelected, setBoostSelected] = useState(false);
+  const [boostDuration, setBoostDuration] = useState("monthly"); // monthly | weekly
   const [cycle, setCycle] = useState("monthly"); // monthly | yearly
   const [joining, setJoining] = useState(false);
   const [joinError, setJoinError] = useState("");
@@ -7060,7 +7068,8 @@ function PricingView({ onBack, onJoined, userId }) {
   const plan = PLANS[0];
   const basePrice = cycle === "monthly" ? plan.priceMonthly : plan.priceYearly;
   const period = cycle === "monthly" ? "/ay" : "/yıl";
-  const total = basePrice + (boostSelected ? BOOST_PACKAGE.priceMonthly : 0);
+  const boostPrice = boostDuration === "weekly" ? WEEKLY_BOOST_PACKAGE.price : BOOST_PACKAGE.priceMonthly;
+  const total = basePrice + (boostSelected ? boostPrice : 0);
 
   // Gerçek ödeme entegrasyonu ayrı bir faz (görev kapsamı dışı) — ama şemanın
   // kendi 30 günlük ücretsiz deneme mekanizması (provider_subscriptions,
@@ -7078,7 +7087,7 @@ function PricingView({ onBack, onJoined, userId }) {
       const { error: subErr } = await supabase.rpc("start_free_trial", { p_billing_cycle: cycle });
       if (subErr) throw subErr;
       if (boostSelected) {
-        const { error: addonErr } = await supabase.rpc("add_boost_addon");
+        const { error: addonErr } = await supabase.rpc(boostDuration === "weekly" ? "add_weekly_boost_addon" : "add_boost_addon");
         if (addonErr) throw addonErr;
       }
       setJoined(true);
@@ -7118,7 +7127,8 @@ function PricingView({ onBack, onJoined, userId }) {
           İlk {plan.trialMonths} ayın tamamen ücretsiz — hiçbir kart çekimi olmayacak.
         </p>
         <p className="text-sm mb-6" style={{ color: "#5C5744" }}>
-          Deneme süresi bitince {cycle === "monthly" ? `ayda ${total}₺` : `yılda ${total}₺ (ilk yıla özel fiyat)`} olarak faturalandırılacaksın{boostSelected ? " (Standart Üyelik + Öne Çıkarma Paketi)" : ""}. İstediğin zaman iptal edebilirsin, kazandığından hiçbir komisyon kesilmez.
+          Deneme süresi bitince {cycle === "monthly" ? `ayda ${total}₺` : `yılda ${total}₺ (ilk yıla özel fiyat)`} olarak faturalandırılacaksın{boostSelected ? ` (Standart Üyelik + ${boostDuration === "weekly" ? WEEKLY_BOOST_PACKAGE.name : BOOST_PACKAGE.name})` : ""}. İstediğin zaman iptal edebilirsin, kazandığından hiçbir komisyon kesilmez.
+          {boostSelected && boostDuration === "weekly" && " Haftalık Öne Çıkarma 7 gün sonra kendiliğinden biter, otomatik yenilenmez — tekrar istersen profilinden yeniden alabilirsin."}
         </p>
         <div className="flex gap-2 justify-center">
           <button onClick={onJoined} className="px-5 py-2.5 rounded-full text-sm font-medium text-white" style={{ background: "#2563EB" }}>Profilini Tamamla</button>
@@ -7228,9 +7238,15 @@ function PricingView({ onBack, onJoined, userId }) {
           önce iki asıl üyelik seçilsin, bu ikisine eklenen isteğe bağlı bir
           ek olarak en sonda dursun. Aylık/yıllık döngüden bağımsız (kendi
           fiyatı hep aylık), o yüzden iki görünümde de aynı yerde kalıyor. */}
-      <button
+      {/* button değil div role="button" — içeride ayrı bir tıklanabilir
+          süre toggle'ı (Aylık/Haftalık) var, buton içinde buton geçersiz
+          HTML olurdu (aynı düzeltme HomeView'ın iş ilanı kartında da var). */}
+      <div
+        role="button"
+        tabIndex={0}
         onClick={() => setBoostSelected(!boostSelected)}
-        className="w-full rounded-2xl border-2 p-6 flex flex-col text-left mb-6 transition-colors"
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setBoostSelected(!boostSelected); }}
+        className="w-full rounded-2xl border-2 p-6 flex flex-col text-left mb-6 transition-colors cursor-pointer"
         style={boostSelected ? { borderColor: "#F59E0B", background: "#FFFBEB" } : { borderColor: "#D9D0BA", background: "#F8F4E9" }}
       >
         <div className="flex items-center justify-between mb-1">
@@ -7244,9 +7260,28 @@ function PricingView({ onBack, onJoined, userId }) {
         </div>
         <p className="text-xs mb-4" style={{ color: "#8A8368" }}>{BOOST_PACKAGE.tagline}, deneme kapsamında değil</p>
         <div className="mb-4 flex items-baseline gap-1">
-          <span className="font-serif text-2xl" style={{ color: "#1B2B24" }}>+{BOOST_PACKAGE.priceMonthly}₺</span>
-          <span className="text-sm" style={{ color: "#8A8368" }}>/ay</span>
+          <span className="font-serif text-2xl" style={{ color: "#1B2B24" }}>+{boostPrice}₺</span>
+          <span className="text-sm" style={{ color: "#8A8368" }}>/{boostDuration === "weekly" ? "7 gün" : "ay"}</span>
         </div>
+        {boostSelected && (
+          <div
+            className="mb-4 flex gap-1.5 rounded-xl p-1"
+            style={{ background: "#F0EAD6" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {[["monthly", "Aylık · 459₺"], ["weekly", "Haftalık · 149₺"]].map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setBoostDuration(key)}
+                className="flex-1 text-xs font-bold py-1.5 rounded-lg transition-colors"
+                style={boostDuration === key ? { background: "#F59E0B", color: "#FFFFFF" } : { color: "#8A8368" }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="space-y-2">
           {BOOST_PACKAGE.features.map((f, i) => (
             <div key={i} className="flex items-start gap-2 text-xs" style={{ color: "#3D3B30" }}>
@@ -7255,7 +7290,7 @@ function PricingView({ onBack, onJoined, userId }) {
             </div>
           ))}
         </div>
-      </button>
+      </div>
 
       <div className="rounded-xl p-4 mb-4 flex items-center justify-between" style={{ background: "#0F1115" }}>
         <div>
@@ -8914,7 +8949,7 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
           .select("profile_id, current_period_end, addon_products!inner(slug)")
           .in("profile_id", providerIds)
           .eq("status", "active")
-          .eq("addon_products.slug", "one-cikarma");
+          .in("addon_products.slug", ["one-cikarma", "one-cikarma-haftalik"]);
         const boostedIds = new Set(
           (addonRows || [])
             .filter((r) => new Date(r.current_period_end) > new Date())
