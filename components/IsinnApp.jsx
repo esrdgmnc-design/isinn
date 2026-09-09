@@ -5833,34 +5833,27 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
     }
   };
 
-  const checkPhotoContent = async (dataUrl, mimeType) => {
+  // GÜVENLİK: AI kontrolü artık burada karar vermiyor, sadece sunucudaki
+  // gerçek kararı gösteriyor (bkz. app/api/listing-photo-check/route.js +
+  // supabase/listing_photo_moderation.sql). Asıl zorlama artık services
+  // tablosundaki trigger'da — bu fonksiyon sadece kullanıcıya "onaylandı/
+  // reddedildi" geri bildirimi vermek için var, submit'i engelleme yetkisi
+  // moderation state'inde değil, veritabanında.
+  const checkPhotoContent = async (url, mimeType) => {
     setModeration({ status: "checking" });
     try {
-      const base64 = dataUrl.split(",")[1];
-      const response = await fetch("/api/claude", {
+      const { data: { session } } = await supabase.auth.getSession();
+      const response = await fetch("/api/listing-photo-check", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-6",
-          max_tokens: 200,
-          messages: [{
-            role: "user",
-            content: [
-              { type: "image", source: { type: "base64", media_type: mimeType, data: base64 } },
-              { type: "text", text: `Bu görsel, bakıcı/temizlikçi/öğretmen gibi hizmet sağlayıcı profillerinin bulunduğu bir aile hizmet pazaryerinde kapak fotoğrafı olarak kullanılacak — platformda çocuk bakımı kategorileri de var, bu yüzden standart yüksek tutulmalı.
-
-Şu kategorilerden herhangi birine giriyorsa "approved: false" ver: çıplaklık veya cinsel içerik, şiddet/silah/yaralanma görüntüsü, nefret sembolü, platformla alakasız/spam görsel (ürün, ekran görüntüsü, ünlü biri vb.), belirsiz/tanınamayan/düşük kaliteli görsel, ya da kararsız kaldığın herhangi bir sınır durum. Sadece görselin normal, profesyonel bir profil/hizmet fotoğrafı olduğundan eminsen "approved: true" ver — şüphede kalırsan reddet.
-
-SADECE şu JSON formatında yanıt ver: {"approved": true veya false, "reason": "kısa gerekçe (en fazla 12 kelime)"}` },
-            ],
-          }],
-        }),
+        headers: {
+          "Content-Type": "application/json",
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({ url, mimeType }),
       });
       const data = await response.json();
-      const text = (data.content || []).map((b) => b.text || "").join("\n");
-      const clean = text.replace(/```json|```/g, "").trim();
-      const parsed = JSON.parse(clean);
-      setModeration({ status: parsed.approved ? "approved" : "flagged", reason: parsed.reason });
+      if (data.error) throw new Error(data.error);
+      setModeration({ status: data.approved ? "approved" : "flagged", reason: data.reason });
     } catch (err) {
       // Fail-safe: eğer otomatik kontrol başarısız olursa, ONAYLAMA — incelemeye al.
       setModeration({ status: "flagged", reason: "Otomatik kontrol başarısız oldu, manuel incelemeye alındı." });
@@ -5915,12 +5908,9 @@ SADECE şu JSON formatında yanıt ver: {"approved": true veya false, "reason": 
       setPhoto({ url: data.publicUrl, name: file.name });
       // AI fotoğraf kontrolü — daha önce "lüks özellikler" kapsamında
       // ertelenmişti, checkPhotoContent fonksiyonu hazır duruyordu ama hiç
-      // çağrılmıyordu. Yükleme bitince (dosya zaten elimizde) base64'e
-      // çevirip kontrolü tetikliyoruz — checkReviewMedia'nın kullandığı
-      // aynı /api/claude deseni.
-      const reader = new FileReader();
-      reader.onload = () => checkPhotoContent(reader.result, file.type);
-      reader.readAsDataURL(file);
+      // çağrılmıyordu. Yükleme bitince, storage'daki genel-erişim url'i ile
+      // sunucu tarafı kontrolü tetikliyoruz (bkz. checkPhotoContent notu).
+      checkPhotoContent(data.publicUrl, file.type);
     } catch (err) {
       setPhotoError(`Fotoğraf yüklenemedi: ${err.message}`);
     } finally {
