@@ -1815,6 +1815,12 @@ const FEATURED_PROFILE_CARDS = [
 
 function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApplyJob, onOpenJob, realListings, listingsLoading, realJobs, favoriteIds, onToggleFavorite, onToggleJobFavorite, platformStats }) {
   const [heroQ, setHeroQ] = useState("");
+  const [heroCity, setHeroCity] = useState("");
+  // Rakip site kıyaslamasında fark edildi: tek kutuya "istanbul temizlik"
+  // yazmak aslında hiç işe yaramıyordu (bkz. SearchResultsView'daki haystack
+  // sırası notu) — "ne" ve "nerede" ayrı alanlara bölündü, İşin Olsun'daki
+  // gibi. Hızlı şehir çipleri de aynı gerekçeyle eklendi (yazmadan tıkla-ara).
+  const QUICK_CITIES = ["İstanbul", "Ankara", "İzmir", "Bursa", "Antalya", "Kocaeli"];
   const [wordIndex, setWordIndex] = useState(0);
   // Önceden gizliydi, tıklayan açardı — kullanıcı "uzaktan hizmetler
   // kısmını da görünür yap" dedi, artık varsayılan açık (istenirse
@@ -1892,23 +1898,48 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
           <p className="mt-8 max-w-md text-base" style={{ color: "#B8BCC4" }}>
             En yakınındaki ustadan güvenilir bakıcıya, uzaktaki yazılımcıdan, salondaki tırnakçıya — ihtiyacın olan herkes burada.
           </p>
-          <div className="mt-9 flex items-center gap-2 max-w-lg bg-white rounded-full p-1.5 pl-4 shadow-2xl">
+          <div className="mt-9 flex items-center gap-1 max-w-lg bg-white rounded-full p-1.5 pl-4 shadow-2xl">
             <Search size={16} style={{ color: "#9CA3AF" }} />
             <input
               value={heroQ}
               onChange={(e) => setHeroQ(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter" && heroQ.trim()) onSearch(heroQ); }}
-              placeholder="Örn. çilingir, mutfak tadilatı, logo tasarımı..."
-              className="flex-1 text-sm outline-none py-1.5"
+              onKeyDown={(e) => { if (e.key === "Enter" && (heroQ.trim() || heroCity)) onSearch(heroQ, heroCity); }}
+              placeholder="Örn. çilingir, mutfak tadilatı..."
+              className="flex-1 min-w-0 text-sm outline-none py-1.5"
               style={{ color: "#0F1115" }}
             />
+            <div className="w-px h-5 shrink-0" style={{ background: "#E5E7EB" }} />
+            <MapPin size={14} className="shrink-0" style={{ color: "#9CA3AF" }} />
+            <select
+              value={heroCity}
+              onChange={(e) => setHeroCity(e.target.value)}
+              className="text-sm outline-none py-1.5 max-w-[92px] shrink-0 bg-transparent"
+              style={{ color: heroCity ? "#0F1115" : "#9CA3AF" }}
+            >
+              <option value="">Nerede?</option>
+              {CITIES.filter((c) => c.country === "Türkiye").map((c) => (
+                <option key={c.id} value={c.name}>{c.name}</option>
+              ))}
+            </select>
             <button
-              onClick={() => heroQ.trim() && onSearch(heroQ)}
-              className="text-sm font-bold px-6 py-3 rounded-full text-white hover:scale-105 transition-transform"
+              onClick={() => (heroQ.trim() || heroCity) && onSearch(heroQ, heroCity)}
+              className="text-sm font-bold px-6 py-3 rounded-full text-white hover:scale-105 transition-transform shrink-0"
               style={{ background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)" }}
             >
               Ara
             </button>
+          </div>
+          <div className="mt-3 flex items-center gap-2 flex-wrap">
+            {QUICK_CITIES.map((c) => (
+              <button
+                key={c}
+                onClick={() => onSearch("", c)}
+                className="text-xs font-medium px-3 py-1.5 rounded-full transition-colors"
+                style={{ background: "rgba(255,255,255,0.08)", color: "#B8BCC4" }}
+              >
+                {c}
+              </button>
+            ))}
           </div>
           {/* Küçük platform istatistikleri ("1 Sağlayıcı, 1 Tamamlanan iş...")
               kullanıcıya amaçsız/zayıf geldi (platform henüz küçükken sayılar
@@ -2005,8 +2036,13 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
               })}
             </div>
 
+            {/* Eskiden burada "Sen de Öne Çıkarma Paketi ile burada görün" gibi
+                doğrudan bir satış mesajı vardı — ilk saniyede, güven inşa
+                etmeden önce ziyaretçiye "burası bir şeyler satmaya çalışıyor"
+                izlenimi veriyordu (rakip site kıyaslamasında fark edildi).
+                Hero'da güven, satış sayfada (Planlar) yapılmalı. */}
             <p className="text-[11px] mt-4 text-center" style={{ color: "#6B7280" }}>
-              Sen de <span style={{ color: "#F59E0B", fontWeight: 700 }}>Öne Çıkarma Paketi</span> ile burada görün.
+              Şu an platformda gerçek, aktif vitrinler.
             </p>
           </div>
         )}
@@ -4029,7 +4065,7 @@ function OffersView({ onBack, job }) {
   );
 }
 
-function SearchResultsView({ query, onBack, onSelectListing, realListings, currentUserId }) {
+function SearchResultsView({ query, cityFilter, onBack, onSelectListing, realListings, currentUserId }) {
   const [homeOnly, setHomeOnly] = useState(false);
   // Kayıtlı arama — sahibinden.com'un "aramanı kaydet, yeni ilan gelince
   // haber ver" özelliği. bkz. supabase/sahibinden_features.sql (saved_searches
@@ -4044,6 +4080,12 @@ function SearchResultsView({ query, onBack, onSelectListing, realListings, curre
     if (!error) setSearchSaved(true);
   };
   const q = query.trim().toLocaleLowerCase("tr-TR");
+  // "Ne" ve "Nerede" ayrı alanlar (hero'daki iki alanlı arama) — önceden tek
+  // kutuya "istanbul temizlik" gibi yazmak işe yaramıyordu, çünkü haystack'te
+  // şehir başlıktan SONRA geliyor ve düz substring arama sırayı bozan
+  // birleşik sorguları hiç yakalamıyordu. Şimdi şehir kendi başına, AND
+  // mantığıyla ayrı bir filtre.
+  const cityQ = (cityFilter || "").trim().toLocaleLowerCase("tr-TR");
   const pool = [...(realListings || []), ...LISTINGS];
   const literalResults = pool
     .filter((l) => {
@@ -4051,8 +4093,9 @@ function SearchResultsView({ query, onBack, onSelectListing, realListings, curre
         .join(" ")
         .toLocaleLowerCase("tr-TR");
       const matchesQuery = q.length === 0 || haystack.includes(q);
+      const matchesCity = cityQ.length === 0 || (l.city || "").toLocaleLowerCase("tr-TR").includes(cityQ);
       const matchesHome = !homeOnly || l.homeService === "evde" || l.homeService === "esnek";
-      return matchesQuery && matchesHome;
+      return matchesQuery && matchesCity && matchesHome;
     })
     .sort((a, b) => computeVisibilityScore(b) - computeVisibilityScore(a));
 
@@ -4100,8 +4143,9 @@ function SearchResultsView({ query, onBack, onSelectListing, realListings, curre
           const haystack = [l.title, l.provider, l.city, l.desc || ""].join(" ").toLocaleLowerCase("tr-TR");
           const matchesCategory = (aiKeywords.categorySlugs || []).includes(l.category);
           const matchesKeyword = (aiKeywords.keywords || []).some((k) => haystack.includes(String(k).toLocaleLowerCase("tr-TR")));
+          const matchesCity = cityQ.length === 0 || (l.city || "").toLocaleLowerCase("tr-TR").includes(cityQ);
           const matchesHome = !homeOnly || l.homeService === "evde" || l.homeService === "esnek";
-          return (matchesCategory || matchesKeyword) && matchesHome;
+          return (matchesCategory || matchesKeyword) && matchesCity && matchesHome;
         })
         .sort((a, b) => computeVisibilityScore(b) - computeVisibilityScore(a))
     : [];
@@ -4114,7 +4158,10 @@ function SearchResultsView({ query, onBack, onSelectListing, realListings, curre
       <button onClick={onBack} className="flex items-center gap-1 text-sm mb-4" style={{ color: "#5C5744" }}>
         <ChevronLeft size={16} /> Geri
       </button>
-      <h1 className="font-serif text-2xl mb-1" style={{ color: "#1B2B24" }}>"{query}" için {results.length} sonuç</h1>
+      <h1 className="font-serif text-2xl mb-1" style={{ color: "#1B2B24" }}>
+        {query.trim() && cityFilter ? `"${query}" — ${cityFilter}` : query.trim() ? `"${query}"` : cityFilter}
+        {" "}için {results.length} sonuç
+      </h1>
       <div className="flex items-center justify-between flex-wrap gap-3 mb-3">
         <p className="text-sm" style={{ color: "#5C5744" }}>Başlık, hizmet sağlayan ve bölgeye göre eşleşenler</p>
         <div className="flex items-center gap-2">
@@ -8721,6 +8768,7 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
   const [trialBannerDismissed, setTrialBannerDismissed] = useState(false);
   const [filter, setFilter] = useState("local");
   const [query, setQuery] = useState("");
+  const [cityFilter, setCityFilter] = useState("");
   const [lastJob, setLastJob] = useState(null);
   const [messageContact, setMessageContact] = useState(null);
   const [realListings, setRealListings] = useState([]); // services tablosundan gelen gerçek ilanlar
@@ -8984,13 +9032,14 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
     return () => { cancelled = true; };
   }, [userId]);
 
-  const runSearch = (q) => {
+  const runSearch = (q, city = "") => {
     const normalized = q.trim().toLocaleLowerCase("tr-TR");
     if (["tırnakçı", "tırnak", "nail", "nailart", "manikür", "manikur"].some((kw) => normalized.includes(kw))) {
       setView("nailart");
       return;
     }
     setQuery(q);
+    setCityFilter(city);
     setView("search");
   };
 
@@ -9094,6 +9143,7 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
       {view === "search" && (
         <SearchResultsView
           query={query}
+          cityFilter={cityFilter}
           onBack={() => setView("home")}
           onSelectListing={(l) => { setSelected(l); setView("detail"); }}
           realListings={realListings}
