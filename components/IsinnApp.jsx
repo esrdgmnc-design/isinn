@@ -2203,7 +2203,17 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
             Sen de ilan ver
           </button>
         </div>
-        <div className="flex gap-4 overflow-x-auto pb-2 -mx-5 px-5" style={{ scrollbarWidth: "thin" }}>
+        <div className="relative -mx-5">
+          {/* Kartlar yatay kaydırmayla görülüyor ama bunu belirten hiçbir
+              görsel ipucu yoktu — sağdaki kart yarım kesik göründüğü için
+              "daha fazlası var, kaydır" değil "bozuk/eksik" gibi algılanıyordu
+              (kullanıcı geri bildirimi: "sağdakiler görünmüyor"). Sağ kenara
+              kaydırılabilir olduğunu gösteren ince bir gradient ekliyoruz. */}
+          <div
+            className="pointer-events-none absolute right-0 top-0 bottom-2 w-10 z-10 sm:hidden"
+            style={{ background: "linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.95) 100%)" }}
+          />
+          <div className="flex gap-4 overflow-x-auto pb-2 px-5" style={{ scrollbarWidth: "thin" }}>
           {[...(realJobs || []), ...JOB_POSTINGS].map((job, jobIdx) => {
             const cat = CATEGORIES.find((c) => c.id === job.category);
             const Icon = cat?.icon;
@@ -2262,6 +2272,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
               </div>
             );
           })}
+          </div>
         </div>
       </section>
 
