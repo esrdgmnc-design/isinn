@@ -4438,17 +4438,22 @@ function FavoritesView({ onBack, onSelectListing, onOpenJob, realListings, realJ
   );
 }
 
-function PostJobView({ onBack, onSubmitted, onViewOffers, onMatchAI, userId, onJobPosted }) {
-  const [mode, setMode] = useState("local");
+function PostJobView({ onBack, onSubmitted, onViewOffers, onMatchAI, userId, onJobPosted, editingJob, onJobUpdated }) {
+  // İlan verildikten sonra düzenleme yolu hiç yoktu (kullanıcının fark
+  // ettiği gerçek bir eksiklik — "balkon temizliğinden bahsetmeyi unutmuş,
+  // düzenleyemiyor" gibi bir durumda tek çare ilanı silip yeniden girmekti).
+  // CreateListingView'daki editingListing deseniyle birebir aynı.
+  const isEditing = !!editingJob;
+  const [mode, setMode] = useState(editingJob?.mode || "local");
   const [step, setStep] = useState("form"); // form | success
-  const [title, setTitle] = useState("");
-  const [categoryId, setCategoryId] = useState("");
-  const [customCategoryLabel, setCustomCategoryLabel] = useState(""); // categoryId === CUSTOM_CATEGORY_ID iken
-  const [desc, setDesc] = useState("");
-  const [cityId, setCityId] = useState("istanbul");
-  const [district, setDistrict] = useState("");
-  const [minBudget, setMinBudget] = useState("");
-  const [maxBudget, setMaxBudget] = useState("");
+  const [title, setTitle] = useState(editingJob?.title || "");
+  const [categoryId, setCategoryId] = useState(editingJob?.category === "diger" ? CUSTOM_CATEGORY_ID : editingJob?.category || "");
+  const [customCategoryLabel, setCustomCategoryLabel] = useState(editingJob?.customCategoryLabel || ""); // categoryId === CUSTOM_CATEGORY_ID iken
+  const [desc, setDesc] = useState(editingJob?.desc || "");
+  const [cityId, setCityId] = useState(() => deriveCityIdFromLabel(editingJob?.city) || "istanbul");
+  const [district, setDistrict] = useState(() => (editingJob?.city || "").split(",")[0]?.trim() || "");
+  const [minBudget, setMinBudget] = useState(editingJob?.budgetMin != null ? String(editingJob.budgetMin) : "");
+  const [maxBudget, setMaxBudget] = useState(editingJob?.budgetMax != null ? String(editingJob.budgetMax) : "");
   const [urgency, setUrgency] = useState("today"); // now | today | flexible
   const [homeServicePref, setHomeServicePref] = useState("evde"); // evde | mekanda | esnek
   const [photos, setPhotos] = useState([]); // { url, name }
@@ -4527,39 +4532,41 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
     if (!categoryDbId) { setError("Bu kategori veritabanında henüz tanımlı değil."); return; }
     setError("");
     setSubmitting(true);
-    const profileGate = await checkProfileGate(userId);
-    if (!profileGate.ok) { setSubmitting(false); setError(profileGate.reason); return; }
-    const gate = await checkPhoneGate(userId);
-    if (!gate.ok) { setSubmitting(false); setError(gate.reason); return; }
+    if (!isEditing) {
+      const profileGate = await checkProfileGate(userId);
+      if (!profileGate.ok) { setSubmitting(false); setError(profileGate.reason); return; }
+      const gate = await checkPhoneGate(userId);
+      if (!gate.ok) { setSubmitting(false); setError(gate.reason); return; }
+    }
 
     const parseBudget = (v) => {
       const n = parseFloat(v.replace(/\./g, "").replace(",", "."));
       return Number.isNaN(n) ? null : n;
     };
     const cityLabel = `${district.trim() ? district.trim() + ", " : ""}${cityName}`;
+    const payload = {
+      category_id: categoryDbId,
+      title: title.trim(),
+      description: desc.trim(),
+      budget_min: minBudget.trim() ? parseBudget(minBudget.trim()) : null,
+      budget_max: maxBudget.trim() ? parseBudget(maxBudget.trim()) : null,
+      is_remote: mode === "remote",
+      city: mode === "local" ? cityLabel : null,
+      location: mode === "local" ? cityToLocationEwkt(cityId) : null,
+      custom_category_label: categoryId === CUSTOM_CATEGORY_ID ? customCategoryLabel.trim() : null,
+    };
 
-    const { data, error: insertError } = await supabase
-      .from("jobs")
-      .insert({
-        client_id: userId,
-        category_id: categoryDbId,
-        title: title.trim(),
-        description: desc.trim(),
-        budget_min: minBudget.trim() ? parseBudget(minBudget.trim()) : null,
-        budget_max: maxBudget.trim() ? parseBudget(maxBudget.trim()) : null,
-        is_remote: mode === "remote",
-        city: mode === "local" ? cityLabel : null,
-        location: mode === "local" ? cityToLocationEwkt(cityId) : null,
-        state: "new_offer",
-        active: true,
-        custom_category_label: categoryId === CUSTOM_CATEGORY_ID ? customCategoryLabel.trim() : null,
-      })
-      .select()
-      .single();
+    const { data, error: dbError } = isEditing
+      ? await supabase.from("jobs").update(payload).eq("id", editingJob.dbId).select().single()
+      : await supabase.from("jobs").insert({ ...payload, client_id: userId, state: "new_offer", active: true }).select().single();
 
     setSubmitting(false);
-    if (insertError || !data) {
-      setError(`İlan kaydedilemedi: ${insertError?.message || "bilinmeyen bir hata oluştu"}`);
+    if (dbError || !data) {
+      setError(`İlan kaydedilemedi: ${dbError?.message || "bilinmeyen bir hata oluştu"}`);
+      return;
+    }
+    if (isEditing) {
+      onJobUpdated?.();
       return;
     }
     setPostedJob({ dbId: data.id, posterId: data.client_id, categoryDbId: data.category_id });
@@ -4620,8 +4627,8 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
       <button onClick={onBack} className="flex items-center gap-1 text-sm mb-5" style={{ color: "#5C5744" }}>
         <ChevronLeft size={16} /> Geri
       </button>
-      <h1 className="font-serif text-2xl mb-1" style={{ color: "#1B2B24" }}>İş İlanı Ver</h1>
-      <p className="text-sm mb-6" style={{ color: "#5C5744" }}>İhtiyacını anlat, uygun kişiler sana anlık teklif göndersin.</p>
+      <h1 className="font-serif text-2xl mb-1" style={{ color: "#1B2B24" }}>{isEditing ? "İlanı Düzenle" : "İş İlanı Ver"}</h1>
+      <p className="text-sm mb-6" style={{ color: "#5C5744" }}>{isEditing ? "İlanında eksik/yanlış bir şey mi vardı? Düzelt, kaydet." : "İhtiyacını anlat, uygun kişiler sana anlık teklif göndersin."}</p>
 
       <div className="flex gap-2 mb-6">
         {[["local", "Yerinde iş"], ["remote", "Uzaktan iş"]].map(([key, label]) => (
@@ -4853,7 +4860,7 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
           style={{ background: "#C2872B", opacity: submitting ? 0.7 : 1 }}
         >
           {submitting && <Loader2 size={14} className="animate-spin" />}
-          {submitting ? "Yayınlanıyor..." : "İlanı Yayınla"}
+          {submitting ? (isEditing ? "Kaydediliyor..." : "Yayınlanıyor...") : (isEditing ? "Değişiklikleri Kaydet" : "İlanı Yayınla")}
         </button>
       </div>
     </div>
@@ -9229,14 +9236,36 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
     fetchJobs();
   }, []);
 
-  // view her değiştiğinde URL'e yaz (?view=profile gibi) — F5 ile yenilenince
-  // getInitialView bunu okuyup kaldığın yerden başlatabilsin diye.
+  // KRİTİK HATA (kullanıcı bildirimi: "AI ile yazınca geri yapınca siteden
+  // komple atıyor"): bu efekt her zaman replaceState kullanıyordu — yani
+  // uygulama içi hiçbir gezinme tarayıcı geçmişine YENİ bir kayıt eklemiyordu.
+  // Sonuç: kullanıcı telefonun/tarayıcının FİZİKSEL geri tuşuna/kaydırmasına
+  // bastığında, uygulama içindeki bir önceki ekrana değil, DOĞRUDAN siteye
+  // gelmeden önce neredeyse oraya (Google sonucu, boş sekme, ne varsa)
+  // atılıyordu — "AI ile Yaz" bunun tetikleyicisi değildi, sadece kullanıcının
+  // "bir şeyi beğenmedim, geri döneyim" refleksinin en sık yaşandığı an oldu.
+  // Artık her view değişikliği gerçek bir pushState kaydı ekliyor (ilk
+  // yüklemede hariç) ve popstate ile fiziksel geri/ileri tuşu uygulama
+  // içinde çalışıyor.
+  const historyInitedRef = useRef(false);
+  const fromPopStateRef = useRef(false);
   useEffect(() => {
+    if (fromPopStateRef.current) { fromPopStateRef.current = false; return; }
     const url = new URL(window.location.href);
     if (view === "home") url.searchParams.delete("view");
     else url.searchParams.set("view", view);
-    window.history.replaceState({}, "", url);
+    if (!historyInitedRef.current) { historyInitedRef.current = true; window.history.replaceState({}, "", url); return; }
+    window.history.pushState({}, "", url);
   }, [view]);
+
+  useEffect(() => {
+    const onPopState = () => {
+      fromPopStateRef.current = true;
+      setView(getInitialView());
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
 
   // Kayıt olurken e-posta onayı gerekiyorsa (AuthView.jsx), auth.uid() henüz
   // set olmadığı için o an profiles satırı oluşturulamıyor — kullanıcı sonradan

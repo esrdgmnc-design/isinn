@@ -60,9 +60,11 @@ export async function POST(request) {
           role: "user",
           content: [
             { type: "image", source: { type: "base64", media_type: mimeType || "image/jpeg", data: base64 } },
-            { type: "text", text: `Bu görsel, bakıcı/temizlikçi/öğretmen gibi hizmet sağlayıcı profillerinin bulunduğu bir aile hizmet pazaryerinde kapak fotoğrafı olarak kullanılacak — platformda çocuk bakımı kategorileri de var, bu yüzden standart yüksek tutulmalı.
+            { type: "text", text: `Bu görsel, bakıcı/temizlikçi/öğretmen'den yazılımcıya/muhasebeciye kadar çok geniş bir kategori yelpazesindeki hizmet sağlayıcı profillerinin bulunduğu bir pazaryerinde kapak fotoğrafı olarak kullanılacak.
 
-Şu kategorilerden herhangi birine giriyorsa "approved: false" ver: çıplaklık veya cinsel içerik, şiddet/silah/yaralanma görüntüsü, nefret sembolü, platformla alakasız/spam görsel (ürün, ekran görüntüsü, ünlü biri vb.), belirsiz/tanınamayan/düşük kaliteli görsel, ya da kararsız kaldığın herhangi bir sınır durum. Sadece görselin normal, profesyonel bir profil/hizmet fotoğrafı olduğundan eminsen "approved: true" ver — şüphede kalırsan reddet.
+Şu kategorilerden herhangi birine GERÇEKTEN giriyorsa "approved: false" ver: çıplaklık veya cinsel içerik, şiddet/silah/kan/yaralanma görüntüsü, nefret sembolü ya da söylemi, ya da başka bir gerçek/ünlü kişiyi izinsiz kötüleyici/aşağılayıcı şekilde kullanan bir görsel.
+
+Şunlar SEBEBIYLE reddetme — hepsi bu platformda meşru: insan/yüz görünmeyen görseller (logo, ürün, çalışma alanı, ekran görüntüsü, portre olmayan portföy işi vb.), belirli bir meslek/kategoriye özgü olması, ya da düşük çözünürlük/estetik zayıflık. Kararsız kaldığın sınır durumlarda ONAYLA (approved: true) — sadece yukarıdaki gerçek güvenlik kategorilerinden birinden GERÇEKTEN eminsen reddet.
 
 SADECE şu JSON formatında yanıt ver: {"approved": true veya false, "reason": "kısa gerekçe (en fazla 12 kelime)"}` },
           ],

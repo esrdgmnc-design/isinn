@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import AuthView from "../components/AuthView";
 import IsinnApp from "../components/IsinnApp";
+import ErrorBoundary from "../components/ErrorBoundary";
 
 export default function Page() {
   const [session, setSession] = useState(undefined); // undefined = still checking, null = signed out
@@ -34,12 +35,18 @@ export default function Page() {
   }
 
   if (!session && showAuth) {
-    return <AuthView onAuthenticated={(s) => { setSession(s); setShowAuth(false); }} onCancel={() => setShowAuth(false)} />;
+    return (
+      <ErrorBoundary>
+        <AuthView onAuthenticated={(s) => { setSession(s); setShowAuth(false); }} onCancel={() => setShowAuth(false)} />
+      </ErrorBoundary>
+    );
   }
 
   return (
-    <div className="relative">
-      <IsinnApp session={session} onRequireAuth={() => setShowAuth(true)} />
-    </div>
+    <ErrorBoundary>
+      <div className="relative">
+        <IsinnApp session={session} onRequireAuth={() => setShowAuth(true)} />
+      </div>
+    </ErrorBoundary>
   );
 }
