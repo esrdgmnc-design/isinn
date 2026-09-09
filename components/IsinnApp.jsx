@@ -2785,6 +2785,14 @@ function ListingDetail({ listing, onBack, onContact, userReviews, onAddReview, o
     return () => { cancelled = true; };
   }, [listing.isReal, listing.dbId]);
 
+  // Kapak fotoğrafı artık (bkz. CreateListingView) zorunlu, ama eski
+  // vitrinlerde hâlâ FALLBACK_LISTING_IMG olabilir — o durumda gerçek bir
+  // fotoğraf gibi göstermiyoruz.
+  const hasRealCover = !!(listing.img && listing.img !== FALLBACK_LISTING_IMG);
+  const showcaseMedia = hasRealCover
+    ? [{ id: "cover", media_type: "image", url: listing.img, isCover: true }, ...providerPortfolio]
+    : providerPortfolio;
+
   // Gerçek ilanlar için değerlendirmeler gerçekten ratings tablosundan geliyor
   // (sahte REVIEWS demo dizisiyle karıştırılmıyor — bir müşteri gerçek bir
   // ilanda alakasız sahte yorumlar görmemeli). Vitrin sahibi "Birleştir" derse
@@ -3369,7 +3377,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
         </div>
       )}
 
-      {(providerShowcase?.video_intro_url || providerPortfolio.length > 0) && (
+      {(providerShowcase?.video_intro_url || hasRealCover || providerPortfolio.length > 0) && (
         <div className="mt-10 pt-8 border-t" style={{ borderColor: "#D9D0BA" }}>
           <div className="flex items-center gap-2 mb-1">
             <Grid3x3 size={18} style={{ color: "#3F7D5C" }} />
@@ -3388,14 +3396,18 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
             </div>
           )}
 
-          {providerPortfolio.length > 0 && (
+          {(hasRealCover || providerPortfolio.length > 0) && (
             <div>
               <p className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: "#5C5744" }}>Portföy — İş Başında</p>
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
-                {providerPortfolio.map((item, i) => (
+                {/* Kullanıcı geri bildirimi: kapak fotoğrafı vitrine girince
+                    (burada) görünmüyordu — sadece üstteki hero'da vardı, sanki
+                    vitrinin gerçek fotoğrafları bunlar değilmiş gibi ayrı
+                    duruyordu. Artık kapak, buradaki ilk fotoğraf. */}
+                {showcaseMedia.map((item, i) => (
                   <button
-                    key={item.id}
-                    onClick={() => setShowcaseLightbox({ media: providerPortfolio.map((p) => ({ type: p.media_type, url: p.url })), index: i })}
+                    key={item.id || `cover-${i}`}
+                    onClick={() => setShowcaseLightbox({ media: showcaseMedia.map((p) => ({ type: p.media_type, url: p.url })), index: i })}
                     className="relative aspect-square rounded-lg overflow-hidden group"
                   >
                     {item.media_type === "video" ? (
@@ -3409,6 +3421,9 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
                       <div className="absolute inset-0 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.15)" }}>
                         <PlayCircle size={20} className="text-white" />
                       </div>
+                    )}
+                    {item.isCover && (
+                      <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded text-[9px] font-bold text-white" style={{ background: "rgba(0,0,0,0.55)" }}>Kapak</span>
                     )}
                   </button>
                 ))}
@@ -8469,6 +8484,11 @@ function VitrinMediaView({ userId, service, onBack, onListingsChanged }) {
   // sayı) vardı, yorumu okumak için vitrini "ziyaretçi gibi" ayrı bir
   // sekmede açması gerekiyordu (kullanıcının fark ettiği gerçek bir eksiklik).
   const [reviewsList, setReviewsList] = useState([]);
+  // Kullanıcı geri bildirimi: kapak fotoğrafı, vitrine girince (bu yönetim
+  // ekranında) hiç görünmüyordu — sadece hero'da/kartlarda vardı, "Portföy"
+  // ızgarasında yoktu, sanki vitrinin tek fotoğrafı portföy fotoğrafları
+  // gibi görünüyordu. Artık kapak, portföyün İLK (silinemeyen) karesi.
+  const [coverUrl, setCoverUrl] = useState(null);
 
   const serviceId = service?.dbId || service?.id;
 
@@ -8478,13 +8498,14 @@ function VitrinMediaView({ userId, service, onBack, onListingsChanged }) {
     (async () => {
       setLoading(true);
       const [{ data: serviceRow }, { data: docs }, { data: items }] = await Promise.all([
-        supabase.from("services").select("video_intro_url, video_intro_name, share_profile_reviews").eq("id", serviceId).maybeSingle(),
+        supabase.from("services").select("video_intro_url, video_intro_name, share_profile_reviews, images").eq("id", serviceId).maybeSingle(),
         supabase.from("provider_documents").select("*").eq("service_id", serviceId).order("created_at", { ascending: false }),
         supabase.from("portfolio_items").select("*").eq("service_id", serviceId).order("created_at", { ascending: true }),
       ]);
       if (cancelled) return;
       if (serviceRow?.video_intro_url) setVideoIntro({ url: serviceRow.video_intro_url, name: serviceRow.video_intro_name || "Tanıtım Videosu" });
       setShareReviews(serviceRow?.share_profile_reviews ?? true);
+      setCoverUrl((Array.isArray(serviceRow?.images) && serviceRow.images[0]) || null);
 
       const docRows = docs || [];
       const certs = docRows.filter((d) => d.doc_type === "certificate");
@@ -8831,9 +8852,17 @@ function VitrinMediaView({ userId, service, onBack, onListingsChanged }) {
               <p className="text-xs mb-3 px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{portfolioError}</p>
             )}
             <div className="grid grid-cols-3 gap-1.5">
+              {coverUrl && (
+                <div className="relative aspect-square rounded-lg overflow-hidden group">
+                  <button onClick={() => setLightbox({ media: [{ type: "image", url: coverUrl }, ...portfolio], index: 0 })} className="w-full h-full block">
+                    <img src={coverUrl} alt="" className="w-full h-full object-cover" />
+                  </button>
+                  <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded text-[9px] font-bold text-white" style={{ background: "rgba(0,0,0,0.55)" }}>Kapak</span>
+                </div>
+              )}
               {portfolio.map((item, i) => (
                 <div key={item.id || i} className="relative aspect-square rounded-lg overflow-hidden group">
-                  <button onClick={() => setLightbox({ media: portfolio, index: i })} className="w-full h-full block">
+                  <button onClick={() => setLightbox({ media: coverUrl ? [{ type: "image", url: coverUrl }, ...portfolio] : portfolio, index: coverUrl ? i + 1 : i })} className="w-full h-full block">
                     {item.type === "video" ? (
                       <video muted playsInline className="w-full h-full object-cover">
                         <source src={item.url} />
