@@ -4,8 +4,8 @@
 > adıyla gönderilen dosyanın (avukatın büro şablonundan, dosya adı değiştirilmemiş — gerçek içerik platform
 > kullanıcılarına yönelik genel KVKK aydınlatma metni) 2026-09-09 tarihinde tarafımızca teyit edilen halidir.
 > Avukat tek bir değişiklik yaptı (aşağıdaki giriş cümlesi eklendi), geri kalan içerik onaylı şekilde geldi.
-> **Doldurulması gereken tek alan: MERSİS No** (aşağıda işaretli) — bu, avukattan/ticaret sicilinden teyit edilip
-> girilmeli.
+> MERSİS No, T.C. İstanbul Ticaret Sicil Gazetesi ilanından (İlan Sıra No: 105310, Ticaret Sicil/Dosya No:
+> 481129-5) teyit edilerek dolduruldu.
 
 6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") kapsamında Veri Sorumlusu Code G Teknoloji ve Ticaret Limited Şirketi olarak bizlerle paylaştığınız kişisel verilerinizi aşağıda yer verdiğimiz şekil ve şartlarda işliyoruz.
 
@@ -17,7 +17,7 @@ KVKK uyarınca, kişisel verileriniz aşağıda bilgileri yer alan veri sorumlus
 
 - Veri Sorumlusu: Code G Teknoloji ve Ticaret Limited Şirketi
 - Adres: Şişli, İstanbul
-- MERSİS No: **[DOLDURULACAK]**
+- MERSİS No: 0211145542800001
 - VKN: 2111455428
 - E-posta: esra.gunes@codegtechnology.com
 

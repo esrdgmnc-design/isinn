@@ -4,18 +4,11 @@ const h2 = { fontWeight: 800, fontSize: "1.05rem", color: "#0F1115", marginTop: 
 const h3 = { fontWeight: 700, fontSize: "0.9rem", color: "#0F1115", marginTop: "1.1rem", marginBottom: "0.35rem" };
 const p = { marginBottom: "0.75rem" };
 const li = { marginBottom: "0.35rem" };
-const note = { background: "#FFFBEB", border: "1px solid #F0E4C4", borderRadius: "0.75rem", padding: "0.9rem 1rem", fontSize: "0.8rem", color: "#92600A", marginBottom: "1.5rem" };
-const fill = { color: "#9C4A3C", fontWeight: 700 };
 const ul = { listStyle: "disc", paddingLeft: "1.25rem" };
 
 export default function KvkkPage() {
   return (
     <LegalPageLayout title="KVKK Aydınlatma Metni" updatedLabel="Son güncelleme: 09.09.2026 — avukat incelemesinden geçmiştir">
-      <div style={note}>
-        MERSİS numarası henüz eklenmedi (<span style={fill}>[DOLDURULACAK]</span>) — ticaret sicilinden teyit edilip
-        girilmesi gerekiyor, metnin geri kalanı avukat onaylıdır.
-      </div>
-
       <p style={p}>
         6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") kapsamında Veri Sorumlusu Code G Teknoloji ve Ticaret
         Limited Şirketi olarak bizlerle paylaştığınız kişisel verilerinizi aşağıda yer verdiğimiz şekil ve şartlarda
@@ -31,7 +24,7 @@ export default function KvkkPage() {
       <ul style={ul}>
         <li style={li}>Veri Sorumlusu: Code G Teknoloji ve Ticaret Limited Şirketi</li>
         <li style={li}>Adres: Şişli, İstanbul</li>
-        <li style={li}>MERSİS No: <span style={fill}>[DOLDURULACAK]</span></li>
+        <li style={li}>MERSİS No: 0211145542800001</li>
         <li style={li}>VKN: 2111455428</li>
         <li style={li}>E-posta: esra.gunes@codegtechnology.com</li>
       </ul>
