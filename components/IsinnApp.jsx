@@ -3637,7 +3637,10 @@ function MapView({ onBack, onSelectProvider, onSelectJob, realListings, realJobs
   // "iş mi arıyorsun, vitrin mi arıyorsun" diye bir ayrım hiç yoktu, ikisi
   // farklı niyetler (kullanıcının kendi tespiti: bir asimetri/tutarsızlık).
   // Varsayılan "Tümü" — eski davranış korunuyor, ama artık daraltılabiliyor.
-  const [pinType, setPinType] = useState("all"); // all | vitrin | job
+  // "Tümü" seçeneği kaldırıldı (kullanıcının kararı) — kullanıcı iş mi
+  // arıyor vitrin mi net seçmeli, varsayılan hizmet sağlayanlar (haritanın
+  // asıl amacı: "Dünya Genelinde Hizmet Sağlayanlar").
+  const [pinType, setPinType] = useState("vitrin"); // vitrin | job
   const [active, setActive] = useState(null);
   const [cityId, setCityId] = useState("istanbul");
   const [userLoc, setUserLoc] = useState(null); // { lat, lng }
@@ -3725,7 +3728,7 @@ function MapView({ onBack, onSelectProvider, onSelectJob, realListings, realJobs
       </div>
 
       <div className="flex items-center gap-1.5 mb-4">
-        {[["all", "Tümü"], ["vitrin", "Hizmet Sağlayanlar"], ["job", "İş İlanları"]].map(([key, label]) => (
+        {[["vitrin", "Hizmet Sağlayanlar"], ["job", "İş İlanları"]].map(([key, label]) => (
           <button
             key={key}
             onClick={() => setPinType(key)}
