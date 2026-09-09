@@ -8230,6 +8230,11 @@ function VitrinMediaView({ userId, service, onBack, onListingsChanged }) {
   // gösterilmiyor.
   const [stats, setStats] = useState(null);
   const [statsLoading, setStatsLoading] = useState(true);
+  // Sağlayıcı, kendi vitrinini yönetim ekranından ("Vitrinlerim") açtığında
+  // yorumların GERÇEK metnini hiç göremiyordu — sadece özet (ortalama puan +
+  // sayı) vardı, yorumu okumak için vitrini "ziyaretçi gibi" ayrı bir
+  // sekmede açması gerekiyordu (kullanıcının fark ettiği gerçek bir eksiklik).
+  const [reviewsList, setReviewsList] = useState([]);
 
   const serviceId = service?.dbId || service?.id;
 
@@ -8273,9 +8278,17 @@ function VitrinMediaView({ userId, service, onBack, onListingsChanged }) {
     let cancelled = false;
     (async () => {
       setStatsLoading(true);
+      // "Birleştir" (paylaşılan) modundaysa sağlayıcının TÜM vitrinlerine
+      // gelen değerlendirmeler sayılmalı — eskiden burada her zaman sadece
+      // service_id'ye göre sorgulanıyordu, bu da "Birleştir" açıkken (ki
+      // varsayılan bu) sayının/listenin herkese açık sayfadakiyle
+      // tutarsız, eksik görünmesine yol açıyordu (ListingDetail'in kendi
+      // loadRealReviews'i bu ayrımı zaten doğru yapıyordu, burası yapmıyordu).
+      let ratingsQuery = supabase.from("ratings").select("id, value, comment, created_at, rater_id, provider_reply, provider_reply_at").order("created_at", { ascending: false });
+      ratingsQuery = shareReviews ? ratingsQuery.eq("rated_profile_id", userId) : ratingsQuery.eq("service_id", serviceId);
       const [{ data: jobsData }, { data: ratingsData }, { count: favCount }] = await Promise.all([
         supabase.from("jobs").select("id, state").eq("service_id", serviceId),
-        supabase.from("ratings").select("value").eq("service_id", serviceId),
+        ratingsQuery,
         supabase.from("favorites").select("id", { count: "exact", head: true }).eq("service_id", serviceId),
       ]);
       if (cancelled) return;
@@ -8288,10 +8301,22 @@ function VitrinMediaView({ userId, service, onBack, onListingsChanged }) {
         reviewCount: ratings.length,
         favorites: favCount || 0,
       });
+
+      const raterIds = [...new Set(ratings.map((r) => r.rater_id))];
+      let profilesById = {};
+      if (raterIds.length > 0) {
+        const { data: profilesData } = await supabase.from("profiles").select("id, full_name, business_name").in("id", raterIds);
+        (profilesData || []).forEach((p) => { profilesById[p.id] = p; });
+      }
+      setReviewsList(ratings.map((r) => {
+        const p = profilesById[r.rater_id];
+        const name = (p?.business_name && p.business_name.trim()) || p?.full_name || "Kullanıcı";
+        return { id: r.id, name, value: r.value, comment: r.comment || "", time: formatRelativeTr(r.created_at), providerReply: r.provider_reply || "" };
+      }));
       setStatsLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [serviceId]);
+  }, [serviceId, shareReviews, userId]);
 
   const uploadToProfileMedia = async (file, prefix) => {
     const ext = (file.name.split(".").pop() || "bin").toLowerCase();
@@ -8494,6 +8519,31 @@ function VitrinMediaView({ userId, service, onBack, onListingsChanged }) {
             Birleştir
           </label>
         </div>
+
+        {/* Eskiden burada sadece ortalama/sayı vardı, yorumun kendi metnini
+            okumak için vitrini "ziyaretçi gibi" ayrı sekmede açman
+            gerekiyordu — artık burada da okunabiliyor. */}
+        {!statsLoading && reviewsList.length > 0 && (
+          <div className="mt-4 pt-4 space-y-3" style={{ borderTop: "1px solid #D9D0BA" }}>
+            {reviewsList.map((r) => (
+              <div key={r.id} className="text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold" style={{ color: "#1B2B24" }}>{r.name}</span>
+                  <span style={{ color: "#8A8368" }}>{r.time}</span>
+                </div>
+                <div className="flex items-center gap-0.5 my-0.5">
+                  <Stars value={r.value} size={11} />
+                </div>
+                {r.comment && <p style={{ color: "#3D3B30" }}>{r.comment}</p>}
+                {r.providerReply && (
+                  <p className="mt-1 pl-2 border-l-2" style={{ color: "#5C5744", borderColor: "#D9D0BA" }}>
+                    <b>Senin yanıtın:</b> {r.providerReply}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {loading ? (
