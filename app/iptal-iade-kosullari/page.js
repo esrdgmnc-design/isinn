@@ -3,17 +3,10 @@ import LegalPageLayout from "../../components/LegalPageLayout";
 const h2 = { fontWeight: 800, fontSize: "1.05rem", color: "#0F1115", marginTop: "1.75rem", marginBottom: "0.5rem" };
 const p = { marginBottom: "0.75rem" };
 const li = { marginBottom: "0.35rem" };
-const note = { background: "#FFFBEB", border: "1px solid #F0E4C4", borderRadius: "0.75rem", padding: "0.9rem 1rem", fontSize: "0.8rem", color: "#92600A", marginBottom: "1.5rem" };
-const fill = { color: "#9C4A3C", fontWeight: 700 };
 
 export default function IptalIadePage() {
   return (
-    <LegalPageLayout title="İptal, İade ve Geri Ödeme Koşulları" updatedLabel="Taslak — henüz yürürlükte değil">
-      <div style={note}>
-        Bu metin taslaktır. Geri ödeme politikasının kesin koşulları (örn. kısmi iade hesaplaması) henüz
-        işletme tarafından netleştirilmedi ve bir avukat tarafından onaylanmadı.
-      </div>
-
+    <LegalPageLayout title="İptal, İade ve Geri Ödeme Koşulları" updatedLabel="Son güncelleme: 09.09.2026">
       <h2 style={h2}>1. Ücretsiz Deneme</h2>
       <p style={p}>
         Standart Üyelik, kart bilgisi istemeden başlayan bir ücretsiz deneme süresiyle gelir (güncel süre{" "}
@@ -39,20 +32,20 @@ export default function IptalIadePage() {
         <li style={li}>Yanlışlıkla yapılan veya mükerrer (aynı ürünün iki kez) tahsilatlarda tam iade yapılır.</li>
         <li style={li}>
           Teknik bir arıza nedeniyle satın aldığınız hizmeti (örn. Öne Çıkarma Paketi'nin aktifleşmemesi)
-          kullanamadıysanız, sorunu bildirdiğiniz andan itibaren <span style={fill}>[X iş günü]</span> içinde
-          tam iade veya sorunun giderilmesi tarafımızca sağlanır.
+          kullanamadıysanız, sorunu bildirdiğiniz andan itibaren <b>3 iş günü</b> içinde tam iade veya sorunun
+          giderilmesi tarafımızca sağlanır.
         </li>
         <li style={li}>
-          Bunların dışındaki iade talepleri <span style={fill}>[işletmenin kararına göre: değerlendirilmez /
-          tek seferlik iyi niyet iadesi olarak değerlendirilebilir — netleştirilmeli]</span>.
+          Bunların dışındaki iade talepleri, İşinn'in kendi takdirine bağlı olarak tek seferlik bir iyi niyet
+          iadesi olarak değerlendirilebilir; bu bir hak değil, işletmenin isteğe bağlı bir uygulamasıdır.
         </li>
       </ul>
 
       <h2 style={h2}>4. İade Süresi ve Yöntemi</h2>
       <p style={p}>
         Onaylanan iadeler, ödemenin yapıldığı karta, PayTR altyapısı üzerinden ve bankanızın işlem sürelerine
-        bağlı olarak genellikle <span style={fill}>[7-14 iş günü]</span> içinde yansır. İşinn nakit veya
-        farklı bir yönteme iade yapmaz.
+        bağlı olarak genellikle <b>7-14 iş günü</b> içinde yansır. İşinn nakit veya farklı bir yönteme iade
+        yapmaz.
       </p>
 
       <h2 style={h2}>5. Kullanıcılar Arası Hizmet Ödemeleri</h2>

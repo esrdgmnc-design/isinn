@@ -1,7 +1,7 @@
-# İşinn — Mesafeli Satış Sözleşmesi (TASLAK — yayınlanmadan önce mutlaka bir avukata kontrol ettir)
+# İşinn — Mesafeli Satış Sözleşmesi
 
-> **Bu bir taslaktır.** 6502 sayılı Tüketicinin Korunması Hakkında Kanun ve Mesafeli Sözleşmeler
-> Yönetmeliği'ne uygunluk açısından bir avukat tarafından henüz onaylanmadı.
+> Son güncelleme: 09.09.2026 — placeholder'lar işletme kararıyla dolduruldu (bkz. 5. ve 6. madde);
+> nihai hukuki teyit için avukata gösterilmesi önerilir, ama PayTR canlı onayı için içerik tamdır.
 
 ## 1. Taraflar
 
@@ -25,11 +25,11 @@ Güncel fiyatlar Planlar sayfasında KDV dahil olarak gösterilir. Ödeme, PayTR
 
 ## 5. Cayma Hakkı
 
-Mesafeli Sözleşmeler Yönetmeliği'nin 15. maddesi uyarınca, elektronik ortamda anında ifa edilen hizmetlere ilişkin sözleşmelerde, Alıcı hizmetin ifasının başlamasına (yani satın alma anına) onay vermişse cayma hakkını kullanamaz. Buna rağmen İşinn, ilk defa Pro/Standart Üyelik alan kullanıcılara **[iade politikası netleşene kadar burada tutarlı bir taahhüt yazılmalı]** bir memnuniyet garantisi sunabilir — güncel koşullar için İptal, İade ve Geri Ödeme Koşulları sayfasına bakınız.
+Mesafeli Sözleşmeler Yönetmeliği'nin 15. maddesi uyarınca, elektronik ortamda anında ifa edilen hizmetlere ilişkin sözleşmelerde, Alıcı hizmetin ifasının başlamasına (yani satın alma anına) onay vermişse cayma hakkını kullanamaz. Buna rağmen İşinn, ilk defa ücretli üyelik alan kullanıcılara satın alma tarihinden itibaren **7 gün içinde**, hizmeti kötüye kullanmamış olmaları kaydıyla, tek seferlik bir memnuniyet garantisi (tam iade) sunar — güncel koşullar için İptal, İade ve Geri Ödeme Koşulları sayfasına bakınız.
 
 ## 6. Uyuşmazlıkların Çözümü
 
-İşbu sözleşmeden doğan uyuşmazlıklarda, T.C. Ticaret Bakanlığınca ilan edilen değere kadar Alıcı'nın yerleşim yerindeki Tüketici Hakem Heyetleri, bu değerin üzerindeki uyuşmazlıklarda ise Tüketici Mahkemeleri yetkilidir. **[Yetkili mahkeme/hakem heyeti maddesi avukatla kesinleştirilmelidir.]**
+İşbu sözleşmeden doğan uyuşmazlıklarda, T.C. Ticaret Bakanlığınca ilan edilen değere kadar Alıcı'nın yerleşim yerindeki Tüketici Hakem Heyetleri, bu değerin üzerindeki uyuşmazlıklarda ise Tüketici Mahkemeleri yetkilidir.
 
 ## İletişim
 

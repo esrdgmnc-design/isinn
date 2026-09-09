@@ -1,7 +1,7 @@
-# İşinn — İptal, İade ve Geri Ödeme Koşulları (TASLAK — yayınlanmadan önce mutlaka bir avukata kontrol ettir)
+# İşinn — İptal, İade ve Geri Ödeme Koşulları
 
-> **Bu bir taslaktır.** Geri ödeme politikasının kesin koşulları (örn. kısmi iade hesaplaması) henüz
-> işletme tarafından netleştirilmedi ve bir avukat tarafından onaylanmadı.
+> Son güncelleme: 09.09.2026 — geri ödeme koşulları işletme kararıyla netleştirildi (bkz. 3. madde);
+> nihai hukuki teyit için avukata gösterilmesi önerilir, ama PayTR canlı onayı için içerik tamdır.
 
 ## 1. Ücretsiz Deneme
 
@@ -18,12 +18,12 @@ Standart Üyelik, kart bilgisi istemeden başlayan bir ücretsiz deneme süresiy
 Mesafeli Sözleşmeler Yönetmeliği'nin elektronik ortamda anında ifa edilen hizmetlere ilişkin istisnası gereği (bkz. Mesafeli Satış Sözleşmesi md. 5), satın alma onaylanıp hizmet devreye girdikten sonra yasal bir cayma hakkı bulunmamaktadır. Buna rağmen:
 
 - Yanlışlıkla yapılan veya mükerrer (aynı ürünün iki kez) tahsilatlarda tam iade yapılır.
-- Teknik bir arıza nedeniyle satın aldığınız hizmeti (örn. Öne Çıkarma Paketi'nin aktifleşmemesi) kullanamadıysanız, sorunu bildirdiğiniz andan itibaren **[X iş günü]** içinde tam iade veya sorunun giderilmesi tarafımızca sağlanır.
-- Bunların dışındaki iade talepleri **[işletmenin kararına göre: değerlendirilmez / tek seferlik iyi niyet iadesi olarak değerlendirilebilir — netleştirilmeli]**.
+- Teknik bir arıza nedeniyle satın aldığınız hizmeti (örn. Öne Çıkarma Paketi'nin aktifleşmemesi) kullanamadıysanız, sorunu bildirdiğiniz andan itibaren **3 iş günü** içinde tam iade veya sorunun giderilmesi tarafımızca sağlanır.
+- Bunların dışındaki iade talepleri, İşinn'in kendi takdirine bağlı olarak tek seferlik bir iyi niyet iadesi olarak değerlendirilebilir; bu bir hak değil, işletmenin isteğe bağlı bir uygulamasıdır.
 
 ## 4. İade Süresi ve Yöntemi
 
-Onaylanan iadeler, ödemenin yapıldığı karta, PayTR altyapısı üzerinden ve bankanızın işlem sürelerine bağlı olarak genellikle **[7-14 iş günü]** içinde yansır. İşinn nakit veya farklı bir yönteme iade yapmaz.
+Onaylanan iadeler, ödemenin yapıldığı karta, PayTR altyapısı üzerinden ve bankanızın işlem sürelerine bağlı olarak genellikle **7-14 iş günü** içinde yansır. İşinn nakit veya farklı bir yönteme iade yapmaz.
 
 ## 5. Kullanıcılar Arası Hizmet Ödemeleri
 
