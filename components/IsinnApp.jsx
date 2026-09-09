@@ -5873,7 +5873,7 @@ const PRO_PACKAGE = {
   ],
 };
 
-function CreateListingView({ onBack, onCreated, userId, editingListing, onGoToProfile }) {
+function CreateListingView({ onBack, onCreated, userId, editingListing, onGoToProfile, onManageMedia }) {
   const isEditing = !!editingListing;
   const [mode, setMode] = useState(editingListing?.mode || "local");
   const [providerName, setProviderName] = useState(editingListing?.provider || "");
@@ -6109,6 +6109,7 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
     if (!title.trim()) { setError("Vitrin başlığı yazmalısın."); return; }
     if (!desc.trim()) { setError("Sunduğun hizmeti kısaca anlat."); return; }
     if (!price.trim()) { setError("Bir fiyat belirtmelisin."); return; }
+    if (!photo?.url) { setError("Bir kapak fotoğrafı yüklemelisin — vitrinsiz vitrin olmaz."); return; }
     if (moderation?.status === "checking") { setError("Fotoğraf içerik kontrolü bitene kadar bekle."); return; }
     if (moderation?.status === "flagged") { setError("Kapak fotoğrafın incelemeye alındı, vitrini yayınlamadan önce fotoğrafı kaldır ya da değiştir."); return; }
     if (!userId) { setError("Vitrin yayınlamak için giriş yapmış olmalısın."); return; }
@@ -6231,6 +6232,19 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
           </div>
         )}
 
+        {/* Kullanıcı geri bildirimi: kapak fotoğrafı dışında (çoklu fotoğraf,
+            video, sertifika, CV) her şey ayrı bir ekranda (VitrinMediaView) —
+            ama biri buraya nasıl geleceğini hiç bilmiyordu. Yayın anında,
+            en yüksek dikkat anında, doğrudan oraya götürüyoruz. */}
+        {onManageMedia && created && (
+          <button
+            onClick={() => onManageMedia(created)}
+            className="w-full flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-full text-sm font-medium text-white mb-2.5"
+            style={{ background: "#2563EB" }}
+          >
+            <Camera size={14} /> Fotoğraf, Video, Sertifika Ekle
+          </button>
+        )}
         <div className="flex gap-2 justify-center">
           <button onClick={onBack} className="px-5 py-2.5 rounded-full text-sm font-medium text-white" style={{ background: "#C2872B" }}>Ana Sayfaya Dön</button>
         </div>
@@ -6436,7 +6450,7 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
         </div>
 
         <div>
-          <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>Kapak fotoğrafı (opsiyonel)</label>
+          <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>Kapak fotoğrafı</label>
           <div className="flex items-center gap-3">
             {photo && (
               <label className="relative w-16 h-16 rounded-lg overflow-hidden cursor-pointer shrink-0 group">
@@ -6469,6 +6483,14 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
               {moderation.status === "flagged" && <><AlertCircle size={11} /> {moderation.reason || "İçerik incelemeye alındı"}</>}
             </p>
           )}
+          {/* Çoklu fotoğraf/video, tanıtım videosu, sertifika ve CV burada değil —
+              yayınladıktan sonra "Vitrinlerim" > yönetim ekranından (VitrinMediaView)
+              ekleniyor. Kullanıcı geri bildirimi: bu adım hiç belli olmuyordu, biri
+              tek kapak fotoğrafıyla kalıp "vitrin gibi çoklu fotoğraf/video
+              koyamıyoruz" sanıyordu — burada önceden not ediyoruz. */}
+          <p className="text-[11px] mt-1.5" style={{ color: "#8A8368" }}>
+            Yayınladıktan sonra bu vitrine özel çoklu fotoğraf, video, sertifika ve CV ekleyebilirsin.
+          </p>
         </div>
 
         {mode === "local" && (
@@ -9484,6 +9506,7 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
           onBack={() => { setEditingListing(null); setView("home"); }}
           onGoToProfile={() => { setEditingListing(null); setView("profile"); }}
           onCreated={() => fetchListings()}
+          onManageMedia={(l) => { setEditingListing(null); setManagingVitrin(l); setView("vitrinMedia"); }}
           userId={userId}
           editingListing={editingListing}
         />
