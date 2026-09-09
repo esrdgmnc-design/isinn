@@ -3573,6 +3573,11 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
 function MapView({ onBack, onSelectProvider, onSelectJob, realListings, realJobs }) {
   const [mapQuery, setMapQuery] = useState("");
   const [homeOnly, setHomeOnly] = useState(false);
+  // Harita eskiden vitrinleri ve iş ilanlarını hep karışık gösteriyordu —
+  // "iş mi arıyorsun, vitrin mi arıyorsun" diye bir ayrım hiç yoktu, ikisi
+  // farklı niyetler (kullanıcının kendi tespiti: bir asimetri/tutarsızlık).
+  // Varsayılan "Tümü" — eski davranış korunuyor, ama artık daraltılabiliyor.
+  const [pinType, setPinType] = useState("all"); // all | vitrin | job
   const [active, setActive] = useState(null);
   const [cityId, setCityId] = useState("istanbul");
   const [userLoc, setUserLoc] = useState(null); // { lat, lng }
@@ -3625,6 +3630,8 @@ function MapView({ onBack, onSelectProvider, onSelectJob, realListings, realJobs
   };
 
   let list = cityId === "all" ? allProviders : allProviders.filter((p) => p.city === cityId);
+  if (pinType === "vitrin") list = list.filter((p) => p.kind !== "job");
+  if (pinType === "job") list = list.filter((p) => p.kind === "job");
   if (mapQuery.trim()) {
     const q = mapQuery.trim().toLocaleLowerCase("tr-TR");
     list = list.filter((p) => {
@@ -3655,6 +3662,19 @@ function MapView({ onBack, onSelectProvider, onSelectJob, realListings, realJobs
           <MapPin size={13} />
           {locStatus === "loading" ? "Konum alınıyor..." : locStatus === "granted" ? "Konumun kullanılıyor" : "Konumumu Kullan"}
         </button>
+      </div>
+
+      <div className="flex items-center gap-1.5 mb-4">
+        {[["all", "Tümü"], ["vitrin", "Vitrinler"], ["job", "İş İlanları"]].map(([key, label]) => (
+          <button
+            key={key}
+            onClick={() => setPinType(key)}
+            className="text-xs font-bold px-3.5 py-2 rounded-full transition-colors"
+            style={pinType === key ? { background: "#2563EB", color: "#FFFFFF" } : { background: "#F8F4E9", color: "#5C5744", border: "1px solid #D9D0BA" }}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       {locStatus === "denied" && (
