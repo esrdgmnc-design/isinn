@@ -5081,7 +5081,7 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
   // atarak geldiyse de, kendi iş ilanına gelen bir teklifi kabul ettiyse de
   // aynı — bkz. schema (3).sql). Sadece o taraf "Hizmeti Aldım" diyebilir;
   // state 'delivered' olunca ListingDetail'deki değerlendirme kapısı açılır.
-  const [activeJob, setActiveJob] = useState(null); // { clientId, state, serviceId }
+  const [activeJob, setActiveJob] = useState(null); // { clientId, state, serviceId, providerId }
   const [markingDelivered, setMarkingDelivered] = useState(false);
   const [deliveredError, setDeliveredError] = useState("");
   const [openingReview, setOpeningReview] = useState(false);
@@ -5273,8 +5273,8 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
     if (!activeId || active?.demo || !currentUserId) { setActiveJob(null); return; }
     let cancelled = false;
     (async () => {
-      const { data } = await supabase.from("jobs").select("client_id, state, service_id").eq("id", activeId).maybeSingle();
-      if (!cancelled) setActiveJob(data ? { clientId: data.client_id, state: data.state, serviceId: data.service_id } : null);
+      const { data } = await supabase.from("jobs").select("client_id, state, service_id, services(provider_id)").eq("id", activeId).maybeSingle();
+      if (!cancelled) setActiveJob(data ? { clientId: data.client_id, state: data.state, serviceId: data.service_id, providerId: data.services?.provider_id || null } : null);
     })();
     setDeliveredError("");
     return () => { cancelled = true; };
@@ -5285,6 +5285,22 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
     setDeliveredError("");
     setMarkingDelivered(true);
     const { error } = await supabase.from("jobs").update({ state: "delivered" }).eq("id", activeId).eq("client_id", currentUserId);
+    setMarkingDelivered(false);
+    if (error) { setDeliveredError(`İşaretlenemedi: ${error.message}`); return; }
+    setActiveJob((j) => (j ? { ...j, state: "delivered" } : j));
+  };
+
+  // Adil olsun diye eklendi: eskiden SADECE müşteri "Hizmeti Aldım"
+  // diyebiliyordu — sağlayıcı gerçekten işi yapmış olsa bile müşteri
+  // onaylamazsa (unutursa, geciktirse) hiçbir hakkı yoktu, değerlendirme de
+  // hiç açılmıyordu. Artık sağlayıcı kendi tarafından "Hizmeti Verdim"
+  // diyebiliyor — ikisinden hangisi önce işaretlerse iş 'delivered' sayılır
+  // (bkz. supabase/provider_delivery_confirmation.sql).
+  const markProviderDelivered = async () => {
+    if (!activeId || !currentUserId || activeJob?.providerId !== currentUserId) return;
+    setDeliveredError("");
+    setMarkingDelivered(true);
+    const { error } = await supabase.from("jobs").update({ state: "delivered", provider_delivered_at: new Date().toISOString() }).eq("id", activeId);
     setMarkingDelivered(false);
     if (error) { setDeliveredError(`İşaretlenemedi: ${error.message}`); return; }
     setActiveJob((j) => (j ? { ...j, state: "delivered" } : j));
@@ -5527,7 +5543,11 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
             <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-xs mb-3 shrink-0" style={{ background: "rgba(63,125,92,0.1)", color: "#3F7D5C" }}>
               <span className="flex items-center gap-2">
                 <Check size={13} className="shrink-0" />
-                {activeJob.clientId === currentUserId ? "Hizmeti aldığını işaretledin — değerlendirme yazabilirsin." : "Müşteri hizmeti aldığını onayladı."}
+                {activeJob.clientId === currentUserId
+                  ? "Hizmeti aldığını işaretledin — değerlendirme yazabilirsin."
+                  : activeJob.providerId === currentUserId
+                  ? "İşi teslim ettin olarak işaretledin."
+                  : "İş teslim edildi olarak işaretlendi."}
               </span>
               {activeJob.clientId === currentUserId && activeJob.serviceId && (
                 <button onClick={goToReview} disabled={openingReview} className="font-bold shrink-0 flex items-center gap-1" style={{ color: "#2563EB" }}>
@@ -5548,6 +5568,23 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
               >
                 {markingDelivered && <Loader2 size={12} className="animate-spin" />}
                 Hizmeti Aldım
+              </button>
+            </div>
+          ) : activeJob.providerId === currentUserId ? (
+            // Adil olsun diye: müşteri onaylamazsa (unutursa, geciktirse)
+            // sağlayıcının hiçbir hakkı yoktu, değerlendirme de hiç
+            // açılmıyordu. Artık sağlayıcı da kendi tarafından işaretleyebiliyor.
+            <div className="rounded-lg p-2.5 mb-3 shrink-0" style={{ background: "#F8F4E9", border: "1px solid #D9D0BA" }}>
+              <p className="text-xs mb-1.5" style={{ color: "#5C5744" }}>Hizmeti verdiysen işaretle — müşteri onaylamasa bile bu, teslim edildiğini kayda geçirir.</p>
+              {deliveredError && <p className="text-xs mb-1.5" style={{ color: "#9C4A3C" }}>{deliveredError}</p>}
+              <button
+                onClick={markProviderDelivered}
+                disabled={markingDelivered}
+                className="text-xs font-bold px-3 py-1.5 rounded-full text-white flex items-center gap-1.5"
+                style={{ background: "#3F7D5C", opacity: markingDelivered ? 0.7 : 1 }}
+              >
+                {markingDelivered && <Loader2 size={12} className="animate-spin" />}
+                Hizmeti Verdim
               </button>
             </div>
           ) : null
