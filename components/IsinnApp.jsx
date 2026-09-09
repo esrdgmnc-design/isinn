@@ -7238,50 +7238,51 @@ function PricingView({ onBack, onJoined, userId }) {
           önce iki asıl üyelik seçilsin, bu ikisine eklenen isteğe bağlı bir
           ek olarak en sonda dursun. Aylık/yıllık döngüden bağımsız (kendi
           fiyatı hep aylık), o yüzden iki görünümde de aynı yerde kalıyor. */}
-      {/* button değil div role="button" — içeride ayrı bir tıklanabilir
-          süre toggle'ı (Aylık/Haftalık) var, buton içinde buton geçersiz
-          HTML olurdu (aynı düzeltme HomeView'ın iş ilanı kartında da var). */}
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={() => setBoostSelected(!boostSelected)}
-        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setBoostSelected(!boostSelected); }}
-        className="w-full rounded-2xl border-2 p-6 flex flex-col text-left mb-6 transition-colors cursor-pointer"
-        style={boostSelected ? { borderColor: "#F59E0B", background: "#FFFBEB" } : { borderColor: "#D9D0BA", background: "#F8F4E9" }}
-      >
-        <div className="flex items-center justify-between mb-1">
-          <p className="font-serif text-lg" style={{ color: "#1B2B24" }}>{BOOST_PACKAGE.name}</p>
-          <div
-            className="w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0"
-            style={boostSelected ? { background: "#F59E0B", borderColor: "#F59E0B" } : { borderColor: "#D9D0BA" }}
-          >
-            {boostSelected && <Check size={13} className="text-white" />}
-          </div>
-        </div>
+      {/* Basitleştirildi (kullanıcı geri bildirimi: "kart mı seçiliyor, süre
+          mi seçiliyor" iki aşamalı akışı kafa karıştırıyordu, "müşterinin
+          kafası karışır" — gerçek bir uyarı). Artık tek adım: iki net fiyat
+          seçeneği, hangisine tıklarsan o hem seçilir hem eklenir. Aynı
+          seçeneğe tekrar tıklamak kaldırır. Standart bir "plan seç" deseni —
+          sayfanın en üstündeki Aylık/Yıllık toggle'ıyla aynı mantık. */}
+      <div className="w-full rounded-2xl border-2 p-6 flex flex-col mb-6" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
+        <p className="font-serif text-lg mb-1" style={{ color: "#1B2B24" }}>{BOOST_PACKAGE.name}</p>
         <p className="text-xs mb-4" style={{ color: "#8A8368" }}>{BOOST_PACKAGE.tagline}, deneme kapsamında değil</p>
-        <div className="mb-4 flex items-baseline gap-1">
-          <span className="font-serif text-2xl" style={{ color: "#1B2B24" }}>+{boostPrice}₺</span>
-          <span className="text-sm" style={{ color: "#8A8368" }}>/{boostDuration === "weekly" ? "7 gün" : "ay"}</span>
-        </div>
-        {boostSelected && (
-          <div
-            className="mb-4 flex gap-1.5 rounded-xl p-1"
-            style={{ background: "#F0EAD6" }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {[["monthly", "Aylık · 459₺"], ["weekly", "Haftalık · 149₺"]].map(([key, label]) => (
+
+        <div className="grid grid-cols-2 gap-2.5 mb-4">
+          {[
+            { key: "monthly", label: "Aylık", price: BOOST_PACKAGE.priceMonthly, unit: "/ay" },
+            { key: "weekly", label: "Haftalık", price: WEEKLY_BOOST_PACKAGE.price, unit: "/7 gün" },
+          ].map((opt) => {
+            const isActive = boostSelected && boostDuration === opt.key;
+            return (
               <button
-                key={key}
+                key={opt.key}
                 type="button"
-                onClick={() => setBoostDuration(key)}
-                className="flex-1 text-xs font-bold py-1.5 rounded-lg transition-colors"
-                style={boostDuration === key ? { background: "#F59E0B", color: "#FFFFFF" } : { color: "#8A8368" }}
+                onClick={() => {
+                  if (isActive) { setBoostSelected(false); return; }
+                  setBoostDuration(opt.key);
+                  setBoostSelected(true);
+                }}
+                className="rounded-xl border-2 p-3 text-left transition-colors"
+                style={isActive ? { borderColor: "#F59E0B", background: "#FFFBEB" } : { borderColor: "#D9D0BA", background: "#FFFFFF" }}
               >
-                {label}
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-bold" style={{ color: "#1B2B24" }}>{opt.label}</span>
+                  {isActive && (
+                    <div className="w-4 h-4 rounded-full flex items-center justify-center shrink-0" style={{ background: "#F59E0B" }}>
+                      <Check size={10} className="text-white" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-baseline gap-0.5">
+                  <span className="font-serif text-lg" style={{ color: "#1B2B24" }}>+{opt.price}₺</span>
+                  <span className="text-[11px]" style={{ color: "#8A8368" }}>{opt.unit}</span>
+                </div>
               </button>
-            ))}
-          </div>
-        )}
+            );
+          })}
+        </div>
+
         <div className="space-y-2">
           {BOOST_PACKAGE.features.map((f, i) => (
             <div key={i} className="flex items-start gap-2 text-xs" style={{ color: "#3D3B30" }}>
