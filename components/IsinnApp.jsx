@@ -7,7 +7,7 @@ import {
   Search, MapPin, Star, Heart, PlayCircle, ChevronLeft, ChevronRight,
   Wrench, Truck, Monitor, Paintbrush, Code2, Sparkles, ThumbsUp,
   X, Send, Menu, Map as MapIcon, Check, MessageCircle, Clock, Key,
-  GraduationCap, Baby, Megaphone, HardHat, Palette, Users, Grid3x3,
+  GraduationCap, Baby, Megaphone, HardHat, Palette, Users, User, Grid3x3,
   ShieldCheck, BadgeCheck, Award, ArrowLeft, HeartPulse, Syringe, Activity, Wand2, Droplet, Home, Briefcase,
   Scissors, Shirt, Salad, Brain, HeartHandshake, Milk, Zap, Droplets, SprayCan, PartyPopper, Eye, Flower2,
   ChefHat, Flower, Sprout, Camera, MoreHorizontal, Dumbbell, Unlock,
@@ -1765,6 +1765,29 @@ function Header({ onNav, onSearch, pendingCount, session, onNotificationClick })
             >
               İlan Ver
             </button>
+            {/* Kullanıcı geri bildirimi: mesajlaşma (veya başka herhangi bir)
+                ekranındayken profile geçmenin tek yolu bu menüde değil, ayrı
+                ve küçük bir avatar ikonundaydı — biri onu fark etmezse
+                anasayfaya dönmek "zorunda" kalıyordu. Artık burada da var. */}
+            {session && (
+              <>
+                <div className="my-1 border-t" style={{ borderColor: "#EAEAEA" }} />
+                <button
+                  onClick={() => { setMobileMenuOpen(false); onNav("profile"); }}
+                  className="flex items-center gap-2 text-sm font-semibold px-2 py-2.5 rounded-lg text-left"
+                  style={{ color: "#0F1115" }}
+                >
+                  <User size={16} /> Profilim
+                </button>
+                <button
+                  onClick={() => { setMobileMenuOpen(false); onNav("favorites"); }}
+                  className="flex items-center gap-2 text-sm font-semibold px-2 py-2.5 rounded-lg text-left"
+                  style={{ color: "#0F1115" }}
+                >
+                  <Heart size={16} /> Favorilerim
+                </button>
+              </>
+            )}
           </div>
         </>
       )}
