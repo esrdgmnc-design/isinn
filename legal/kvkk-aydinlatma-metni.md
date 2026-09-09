@@ -1,69 +1,145 @@
-# İşinn — KVKK Aydınlatma Metni (TASLAK — yayınlanmadan önce mutlaka bir avukata/KVKK danışmanına kontrol ettir)
+# İşinn — KVKK Aydınlatma Metni
 
-> **Bu bir taslaktır.** Şirket bilgileri dolduruldu, ama gerçek bir hukuki belge olarak kullanılmadan önce
-> mutlaka bir avukat/KVKK danışmanı tarafından gözden geçirilmelidir — özellikle **4. madde** (yurt dışına
-> veri aktarımı). Köşeli parantez `[...]` içinde kalan tek yer, avukat onayı gereken o maddedir.
+> **Avukat incelemesinden geçmiştir.** Bu metin, "Kariyer Fırsatları İnternet Sitesi Çalışan Adayı Aydınlatma.docx"
+> adıyla gönderilen dosyanın (avukatın büro şablonundan, dosya adı değiştirilmemiş — gerçek içerik platform
+> kullanıcılarına yönelik genel KVKK aydınlatma metni) 2026-09-09 tarihinde tarafımızca teyit edilen halidir.
+> Avukat tek bir değişiklik yaptı (aşağıdaki giriş cümlesi eklendi), geri kalan içerik onaylı şekilde geldi.
+> **Doldurulması gereken tek alan: MERSİS No** (aşağıda işaretli) — bu, avukattan/ticaret sicilinden teyit edilip
+> girilmeli.
+
+6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") kapsamında Veri Sorumlusu Code G Teknoloji ve Ticaret Limited Şirketi olarak bizlerle paylaştığınız kişisel verilerinizi aşağıda yer verdiğimiz şekil ve şartlarda işliyoruz.
+
+İşbu Aydınlatma Metni, kişisel verilerinizin hangi kapsamda işlendiği, hangi amaçlarla kullanıldığı, kimlere ve hangi amaçlarla aktarılabileceği, kişisel verilerinizin toplanma yöntemi ve hukuki sebepleri ile KVKK kapsamındaki haklarınız hakkında sizleri bilgilendirmek amacıyla hazırlanmıştır.
 
 ## 1. Veri Sorumlusu
 
-**Code G Teknoloji ve Ticaret Limited Şirketi** ("İşinn", "biz") olarak, 6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") uyarınca veri sorumlusu sıfatıyla, aşağıda açıklanan kapsamda kişisel verilerinizi işlemekteyiz.
+KVKK uyarınca, kişisel verileriniz aşağıda bilgileri yer alan veri sorumlusu tarafından işlenmektedir:
 
-- Unvan: Code G Teknoloji ve Ticaret Limited Şirketi
+- Veri Sorumlusu: Code G Teknoloji ve Ticaret Limited Şirketi
 - Adres: Şişli, İstanbul
-- Vergi No: 2111455428
+- MERSİS No: **[DOLDURULACAK]**
+- VKN: 2111455428
 - E-posta: esra.gunes@codegtechnology.com
-- Telefon: 0536 460 36 82
 
-## 2. İşlenen Kişisel Veri Kategorileri
+## 2. İşlenen Kişisel Veriler
 
-İşinn uygulamasını kullanırken aşağıdaki kişisel verileriniz işlenebilir:
+İşinn platformunu kullanmanız kapsamında aşağıdaki kişisel verileriniz işlenebilmektedir:
 
-| Kategori | Örnekler |
-|---|---|
-| Kimlik ve iletişim | Ad-soyad/işletme adı, e-posta, telefon numarası |
-| Görsel/işitsel veri | Profil fotoğrafı, tanıtım videosu, portföy fotoğraf/videoları |
-| Mesleki bilgi | Sertifikalar, CV, iş deneyimi açıklaması |
-| Konum verisi | Şehir/semt bilgisi; "Konumumu Kullan" özelliği kullanıldığında GPS konumu (cihaz izniyle) |
-| İşlem güvenliği | Şikayet/rapor kayıtları, engelleme kayıtları, hesap oluşturma/giriş zaman damgaları |
-| Müşteri işlem verisi | Gönderilen/alınan mesajlar, değerlendirme/yorum metinleri, favoriler |
-| Abonelik/ödeme bilgisi | Seçilen üyelik planı, faturalama döngüsü (ödeme kartı bilgisi platformumuzca hiçbir zaman saklanmaz — ödeme sağlayıcı [PayTR] üzerinden işlenir) |
+**Kimlik ve kullanıcı bilgileri**
+- Ad-soyad
+- İşletme adı
+- Şehir bilgisi
+
+**İletişim bilgileri**
+- E-posta adresi
+- Telefon numarası (Telefon numaranız doğrulama amacıyla ayrı ve kısıtlı erişimli bir tabloda tutulmakta olup, açık profilinizde tarafınızca ayrıca görüntülenmesi tercih edilmediği sürece diğer kullanıcılara gösterilmemektedir.)
+
+**Görsel ve mesleki bilgiler**
+- Profil fotoğrafı
+- Vitrin tanıtım videosu
+- Portföy fotoğraf ve videoları
+- Sertifika ve CV dosyaları
+
+**İletişim ve platform kullanım bilgileri**
+- Platform içi mesajlar
+- Aldığınız ve bıraktığınız değerlendirmeler
+- Puan ve yorumlar
+- Değerlendirmelerde isteğe bağlı olarak paylaşılan fotoğraflar
+- Favorilenen vitrinler
+- Kayıtlı aramalar
+- Bildirim tercihleri
+
+**Konum bilgisi**
+"Konumumu Kullan" fonksiyonunu kullanmanız halinde tarayıcınız tarafından sağlanan GPS konumu, yalnızca en yakın şehrin belirlenmesi amacıyla kullanılmakta olup, kaydedilmemektedir.
+
+**İşlem ve ödeme bilgileri**
+Ödeme işlemlerinde gerekli bilgiler ilgili ödeme hizmet sağlayıcısına aktarılmaktadır. Kart bilgileriniz İşinn sunucularında tutulmamakta, ödeme işlemi doğrudan PayTR altyapısı üzerinden gerçekleştirilmektedir.
 
 ## 3. Kişisel Verilerin İşlenme Amaçları
 
-- Hizmet sağlayıcı ile hizmet arayan kullanıcıları buluşturmak (temel platform işlevi)
-- Kullanıcı hesabı oluşturma, kimlik doğrulama ve profil yönetimi
-- Sağlayıcıların kimlik/uzmanlık belgelerini (sertifika, CV) diğer vitrinlerinden bağımsız olarak sergileyebilmesi
-- Mesajlaşma altyapısının çalışması
-- Değerlendirme/yorum sisteminin işletilmesi, sahte değerlendirmelerin önlenmesi (gerçek iş tamamlama onayı şartı)
-- Kullanıcı güvenliği: şikayet/engelleme sisteminin işletilmesi, şüpheli/uygunsuz içeriğin (yapay zeka destekli ön kontrol dahil) tespiti
-- Abonelik ve ücretli ek ürünlerin (Öne Çıkarma Paketi vb.) yönetimi
-- Yasal yükümlülüklerin yerine getirilmesi
+Kişisel verileriniz;
 
-## 4. Kişisel Verilerin Aktarıldığı Taraflar
+- İşinn hesabınızın oluşturulması ve yönetilmesi,
+- Kullanıcı doğrulama işlemlerinin gerçekleştirilmesi,
+- Profil ve vitrin oluşturulması ve sunulması,
+- Profil, portföy, sertifika ve CV bilgilerinin platform üzerinde ilgili fonksiyonlar kapsamında kullanılabilmesi,
+- Platform içi mesajlaşma hizmetinin sağlanması,
+- Değerlendirme ve puanlama hizmetlerinin yürütülmesi,
+- Kullanıcıların arama ve favori özelliklerini kullanabilmelerinin sağlanması,
+- Bildirim tercihlerinin uygulanması,
+- Konum özelliğinin kullanılması halinde en yakın şehrin belirlenmesi,
+- Ödeme işlemlerinin gerçekleştirilmesi,
+- Telefon doğrulama işlemlerinin gerçekleştirilmesi,
+- Platformun güvenli ve teknik olarak çalışmasının sağlanması,
+- Fotoğraf uygunluk kontrolü, akıllı arama ve yazım yardımı gibi yapay zekâ destekli özelliklerin sunulması,
+- Kullanıcı taleplerinin ve iletişim süreçlerinin yönetilmesi,
+- Yasal yükümlülüklerin yerine getirilmesi ve mevzuattan kaynaklanan kayıtların tutulması
 
-Kişisel verileriniz, hizmetin sunulabilmesi için aşağıdaki hizmet sağlayıcılarla (veri işleyenlerle) paylaşılmaktadır:
+amaçlarıyla işlenmektedir. Kişisel verileriniz, yukarıda belirtilen amaçlar dışında, belirli olmayan veya bu amaçlarla bağdaşmayan amaçlarla işlenmez.
 
-- **Supabase Inc.** — veritabanı ve depolama altyapısı (profil bilgileri, mesajlar, belgeler, fotoğraf/video dosyaları)
-- **Anthropic PBC (Claude AI)** — bazı özelliklerin (fotoğraf/içerik uygunluk ön kontrolü, değerlendirme özetleri, arama, yazım yardımı) çalışabilmesi için ilgili metin/görsel içerik bu sağlayıcıya işlenmek üzere gönderilir. Bu şirketler **yurt dışında** yerleşiktir; KVKK'nın yurt dışına veri aktarımına ilişkin hükümleri (md. 9) bu aktarımlar için geçerlidir — **[avukatınızla açık rıza metni/uygun aktarım mekanizması gerekip gerekmediğini teyit edin]**.
-- **PayTR** — abonelik ödemelerinin işlenmesi
-- **Netgsm** — telefon numarası doğrulama SMS gönderimi (entegrasyon tamamlandığında)
-- Yetkili kamu kurum ve kuruluşları — yasal bir talep olması halinde
+## 4. Kişisel Verilerin Aktarılması
 
-## 5. Hukuki Sebep
+Kişisel verileriniz, yalnızca platformun işletilebilmesi ve yukarıda belirtilen amaçların yerine getirilebilmesi için gerekli olduğu ölçüde hizmet sağlayıcılara ve ilgili alıcı gruplarına aktarılabilmektedir. Bu kapsamda:
 
-Kişisel verileriniz; bir sözleşmenin kurulması/ifası (KVKK md. 5/2-c), açık rızanız (md. 5/1), hukuki yükümlülüğün yerine getirilmesi (md. 5/2-ç) ve meşru menfaat (md. 5/2-f — örn. platform güvenliği, dolandırıcılık önleme) hukuki sebeplerine dayanılarak işlenmektedir.
+- **Supabase** — Verilerinizin saklanması amacıyla kullanılan veritabanı ve depolama altyapısıdır.
+- **Anthropic (Claude AI)** — Fotoğraf uygunluk kontrolü, akıllı arama ve yazım yardımı gibi yapay zekâ destekli özelliklerin sağlanması amacıyla ilgili metin ve/veya görseller işlenebilmektedir.
+- **PayTR** — Ödeme işlemlerinin gerçekleştirilmesi amacıyla kullanılmaktadır. Kart bilgileriniz İşinn sunucularına aktarılmamakta ve doğrudan PayTR'ye iletilmektedir.
+- **Netgsm** — Telefon numarası doğrulama işlemleri kapsamında SMS gönderimi amacıyla kullanılmaktadır.
 
-## 6. Veri Sahibinin Hakları (KVKK md. 11)
+Bunun yanında, kullanıcı tarafından platformda herkese açık şekilde paylaşılması tercih edilen bilgiler, platformun diğer kullanıcıları tarafından görüntülenebilir.
 
-Kişisel verisi işlenen herkes, veri sorumlusuna başvurarak:
-- Kişisel verisinin işlenip işlenmediğini öğrenme,
-- İşlenmişse buna ilişkin bilgi talep etme,
-- İşlenme amacını ve amacına uygun kullanılıp kullanılmadığını öğrenme,
-- Yurt içinde/yurt dışında aktarıldığı üçüncü kişileri bilme,
-- Eksik/yanlış işlenmişse düzeltilmesini isteme,
-- KVKK md. 7'de öngörülen şartlar çerçevesinde silinmesini/yok edilmesini isteme,
-- Düzeltme/silme işlemlerinin aktarılan üçüncü kişilere bildirilmesini isteme,
-- İşlenen verilerin münhasıran otomatik sistemlerle analiz edilmesi suretiyle aleyhine bir sonucun ortaya çıkmasına itiraz etme,
-- Kanuna aykırı işlenme nedeniyle zarara uğraması halinde zararın giderilmesini talep etme
+## 5. Diğer Kullanıcıların Görebileceği Bilgiler
 
-haklarına sahiptir. Başvurularınızı **esra.gunes@codegtechnology.com** üzerinden iletebilirsiniz.
+Platformun niteliği gereği aşağıdaki bilgiler diğer kullanıcıların erişimine açık olabilir:
+
+- Profil fotoğrafı
+- Vitrin başlığı ve açıklaması
+- Şehir bilgisi
+- Alınan değerlendirmeler
+- Sertifika/CV belgesi paylaşılmış olduğunu gösteren rozet
+
+Sertifika ve CV dosyasının kendisi diğer kullanıcıların erişimine açık değildir; yalnızca kullanıcı tarafından görüntülenebilir. Platform içi mesaj geçmişi yalnızca mesajlaşmanın tarafları tarafından görülebilir. Telefon numarası, tam adres ve ödeme bilgileri diğer kullanıcılarla paylaşılmaz; telefon numarası yalnızca kullanıcının açıkça görüntülenmesini tercih etmesi halinde profil kapsamında gösterilebilir.
+
+## 6. Kişisel Verilerin Toplanma Yöntemi ve Hukuki Sebebi
+
+Kişisel verileriniz;
+
+- İşinn internet sitesi ve/veya platformu üzerinden oluşturduğunuz hesap ve profiller,
+- Platform üzerinde gerçekleştirdiğiniz işlemler,
+- Platform içi mesajlaşma ve değerlendirme faaliyetleri,
+- Teknik altyapı ve kullanım süreçleri,
+- Telefon doğrulama işlemleri,
+- Ödeme işlemleri,
+- Tarayıcınız tarafından "Konumumu Kullan" fonksiyonunun kullanılması halinde sağlanan konum bilgisi
+
+aracılığıyla elektronik ortamda toplanmaktadır.
+
+Kişisel verileriniz, işleme faaliyetinin niteliğine göre KVKK'nın 5. maddesinde düzenlenen kişisel veri işleme şartları kapsamında; kanunlarda açıkça öngörülmesi, bir sözleşmenin kurulması veya ifasıyla doğrudan doğruya ilgili olması, veri sorumlusunun hukuki yükümlülüğünü yerine getirebilmesi için zorunlu olması, bir hakkın tesisi, kullanılması veya korunması için veri işlemenin zorunlu olması, ilgili kişinin temel hak ve özgürlüklerine zarar vermemek kaydıyla veri sorumlusunun meşru menfaatleri için veri işlenmesinin zorunlu olması gibi hukuki sebeplere dayanılarak işlenebilecektir.
+
+İşleme faaliyetinin KVKK kapsamında açık rıza gerektirdiği durumlarda, açık rızanız ayrıca ve aydınlatma işleminden ayrı olarak alınacaktır.
+
+## 7. Konum Verilerinin İşlenmesi
+
+Platformdaki "Konumumu Kullan" özelliğini kullanmanız halinde tarayıcınız tarafından sağlanan GPS konumu, yalnızca size en yakın şehrin belirlenmesi amacıyla kullanılmaktadır. Bu konum bilgisi kalıcı olarak kaydedilmemektedir.
+
+## 8. Çerezler
+
+İşinn tarafından mevcut uygulamada pazarlama veya takip amacıyla kullanılan çerezler bulunmamaktadır. Platformda yalnızca oturumun devamlılığının sağlanması amacıyla teknik olarak zorunlu bir oturum belirteci (session token) tarayıcınızda tutulmaktadır.
+
+## 9. Kişisel Verilerin Saklanması
+
+Kişisel verileriniz, işleme amaçlarının gerektirdiği süre boyunca ve ilgili mevzuatta öngörülen saklama sürelerine uygun olarak muhafaza edilir. Hesabınızın silinmesi halinde profil, vitrin ve belgeleriniz kaldırılır. Bununla birlikte, mevzuat uyarınca saklanması zorunlu olan kayıtlar, ilgili mevzuatta öngörülen süre boyunca muhafaza edilebilir.
+
+## 10. KVKK Kapsamındaki Haklarınız
+
+KVKK'nın 11. maddesi uyarınca; kişisel verilerinizin işlenip işlenmediğini öğrenme, işlenmişse buna ilişkin bilgi talep etme, işlenme amacını ve amacına uygun kullanılıp kullanılmadığını öğrenme, yurt içinde veya yurt dışında aktarıldığı üçüncü kişileri bilme, eksik veya yanlış işlenmiş olması hâlinde düzeltilmesini isteme, KVKK'da öngörülen şartlar çerçevesinde silinmesini veya yok edilmesini isteme, yapılan işlemlerin kişisel verilerin aktarıldığı üçüncü kişilere bildirilmesini isteme, münhasıran otomatik sistemler vasıtasıyla analiz edilmesi suretiyle aleyhinize bir sonuç doğmasına itiraz etme ve kanuna aykırı işlenmesi nedeniyle zarara uğramanız hâlinde zararın giderilmesini talep etme haklarına sahipsiniz.
+
+## 11. Başvuru Yöntemi
+
+KVKK kapsamındaki haklarınızı kullanmak ve kişisel verilerinizle ilgili taleplerinizi iletmek için **esra.gunes@codegtechnology.com** adresine başvurabilirsiniz. Hesabınızın silinmesini istemeniz hâlinde de aynı iletişim adresi üzerinden talebinizi iletebilirsiniz. Başvurularınız, KVKK ve ilgili mevzuatta öngörülen usul ve esaslar ile yasal saklama zorunluluğu göz önünde bulundurularak değerlendirilir.
+
+## 12. Yürürlük
+
+İşbu Aydınlatma Metni, kişisel verilerinizin işlenmesine ilişkin olarak KVKK'nın 10. maddesi kapsamında aydınlatma yükümlülüğünün yerine getirilmesi amacıyla hazırlanmıştır.
+
+Son Güncelleme Tarihi: 09.09.2026
