@@ -5401,8 +5401,14 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
     return () => { cancelled = true; };
   }, [activeId, active?.demo, currentUserId]);
 
+  // Kullanıcı geri bildirimi: "sahte aldım demesin" — biri hizmeti hiç
+  // almadan, sadece değerlendirme yazabilmek için "Hizmeti Aldım"a basabilir.
+  // Engelleyemiyoruz (rıza beyanı, teknik olarak doğrulanamaz) ama en azından
+  // bilinçli bir onay adımı koyuyoruz — yanlış beyanın ciddiyetini hatırlatan
+  // bir uyarı, tek tıkla geçilmiyor.
   const markDelivered = async () => {
     if (!activeId || !currentUserId || activeJob?.clientId !== currentUserId) return;
+    if (!window.confirm("Hizmeti gerçekten aldığını onaylıyor musun? Bu bilgi değerlendirme hakkı doğurur — yanlış beyan (hizmeti almadan onaylamak) platform kurallarına aykırıdır ve hesabının kısıtlanmasına yol açabilir.")) return;
     setDeliveredError("");
     setMarkingDelivered(true);
     const { error } = await supabase.from("jobs").update({ state: "delivered" }).eq("id", activeId).eq("client_id", currentUserId);
@@ -5419,6 +5425,7 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
   // (bkz. supabase/provider_delivery_confirmation.sql).
   const markProviderDelivered = async () => {
     if (!activeId || !currentUserId || activeJob?.providerId !== currentUserId) return;
+    if (!window.confirm("Hizmeti gerçekten verdiğini onaylıyor musun? Yanlış beyan platform kurallarına aykırıdır ve hesabının kısıtlanmasına yol açabilir.")) return;
     setDeliveredError("");
     setMarkingDelivered(true);
     const { error } = await supabase.from("jobs").update({ state: "delivered", provider_delivered_at: new Date().toISOString() }).eq("id", activeId);
@@ -5659,7 +5666,13 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
           </div>
         )}
 
-        {!active.demo && activeJob && (
+        {/* Kullanıcı geri bildirimi: "İletişime Geç"e basar basmaz, daha tek
+            mesaj bile atılmadan "Hizmeti aldıysan onayla" banner'ı hemen
+            görünüyordu — anlamsız ve kafa karıştırıcıydı. Artık en azından
+            karşı taraf gerçekten bir kez yanıt verene kadar (activeMessages
+            içinde "them" yoksa) bu isteği hiç göstermiyoruz; zaten "delivered"
+            durumuna zaten geçmiş bir iş için bu şart aranmaz. */}
+        {!active.demo && activeJob && (activeJob.state === "delivered" || activeMessages.some((m) => m.sender === "them")) && (
           activeJob.state === "delivered" ? (
             <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-xs mb-3 shrink-0" style={{ background: "rgba(63,125,92,0.1)", color: "#3F7D5C" }}>
               <span className="flex items-center gap-2">
