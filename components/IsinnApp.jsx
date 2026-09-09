@@ -3665,7 +3665,7 @@ function MapView({ onBack, onSelectProvider, onSelectJob, realListings, realJobs
       </div>
 
       <div className="flex items-center gap-1.5 mb-4">
-        {[["all", "Tümü"], ["vitrin", "Vitrinler"], ["job", "İş İlanları"]].map(([key, label]) => (
+        {[["all", "Tümü"], ["vitrin", "Hizmet Sağlayanlar"], ["job", "İş İlanları"]].map(([key, label]) => (
           <button
             key={key}
             onClick={() => setPinType(key)}
