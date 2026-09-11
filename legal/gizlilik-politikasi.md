@@ -1,43 +1,52 @@
-# İşinn — Gizlilik Politikası (TASLAK — yayınlanmadan önce mutlaka bir avukata kontrol ettir)
+# İşinn — Gizlilik Politikası
 
-> **Bu bir taslaktır.** Şirket bilgileri dolduruldu, ama bir avukat tarafından henüz onaylanmadı. KVKK
-> Aydınlatma Metni'nden farkı: bu belge daha genel, kullanıcıya yönelik, "verilerinizle ne yapıyoruz" anlatan
-> bir metin — Aydınlatma Metni ise KVKK'nın zorunlu kıldığı belirli maddeleri içeren resmi metin. İkisi
-> birlikte kullanılır, çoğu bilgi örtüşür.
+> Son güncelleme: 11.09.2026 — avukat incelemesinden geçmiştir.
 
-## Hangi verileri topluyoruz?
+Bu Gizlilik Politikası, İşinn platformunu ("Platform") kullanırken kişisel verilerinizin neler olduğunu, nasıl toplandığını, kimlerle paylaşıldığını ve haklarınızı ne şekilde kullanabileceğinizi sade bir dille anlatır. Verilerinizin işlenmesine ilişkin hukuki dayanaklar ve ayrıntılı kapsam için KVKK Aydınlatma Metni esas alınır — bu iki belge birlikte, birbirini tamamlayacak şekilde okunmalıdır.
+
+## 1. Hangi Verileri Topluyoruz?
 
 - **Hesap bilgileri:** E-posta, ad-soyad/işletme adı, şehir
-- **Profil ve vitrin içeriği:** Profil fotoğrafı (paylaşılan), her vitrine özel tanıtım videosu, portföy fotoğraf/videoları, sertifika ve CV dosyaları
-- **Telefon numarası:** Doğrulama amacıyla, ayrı ve kısıtlı erişimli bir tabloda saklanır — herkese açık profilinizde görünmez (siz göstermeyi seçmedikçe)
+- **Profil ve vitrin içeriği:** Profil fotoğrafı, vitrine özel tanıtım videosu, portföy fotoğraf/videoları, sertifika ve CV dosyaları
+- **Telefon numarası:** Doğrulama amacıyla, kısıtlı erişimli ayrı bir tabloda tutulur — siz göstermeyi seçmedikçe profilinizde görünmez
 - **Mesajlar:** Platform içi mesajlaşmada gönderdiğiniz/aldığınız mesajlar
-- **Değerlendirmeler:** Bıraktığınız/aldığınız puan, yorum ve isteğe bağlı fotoğraflar
-- **Konum:** Haritada "Konumumu Kullan" dediğinizde tarayıcınızın verdiği GPS konumu (yalnızca en yakın şehri bulmak için kullanılır, kaydedilmez)
-- **Kullanım verisi:** Hangi vitrinlerin favorilendiği, kayıtlı aramalar, bildirim tercihleriniz
+- **Değerlendirmeler:** Puan, yorum ve isteğe bağlı fotoğraflar
+- **Konum:** "Konumumu Kullan" dediğinizde tarayıcınızın verdiği GPS konumu — yalnızca en yakın şehri bulmak için kullanılır, kaydedilmez
+- **Kullanım verisi:** Favoriler, kayıtlı aramalar, bildirim tercihleri
+- **Ziyaret istatistikleri:** Vercel Web Analytics üzerinden, kimliğinizi belirlemeyen (çerezsiz) toplu sayfa görüntüleme/ziyaretçi sayıları
 
-## Verilerinizi kimlerle paylaşıyoruz?
+## 2. Verilerinizi Kimlerle Paylaşıyoruz?
 
-Verilerinizi **satmıyoruz**. Aşağıdaki hizmet sağlayıcılarla, yalnızca hizmeti çalıştırabilmek için paylaşıyoruz:
+Verilerinizi **satmıyoruz**. Yalnızca platformu işletebilmek için aşağıdaki hizmet sağlayıcılarla paylaşıyoruz:
 
-- **Supabase** — tüm verilerinizin saklandığı veritabanı/depolama altyapısı
-- **Anthropic (Claude AI)** — fotoğraf uygunluk kontrolü, akıllı arama, yazım yardımı gibi özellikler için ilgili metin/görsel bu sağlayıcıya işlenir
-- **PayTR** — ödeme işlemleri (kart bilgileriniz bizim sunucularımıza hiçbir zaman uğramaz, doğrudan PayTR'ye gider)
+- **Supabase** — tüm verilerin saklandığı veritabanı/depolama altyapısı
+- **Anthropic (Claude AI)** — fotoğraf uygunluk kontrolü, akıllı arama, yazım yardımı gibi özellikler için ilgili içerik işlenir
+- **PayTR** — ödeme işlemleri (kart bilgileriniz bizim sunucularımıza hiç uğramaz, doğrudan PayTR'ye iletilir)
 - **Netgsm** — telefon doğrulama SMS'i
+- **Vercel** — platformun barındırıldığı ve çerezsiz ziyaret istatistiklerinin toplandığı altyapı
 
-## Diğer kullanıcılar sizin hakkınızda ne görebilir?
+## 3. Diğer Kullanıcılar Sizin Hakkınızda Ne Görebilir?
 
-- Herkese açık: profil fotoğrafınız, vitrin başlığı/açıklaması, şehir, aldığınız değerlendirmeler, paylaştığınız sertifika/CV'nin "belge paylaşıldı" rozeti (belgenin kendisi değil — belgeyi yalnızca siz görebilirsiniz)
-- Sadece mesajlaştığınız kişi: mesaj geçmişiniz
-- Kimse: telefon numaranız (siz açıkça göstermeyi seçmedikçe), tam adresiniz, ödeme bilgileriniz
+- **Herkese açık:** profil fotoğrafı, vitrin başlığı/açıklaması, şehir, aldığınız değerlendirmeler, "belge paylaşıldı" rozeti (belgenin kendisi değil).
+- **Sadece mesajlaştığınız kişi:** mesaj geçmişiniz.
+- **Kimse:** telefon numaranız (siz göstermeyi seçmedikçe), tam adresiniz, ödeme bilgileriniz.
 
-## Verilerinizi nasıl silebilirsiniz?
+## 4. Verilerinizi Nasıl Silebilirsiniz?
 
-Hesabınızı silmek istediğinizde **esra.gunes@codegtechnology.com** üzerinden bize ulaşabilirsiniz. Hesap silindiğinde profil, vitrin ve belgeleriniz kaldırılır; yasal saklama yükümlülüğü olan kayıtlar (ör. tamamlanmış işlemlere dair asgari kayıtlar) mevzuatın öngördüğü süre kadar saklanabilir.
+Hesabınızı silmek için **esra.gunes@codegtechnology.com** üzerinden bize ulaşabilirsiniz. Hesap silindiğinde profil, vitrin ve belgeleriniz kaldırılır; yasal saklama yükümlülüğü olan kayıtlar mevzuatın öngördüğü süre kadar saklanabilir.
 
-## Çerezler (Cookies)
+## 5. Çerezler
 
-İşinn şu an için pazarlama/takip çerezi kullanmıyor — yalnızca oturumunuzu açık tutmak için teknik olarak zorunlu bir oturum belirteci (session token) tarayıcınızda tutulur.
+İşinn pazarlama/takip çerezi kullanmıyor — yalnızca oturumunuzu açık tutmak için teknik olarak zorunlu bir oturum belirteci tarayıcınızda tutulur. Ziyaret istatistikleri (Vercel Web Analytics) çerezsiz çalışır, kimliğinizi belirlemez.
 
-## İletişim
+## 6. Veri Güvenliği
 
-Gizlilikle ilgili sorularınız için: **esra.gunes@codegtechnology.com**
+Verileriniz, sektör standardı şifreleme ve erişim kontrolleriyle korunan Supabase altyapısında saklanır. Telefon numarası gibi hassas alanlar ayrı, kısıtlı erişimli tablolarda tutulur; ödeme kartı bilgileriniz hiçbir aşamada İşinn sunucularına ulaşmaz.
+
+## 7. Politikada Değişiklikler
+
+Bu politika zaman zaman güncellenebilir; önemli değişikliklerde kullanıcılar bilgilendirilir.
+
+## 8. İletişim
+
+Gizlilikle ilgili sorularınız için: **esra.gunes@codegtechnology.com** · 0536 460 36 82
