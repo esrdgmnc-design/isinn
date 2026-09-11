@@ -26,6 +26,7 @@ export default function GizlilikPage() {
         <li style={li}><b>Konum:</b> "Konumumu Kullan" dediğinizde tarayıcınızın verdiği GPS konumu — yalnızca en yakın şehri bulmak için kullanılır, kaydedilmez</li>
         <li style={li}><b>Kullanım verisi:</b> Favoriler, kayıtlı aramalar, bildirim tercihleri</li>
         <li style={li}><b>Ziyaret istatistikleri:</b> Vercel Web Analytics üzerinden, kimliğinizi belirlemeyen (çerezsiz) toplu sayfa görüntüleme/ziyaretçi sayıları</li>
+        <li style={li}><b>Arama istatistikleri:</b> Platformda yazdığınız arama metni ve kaç sonuç döndüğü — kim aradığı bilgisi olmadan, yalnızca hangi hizmetlere talep olduğunu anlamak için</li>
       </ul>
 
       <h2 style={h2}>2. Verilerinizi Kimlerle Paylaşıyoruz?</h2>

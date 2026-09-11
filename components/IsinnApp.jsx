@@ -4320,6 +4320,21 @@ function SearchResultsView({ query, cityFilter, onBack, onSelectListing, realLis
   const results = literalResults.length > 0 ? literalResults : aiResults;
   const isAiBoosted = literalResults.length === 0 && aiResults.length > 0;
 
+  // Pazar açığı analizi için — hangi aramaların az/hiç sonuç döndürdüğünü
+  // görmek, hangi kategorilere talep var ama arz yok sorusuna gerçek veriyle
+  // cevap vermeyi sağlıyor (bkz. supabase/search_query_log.sql). Kişisel veri
+  // taşımıyor (kim aradı bilgisi yok) — sessiz, engellemeyen, tek seferlik
+  // (aynı sorgu için tekrar tekrar loglamıyoruz). AI genişletmesi bitene kadar
+  // bekliyor ki gerçek nihai sonuç sayısı loglansın.
+  const loggedSearchRef = useRef("");
+  useEffect(() => {
+    if (!query.trim() || aiExpanding) return;
+    const key = `${query}||${cityFilter}`;
+    if (loggedSearchRef.current === key) return;
+    loggedSearchRef.current = key;
+    supabase.from("search_queries").insert({ query: query.trim(), result_count: results.length }).then(() => {});
+  }, [query, cityFilter, aiExpanding, results.length]);
+
   return (
     <div className="max-w-6xl mx-auto px-5 py-8">
       <button onClick={onBack} className="flex items-center gap-1 text-sm mb-4" style={{ color: "#5C5744" }}>

@@ -14,6 +14,7 @@ Bu Gizlilik Politikası, İşinn platformunu ("Platform") kullanırken kişisel 
 - **Konum:** "Konumumu Kullan" dediğinizde tarayıcınızın verdiği GPS konumu — yalnızca en yakın şehri bulmak için kullanılır, kaydedilmez
 - **Kullanım verisi:** Favoriler, kayıtlı aramalar, bildirim tercihleri
 - **Ziyaret istatistikleri:** Vercel Web Analytics üzerinden, kimliğinizi belirlemeyen (çerezsiz) toplu sayfa görüntüleme/ziyaretçi sayıları
+- **Arama istatistikleri:** Platformda yazdığınız arama metni ve kaç sonuç döndüğü — kim aradığı bilgisi olmadan, yalnızca hangi hizmetlere talep olduğunu anlamak için
 
 ## 2. Verilerinizi Kimlerle Paylaşıyoruz?
 
