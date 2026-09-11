@@ -7875,6 +7875,11 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenAnalytics, onOp
   const sendPhoneCode = async () => {
     if (!phoneInput.trim()) { setPhoneError("Telefon numarası gir."); return; }
     setPhoneError("");
+    // Bir önceki denemede "yakında aktif olacak" uyarısı gösterildiyse hiç
+    // sıfırlanmıyordu — Netgsm sonradan gerçekten yapılandırılsa bile sayfa
+    // tam yenilenmeden tekrar denenince eski uyarı öylece ekranda kalıyordu
+    // (canlıda kullanıcı tarafından yakalandı, 2026-09-11).
+    setPhoneNotConfigured(false);
     setPhoneStage("sending");
     try {
       // Kod artık istemciye hiç gelmiyor — sunucu (/api/send-otp) kendi
