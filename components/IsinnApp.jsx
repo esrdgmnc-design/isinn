@@ -4536,8 +4536,12 @@ function PostJobView({ onBack, onSubmitted, onViewOffers, onMatchAI, userId, onJ
       // Güvenlik amaçlı ilan tavanı — plana göre (Standart 5, Pro 10) aktif
       // ilan sayısı (bkz. supabase/job_posting_cap.sql, aynı kural DB'de de
       // zorlanıyor). getVitrinCapInfo'daki plan-lookup deseniyle aynı.
+      // Aynı sızıntı burada da vardı: "İletişime Geç" ile açılan görüşme
+      // job'ları (service_id dolu) da sayılıyordu — yani biri sadece birkaç
+      // vitrine mesaj atarak, hiç ilan vermeden, kendi ilan hakkını sessizce
+      // tüketebiliyordu (bkz. fetchJobs'daki aynı düzeltme notu).
       const [{ count }, { data: subRow }] = await Promise.all([
-        supabase.from("jobs").select("id", { count: "exact", head: true }).eq("client_id", userId).eq("active", true),
+        supabase.from("jobs").select("id", { count: "exact", head: true }).eq("client_id", userId).eq("active", true).is("service_id", null),
         supabase.from("provider_subscriptions").select("subscription_plans(max_active_jobs)").eq("profile_id", userId).in("status", ["active", "trialing"]).maybeSingle(),
       ]);
       if (cancelled) return;
@@ -7804,11 +7808,16 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenAnalytics, onOp
 
   const loadMyJobs = async () => {
     if (!userId) return;
+    // Aynı düzeltme burada da gerekli — yoksa "İlanlarım" listesi, hiç
+    // yayınlamadığın, sadece bir vitrine mesaj attığın için oluşan
+    // açıklamasız "{vitrin} hakkında görüşme" satırlarıyla dolardı (bkz.
+    // fetchJobs'daki not).
     const { data } = await supabase
       .from("jobs")
       .select("id, title, description, city, budget_min, budget_max, is_remote, active, created_at, category_id, custom_category_label, categories(slug)")
       .eq("client_id", userId)
       .eq("active", true)
+      .is("service_id", null)
       .order("created_at", { ascending: false });
     setMyJobs(data || []);
   };
@@ -9208,7 +9217,8 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
   const [favoriteIds, setFavoriteIds] = useState(new Set()); // gerçek, kalıcı favoriler (favorites tablosu)
   const [trialBanner, setTrialBanner] = useState(null); // { status, planName, daysLeft } — provider_subscriptions'tan
   const [trialBannerDismissed, setTrialBannerDismissed] = useState(false);
-  const [filter, setFilter] = useState("local");
+  // Varsayılan "local" idi — kullanıcı gezinirken "Tümü" ile başlamak istedi (2026-09-11).
+  const [filter, setFilter] = useState("all");
   const [query, setQuery] = useState("");
   const [cityFilter, setCityFilter] = useState("");
   const [lastJob, setLastJob] = useState(null);
@@ -9423,10 +9433,20 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
   }, []);
 
   const fetchJobs = async () => {
+    // KRİTİK HATA (kullanıcı fark etti, canlıda doğrulandı): "İletişime Geç"
+    // her tıklandığında find_or_create_job RPC'si arka planda gerçek bir
+    // jobs satırı açıyor (mesajlaşmayı bir job'a bağlamak için), başlığı
+    // "{vitrin} hakkında görüşme" gibi. Bu satırların hepsi service_id
+    // taşıyor ve active=true — ama bu sorgu service_id'yi hiç dışlamıyordu,
+    // yani birinin sadece bir vitrine mesaj atması, o kişi adına, açıklamasız/
+    // bütçesiz sahte bir "İlan Ver" gönderisi gibi HERKESE AÇIK panoda
+    // görünüyordu. Gerçek ilanlar (PostJobView) hiçbir zaman service_id
+    // set etmez — bu yüzden service_id IS NULL güvenilir bir ayrım.
     const { data, error } = await supabase
       .from("jobs")
       .select("*, profiles(*), categories(*)")
       .eq("active", true)
+      .is("service_id", null)
       .order("bumped_at", { ascending: false });
     if (!error && data) {
       setRealJobs(data.map(mapJobRowToPosting));
