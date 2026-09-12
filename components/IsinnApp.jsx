@@ -14,7 +14,7 @@ import {
   LifeBuoy, Bot, Loader2, AlertCircle, Inbox,
   UploadCloud, FileText, Trash2, Pencil, Phone, Lock, Bell,
   PaintBucket, AirVent, PawPrint, Music2, Calculator, Languages,
-  PenTool, Video, Mic, ClipboardList
+  PenTool, Video, Mic, ClipboardList, TrendingUp, BarChart3, Wallet, CalendarClock
 } from "lucide-react";
 
 // ---------------------------------------------------------------
@@ -6869,49 +6869,108 @@ ${convoText}`;
   );
 }
 
-function AdminAnalyticsView({ onBack }) {
-  const [status, setStatus] = useState("loading"); // loading | done | error
-  const [insights, setInsights] = useState([]);
+// Gün farkını "bugün / yarın / N gün sonra" gibi Türkçe okunur hale getirir.
+// formatRelativeTr'nin tam tersi — o geçmişe bakıyor ("X önce"), bu ileriye
+// (abonelik yenileme tarihleri gibi gelecekteki bir an için).
+function formatDaysUntilTr(iso) {
+  const diffMs = new Date(iso).getTime() - Date.now();
+  const diffD = Math.round(diffMs / (24 * 60 * 60 * 1000));
+  if (diffD <= 0) return "bugün";
+  if (diffD === 1) return "yarın";
+  return `${diffD} gün sonra`;
+}
+
+// Gerçek Yönetim Paneli — eskiden burada sabit demo kategori verisine AI
+// yorumu yaptıran "Pazar Analizi" vardı (bkz. ProfileView'daki kaldırılış
+// notu). Bunun yerine profiles/services/provider_subscriptions'tan gerçek
+// sayılar çekip gösteriyoruz: kaç kullanıcı, kaç sağlayıcı, büyüme, kimin
+// aboneliği ne zaman bitiyor. Gelir kartı bilinçli olarak "₺0" gösteriyor —
+// PayTR canlı ödeme entegrasyonu henüz açılmadığı için platformda gerçek
+// bir para akışı yok; sahte bir sayı göstermek yanıltıcı olurdu.
+function AdminDashboardView({ onBack }) {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [profiles, setProfiles] = useState([]);
+  const [services, setServices] = useState([]);
+  const [subs, setSubs] = useState([]);
+  const [rangeMode, setRangeMode] = useState("day"); // day | week | month
 
   useEffect(() => {
     let cancelled = false;
-    async function run() {
+    async function load() {
+      setLoading(true);
+      setError(false);
       try {
-        const categoryCounts = {};
-        LISTINGS.forEach((l) => { categoryCounts[l.category] = (categoryCounts[l.category] || 0) + 1; });
-        const jobCategoryCounts = {};
-        JOB_POSTINGS.forEach((j) => { jobCategoryCounts[j.category] = (jobCategoryCounts[j.category] || 0) + 1; });
-        const summary = Object.entries(categoryCounts)
-          .map(([cat, count]) => {
-            const name = CATEGORIES.find((c) => c.id === cat)?.name || cat;
-            const jobCount = jobCategoryCounts[cat] || 0;
-            return `${name}: ${count} sağlayıcı ilanı, ${jobCount} aktif iş talebi`;
-          })
-          .join("\n");
-        const prompt = `Aşağıda bir hizmet pazaryeri uygulamasının kategori bazlı verisi var. Bu veriye bakarak üst yönetime sunulacak, ülke/sektör bazında mesleki yönelim ve talep trendi hakkında 4-5 kısa içgörü (insight) üret. Türkçe, madde madde, iş dünyasına uygun bir dille yaz. SADECE şu JSON formatında yanıt ver: {"insights": ["içgörü 1", "içgörü 2", ...]}
-
-VERİ:
-${summary}`;
-        const response = await fetch("/api/claude", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 700, messages: [{ role: "user", content: prompt }] }),
-        });
-        const data = await response.json();
-        const text = (data.content || []).map((b) => b.text || "").join("\n");
-        const clean = text.replace(/```json|```/g, "").trim();
-        const parsed = JSON.parse(clean);
+        const [profilesRes, servicesRes, subsRes, plansRes] = await Promise.all([
+          supabase.from("profiles").select("id, user_type, created_at, full_name, business_name"),
+          supabase.from("services").select("provider_id, created_at"),
+          supabase.from("provider_subscriptions").select("id, profile_id, plan_id, status, billing_cycle, current_period_end"),
+          supabase.from("subscription_plans").select("id, slug, name"),
+        ]);
         if (cancelled) return;
-        setInsights(parsed.insights || []);
-        setStatus("done");
-      } catch (err) {
-        if (cancelled) return;
-        setStatus("error");
+        const profilesData = profilesRes.data || [];
+        const profilesById = {};
+        profilesData.forEach((p) => { profilesById[p.id] = p; });
+        const plansById = {};
+        (plansRes.data || []).forEach((p) => { plansById[p.id] = p; });
+        const enrichedSubs = (subsRes.data || []).map((s) => ({
+          ...s,
+          planName: plansById[s.plan_id]?.name || plansById[s.plan_id]?.slug || "Bilinmiyor",
+          userName: profilesById[s.profile_id]?.business_name || profilesById[s.profile_id]?.full_name || "Bilinmiyor",
+        }));
+        setProfiles(profilesData);
+        setServices(servicesRes.data || []);
+        setSubs(enrichedSubs);
+      } catch (e) {
+        if (!cancelled) setError(true);
       }
+      if (!cancelled) setLoading(false);
     }
-    run();
+    load();
     return () => { cancelled = true; };
   }, []);
+
+  const now = Date.now();
+  const weekAgo = now - 7 * 24 * 60 * 60 * 1000;
+  const totalUsers = profiles.length;
+  const totalProviders = new Set(services.map((s) => s.provider_id)).size;
+  const newThisWeek = profiles.filter((p) => new Date(p.created_at).getTime() >= weekAgo).length;
+  const activeSubs = subs.filter((s) => s.status === "active").length;
+
+  const soon = now + 7 * 24 * 60 * 60 * 1000;
+  const renewalsSoon = subs
+    .filter((s) => s.status === "active" && s.current_period_end && new Date(s.current_period_end).getTime() <= soon)
+    .sort((a, b) => new Date(a.current_period_end) - new Date(b.current_period_end));
+
+  // Büyüme grafiği: profilleri seçili aralığa göre kovala (gün/hafta/ay).
+  const buckets = {};
+  profiles.forEach((p) => {
+    const d = new Date(p.created_at);
+    let key;
+    if (rangeMode === "day") {
+      key = d.toISOString().slice(0, 10);
+    } else if (rangeMode === "week") {
+      const dow = (d.getUTCDay() + 6) % 7; // Pazartesi=0
+      const monday = new Date(d);
+      monday.setUTCDate(d.getUTCDate() - dow);
+      key = monday.toISOString().slice(0, 10);
+    } else {
+      key = d.toISOString().slice(0, 7);
+    }
+    buckets[key] = (buckets[key] || 0) + 1;
+  });
+  const bucketEntries = Object.entries(buckets).sort(([a], [b]) => a.localeCompare(b));
+  const maxBucket = Math.max(1, ...bucketEntries.map(([, c]) => c));
+
+  const StatCard = ({ icon, label, value, accent }) => (
+    <div className="rounded-2xl border p-4" style={{ borderColor: "#F0F0F0", background: "#FFFFFF" }}>
+      <div className="w-8 h-8 rounded-full flex items-center justify-center mb-3" style={{ background: `${accent}1F` }}>
+        {icon}
+      </div>
+      <p className="text-2xl font-black" style={{ color: "#0F1115" }}>{value}</p>
+      <p className="text-xs mt-0.5" style={{ color: "#6B7280" }}>{label}</p>
+    </div>
+  );
 
   return (
     <div className="max-w-2xl mx-auto px-5 py-8">
@@ -6919,36 +6978,97 @@ ${summary}`;
         <ChevronLeft size={16} /> Geri
       </button>
       <div className="flex items-center gap-2 mb-1">
-        <Sparkles size={20} style={{ color: "#2563EB" }} />
-        <h1 className="font-sans text-2xl font-black" style={{ color: "#0F1115" }}>Pazar Analizi</h1>
+        <BarChart3 size={20} style={{ color: "#2563EB" }} />
+        <h1 className="font-sans text-2xl font-black" style={{ color: "#0F1115" }}>Yönetim Paneli</h1>
       </div>
-      <p className="text-sm mb-6" style={{ color: "#6B7280" }}>Platform verisine göre AI tarafından üretilen sektör/talep içgörüleri</p>
+      <p className="text-sm mb-6" style={{ color: "#6B7280" }}>Gerçek platform verisi — kullanıcı, sağlayıcı ve abonelik durumu</p>
 
-      {status === "loading" && (
-        <div className="rounded-2xl border p-8 text-center" style={{ borderColor: "#F0F0F0", background: "#FAFAFA" }}>
-          <Loader2 size={20} className="animate-spin mx-auto mb-2" style={{ color: "#2563EB" }} />
-          <p className="text-sm" style={{ color: "#6B7280" }}>Kategori verileri analiz ediliyor...</p>
-        </div>
-      )}
-      {status === "error" && (
+      {loading ? (
+        <div className="flex items-center justify-center py-12"><Loader2 size={20} className="animate-spin" style={{ color: "#9CA3AF" }} /></div>
+      ) : error ? (
         <div className="rounded-2xl border p-6 text-center" style={{ borderColor: "#F0F0F0", background: "#FAFAFA" }}>
-          <p className="text-sm" style={{ color: "#EF4444" }}>Analiz oluşturulamadı, tekrar dener misin?</p>
+          <p className="text-sm" style={{ color: "#EF4444" }}>Veriler yüklenemedi, tekrar dener misin?</p>
         </div>
-      )}
-      {status === "done" && (
-        <div className="space-y-3">
-          {insights.map((insight, i) => (
-            <div key={i} className="rounded-2xl border p-4 flex items-start gap-3" style={{ borderColor: "#F0F0F0", background: "#FFFFFF" }}>
-              <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold text-white" style={{ background: "linear-gradient(135deg, #2563EB, #1D4ED8)" }}>
-                {i + 1}
-              </div>
-              <p className="text-sm leading-relaxed" style={{ color: "#1B2B24" }}>{insight}</p>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <StatCard icon={<Users size={15} style={{ color: "#2563EB" }} />} label="Toplam kayıtlı kullanıcı" value={totalUsers} accent="#2563EB" />
+            <StatCard icon={<Briefcase size={15} style={{ color: "#16321F" }} />} label="Aktif sağlayıcı (vitrin açan)" value={totalProviders} accent="#16321F" />
+            <StatCard icon={<TrendingUp size={15} style={{ color: "#34D399" }} />} label="Bu hafta yeni kayıt" value={newThisWeek} accent="#34D399" />
+            <StatCard icon={<Award size={15} style={{ color: "#F59E0B" }} />} label="Aktif ücretli abonelik" value={activeSubs} accent="#F59E0B" />
+          </div>
+
+          <div className="rounded-2xl border p-4 mb-4" style={{ borderColor: "#F0F0F0", background: "#FAFAFA" }}>
+            <div className="flex items-center gap-2">
+              <Wallet size={15} style={{ color: "#9CA3AF" }} />
+              <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>Gelir</p>
             </div>
-          ))}
-          <p className="text-[11px] mt-3" style={{ color: "#9CA3AF" }}>
-            Not: Bu analiz şu anki örnek/demo veriye dayanıyor. Platform büyüdükçe içgörüler gerçek kullanıcı verisiyle çok daha güvenilir hale gelecek.
-          </p>
-        </div>
+            <p className="text-2xl font-black mt-2" style={{ color: "#0F1115" }}>₺0</p>
+            <p className="text-xs mt-1" style={{ color: "#9CA3AF" }}>PayTR canlı ödeme entegrasyonu henüz açılmadı — gerçek gelir akmaya başlayınca burada görünecek.</p>
+          </div>
+
+          <div className="rounded-2xl border p-4 mb-4" style={{ borderColor: "#F0F0F0", background: "#FFFFFF" }}>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>Kayıt büyümesi</p>
+              <div className="flex items-center gap-1">
+                {[["day", "Günlük"], ["week", "Haftalık"], ["month", "Aylık"]].map(([key, label]) => (
+                  <button
+                    key={key}
+                    onClick={() => setRangeMode(key)}
+                    className="text-[11px] font-bold px-2.5 py-1 rounded-full border"
+                    style={rangeMode === key
+                      ? { background: "#1B2B24", color: "#EFE8D8", borderColor: "#1B2B24" }
+                      : { borderColor: "#D9D0BA", color: "#5C5744" }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {bucketEntries.length === 0 ? (
+              <p className="text-sm text-center py-6" style={{ color: "#9CA3AF" }}>Henüz kayıt yok.</p>
+            ) : (
+              <div className="flex items-end gap-1.5" style={{ height: 100 }}>
+                {bucketEntries.map(([key, count]) => (
+                  <div key={key} className="flex-1 flex flex-col items-center gap-1" title={`${key}: ${count}`}>
+                    <div
+                      className="w-full rounded-t-md"
+                      style={{ height: `${Math.max(6, (count / maxBucket) * 80)}px`, background: "linear-gradient(180deg, #60A5FA, #2563EB)" }}
+                    />
+                    <span className="text-[9px]" style={{ color: "#9CA3AF" }}>{count}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <p className="text-[11px] mt-3" style={{ color: "#9CA3AF" }}>
+              Gerçek kayıt verisi. Platform büyüdükçe grafik daha anlamlı olacak.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border p-4" style={{ borderColor: "#F0F0F0", background: "#FFFFFF" }}>
+            <div className="flex items-center gap-2 mb-3">
+              <CalendarClock size={15} style={{ color: "#9C4A3C" }} />
+              <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>Yenilemesi yaklaşanlar (7 gün içinde)</p>
+            </div>
+            {renewalsSoon.length === 0 ? (
+              <p className="text-sm text-center py-4" style={{ color: "#9CA3AF" }}>Önümüzdeki 7 gün içinde yenilenecek abonelik yok.</p>
+            ) : (
+              <div className="space-y-2">
+                {renewalsSoon.map((s) => (
+                  <div key={s.id} className="flex items-center justify-between rounded-xl px-3 py-2.5" style={{ background: "#FAFAFA" }}>
+                    <div>
+                      <p className="text-sm font-bold" style={{ color: "#0F1115" }}>{s.userName}</p>
+                      <p className="text-[11px]" style={{ color: "#8A8368" }}>{s.planName} · {s.billing_cycle === "yearly" ? "yıllık" : "aylık"}</p>
+                    </div>
+                    <span className="text-[11px] font-bold px-2 py-1 rounded-full" style={{ background: "rgba(156,74,60,0.12)", color: "#9C4A3C" }}>
+                      {formatDaysUntilTr(s.current_period_end)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
       )}
     </div>
   );
@@ -7686,7 +7806,7 @@ function PricingView({ onBack, onJoined, userId }) {
   );
 }
 
-function ProfileView({ userId, onBack, onOpenAdminReports, onOpenAnalytics, onOpenModeration, onOpenUserReports, onOpenListingReports, onOpenContentFlags, isAdmin, pendingMediaApprovals, onApproveMedia, onRejectMedia, onListingsChanged, onJobsChanged, onEditListing, onOpenVitrinMedia, onEditJob }) {
+function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOpenModeration, onOpenUserReports, onOpenListingReports, onOpenContentFlags, isAdmin, pendingMediaApprovals, onApproveMedia, onRejectMedia, onListingsChanged, onJobsChanged, onEditListing, onOpenVitrinMedia, onEditJob }) {
   // Video tanıtım/portföy/sertifika/CV artık vitrine özel — bkz. VitrinMediaView
   // (supabase/vitrin_media.sql). Burada sadece paylaşılan profil fotoğrafı kalıyor
   // ("aynı kişinin gerçek yüzü her vitrinde aynı görünsün" — kullanıcının kararı).
@@ -8507,6 +8627,23 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenAnalytics, onOp
 
       {isAdmin && (
         <button
+          onClick={onOpenDashboard}
+          className="w-full rounded-xl border p-5 mb-4 text-left flex items-center gap-3 hover:shadow-sm transition-shadow"
+          style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}
+        >
+          <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: "rgba(37,99,235,0.12)" }}>
+            <BarChart3 size={16} style={{ color: "#2563EB" }} />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>Yönetim Paneli</p>
+            <p className="text-xs" style={{ color: "#8A8368" }}>Kullanıcı, sağlayıcı ve abonelik sayıları</p>
+          </div>
+          <ChevronRight size={16} style={{ color: "#8A8368" }} />
+        </button>
+      )}
+
+      {isAdmin && (
+        <button
           onClick={onOpenUserReports}
           className="w-full rounded-xl border p-5 mb-4 text-left flex items-center gap-3 hover:shadow-sm transition-shadow"
           style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}
@@ -8556,16 +8693,17 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenAnalytics, onOp
         </button>
       )}
 
-      {/* KRİTİK: "Moderasyon Kuyruğu" ve "Pazar Analizi" (ikisi de "(Yönetim)"
-          etiketli) burada isAdmin kontrolü OLMADAN herkese görünüyordu —
-          gerçek kullanıcı bunu gördüğünde haklı olarak "ben yönetici
-          paneline mi bakıyorum" diye endişelendi. İkisi de gerçek veri
-          göstermiyordu (staffModerationQueue tamamen session-local/boş,
-          AdminAnalyticsView sabit demo veri kullanıyor) — yani bir veri
-          sızıntısı değildi, ama kafa karıştırıcı bir prototip kalıntısıydı.
-          Altındaki "prototip amaçlı örnek profil ekranı" notuyla birlikte
-          tamamen kaldırıldı — gerçek admin (isAdmin) zaten yukarıdaki asıl
-          admin ekranlarına (Destek/Kullanıcı/İlan/İçerik) erişebiliyor. */}
+      {/* KRİTİK: "Moderasyon Kuyruğu" ve eski "Pazar Analizi" (ikisi de
+          "(Yönetim)" etiketli) burada isAdmin kontrolü OLMADAN herkese
+          görünüyordu — gerçek kullanıcı bunu gördüğünde haklı olarak "ben
+          yönetici paneline mi bakıyorum" diye endişelendi. İkisi de gerçek
+          veri göstermiyordu (staffModerationQueue tamamen session-local/boş,
+          eski Pazar Analizi sabit demo kategori verisine AI yorumu
+          yaptırıyordu) — yani bir veri sızıntısı değildi, ama kafa karıştırıcı
+          bir prototip kalıntısıydı, ikisi de kaldırıldı. Pazar Analizi'nin
+          yerini artık yukarıdaki gerçek "Yönetim Paneli" (AdminDashboardView,
+          isAdmin korumalı) aldı — gerçek kullanıcı/sağlayıcı/abonelik
+          sayılarını gösteriyor. */}
     </div>
   );
 }
@@ -9159,7 +9297,7 @@ function VitrinMediaView({ userId, service, onBack, onListingsChanged }) {
 // listeyle sınırlı, diğerleri yenilenince ana sayfaya düşer.
 const RESTORABLE_VIEWS = new Set([
   "home", "profile", "createListing", "map", "post", "pricing", "messages",
-  "search", "nailart", "support", "adminReports", "adminModeration", "adminAnalytics", "favorites",
+  "search", "nailart", "support", "adminReports", "adminModeration", "adminDashboard", "favorites",
 ]);
 
 function getInitialView() {
@@ -9784,7 +9922,7 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
           onEditJob={(j) => { setEditingJob(j); setView("post"); }}
           onBack={() => setView("home")}
           onOpenAdminReports={() => setView("adminReports")}
-          onOpenAnalytics={() => setView("adminAnalytics")}
+          onOpenDashboard={() => setView("adminDashboard")}
           onOpenModeration={() => setView("adminModeration")}
           onOpenUserReports={() => setView("adminUserReports")}
           onOpenListingReports={() => setView("adminListingReports")}
@@ -9835,7 +9973,7 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
           onReject={(id) => setStaffModerationQueue((prev) => prev.filter((q) => q.id !== id))}
         />
       )}
-      {view === "adminAnalytics" && <AdminAnalyticsView onBack={() => setView("home")} />}
+      {view === "adminDashboard" && isAdmin && <AdminDashboardView onBack={() => setView("home")} />}
 
       {view !== "support" && <DraggableSupportButton onClick={() => setView("support")} />}
     </div>
