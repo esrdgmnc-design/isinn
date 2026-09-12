@@ -6995,7 +6995,7 @@ function AdminDashboardView({ onBack }) {
             <StatCard icon={<Users size={15} style={{ color: "#2563EB" }} />} label="Toplam kayıtlı kullanıcı" value={totalUsers} accent="#2563EB" />
             <StatCard icon={<Briefcase size={15} style={{ color: "#16321F" }} />} label="Aktif sağlayıcı (vitrin açan)" value={totalProviders} accent="#16321F" />
             <StatCard icon={<TrendingUp size={15} style={{ color: "#34D399" }} />} label="Bu hafta yeni kayıt" value={newThisWeek} accent="#34D399" />
-            <StatCard icon={<Award size={15} style={{ color: "#F59E0B" }} />} label="Aktif ücretli abonelik" value={activeSubs} accent="#F59E0B" />
+            <StatCard icon={<Award size={15} style={{ color: "#F59E0B" }} />} label="Aktif Pro/Standart plan" value={activeSubs} accent="#F59E0B" />
           </div>
 
           <div className="rounded-2xl border p-4 mb-4" style={{ borderColor: "#F0F0F0", background: "#FAFAFA" }}>
