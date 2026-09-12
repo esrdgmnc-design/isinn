@@ -1946,16 +1946,27 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
               pb-1.5 (alt boşluk) verdik. */}
           <h1 className="font-sans text-5xl md:text-7xl font-black leading-[1.15] max-w-3xl tracking-tight" style={{ color: "#FFFFFF" }}>
             İhtiyacın olan şeyi<br />
-            <span className="inline-block relative">
-              <span
-                key={wordIndex}
-                className="inline-block pb-1.5 animate-[fadeSlide_0.4s_ease] bg-clip-text text-transparent"
-                style={{ backgroundImage: "linear-gradient(90deg, #2563EB, #60A5FA)" }}
-              >
-                {ROTATING_WORDS[wordIndex]}
-              </span>
-            </span>{" "}
-            anlat!
+            {/* Dönen kelimeler çok farklı uzunlukta ("çilingire" vs
+                "fizyoterapiste") — özellikle mobilde kısa kelimeyle tek
+                satıra sığan ikinci satır, uzun kelimede ikinci satıra taşıp
+                h1'in toplam yüksekliğini değiştiriyordu, bu da altındaki
+                her şeyi yukarı/aşağı kaydırıyordu (kullanıcı fark etti,
+                2026-09-12). İkinci satırı ayrı bir block'a alıp, en uzun
+                kelimenin 2 satıra sardığı en kötü durumu karşılayacak sabit
+                bir min-height veriyoruz — hangi kelime gelirse gelsin yükseklik
+                sabit kalıyor. */}
+            <span className="block min-h-[112px] md:min-h-[168px]">
+              <span className="inline-block relative">
+                <span
+                  key={wordIndex}
+                  className="inline-block pb-1.5 animate-[fadeSlide_0.4s_ease] bg-clip-text text-transparent"
+                  style={{ backgroundImage: "linear-gradient(90deg, #2563EB, #60A5FA)" }}
+                >
+                  {ROTATING_WORDS[wordIndex]}
+                </span>
+              </span>{" "}
+              anlat!
+            </span>
           </h1>
           <style>{`@keyframes fadeSlide { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }`}</style>
           <p className="mt-8 max-w-md text-base" style={{ color: "#B8BCC4" }}>
