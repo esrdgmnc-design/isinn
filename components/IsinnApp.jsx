@@ -6896,6 +6896,16 @@ function AdminDashboardView({ onBack }) {
   const [pageViews, setPageViews] = useState([]);
   const [rangeMode, setRangeMode] = useState("day"); // day | week | month
   const [selectedDetail, setSelectedDetail] = useState(null); // "users" | "providers" | "newThisWeek" | "subs" | null
+  const detailPanelRef = useRef(null);
+  // Detay paneli kart ızgarasının HEMEN ALTINDA açılıyor — tıklanan kartın
+  // kendi içinde değil. Ekranda görünmeyebilir (özellikle mobilde, ızgara
+  // altta kalmışsa) diye otomatik kaydırıyoruz, yoksa "tıkladım ama hiçbir
+  // şey olmadı" izlenimi veriyor (gerçekten de öyle bir geri bildirim aldık).
+  useEffect(() => {
+    if (selectedDetail && detailPanelRef.current) {
+      detailPanelRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [selectedDetail]);
 
   useEffect(() => {
     let cancelled = false;
@@ -7061,7 +7071,7 @@ function AdminDashboardView({ onBack }) {
           </p>
 
           {selectedDetail && (
-            <div className="rounded-2xl border p-4 mb-4" style={{ borderColor: "#F0F0F0", background: "#FFFFFF" }}>
+            <div ref={detailPanelRef} className="rounded-2xl border p-4 mb-4" style={{ borderColor: "#F0F0F0", background: "#FFFFFF" }}>
               <div className="flex items-center justify-between mb-3">
                 <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>{detailTitle}</p>
                 <button onClick={() => setSelectedDetail(null)} style={{ color: "#9CA3AF" }}><X size={16} /></button>
