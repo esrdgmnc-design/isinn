@@ -1805,7 +1805,7 @@ function Header({ onNav, onSearch, pendingCount, session, onNotificationClick })
 // kaldırıldı — sadece gerçek "İlan Ver" kayıtları (realJobs) gösteriliyor.
 const JOB_POSTINGS = [];
 
-const ROTATING_WORDS = ["çilingire", "temizlikçiye", "hemşireye", "bakıcıya", "tırnakçıya", "fizyoterapiste"];
+const ROTATING_WORDS = ["çilingire", "temizlikçiye", "hemşireye", "bakıcıya", "nailartiste", "fizyoterapiste"];
 
 const CATEGORY_TILE_COLORS = ["#2563EB", "#14B8A6", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899", "#3B82F6", "#F97316"];
 // Her rengin canlı-koyu çift ucu — rozet gradyanı için (bkz. CategoryTile).

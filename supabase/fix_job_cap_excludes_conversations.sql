@@ -1,11 +1,20 @@
--- İşinn — KRİTİK HATA (kullanıcı canlıda yakaladı, 2026-09-10): jobs tablosu
+-- İşinn — bu dosya artık job_posting_cap.sql'in TAMAMINI da içeriyor
+-- (2026-09-12'deki sistem taramasında bulundu: job_posting_cap.sql hiç
+-- çalıştırılmamış — subscription_plans.max_active_jobs kolonu ve
+-- trg_enforce_job_cap trigger'ı canlıda yoktu. Bu dosya sadece FONKSİYONU
+-- değiştiriyordu, kolonu eklemiyordu ve trigger'ı hiç oluşturmuyordu — yani
+-- "çalıştırdım" dense bile hem kolon eksikliğinden hata verip duracaktı hem
+-- de trigger hiçbir zaman var olmayacaktı. Artık tek dosya, baştan sona
+-- güvenle (tekrar) çalıştırılabilir.)
+--
+-- KRİTİK HATA (kullanıcı canlıda yakaladı, 2026-09-10): jobs tablosu
 -- iki tamamen farklı şey için kullanılıyor:
 --   1) Gerçek "İlan Ver" gönderileri (PostJobView) — service_id HER ZAMAN null.
 --   2) Bir vitrine "İletişime Geç" denince find_or_create_job'ın arka planda
 --      açtığı, mesajlaşmayı bağlayan görüşme kaydı — service_id HER ZAMAN dolu,
 --      başlığı "{vitrin} hakkında görüşme", açıklaması yok.
 --
--- enforce_job_cap() (job_posting_cap.sql) bu ikisini hiç ayırmıyordu:
+-- Eski enforce_job_cap() bu ikisini hiç ayırmıyordu:
 --   a) Aktif sayısını sayarken (2) türü satırları da sayıyordu — yani biri
 --      hiç ilan vermeden, sadece birkaç vitrine mesaj atarak kendi ilan
 --      hakkını (Standart 5 / Pro 20) sessizce tüketebiliyordu.
@@ -15,9 +24,14 @@
 --      vitrine mesaj bile atamaz hale geliyordu (bu asla amaçlanmamıştı).
 --
 -- Aynı sorunun component tarafındaki (fetchJobs, loadMyJobs, PostJobView'daki
--- ilan-tavanı ön kontrolü) karşılığı da components/IsinnApp.jsx'te ayrı
--- ayrı düzeltildi (service_id IS NULL filtresi eklendi) — bu dosya sunucu
--- tarafındaki asıl zorlamayı (trigger) aynı kurala getiriyor.
+-- ilan-tavanı ön kontrolü) karşılığı components/IsinnApp.jsx'te zaten
+-- düzeltildi (service_id IS NULL filtresi) — bu dosya sunucu tarafındaki
+-- asıl zorlamayı (kolon + trigger + fonksiyon, sıfırdan) kuruyor.
+
+alter table subscription_plans add column if not exists max_active_jobs integer;
+update subscription_plans set max_active_jobs = 5 where slug = 'standart';
+update subscription_plans set max_active_jobs = 20 where slug = 'pro';
+
 create or replace function enforce_job_cap()
 returns trigger as $$
 declare
@@ -59,3 +73,8 @@ begin
   return new;
 end;
 $$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists trg_enforce_job_cap on jobs;
+create trigger trg_enforce_job_cap
+before insert or update on jobs
+for each row execute function enforce_job_cap();
