@@ -2536,6 +2536,12 @@ function SiteFooter({ onNav }) {
             <p className="text-xs mt-3 leading-relaxed max-w-[220px]" style={{ color: "#7A7F8A" }}>
               İhtiyacın olan hizmeti bulduğun ya da kendi hizmetini sunduğun güvenilir yerel pazar yeri.
             </p>
+            {/* IYS/Netgsm başvurusunda marka doğrulaması için — sitede İşinn'in
+                hangi tüzel kişiliğe (CODE G LTD) ait olduğu hiçbir yerde açıkça
+                yazmıyordu (kullanıcının isteği, 2026-09-12). */}
+            <p className="text-xs mt-3 leading-relaxed max-w-[220px]" style={{ color: "#7A7F8A" }}>
+              İşinn, <b style={{ color: "#D1D5DB" }}>CODE G LTD</b> (Code G Teknoloji ve Ticaret Limited Şirketi) markasıdır.
+            </p>
           </div>
           <div>
             <p className="text-xs font-bold tracking-wide mb-3" style={{ color: "#FFFFFF" }}>Keşfet</p>
@@ -2567,7 +2573,7 @@ function SiteFooter({ onNav }) {
         </div>
         <div className="pt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2" style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}>
           <p className="text-[11px]" style={{ color: "#5C6070" }}>
-            © {new Date().getFullYear()} Code G Teknoloji ve Ticaret Limited Şirketi — Şişli, İstanbul. Tüm hakları saklıdır.
+            © {new Date().getFullYear()} CODE G LTD — Code G Teknoloji ve Ticaret Limited Şirketi, Şişli, İstanbul. Tüm hakları saklıdır.
           </p>
           <p className="text-[11px]" style={{ color: "#5C6070" }}>İşinn bir aracı pazaryeridir; hizmetin tarafı değildir.</p>
         </div>
