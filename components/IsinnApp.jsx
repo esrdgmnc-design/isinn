@@ -6893,6 +6893,7 @@ function AdminDashboardView({ onBack }) {
   const [profiles, setProfiles] = useState([]);
   const [services, setServices] = useState([]);
   const [subs, setSubs] = useState([]);
+  const [pageViews, setPageViews] = useState([]);
   const [rangeMode, setRangeMode] = useState("day"); // day | week | month
 
   useEffect(() => {
@@ -6901,13 +6902,15 @@ function AdminDashboardView({ onBack }) {
       setLoading(true);
       setError(false);
       try {
-        const [profilesRes, servicesRes, subsRes, plansRes] = await Promise.all([
+        const [profilesRes, servicesRes, subsRes, plansRes, viewsRes] = await Promise.all([
           supabase.from("profiles").select("id, user_type, created_at, full_name, business_name"),
           supabase.from("services").select("provider_id, created_at"),
           supabase.from("provider_subscriptions").select("id, profile_id, plan_id, status, billing_cycle, current_period_end"),
           supabase.from("subscription_plans").select("id, slug, name"),
+          supabase.from("page_views").select("created_at"),
         ]);
         if (cancelled) return;
+        setPageViews(viewsRes.data || []);
         const profilesData = profilesRes.data || [];
         const profilesById = {};
         profilesData.forEach((p) => { profilesById[p.id] = p; });
@@ -6936,6 +6939,10 @@ function AdminDashboardView({ onBack }) {
   const totalProviders = new Set(services.map((s) => s.provider_id)).size;
   const newThisWeek = profiles.filter((p) => new Date(p.created_at).getTime() >= weekAgo).length;
   const activeSubs = subs.filter((s) => s.status === "active").length;
+
+  const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+  const viewsToday = pageViews.filter((v) => new Date(v.created_at).getTime() >= todayStart.getTime()).length;
+  const viewsThisWeek = pageViews.filter((v) => new Date(v.created_at).getTime() >= weekAgo).length;
 
   const soon = now + 7 * 24 * 60 * 60 * 1000;
   const renewalsSoon = subs
@@ -6996,7 +7003,12 @@ function AdminDashboardView({ onBack }) {
             <StatCard icon={<Briefcase size={15} style={{ color: "#16321F" }} />} label="Aktif sağlayıcı (vitrin açan)" value={totalProviders} accent="#16321F" />
             <StatCard icon={<TrendingUp size={15} style={{ color: "#34D399" }} />} label="Bu hafta yeni kayıt" value={newThisWeek} accent="#34D399" />
             <StatCard icon={<Award size={15} style={{ color: "#F59E0B" }} />} label="Aktif Pro/Standart plan" value={activeSubs} accent="#F59E0B" />
+            <StatCard icon={<Eye size={15} style={{ color: "#8B5CF6" }} />} label="Bugün ziyaret" value={viewsToday} accent="#8B5CF6" />
+            <StatCard icon={<Eye size={15} style={{ color: "#8B5CF6" }} />} label="Bu hafta ziyaret" value={viewsThisWeek} accent="#8B5CF6" />
           </div>
+          <p className="text-[11px] mb-4 -mt-2" style={{ color: "#9CA3AF" }}>
+            Ziyaret sayıları kimlik bilgisi taşımaz — aynı kişi farklı zamanlarda gelirse her seferinde ayrı sayılır (tekil ziyaretçi değil, ziyaret).
+          </p>
 
           <div className="rounded-2xl border p-4 mb-4" style={{ borderColor: "#F0F0F0", background: "#FAFAFA" }}>
             <div className="flex items-center gap-2">
@@ -9426,6 +9438,18 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
     });
     return () => { cancelled = true; };
   }, [userId]);
+
+  // "Siteye uğrayanların sayısı" (2026-09-13) — page_views.sql, kişisel veri
+  // taşımıyor (bkz. o dosyadaki not). sessionStorage ile aynı sekmede sayfa
+  // içi gezinme/yeniden render bunu tekrar tekrar loglamıyor — tarayıcı
+  // sekmesi/oturumu başına bir kayıt, "ziyaretçi" değil "ziyaret" sayıyoruz.
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem("isinn_visit_logged")) return;
+      sessionStorage.setItem("isinn_visit_logged", "1");
+    } catch (e) { /* sessionStorage kapalıysa sessizce vazgeç */ }
+    supabase.from("page_views").insert({}).then(() => {});
+  }, []);
 
   // Gerçek, kalıcı favoriler (favorites tablosu — schema (3).sql'de zaten
   // vardı, hem vitrin hem iş ilanı favorileyebilecek şekilde, ama hiç
