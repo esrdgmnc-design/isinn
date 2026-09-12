@@ -6895,6 +6895,7 @@ function AdminDashboardView({ onBack }) {
   const [subs, setSubs] = useState([]);
   const [pageViews, setPageViews] = useState([]);
   const [rangeMode, setRangeMode] = useState("day"); // day | week | month
+  const [selectedDetail, setSelectedDetail] = useState(null); // "users" | "providers" | "newThisWeek" | "subs" | null
 
   useEffect(() => {
     let cancelled = false;
@@ -6904,7 +6905,7 @@ function AdminDashboardView({ onBack }) {
       try {
         const [profilesRes, servicesRes, subsRes, plansRes, viewsRes] = await Promise.all([
           supabase.from("profiles").select("id, user_type, created_at, full_name, business_name"),
-          supabase.from("services").select("provider_id, created_at"),
+          supabase.from("services").select("provider_id, title, created_at"),
           supabase.from("provider_subscriptions").select("id, profile_id, plan_id, status, billing_cycle, current_period_end"),
           supabase.from("subscription_plans").select("id, slug, name"),
           supabase.from("page_views").select("created_at"),
@@ -6969,15 +6970,64 @@ function AdminDashboardView({ onBack }) {
   const bucketEntries = Object.entries(buckets).sort(([a], [b]) => a.localeCompare(b));
   const maxBucket = Math.max(1, ...bucketEntries.map(([, c]) => c));
 
-  const StatCard = ({ icon, label, value, accent }) => (
-    <div className="rounded-2xl border p-4" style={{ borderColor: "#F0F0F0", background: "#FFFFFF" }}>
+  const profilesById = {};
+  profiles.forEach((p) => { profilesById[p.id] = p; });
+  const nameOf = (p) => (p?.business_name || p?.full_name || "İsimsiz kullanıcı");
+
+  const StatCard = ({ icon, label, value, accent, detailKey }) => (
+    <button
+      onClick={detailKey ? () => setSelectedDetail((cur) => (cur === detailKey ? null : detailKey)) : undefined}
+      className="rounded-2xl border p-4 text-left w-full transition-shadow"
+      style={{
+        borderColor: selectedDetail === detailKey && detailKey ? accent : "#F0F0F0",
+        background: "#FFFFFF",
+        cursor: detailKey ? "pointer" : "default",
+        boxShadow: selectedDetail === detailKey && detailKey ? `0 0 0 1.5px ${accent}` : "none",
+      }}
+    >
       <div className="w-8 h-8 rounded-full flex items-center justify-center mb-3" style={{ background: `${accent}1F` }}>
         {icon}
       </div>
       <p className="text-2xl font-black" style={{ color: "#0F1115" }}>{value}</p>
       <p className="text-xs mt-0.5" style={{ color: "#6B7280" }}>{label}</p>
-    </div>
+      {detailKey && <p className="text-[10px] mt-1 font-bold" style={{ color: accent }}>{selectedDetail === detailKey ? "Kapat" : "Detay gör →"}</p>}
+    </button>
   );
+
+  // Detay panelinde gösterilecek liste — sadece tıklanan kart için hesaplanır.
+  let detailTitle = "";
+  let detailRows = [];
+  if (selectedDetail === "users") {
+    detailTitle = "Tüm kayıtlı kullanıcılar";
+    detailRows = [...profiles]
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      .map((p) => ({ key: p.id, name: nameOf(p), sub: p.user_type === "provider" ? "Sağlayıcı" : "Müşteri", right: formatRelativeTr(p.created_at) }));
+  } else if (selectedDetail === "providers") {
+    detailTitle = "Vitrin açmış sağlayıcılar";
+    const byProvider = {};
+    services.forEach((s) => {
+      if (!byProvider[s.provider_id]) byProvider[s.provider_id] = { count: 0, firstTitle: s.title };
+      byProvider[s.provider_id].count += 1;
+    });
+    detailRows = Object.entries(byProvider).map(([pid, info]) => ({
+      key: pid,
+      name: nameOf(profilesById[pid]),
+      sub: info.firstTitle,
+      right: `${info.count} vitrin`,
+    }));
+  } else if (selectedDetail === "newThisWeek") {
+    detailTitle = "Bu hafta kayıt olanlar";
+    detailRows = profiles
+      .filter((p) => new Date(p.created_at).getTime() >= weekAgo)
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      .map((p) => ({ key: p.id, name: nameOf(p), sub: p.user_type === "provider" ? "Sağlayıcı" : "Müşteri", right: formatRelativeTr(p.created_at) }));
+  } else if (selectedDetail === "subs") {
+    detailTitle = "Aktif Pro/Standart planlar";
+    detailRows = subs
+      .filter((s) => s.status === "active")
+      .sort((a, b) => new Date(a.current_period_end) - new Date(b.current_period_end))
+      .map((s) => ({ key: s.id, name: s.userName, sub: `${s.planName} · ${s.billing_cycle === "yearly" ? "yıllık" : "aylık"}`, right: formatDaysUntilTr(s.current_period_end) }));
+  }
 
   return (
     <div className="max-w-2xl mx-auto px-5 py-8">
@@ -6999,16 +7049,40 @@ function AdminDashboardView({ onBack }) {
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 mb-4">
-            <StatCard icon={<Users size={15} style={{ color: "#2563EB" }} />} label="Toplam kayıtlı kullanıcı" value={totalUsers} accent="#2563EB" />
-            <StatCard icon={<Briefcase size={15} style={{ color: "#16321F" }} />} label="Aktif sağlayıcı (vitrin açan)" value={totalProviders} accent="#16321F" />
-            <StatCard icon={<TrendingUp size={15} style={{ color: "#34D399" }} />} label="Bu hafta yeni kayıt" value={newThisWeek} accent="#34D399" />
-            <StatCard icon={<Award size={15} style={{ color: "#F59E0B" }} />} label="Aktif Pro/Standart plan" value={activeSubs} accent="#F59E0B" />
+            <StatCard icon={<Users size={15} style={{ color: "#2563EB" }} />} label="Toplam kayıtlı kullanıcı" value={totalUsers} accent="#2563EB" detailKey="users" />
+            <StatCard icon={<Briefcase size={15} style={{ color: "#16321F" }} />} label="Aktif sağlayıcı (vitrin açan)" value={totalProviders} accent="#16321F" detailKey="providers" />
+            <StatCard icon={<TrendingUp size={15} style={{ color: "#34D399" }} />} label="Bu hafta yeni kayıt" value={newThisWeek} accent="#34D399" detailKey="newThisWeek" />
+            <StatCard icon={<Award size={15} style={{ color: "#F59E0B" }} />} label="Aktif Pro/Standart plan" value={activeSubs} accent="#F59E0B" detailKey="subs" />
             <StatCard icon={<Eye size={15} style={{ color: "#8B5CF6" }} />} label="Bugün ziyaret" value={viewsToday} accent="#8B5CF6" />
             <StatCard icon={<Eye size={15} style={{ color: "#8B5CF6" }} />} label="Bu hafta ziyaret" value={viewsThisWeek} accent="#8B5CF6" />
           </div>
           <p className="text-[11px] mb-4 -mt-2" style={{ color: "#9CA3AF" }}>
-            Ziyaret sayıları kimlik bilgisi taşımaz — aynı kişi farklı zamanlarda gelirse her seferinde ayrı sayılır (tekil ziyaretçi değil, ziyaret).
+            Ziyaret sayıları kimlik bilgisi taşımaz, o yüzden detayları yok — aynı kişi farklı zamanlarda gelirse her seferinde ayrı sayılır (tekil ziyaretçi değil, ziyaret).
           </p>
+
+          {selectedDetail && (
+            <div className="rounded-2xl border p-4 mb-4" style={{ borderColor: "#F0F0F0", background: "#FFFFFF" }}>
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>{detailTitle}</p>
+                <button onClick={() => setSelectedDetail(null)} style={{ color: "#9CA3AF" }}><X size={16} /></button>
+              </div>
+              {detailRows.length === 0 ? (
+                <p className="text-sm text-center py-4" style={{ color: "#9CA3AF" }}>Bu grupta henüz kimse yok.</p>
+              ) : (
+                <div className="space-y-2">
+                  {detailRows.map((r) => (
+                    <div key={r.key} className="flex items-center justify-between rounded-xl px-3 py-2.5" style={{ background: "#FAFAFA" }}>
+                      <div>
+                        <p className="text-sm font-bold" style={{ color: "#0F1115" }}>{r.name}</p>
+                        {r.sub && <p className="text-[11px]" style={{ color: "#8A8368" }}>{r.sub}</p>}
+                      </div>
+                      <span className="text-[11px] font-bold" style={{ color: "#9CA3AF" }}>{r.right}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="rounded-2xl border p-4 mb-4" style={{ borderColor: "#F0F0F0", background: "#FAFAFA" }}>
             <div className="flex items-center gap-2">
