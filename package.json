@@ -11,8 +11,10 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",
     "@vercel/analytics": "^2.0.1",
+    "hpagent": "^1.2.0",
     "lucide-react": "^0.383.0",
     "next": "14.2.5",
+    "node-fetch": "^2.7.0",
     "react": "^18",
     "react-dom": "^18",
     "react-easy-crop": "^6.2.3"
