@@ -4765,13 +4765,15 @@ function NailArtView({ onBack, onContact }) {
             </div>
           </div>
         </div>
-        <button
-          onClick={() => onContact({ name: openProfile.name, listingTitle: "Nail Art Hizmeti" })}
-          className="w-full py-2.5 rounded-full text-sm font-medium text-white my-4"
-          style={{ background: "#C2872B" }}
-        >
-          İletişime Geç
-        </button>
+        {/* "İletişime Geç" bilerek kaldırıldı (2026-09-13) — bu galerideki
+            sanatçılar gerçek hesaplar değil, ilham amaçlı örnek portföyler.
+            Buton varken gerçek bir müşteri mesaj gönderip hiç cevap
+            alamayabiliyordu, özellikle artık platformda gerçek para akarken
+            bu güven kaybı riskiydi. Gerçek nail art sağlayıcıları katılınca
+            geri eklenebilir. */}
+        <p className="text-xs text-center my-4 px-3 py-2 rounded-lg" style={{ background: "#F3EDDD", color: "#8A8368" }}>
+          Bu bir ilham galerisi — gerçek nail art sağlayıcıları platforma katıldıkça burada göreceksin.
+        </p>
         <div className="grid grid-cols-3 gap-1">
           {openProfile.portfolio.map((url, i) => (
             <button key={i} onClick={() => setLightbox({ media, index: i })} className="aspect-square overflow-hidden">
