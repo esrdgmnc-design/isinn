@@ -289,12 +289,22 @@ function formatPriceLabel(price, priceType) {
 // görünmüyordu, "3'ten kaçı doldu" bilgisi eksikti).
 async function getVitrinCapInfo(userId) {
   if (!userId) return { cap: 1, planName: "Standart Üyelik", hasExtraVitrinAddon: false };
+  // GERÇEK HATA DÜZELTMESİ (2026-09-13, "farklı senaryolar/profiller"
+  // taramasında bulundu): burada sadece status kontrol ediliyordu,
+  // current_period_end'in geçip geçmediğine hiç bakılmıyordu — yani biri
+  // bir kere Pro'ya ödesin, dönemi bitsin, bir daha hiç ödemesin, sistem onu
+  // SÜRESİZ olarak hâlâ tam Pro sanmaya devam ederdi (sync_subscription_period
+  // kapatıldıktan sonra bile). Ek Vitrin addon kontrolü bunu zaten doğru
+  // yapıyordu (current_period_end > şimdi) — abonelik kontrolü aynı deseni
+  // kullanmıyordu, tutarsızlık buradaydı. Artık o da tarihe bakıyor.
+  const nowIso = new Date().toISOString();
   const [{ data: subRow }, { data: addonProduct }] = await Promise.all([
     supabase
       .from("provider_subscriptions")
       .select("subscription_plans(name, max_active_listings)")
       .eq("profile_id", userId)
       .in("status", ["active", "trialing"])
+      .gt("current_period_end", nowIso)
       .maybeSingle(),
     supabase.from("addon_products").select("id").eq("slug", "ek-vitrin").maybeSingle(),
   ]);
@@ -4094,9 +4104,12 @@ function PostJobView({ onBack, onSubmitted, onViewOffers, onMatchAI, userId, onJ
       // job'ları (service_id dolu) da sayılıyordu — yani biri sadece birkaç
       // vitrine mesaj atarak, hiç ilan vermeden, kendi ilan hakkını sessizce
       // tüketebiliyordu (bkz. fetchJobs'daki aynı düzeltme notu).
+      // (2026-09-13) current_period_end kontrolü eklendi — bkz.
+      // fix_cap_ignores_expired_period.sql'deki gerekçe, aynı sızıntı burada
+      // da vardı.
       const [{ count }, { data: subRow }] = await Promise.all([
         supabase.from("jobs").select("id", { count: "exact", head: true }).eq("client_id", userId).eq("active", true).is("service_id", null),
-        supabase.from("provider_subscriptions").select("subscription_plans(max_active_jobs)").eq("profile_id", userId).in("status", ["active", "trialing"]).maybeSingle(),
+        supabase.from("provider_subscriptions").select("subscription_plans(max_active_jobs)").eq("profile_id", userId).in("status", ["active", "trialing"]).gt("current_period_end", new Date().toISOString()).maybeSingle(),
       ]);
       if (cancelled) return;
       const jobCap = subRow?.subscription_plans?.max_active_jobs ?? 5;
@@ -6406,7 +6419,13 @@ function AdminDashboardView({ onBack }) {
   const totalUsers = profiles.length;
   const totalProviders = new Set(services.map((s) => s.provider_id)).size;
   const newThisWeek = profiles.filter((p) => new Date(p.created_at).getTime() >= weekAgo).length;
-  const activeSubs = subs.filter((s) => s.status === "active").length;
+  // (2026-09-13) sadece status="active" yetmez — dönemi geçmiş ama bir daha
+  // hiç ödenmemiş bir abonelik de status'u hâlâ "active" taşıyor (hiçbir şey
+  // onu otomatik "expired" yapmıyor, bkz. sync_subscription_period'ın
+  // kapatılma gerekçesi). Buraya da aynı tarih kontrolünü ekledim, yoksa
+  // panel gerçekte artık ödeme yapmayan birini hâlâ "aktif ödeyen müşteri"
+  // gibi gösterirdi.
+  const activeSubs = subs.filter((s) => s.status === "active" && s.current_period_end && new Date(s.current_period_end) > now).length;
 
   const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
   const viewsToday = pageViews.filter((v) => new Date(v.created_at).getTime() >= todayStart.getTime()).length;
@@ -6499,7 +6518,7 @@ function AdminDashboardView({ onBack }) {
   } else if (selectedDetail === "subs") {
     detailTitle = "Aktif Pro/Standart planlar";
     detailRows = subs
-      .filter((s) => s.status === "active")
+      .filter((s) => s.status === "active" && s.current_period_end && new Date(s.current_period_end) > now)
       .sort((a, b) => new Date(a.current_period_end) - new Date(b.current_period_end))
       .map((s) => ({ key: s.id, name: s.userName, sub: `${s.planName} · ${s.billing_cycle === "yearly" ? "yıllık" : "aylık"}`, right: formatDaysUntilTr(s.current_period_end) }));
   }
