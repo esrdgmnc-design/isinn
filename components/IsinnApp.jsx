@@ -7646,6 +7646,51 @@ function AdminContentFlagsView({ onBack }) {
   );
 }
 
+// PayTR iFrame ödeme ekranı — get-token'dan dönen token ile açılır. Ödeme
+// sonucunu buradan "biliyormuş gibi" okuyamıyoruz (PayTR postMessage
+// göndermiyor); iframe içeriği ödeme bitince merchant_ok_url/fail_url'e
+// (kendi domainimiz — /odeme/basarili|basarisiz) yönleniyor. Cross-origin
+// olduğu sürece iframe.contentWindow.location okumak güvenlik hatası verir
+// (beklenen); PayTR'ın kendi sayfasındayken bunu SESSİZCE yutup denemeye
+// devam ediyoruz, kendi domainimize dönünce artık same-origin oluyor ve
+// path'i okuyup modalı kapatabiliyoruz. Gerçek abonelik aktivasyonu bu
+// modalda DEĞİL, paytr-callback route'unda (sunucudan sunucuya) oluyor —
+// bu polling sadece "kullanıcıya ne zaman kapansın" sorusunu çözüyor.
+function PaytrCheckoutModal({ token, onClose, onSuccess }) {
+  const iframeRef = useRef(null);
+  useEffect(() => {
+    const interval = setInterval(() => {
+      try {
+        const href = iframeRef.current?.contentWindow?.location?.href;
+        if (!href) return;
+        if (href.includes("/odeme/basarili")) { clearInterval(interval); onSuccess(); }
+        else if (href.includes("/odeme/basarisiz")) { clearInterval(interval); onClose(); }
+      } catch {
+        // PayTR'ın kendi domaininde (cross-origin) — henüz okunamıyor, normal.
+      }
+    }, 800);
+    return () => clearInterval(interval);
+  }, [onClose, onSuccess]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(15,17,21,0.7)" }}>
+      <div className="rounded-2xl overflow-hidden w-full flex flex-col" style={{ maxWidth: 480, height: "min(85vh, 720px)", background: "#fff" }}>
+        <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: "#F0F0F0" }}>
+          <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>Güvenli ödeme — PayTR</p>
+          <button onClick={onClose} style={{ color: "#9CA3AF" }}><X size={18} /></button>
+        </div>
+        <iframe
+          ref={iframeRef}
+          src={`https://www.paytr.com/odeme/guvenli/${token}`}
+          title="PayTR Ödeme"
+          className="flex-1 w-full"
+          style={{ border: "none" }}
+        />
+      </div>
+    </div>
+  );
+}
+
 function PricingView({ onBack, onJoined, userId }) {
   const [joined, setJoined] = useState(false);
   const [boostSelected, setBoostSelected] = useState(false);
@@ -7656,6 +7701,7 @@ function PricingView({ onBack, onJoined, userId }) {
   const [proJoining, setProJoining] = useState(false);
   const [proJoined, setProJoined] = useState(false);
   const [proError, setProError] = useState("");
+  const [paytrToken, setPaytrToken] = useState(null);
   const proPrice = cycle === "monthly" ? PRO_PACKAGE.priceMonthly : PRO_PACKAGE.priceYearly;
   const plan = PLANS[0];
   const basePrice = cycle === "monthly" ? plan.priceMonthly : plan.priceYearly;
@@ -7692,15 +7738,32 @@ function PricingView({ onBack, onJoined, userId }) {
 
   // Pro Üyelik, Standart'ın denemesinden bağımsız, ayrı bir yükseltme —
   // birden fazla vitrin açmak isteyen (örn. iki farklı uzmanlık alanı) biri
-  // deneme beklemeden doğrudan buradan geçebilir (bkz. supabase/pro_plan.sql).
+  // deneme beklemeden doğrudan buradan geçebilir.
+  //
+  // GERÇEK ÖDEME (2026-09-13): eskiden bu buton doğrudan upgrade_to_pro
+  // RPC'sini çağırıp hiçbir ödeme almadan aboneliği aktif ediyordu — yani
+  // aslında herkes Pro'yu bedavaya alabiliyordu (admin'in kendi hesabındaki
+  // test aboneliği de böyle oluşmuştu). Artık /api/paytr-init'ten gerçek bir
+  // ödeme token'ı alıp PayTR'ın iframe'ini açıyoruz; abonelik SADECE PayTR
+  // ödemeyi gerçekten onayladıktan sonra, paytr-callback route'u tarafından
+  // aktifleştiriliyor (bkz. o dosya).
   const joinPro = async () => {
     if (!userId) { setProError("Pro Üyelik için giriş yapmış olmalısın."); return; }
     setProError("");
     setProJoining(true);
     try {
-      const { error: proErr } = await supabase.rpc("upgrade_to_pro", { p_billing_cycle: cycle });
-      if (proErr) throw proErr;
-      setProJoined(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch("/api/paytr-init", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({ planSlug: "pro", billingCycle: cycle }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.message || "Ödeme başlatılamadı.");
+      setPaytrToken(data.token);
     } catch (err) {
       setProError(`Geçilemedi: ${err?.message || "bilinmeyen hata"}`);
     } finally {
@@ -7825,6 +7888,14 @@ function PricingView({ onBack, onJoined, userId }) {
           {proJoined ? "Pro Üyeliğe geçtin ✓" : "Pro Üyelik'e Geç"}
         </button>
       </div>
+
+      {paytrToken && (
+        <PaytrCheckoutModal
+          token={paytrToken}
+          onClose={() => setPaytrToken(null)}
+          onSuccess={() => { setPaytrToken(null); setProJoined(true); }}
+        />
+      )}
 
       {/* Öne Çıkarma Paketi bilerek en altta — kullanıcının kararı (2026-09-08):
           önce iki asıl üyelik seçilsin, bu ikisine eklenen isteğe bağlı bir
