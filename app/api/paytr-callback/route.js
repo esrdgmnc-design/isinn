@@ -27,7 +27,12 @@ export async function POST(request) {
     return new Response("PAYTR notification failed: server not configured", { status: 500 });
   }
 
-  const form = await request.formData();
+  let form;
+  try {
+    form = await request.formData();
+  } catch {
+    return new Response("PAYTR notification failed: bad body", { status: 400 });
+  }
   const merchantOid = form.get("merchant_oid");
   const status = form.get("status");
   const totalAmount = form.get("total_amount");
@@ -49,7 +54,7 @@ export async function POST(request) {
 
   const { data: order } = await admin
     .from("payment_orders")
-    .select("id, profile_id, plan_slug, billing_cycle, status")
+    .select("id, profile_id, plan_slug, order_type, billing_cycle, status")
     .eq("merchant_oid", merchantOid)
     .maybeSingle();
 
@@ -66,37 +71,71 @@ export async function POST(request) {
   }
 
   if (status === "success") {
-    const { data: plan } = await admin
-      .from("subscription_plans")
-      .select("id")
-      .eq("slug", order.plan_slug)
-      .maybeSingle();
+    const periodEnd = new Date(Date.now() + (order.billing_cycle === "yearly" ? 365 : 30) * 24 * 60 * 60 * 1000);
 
-    if (plan) {
-      const periodEnd = new Date(Date.now() + (order.billing_cycle === "yearly" ? 365 : 30) * 24 * 60 * 60 * 1000);
-      const { data: existing } = await admin
-        .from("provider_subscriptions")
+    if (order.order_type === "addon") {
+      const { data: addon } = await admin
+        .from("addon_products")
         .select("id")
-        .eq("profile_id", order.profile_id)
+        .eq("slug", order.plan_slug)
         .maybeSingle();
 
-      if (existing) {
-        await admin.from("provider_subscriptions").update({
-          plan_id: plan.id,
-          status: "active",
-          billing_cycle: order.billing_cycle,
-          current_period_start: new Date().toISOString(),
-          current_period_end: periodEnd.toISOString(),
-        }).eq("id", existing.id);
-      } else {
-        await admin.from("provider_subscriptions").insert({
-          profile_id: order.profile_id,
-          plan_id: plan.id,
-          status: "active",
-          billing_cycle: order.billing_cycle,
-          current_period_start: new Date().toISOString(),
-          current_period_end: periodEnd.toISOString(),
-        });
+      if (addon) {
+        const { data: existingAddon } = await admin
+          .from("provider_addons")
+          .select("id")
+          .eq("profile_id", order.profile_id)
+          .eq("addon_id", addon.id)
+          .maybeSingle();
+
+        if (existingAddon) {
+          await admin.from("provider_addons").update({
+            status: "active",
+            current_period_start: new Date().toISOString(),
+            current_period_end: periodEnd.toISOString(),
+          }).eq("id", existingAddon.id);
+        } else {
+          await admin.from("provider_addons").insert({
+            profile_id: order.profile_id,
+            addon_id: addon.id,
+            status: "active",
+            current_period_start: new Date().toISOString(),
+            current_period_end: periodEnd.toISOString(),
+          });
+        }
+      }
+    } else {
+      const { data: plan } = await admin
+        .from("subscription_plans")
+        .select("id")
+        .eq("slug", order.plan_slug)
+        .maybeSingle();
+
+      if (plan) {
+        const { data: existing } = await admin
+          .from("provider_subscriptions")
+          .select("id")
+          .eq("profile_id", order.profile_id)
+          .maybeSingle();
+
+        if (existing) {
+          await admin.from("provider_subscriptions").update({
+            plan_id: plan.id,
+            status: "active",
+            billing_cycle: order.billing_cycle,
+            current_period_start: new Date().toISOString(),
+            current_period_end: periodEnd.toISOString(),
+          }).eq("id", existing.id);
+        } else {
+          await admin.from("provider_subscriptions").insert({
+            profile_id: order.profile_id,
+            plan_id: plan.id,
+            status: "active",
+            billing_cycle: order.billing_cycle,
+            current_period_start: new Date().toISOString(),
+            current_period_end: periodEnd.toISOString(),
+          });
+        }
       }
     }
 

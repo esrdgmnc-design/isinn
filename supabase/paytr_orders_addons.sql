@@ -1,0 +1,13 @@
+-- payment_orders'ı sadece plan (Pro/Standart) değil, addon (Ek Vitrin
+-- Paketi, Öne Çıkarma vb.) satın alımlarını da taşıyacak şekilde genişletiyor
+-- (2026-09-13). Gerekçe: CreateListingView'daki "vitrin hakkını doldurdun"
+-- duvarında HEM "Pro Üyelik'e Geç" HEM "Ek Vitrin Paketi Al" butonları
+-- paytr_orders.sql'den önce hiç ödeme almadan (add_extra_vitrin_addon RPC'sini
+-- doğrudan çağırarak) aktif ediyordu — Pro tarafını PricingView ile aynı anda
+-- kapatmıştık, addon tarafı unutulmuştu, gerçek kullanıcı tam bu yüzden
+-- "PayTR'a hiç yönlenmeden Pro oldum" diye bildirdi.
+--
+-- plan_slug kolonu artık genel bir "ürün slug'ı" gibi kullanılıyor (plan için
+-- subscription_plans.slug, addon için addon_products.slug) — order_type hangi
+-- tabloya bakılacağını söylüyor.
+alter table payment_orders add column if not exists order_type text not null default 'plan' check (order_type in ('plan', 'addon'));

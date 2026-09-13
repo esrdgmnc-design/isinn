@@ -33,32 +33,53 @@ export async function POST(request) {
     return Response.json({ ok: false, message: "Çok fazla deneme yaptın, bir süre sonra tekrar dene." }, { status: 429 });
   }
 
-  const { planSlug, billingCycle } = await request.json();
-  if (!planSlug || !["monthly", "yearly"].includes(billingCycle)) {
-    return Response.json({ ok: false, message: "Eksik veya geçersiz plan bilgisi." }, { status: 400 });
+  // orderType "plan" (Standart/Pro, subscription_plans) veya "addon" (Ek
+  // Vitrin Paketi, Öne Çıkarma vb., addon_products) — ikisi de aynı akıştan
+  // geçiyor, sadece fiyatı hangi tablodan okuduğumuz değişiyor. Addon'lar
+  // şu an sadece aylık (addon_products'ta price_yearly yok).
+  const { planSlug, addonSlug, billingCycle } = await request.json();
+  const orderType = addonSlug ? "addon" : "plan";
+  const itemSlug = addonSlug || planSlug;
+  if (!itemSlug || !["monthly", "yearly"].includes(billingCycle)) {
+    return Response.json({ ok: false, message: "Eksik veya geçersiz ürün bilgisi." }, { status: 400 });
+  }
+  if (orderType === "addon" && billingCycle !== "monthly") {
+    return Response.json({ ok: false, message: "Bu paket sadece aylık satın alınabilir." }, { status: 400 });
   }
 
   const admin = createClient(supabaseUrl, serviceRoleKey);
 
-  const { data: plan } = await admin
-    .from("subscription_plans")
-    .select("id, name, slug, price_monthly, price_yearly")
-    .eq("slug", planSlug)
-    .eq("active", true)
-    .maybeSingle();
-  if (!plan) {
-    return Response.json({ ok: false, message: "Plan bulunamadı." }, { status: 404 });
+  let itemName, price;
+  if (orderType === "addon") {
+    const { data: addon } = await admin
+      .from("addon_products")
+      .select("id, name, slug, price_monthly")
+      .eq("slug", itemSlug)
+      .eq("active", true)
+      .maybeSingle();
+    if (!addon) return Response.json({ ok: false, message: "Paket bulunamadı." }, { status: 404 });
+    itemName = addon.name;
+    price = addon.price_monthly;
+  } else {
+    const { data: plan } = await admin
+      .from("subscription_plans")
+      .select("id, name, slug, price_monthly, price_yearly")
+      .eq("slug", itemSlug)
+      .eq("active", true)
+      .maybeSingle();
+    if (!plan) return Response.json({ ok: false, message: "Plan bulunamadı." }, { status: 404 });
+    itemName = plan.name;
+    price = billingCycle === "yearly" ? plan.price_yearly : plan.price_monthly;
   }
-  const price = billingCycle === "yearly" ? plan.price_yearly : plan.price_monthly;
   if (!price || price <= 0) {
-    return Response.json({ ok: false, message: "Bu plan için fiyat tanımlı değil." }, { status: 400 });
+    return Response.json({ ok: false, message: "Bu ürün için fiyat tanımlı değil." }, { status: 400 });
   }
 
   const merchantOid = generateMerchantOid("ISINN");
   const userIp = getClientIp(request);
   const email = user.email || "";
   const paymentAmount = Math.round(price * 100); // PayTR kuruş cinsinden bekliyor
-  const userBasketBase64 = Buffer.from(JSON.stringify([[`${plan.name} (${billingCycle === "yearly" ? "yıllık" : "aylık"})`, price.toFixed(2), 1]])).toString("base64");
+  const userBasketBase64 = Buffer.from(JSON.stringify([[`${itemName} (${billingCycle === "yearly" ? "yıllık" : "aylık"})`, price.toFixed(2), 1]])).toString("base64");
   const currency = "TL";
   const testMode = process.env.PAYTR_TEST_MODE === "1" ? "1" : "0";
   const noInstallment = "0";
@@ -67,7 +88,8 @@ export async function POST(request) {
   const { error: insertErr } = await admin.from("payment_orders").insert({
     merchant_oid: merchantOid,
     profile_id: user.id,
-    plan_slug: plan.slug,
+    plan_slug: itemSlug,
+    order_type: orderType,
     billing_cycle: billingCycle,
     amount: price,
     status: "pending",

@@ -6083,21 +6083,40 @@ function CreateListingView({ onBack, onCreated, userId, editingListing, onGoToPr
 
   useEffect(() => { checkVitrinLimit(); }, [userId, isEditing]);
 
-  const upgradeToPro = async () => {
+  // GERÇEK ÖDEME (2026-09-13): bu iki buton da PricingView'daki "Pro
+  // Üyelik'e Geç" ile AYNI boşluğu taşıyordu — doğrudan RPC çağırıp hiç
+  // ödeme almadan aktif ediyorlardı. PricingView'ı düzeltirken bu ikisi
+  // atlanmıştı; gerçek bir kullanıcı burada "PayTR'a hiç yönlenmeden Pro
+  // oldum" diye bildirdi. Artık ikisi de /api/paytr-init'ten gerçek bir
+  // ödeme token'ı alıp PaytrCheckoutModal'ı açıyor; aktivasyon yine sadece
+  // paytr-callback route'unda, ödeme gerçekten onaylanınca oluyor.
+  const [paytrToken, setPaytrToken] = useState(null);
+
+  const startPaytrCheckout = async (body) => {
     setUpgrading(true);
-    const { error: rpcError } = await supabase.rpc("upgrade_to_pro");
-    setUpgrading(false);
-    if (rpcError) { setError(rpcError.message); return; }
-    await checkVitrinLimit();
+    setError("");
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch("/api/paytr-init", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.message || "Ödeme başlatılamadı.");
+      setPaytrToken(data.token);
+    } catch (err) {
+      setError(err?.message || "Ödeme başlatılamadı.");
+    } finally {
+      setUpgrading(false);
+    }
   };
 
-  const buyExtraVitrinAddon = async () => {
-    setUpgrading(true);
-    const { error: rpcError } = await supabase.rpc("add_extra_vitrin_addon");
-    setUpgrading(false);
-    if (rpcError) { setError(rpcError.message); return; }
-    await checkVitrinLimit();
-  };
+  const upgradeToPro = () => startPaytrCheckout({ planSlug: "pro", billingCycle: "monthly" });
+  const buyExtraVitrinAddon = () => startPaytrCheckout({ addonSlug: "ek-vitrin", billingCycle: "monthly" });
 
   const availableCategories = CATEGORIES.filter((c) => c.mode === mode || c.mode === "both");
   const cityName = CITIES.find((c) => c.id === cityId)?.name;
@@ -6468,6 +6487,13 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
           </div>
         ) : null}
         <button onClick={onBack} className="text-xs font-medium" style={{ color: "#8A8368" }}>Şimdilik vazgeç</button>
+        {paytrToken && (
+          <PaytrCheckoutModal
+            token={paytrToken}
+            onClose={() => setPaytrToken(null)}
+            onSuccess={async () => { setPaytrToken(null); await checkVitrinLimit(); }}
+          />
+        )}
       </div>
     );
   }
