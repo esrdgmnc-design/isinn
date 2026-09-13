@@ -81,7 +81,15 @@ export async function POST(request) {
   const paymentAmount = Math.round(price * 100); // PayTR kuruş cinsinden bekliyor
   const userBasketBase64 = Buffer.from(JSON.stringify([[`${itemName} (${billingCycle === "yearly" ? "yıllık" : "aylık"})`, price.toFixed(2), 1]])).toString("base64");
   const currency = "TL";
-  const testMode = process.env.PAYTR_TEST_MODE === "1" ? "1" : "0";
+  // GÜVENLİ VARSAYILAN (2026-09-13 — gerçek bir yakın-kaçırma sonrası
+  // düzeltildi): eskiden bu satır "PAYTR_TEST_MODE === '1' ise test, aksi
+  // halde canlı" diyordu — yani ortam değişkeni Vercel'e hiç eklenmemişse
+  // ya da yanlış yazılmışsa sessizce CANLI moda düşüyordu. Gerçekten de
+  // öyle oldu: env değişkeni eklenmeden önce yapılan bir "test" ödemesi
+  // muhtemelen gerçek bir kart çekimiydi. Artık tam tersi: sadece açıkça
+  // "0" yazılırsa canlıya geçiyor, her şey (eksik, yanlış yazılmış, boş)
+  // güvenli tarafta — test modunda kalıyor.
+  const testMode = process.env.PAYTR_TEST_MODE === "0" ? "0" : "1";
   const noInstallment = "0";
   const maxInstallment = "0";
 
