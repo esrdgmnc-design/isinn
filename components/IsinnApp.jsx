@@ -235,143 +235,10 @@ const CITIES = [
 
 // Real approximate lat/lng per provider (used for genuine distance calculation)
 // x/y are separate — stylized screen-position percentages for the visual map card of each city.
-const LOCAL_PROVIDERS = [
-  // İstanbul
-  { id: 1, name: "Hakan Y.", category: "tadilat", homeService: "evde", city: "istanbul", district: "Kadıköy", lat: 40.9833, lng: 29.0333, x: 42, y: 38, rating: 4.9, price: "8.500₺'den", img: "https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=200" },
-  { id: 2, name: "TemizPark Ekibi", category: "temizlik", homeService: "evde", city: "istanbul", district: "Üsküdar", lat: 41.0225, lng: 29.0163, x: 58, y: 30, rating: 4.8, price: "900₺'den", img: "https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=200" },
-  { id: 3, name: "Murat Nakliyat", category: "nakliye", homeService: "evde", city: "istanbul", district: "Beşiktaş", lat: 41.0422, lng: 29.0083, x: 30, y: 55, rating: 4.7, price: "3.200₺'den", img: "https://images.unsplash.com/photo-1600518464441-9154a4dea21b?w=200" },
-  { id: 4, name: "Selin Temizlik", category: "temizlik", homeService: "evde", city: "istanbul", district: "Şişli", lat: 41.0602, lng: 28.9877, x: 48, y: 62, rating: 4.9, price: "800₺'den", img: "https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=200" },
-  { id: 5, name: "Kaya Tadilat", category: "tadilat", homeService: "evde", city: "istanbul", district: "Bakırköy", lat: 40.9819, lng: 28.8772, x: 20, y: 70, rating: 4.6, price: "6.000₺'den", img: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=200" },
-  { id: 6, name: "Hızlı Nakliyat", category: "nakliye", homeService: "evde", city: "istanbul", district: "Maltepe", lat: 40.9354, lng: 29.1553, x: 68, y: 66, rating: 4.5, price: "2.900₺'den", img: "https://images.unsplash.com/photo-1600518464441-9154a4dea21b?w=200" },
-  { id: 7, name: "Pak Temizlik", category: "temizlik", homeService: "evde", city: "istanbul", district: "Kartal", lat: 40.9061, lng: 29.1897, x: 75, y: 45, rating: 4.7, price: "850₺'den", img: "https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=200" },
-  { id: 8, name: "Ortaköy Anahtar Usta", category: "cilingir", homeService: "evde", city: "istanbul", district: "Ortaköy", lat: 41.0553, lng: 29.0272, x: 36, y: 44, rating: 4.8, price: "450₺'den", img: "https://images.unsplash.com/photo-1622037022824-0c71d511ad76?w=200" },
-  { id: 9, name: "Barış Çilingir", category: "cilingir", homeService: "evde", city: "istanbul", district: "Ortaköy", lat: 41.0489, lng: 29.0219, x: 40, y: 47, rating: 4.6, price: "500₺'den", img: "https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=200" },
-  { id: 10, name: "Hızlı Çilingir Servisi", category: "cilingir", homeService: "evde", city: "istanbul", district: "Ortaköy", lat: 41.0577, lng: 29.0339, x: 33, y: 41, rating: 4.9, price: "400₺'den", img: "https://images.unsplash.com/photo-1632823469850-1b7b1e8b7d4a?w=200" },
-  // Ankara
-  { id: 11, name: "Başkent Nakliyat", category: "nakliye", homeService: "evde", city: "ankara", district: "Çankaya", lat: 39.9179, lng: 32.8627, x: 45, y: 55, rating: 4.7, price: "2.800₺'den", img: "https://images.unsplash.com/photo-1600518464441-9154a4dea21b?w=200" },
-  { id: 12, name: "Ankara Anahtarcı", category: "cilingir", homeService: "evde", city: "ankara", district: "Kızılay", lat: 39.9208, lng: 32.8541, x: 40, y: 45, rating: 4.8, price: "400₺'den", img: "https://images.unsplash.com/photo-1622037022824-0c71d511ad76?w=200" },
-  { id: 13, name: "Parlak Temizlik", category: "temizlik", homeService: "evde", city: "ankara", district: "Keçiören", lat: 39.9836, lng: 32.8628, x: 50, y: 20, rating: 4.6, price: "750₺'den", img: "https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=200" },
-  { id: 14, name: "Duran Usta Tadilat", category: "tadilat", homeService: "evde", city: "ankara", district: "Etimesgut", lat: 39.9500, lng: 32.6683, x: 15, y: 35, rating: 4.9, price: "5.500₺'den", img: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=200" },
-  // İzmir
-  { id: 15, name: "Ege Nakliyat", category: "nakliye", homeService: "evde", city: "izmir", district: "Bornova", lat: 38.4691, lng: 27.2170, x: 65, y: 35, rating: 4.7, price: "3.000₺'den", img: "https://images.unsplash.com/photo-1600518464441-9154a4dea21b?w=200" },
-  { id: 16, name: "Konak Çilingir", category: "cilingir", homeService: "evde", city: "izmir", district: "Konak", lat: 38.4192, lng: 27.1287, x: 35, y: 55, rating: 4.9, price: "420₺'den", img: "https://images.unsplash.com/photo-1622037022824-0c71d511ad76?w=200" },
-  { id: 17, name: "Deniz Temizlik", category: "temizlik", homeService: "evde", city: "izmir", district: "Karşıyaka", lat: 38.4614, lng: 27.1128, x: 30, y: 20, rating: 4.8, price: "800₺'den", img: "https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=200" },
-  // Bursa
-  { id: 18, name: "Uludağ Tadilat", category: "tadilat", homeService: "evde", city: "bursa", district: "Osmangazi", lat: 40.1885, lng: 29.0610, x: 45, y: 45, rating: 4.6, price: "5.000₺'den", img: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=200" },
-  { id: 19, name: "Bursa Nakliyat Ekibi", category: "nakliye", homeService: "evde", city: "bursa", district: "Nilüfer", lat: 40.2138, lng: 28.9903, x: 25, y: 35, rating: 4.7, price: "2.700₺'den", img: "https://images.unsplash.com/photo-1600518464441-9154a4dea21b?w=200" },
-  // Antalya
-  { id: 20, name: "Akdeniz Temizlik", category: "temizlik", homeService: "evde", city: "antalya", district: "Muratpaşa", lat: 36.8841, lng: 30.7056, x: 50, y: 55, rating: 4.8, price: "780₺'den", img: "https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=200" },
-  { id: 21, name: "Antalya Çilingir 7/24", category: "cilingir", homeService: "evde", city: "antalya", district: "Konyaaltı", lat: 36.8611, lng: 30.6339, x: 20, y: 60, rating: 4.9, price: "450₺'den", img: "https://images.unsplash.com/photo-1622037022824-0c71d511ad76?w=200" },
-  // London
-  { id: 22, name: "City Locksmiths", category: "cilingir", homeService: "evde", city: "london", district: "Camden", lat: 51.5390, lng: -0.1426, x: 45, y: 30, rating: 4.8, price: "£45'den", img: "https://images.unsplash.com/photo-1622037022824-0c71d511ad76?w=200" },
-  { id: 23, name: "Thames Removals", category: "nakliye", homeService: "evde", city: "london", district: "Greenwich", lat: 51.4826, lng: -0.0077, x: 65, y: 60, rating: 4.6, price: "£180'den", img: "https://images.unsplash.com/photo-1600518464441-9154a4dea21b?w=200" },
-  // Berlin
-  { id: 24, name: "Berlin Reinigung", category: "temizlik", homeService: "evde", city: "berlin", district: "Kreuzberg", lat: 52.4996, lng: 13.4033, x: 40, y: 55, rating: 4.7, price: "€25'den", img: "https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=200" },
-  { id: 25, name: "Schnell Schlüsseldienst", category: "cilingir", homeService: "evde", city: "berlin", district: "Mitte", lat: 52.5170, lng: 13.3888, x: 45, y: 40, rating: 4.9, price: "€40'dan", img: "https://images.unsplash.com/photo-1622037022824-0c71d511ad76?w=200" },
-  // Paris
-  { id: 26, name: "Serrurier Paris", category: "cilingir", homeService: "evde", city: "paris", district: "Le Marais", lat: 48.8606, lng: 2.3622, x: 50, y: 45, rating: 4.7, price: "€50'den", img: "https://images.unsplash.com/photo-1622037022824-0c71d511ad76?w=200" },
-  // Amsterdam
-  { id: 27, name: "Amsterdam Verhuizers", category: "nakliye", homeService: "evde", city: "amsterdam", district: "Jordaan", lat: 52.3745, lng: 4.8809, x: 40, y: 40, rating: 4.6, price: "€150'den", img: "https://images.unsplash.com/photo-1600518464441-9154a4dea21b?w=200" },
-  // New York
-  { id: 28, name: "Manhattan Locksmith 24/7", category: "cilingir", homeService: "evde", city: "newyork", district: "Midtown", lat: 40.7549, lng: -73.9840, x: 50, y: 35, rating: 4.8, price: "$60'dan", img: "https://images.unsplash.com/photo-1622037022824-0c71d511ad76?w=200" },
-  { id: 29, name: "Brooklyn Movers Co.", category: "nakliye", homeService: "evde", city: "newyork", district: "Brooklyn", lat: 40.6782, lng: -73.9442, x: 65, y: 65, rating: 4.5, price: "$220'dan", img: "https://images.unsplash.com/photo-1600518464441-9154a4dea21b?w=200" },
-  { id: 30, name: "Sparkle NYC Cleaning", category: "temizlik", homeService: "evde", city: "newyork", district: "Queens", lat: 40.7282, lng: -73.7949, x: 75, y: 30, rating: 4.7, price: "$80'den", img: "https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=200" },
-  // Los Angeles
-  { id: 31, name: "LA Handyman Pro", category: "tadilat", homeService: "evde", city: "losangeles", district: "Venice", lat: 33.9850, lng: -118.4695, x: 25, y: 60, rating: 4.6, price: "$95'den", img: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=200" },
-  // Toronto
-  { id: 32, name: "Toronto Cleaning Crew", category: "temizlik", homeService: "evde", city: "toronto", district: "Downtown", lat: 43.6511, lng: -79.3838, x: 50, y: 50, rating: 4.7, price: "CA$70'den", img: "https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=200" },
-  // Dubai
-  { id: 33, name: "Dubai Express Movers", category: "nakliye", homeService: "evde", city: "dubai", district: "Marina", lat: 25.0805, lng: 55.1403, x: 30, y: 60, rating: 4.8, price: "550 AED'den", img: "https://images.unsplash.com/photo-1600518464441-9154a4dea21b?w=200" },
-  { id: 34, name: "Al Fahim Locksmith", category: "cilingir", homeService: "evde", city: "dubai", district: "Deira", lat: 25.2697, lng: 55.3095, x: 65, y: 30, rating: 4.7, price: "150 AED'den", img: "https://images.unsplash.com/photo-1622037022824-0c71d511ad76?w=200" },
-  // Tokyo
-  { id: 35, name: "Tokyo Kagi Service", category: "cilingir", homeService: "evde", city: "tokyo", district: "Shibuya", lat: 35.6580, lng: 139.7016, x: 40, y: 55, rating: 4.9, price: "¥6.000'den", img: "https://images.unsplash.com/photo-1622037022824-0c71d511ad76?w=200" },
-  // Sydney
-  { id: 36, name: "Sydney Harbour Cleaners", category: "temizlik", homeService: "evde", city: "sydney", district: "Bondi", lat: -33.8908, lng: 151.2743, x: 60, y: 55, rating: 4.6, price: "AU$90'dan", img: "https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=200" },
-  // Mumbai
-  { id: 37, name: "Mumbai Quick Locksmith", category: "cilingir", homeService: "evde", city: "mumbai", district: "Andheri", lat: 19.1197, lng: 72.8468, x: 35, y: 40, rating: 4.7, price: "₹500'den", img: "https://images.unsplash.com/photo-1622037022824-0c71d511ad76?w=200" },
-  { id: 38, name: "Shree Packers & Movers", category: "nakliye", homeService: "evde", city: "mumbai", district: "Bandra", lat: 19.0596, lng: 72.8295, x: 45, y: 55, rating: 4.6, price: "₹3.500'den", img: "https://images.unsplash.com/photo-1600518464441-9154a4dea21b?w=200" },
-  // Delhi
-  { id: 39, name: "Delhi Deep Clean Services", category: "temizlik", homeService: "evde", city: "delhi", district: "Saket", lat: 28.5244, lng: 77.2066, x: 50, y: 60, rating: 4.8, price: "₹800'den", img: "https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=200" },
-  { id: 40, name: "Capital Renovation Works", category: "tadilat", homeService: "evde", city: "delhi", district: "Dwarka", lat: 28.5921, lng: 77.0460, x: 25, y: 45, rating: 4.5, price: "₹15.000'den", img: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=200" },
-  // Bangalore
-  { id: 41, name: "Bangalore 24x7 Locksmith", category: "cilingir", homeService: "evde", city: "bangalore", district: "Koramangala", lat: 12.9352, lng: 77.6245, x: 55, y: 60, rating: 4.9, price: "₹450'den", img: "https://images.unsplash.com/photo-1622037022824-0c71d511ad76?w=200" },
-  // Öğretmen
-  { id: 42, name: "Deniz Aydın", category: "ogretmen", homeService: "esnek", city: "ankara", district: "Çankaya", lat: 39.9179, lng: 32.8627, x: 47, y: 58, rating: 4.9, price: "350₺/saat", img: "https://images.unsplash.com/photo-1509062522246-3755977927d7?w=200" },
-  { id: 43, name: "İstanbul Özel Ders Merkezi", category: "ogretmen", homeService: "esnek", city: "istanbul", district: "Şişli", lat: 41.0602, lng: 28.9877, x: 50, y: 60, rating: 4.7, price: "320₺/saat", img: "https://images.unsplash.com/photo-1509062522246-3755977927d7?w=200" },
-  { id: 44, name: "Ege Akademi Özel Ders", category: "ogretmen", homeService: "esnek", city: "izmir", district: "Bornova", lat: 38.4691, lng: 27.2170, x: 67, y: 37, rating: 4.8, price: "300₺/saat", img: "https://images.unsplash.com/photo-1509062522246-3755977927d7?w=200" },
-  // Bakıcı
-  { id: 45, name: "Fatma H.", category: "bakici", homeService: "evde", city: "istanbul", district: "Beşiktaş", lat: 41.0422, lng: 29.0083, x: 32, y: 53, rating: 4.8, price: "300₺/gün", img: "https://images.unsplash.com/photo-1544126592-807ade215a0b?w=200" },
-  { id: 46, name: "Güvenilir Bakıcılık Hizmeti", category: "bakici", homeService: "evde", city: "ankara", district: "Yenimahalle", lat: 39.9700, lng: 32.7900, x: 30, y: 25, rating: 4.6, price: "280₺/gün", img: "https://images.unsplash.com/photo-1544126592-807ade215a0b?w=200" },
-  // Mühendis
-  { id: 47, name: "Emre Y. İnşaat Müh.", category: "muhendis", homeService: "esnek", city: "izmir", district: "Bornova", lat: 38.4691, lng: 27.2170, x: 67, y: 37, rating: 4.9, price: "6.000₺'den", img: "https://images.unsplash.com/photo-1541888946425-d81bb19240f5?w=200" },
-  { id: 48, name: "Yılmaz Mühendislik", category: "muhendis", homeService: "esnek", city: "istanbul", district: "Kadıköy", lat: 40.9833, lng: 29.0333, x: 42, y: 38, rating: 4.7, price: "5.500₺'den", img: "https://images.unsplash.com/photo-1541888946425-d81bb19240f5?w=200" },
-  // Hasta Bakıcı
-  { id: 49, name: "Songül T.", category: "hasta-bakici", homeService: "evde", city: "istanbul", district: "Üsküdar", lat: 41.0225, lng: 29.0163, x: 58, y: 30, rating: 4.9, price: "350₺/gün", img: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=200" },
-  { id: 50, name: "Nazan Bakım Hizmetleri", category: "hasta-bakici", homeService: "evde", city: "ankara", district: "Çankaya", lat: 39.9179, lng: 32.8627, x: 47, y: 58, rating: 4.7, price: "380₺/gün", img: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=200" },
-  // Hemşire
-  { id: 51, name: "Hemşire Aylin K.", category: "hemsire", homeService: "evde", city: "ankara", district: "Çankaya", lat: 39.9179, lng: 32.8627, x: 44, y: 55, rating: 5.0, price: "300₺'den", img: "https://images.unsplash.com/photo-1587351021355-a479a299d2f9?w=200" },
-  { id: 52, name: "Hemşire Onur D.", category: "hemsire", homeService: "evde", city: "istanbul", district: "Kadıköy", lat: 40.9833, lng: 29.0333, x: 45, y: 40, rating: 4.8, price: "280₺'den", img: "https://images.unsplash.com/photo-1587351021355-a479a299d2f9?w=200" },
-  // Fizyoterapist
-  { id: 53, name: "Fzt. Kerem A.", category: "fizyoterapist", homeService: "evde", city: "izmir", district: "Konak", lat: 38.4192, lng: 27.1287, x: 38, y: 58, rating: 4.8, price: "500₺/seans", img: "https://images.unsplash.com/photo-1567168539593-59673ababaee?w=200" },
-  { id: 54, name: "Fzt. Selin B.", category: "fizyoterapist", homeService: "evde", city: "istanbul", district: "Şişli", lat: 41.0602, lng: 28.9877, x: 51, y: 63, rating: 4.9, price: "450₺/seans", img: "https://images.unsplash.com/photo-1567168539593-59673ababaee?w=200" },
-  // Makyaj
-  { id: 55, name: "Melis Makyaj Atölyesi", category: "makyaj", homeService: "evde", city: "istanbul", district: "Beşiktaş", lat: 41.0422, lng: 29.0083, x: 30, y: 52, rating: 4.9, price: "1.200₺'den", img: "https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?w=200" },
-  { id: 56, name: "Naz Güzellik", category: "makyaj", homeService: "evde", city: "ankara", district: "Kızılay", lat: 39.9208, lng: 32.8541, x: 40, y: 45, rating: 5.0, price: "1.400₺'den", img: "https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?w=200" },
-  // Cilt Bakımı
-  { id: 57, name: "Dermo Güzellik Merkezi", category: "bakim", homeService: "mekanda", city: "izmir", district: "Konak", lat: 38.4192, lng: 27.1287, x: 35, y: 55, rating: 4.8, price: "650₺'den", img: "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=200" },
-  { id: 58, name: "Glow Skin Studio", category: "bakim", homeService: "mekanda", city: "istanbul", district: "Kadıköy", lat: 40.9833, lng: 29.0333, x: 43, y: 39, rating: 4.6, price: "580₺'den", img: "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=200" },
-  // Kuaför
-  { id: 59, name: "Studio Reyhan", category: "bakim", homeService: "mekanda", city: "istanbul", district: "Kadıköy", lat: 40.9833, lng: 29.0333, x: 46, y: 42, rating: 4.9, price: "500₺'den", img: "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=200" },
-  { id: 60, name: "Berrak Kuaför", category: "bakim", homeService: "mekanda", city: "ankara", district: "Kızılay", lat: 39.9208, lng: 32.8541, x: 42, y: 47, rating: 4.7, price: "420₺'den", img: "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=200" },
-  { id: 61, name: "Hair Lounge", category: "bakim", homeService: "mekanda", city: "izmir", district: "Alsancak", lat: 38.4380, lng: 27.1428, x: 40, y: 45, rating: 4.8, price: "550₺'den", img: "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=200" },
-  { id: 62, name: "Şişli Saç Tasarım", category: "bakim", homeService: "mekanda", city: "istanbul", district: "Şişli", lat: 41.0602, lng: 28.9877, x: 52, y: 61, rating: 4.6, price: "480₺'den", img: "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=200" },
-  // Terzi
-  { id: 63, name: "Terzi Necla Hanım", category: "terzi", homeService: "mekanda", city: "ankara", district: "Çankaya", lat: 39.9179, lng: 32.8627, x: 45, y: 56, rating: 4.8, price: "150₺'den", img: "https://images.unsplash.com/photo-1556905055-8f358a7a47b2?w=200" },
-  { id: 64, name: "Moda Terzi Atölyesi", category: "terzi", homeService: "mekanda", city: "istanbul", district: "Beşiktaş", lat: 41.0422, lng: 29.0083, x: 33, y: 54, rating: 4.6, price: "180₺'den", img: "https://images.unsplash.com/photo-1556905055-8f358a7a47b2?w=200" },
-  { id: 65, name: "Hızlı Tadilat Terzi", category: "terzi", homeService: "mekanda", city: "izmir", district: "Konak", lat: 38.4192, lng: 27.1287, x: 37, y: 57, rating: 4.5, price: "130₺'den", img: "https://images.unsplash.com/photo-1556905055-8f358a7a47b2?w=200" },
-  // Diyetisyen
-  { id: 66, name: "Dyt. Ceren Yıldız", category: "diyetisyen", homeService: "esnek", city: "istanbul", district: "Beşiktaş", lat: 41.0422, lng: 29.0083, x: 31, y: 51, rating: 4.9, price: "600₺'den", img: "https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=200" },
-  { id: 67, name: "Beslenme Kliniği", category: "diyetisyen", homeService: "esnek", city: "ankara", district: "Çankaya", lat: 39.9179, lng: 32.8627, x: 46, y: 57, rating: 4.8, price: "650₺'den", img: "https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=200" },
-  // Psikolog
-  { id: 68, name: "Psk. Selin Arslan", category: "psikolog", homeService: "esnek", city: "ankara", district: "Çankaya", lat: 39.9179, lng: 32.8627, x: 43, y: 60, rating: 5.0, price: "750₺'den", img: "https://images.unsplash.com/photo-1573497620053-ea5300f94f21?w=200" },
-  { id: 69, name: "Yaşam Terapi Merkezi", category: "psikolog", homeService: "esnek", city: "istanbul", district: "Şişli", lat: 41.0602, lng: 28.9877, x: 54, y: 58, rating: 4.9, price: "800₺'den", img: "https://images.unsplash.com/photo-1573497620053-ea5300f94f21?w=200" },
-  // Loğusa Bakıcısı
-  { id: 70, name: "Hemşire Gül T.", category: "logusa-bakicisi", homeService: "evde", city: "istanbul", district: "Üsküdar", lat: 41.0225, lng: 29.0163, x: 60, y: 28, rating: 4.9, price: "400₺/gün", img: "https://images.unsplash.com/photo-1544126592-807ade215a0b?w=200" },
-  // Emzirme Danışmanı
-  { id: 71, name: "IBCLC Deniz K.", category: "emzirme-danismani", homeService: "evde", city: "istanbul", district: "Kadıköy", lat: 40.9833, lng: 29.0333, x: 44, y: 36, rating: 5.0, price: "500₺'den", img: "https://images.unsplash.com/photo-1591604021695-0c69b7c05981?w=200" },
-  // Elektrikçi
-  { id: 72, name: "Elektrikçi Hasan Usta", category: "elektrikci", homeService: "evde", city: "izmir", district: "Bornova", lat: 38.4691, lng: 27.2170, x: 70, y: 33, rating: 4.7, price: "350₺'den", img: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=200" },
-  { id: 73, name: "Güven Elektrik", category: "elektrikci", homeService: "evde", city: "istanbul", district: "Kartal", lat: 40.9061, lng: 29.1897, x: 77, y: 47, rating: 4.9, price: "400₺'den", img: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=200" },
-  // Su Tesisatçısı
-  { id: 74, name: "Tesisatçı Murat", category: "su-tesisatcisi", homeService: "evde", city: "istanbul", district: "Maltepe", lat: 40.9354, lng: 29.1553, x: 66, y: 64, rating: 4.6, price: "400₺'den", img: "https://images.unsplash.com/photo-1607472829122-63c2b7c4b1b7?w=200" },
-  { id: 75, name: "Anadolu Tesisat", category: "su-tesisatcisi", homeService: "evde", city: "ankara", district: "Etimesgut", lat: 39.9500, lng: 32.6683, x: 17, y: 33, rating: 4.8, price: "450₺'den", img: "https://images.unsplash.com/photo-1607472829122-63c2b7c4b1b7?w=200" },
-  // Halı & Koltuk Yıkama
-  { id: 76, name: "TemizPark Halı Yıkama", category: "hali-yikama", homeService: "evde", city: "izmir", district: "Konak", lat: 38.4192, lng: 27.1287, x: 33, y: 52, rating: 4.8, price: "80₺/m²'den", img: "https://images.unsplash.com/photo-1558317374-067fb5f30001?w=200" },
-  { id: 77, name: "Işıl Halı Yıkama", category: "hali-yikama", homeService: "evde", city: "istanbul", district: "Şişli", lat: 41.0602, lng: 28.9877, x: 49, y: 60, rating: 4.6, price: "65₺/m²'den", img: "https://images.unsplash.com/photo-1558317374-067fb5f30001?w=200" },
-  // Doğum Günü / Etkinlik Organizatörü
-  { id: 78, name: "Renkli Partiler Ekibi", category: "etkinlik-organizatoru", homeService: "esnek", city: "istanbul", district: "Şişli", lat: 41.0602, lng: 28.9877, x: 47, y: 65, rating: 4.9, price: "3.500₺'den", img: "https://images.unsplash.com/photo-1530103862676-de8c9debad1d?w=200" },
-  // Kaş & Kirpik
-  { id: 79, name: "Brow Studio Zeynep", category: "bakim", homeService: "mekanda", city: "istanbul", district: "Kadıköy", lat: 40.9833, lng: 29.0333, x: 48, y: 34, rating: 4.9, price: "600₺'den", img: "https://images.unsplash.com/photo-1522337660859-02fbefca4702?w=200" },
-  { id: 80, name: "Lash & Brow Bar", category: "bakim", homeService: "mekanda", city: "izmir", district: "Alsancak", lat: 38.4380, lng: 27.1428, x: 43, y: 42, rating: 4.7, price: "550₺'den", img: "https://images.unsplash.com/photo-1522337660859-02fbefca4702?w=200" },
-  // Masaj & Spa
-  { id: 81, name: "Huzur Masaj Stüdyosu", category: "bakim", homeService: "mekanda", city: "ankara", district: "Çankaya", lat: 39.9179, lng: 32.8627, x: 40, y: 62, rating: 4.8, price: "700₺'den", img: "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=200" },
-  // Yemek
-  { id: 82, name: "Elif'in Mutfağı", category: "yemek", homeService: "evde", city: "istanbul", district: "Üsküdar", lat: 41.0225, lng: 29.0163, x: 55, y: 25, rating: 4.9, price: "800₺/hafta'dan", img: "https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=200" },
-  { id: 83, name: "Ev Sofrası Catering", category: "yemek", homeService: "evde", city: "ankara", district: "Çankaya", lat: 39.9179, lng: 32.8627, x: 48, y: 52, rating: 4.7, price: "950₺/hafta'dan", img: "https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=200" },
-  // Yoga & Meditasyon / Yaşam Koçu
-  { id: 84, name: "Ayşe Nur — Yoga & Yaşam Koçu", category: "yoga-koc", homeService: "esnek", city: "istanbul", district: "Kadıköy", lat: 40.9833, lng: 29.0333, x: 41, y: 33, rating: 4.9, price: "450₺'den", img: "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=200" },
-  { id: 85, name: "Huzur Yoga Stüdyosu", category: "yoga-koc", homeService: "esnek", city: "izmir", district: "Alsancak", lat: 38.4380, lng: 27.1428, x: 45, y: 48, rating: 4.8, price: "400₺'den", img: "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=200" },
-  { id: 92, name: "Yudum Bulut — Nefes Terapisti", category: "yoga-koc", homeService: "esnek", city: "istanbul", district: "Beşiktaş", lat: 41.0422, lng: 29.0083, x: 36, y: 58, rating: 4.9, price: "500₺/seans", img: "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=200" },
-  // Bahçe / Bakım
-  { id: 86, name: "Yeşil Bahçe Ekibi", category: "bahce-bakim", homeService: "evde", city: "istanbul", district: "Beykoz", lat: 41.1250, lng: 29.0958, x: 60, y: 15, rating: 4.7, price: "500₺'den", img: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=200" },
-  { id: 87, name: "Bahçıvan Kemal", category: "bahce-bakim", homeService: "evde", city: "ankara", district: "Çankaya", lat: 39.9179, lng: 32.8627, x: 38, y: 64, rating: 4.5, price: "400₺'den", img: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=200" },
-  // Profesyonel Fotoğraf
-  { id: 88, name: "Cansu Kaya Fotoğrafçılık", category: "profesyonel-fotograf", homeService: "evde", city: "istanbul", district: "Şişli", lat: 41.0602, lng: 28.9877, x: 50, y: 63, rating: 5.0, price: "2.500₺'den", img: "https://images.unsplash.com/photo-1519741497674-611481863552?w=200" },
-  { id: 89, name: "Foto Stüdyo Aile", category: "profesyonel-fotograf", homeService: "evde", city: "izmir", district: "Konak", lat: 38.4192, lng: 27.1287, x: 39, y: 60, rating: 4.7, price: "1.800₺'den", img: "https://images.unsplash.com/photo-1519741497674-611481863552?w=200" },
-  // Spor Eğitmeni
-  { id: 90, name: "Buğra Fit — Kişisel Antrenör", category: "spor-egitmeni", homeService: "esnek", city: "istanbul", district: "Beşiktaş", lat: 41.0422, lng: 29.0083, x: 34, y: 56, rating: 4.8, price: "500₺'den", img: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=200" },
-  { id: 91, name: "Form Stüdyo", category: "spor-egitmeni", homeService: "esnek", city: "ankara", district: "Çankaya", lat: 39.9179, lng: 32.8627, x: 42, y: 59, rating: 4.9, price: "550₺'den", img: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=200" },
-];
+// Yayın öncesi kullanıcı kararı (2026-09-13): LISTINGS ile aynı gerekçeyle
+// boşaltıldı — haritada artık sadece gerçek "services" pinleri (realPins)
+// ve gerçek iş ilanı pinleri (jobPins) gösteriliyor.
+const LOCAL_PROVIDERS = [];
 
 function distanceKm(lat1, lng1, lat2, lng2) {
   const R = 6371;
@@ -5680,7 +5547,7 @@ const BOOST_PACKAGE = {
   tagline: "Seçtiğin bir vitrini öne çıkarır — Standart Üyeliğe ek, isteğe bağlı",
   features: [
     "Öne çıkan sağlayıcı rozeti", "Haritada ve aramada üstte görünme",
-    "AI eşleştirmede öncelik", "Pazar Analizi'ne erişim (talep trendleri)", "Destek asistanında öncelikli sıra",
+    "AI eşleştirmede öncelik", "Destek asistanında öncelikli sıra",
   ],
 };
 
