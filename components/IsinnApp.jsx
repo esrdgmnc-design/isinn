@@ -1104,11 +1104,21 @@ function formatMessageTime(iso) {
 
 // İlan/iş ilanı oluşturma ve mesaj gönderme gibi "eylemler" için ortak telefon
 // doğrulama kilidi (Fiverr'ın yaptığı gibi — gezinme/görüntüleme serbest,
-// sadece eylemler kilitli). SMS servisi henüz yapılandırılmadıysa (Netgsm
-// anahtarları yoksa) kilit devreye girmiyor — yumuşak blok, anahtar eklenince
-// otomatik sertleşir.
+// sadece eylemler kilitli).
+//
+// GEÇİCİ OLARAK KAPALI (2026-09-13): Netgsm anahtarları .env'de olduğu için
+// /api/send-otp "configured: true" dönüyor — yani aşağıdaki eski yumuşak-blok
+// mantığı ("SMS yapılandırılmadıysa engelleme") artık devreye girmiyor, kilit
+// sertleşiyor. Ama gerçek SMS gönderimi hâlâ çalışmıyor: Netgsm hesabı İYS
+// (İleti Yönetim Sistemi) marka onayı bekliyor, onay gelene kadar kimse
+// telefonunu doğrulayamıyor — sonuç: vitrin/iş ilanı açmak isteyenler bu
+// adımda tıkanıp kalıyordu. İYS onayı gelip SMS gerçekten çalışana kadar
+// kilit tamamen kapalı; onay gelince `return { ok: true };` satırını silip
+// altındaki orijinal kontrolü geri açmak yeterli.
 async function checkPhoneGate(userId) {
   if (!userId) return { ok: false, reason: "Giriş yapmış olmalısın." };
+  return { ok: true };
+  // eslint-disable-next-line no-unreachable
   try {
     const cfgRes = await fetch("/api/send-otp");
     const cfg = await cfgRes.json();
