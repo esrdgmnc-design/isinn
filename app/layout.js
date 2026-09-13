@@ -2,8 +2,26 @@ import "./globals.css";
 import { Analytics } from "@vercel/analytics/react";
 
 export const metadata = {
+  metadataBase: new URL("https://www.isinn.com.tr"),
   title: "İşinn — Güvendiğin Ellere",
   description: "Yerinde ve uzaktan hizmet pazaryeri",
+  // Bu alanlar olmadan link WhatsApp/Instagram/X'te paylaşıldığında çıplak
+  // bir metin linki görünüyordu — og:image app/opengraph-image.js'ten
+  // (özel dosya kuralı) otomatik bağlanıyor, burada ayrıca belirtmeye
+  // gerek yok.
+  openGraph: {
+    title: "İşinn — Güvendiğin Ellere",
+    description: "İhtiyacın olan hizmeti bulduğun ya da kendi hizmetini sunduğun güvenilir yerel pazar yeri. Sıfır komisyon.",
+    url: "https://www.isinn.com.tr",
+    siteName: "İşinn",
+    locale: "tr_TR",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "İşinn — Güvendiğin Ellere",
+    description: "İhtiyacın olan hizmeti bulduğun ya da kendi hizmetini sunduğun güvenilir yerel pazar yeri.",
+  },
 };
 
 export default function RootLayout({ children }) {

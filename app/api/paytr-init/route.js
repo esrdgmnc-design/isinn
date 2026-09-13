@@ -75,6 +75,17 @@ export async function POST(request) {
     return Response.json({ ok: false, message: "Bu ürün için fiyat tanımlı değil." }, { status: 400 });
   }
 
+  // "Kredi kartı otomatik hatırlar mı" (2026-09-13) — PayTR'ın Kart Saklama
+  // API'siyle her ödemede kartı saklamayı deniyoruz (store_card:1). Kullanıcının
+  // zaten kayıtlı bir kartı varsa (payment_methods'ta utoken) onu da birlikte
+  // gönderiyoruz — PayTR dokümanına göre var olan bir utoken'a yeni kart
+  // eklenirken ikisi birlikte gitmesi gerekiyor.
+  const { data: existingMethod } = await admin
+    .from("payment_methods")
+    .select("utoken")
+    .eq("profile_id", user.id)
+    .maybeSingle();
+
   const merchantOid = generateMerchantOid("ISINN");
   const userIp = getClientIp(request);
   const email = user.email || "";
@@ -129,6 +140,8 @@ export async function POST(request) {
     merchant_ok_url: `${siteUrl}/odeme/basarili`,
     merchant_fail_url: `${siteUrl}/odeme/basarisiz`,
     timeout_limit: "30",
+    store_card: "1",
+    ...(existingMethod?.utoken ? { utoken: existingMethod.utoken } : {}),
     debug_on: testMode === "1" ? "1" : "0",
     lang: "tr",
   });

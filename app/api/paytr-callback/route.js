@@ -12,7 +12,87 @@
 //    hiçbir şey değil. Aksi halde PayTR bildirimi "başarısız" sayıp tekrar
 //    tekrar dener.
 import { createClient } from "@supabase/supabase-js";
-import { computeCallbackHash } from "../../../lib/paytr";
+import { computeCallbackHash, computeCapiListHash } from "../../../lib/paytr";
+import { COMPANY } from "../../../lib/companyInfo";
+
+// Ödeme başarılıysa PayTR bildirimde bir "utoken" de gönderiyor (kart
+// store_card:1 ile saklandıysa). Bu tek başına kartı çekmek için yetmiyor —
+// gerçek kart token'ı (ctoken) ayrı bir çağrıyla (CAPI LIST) alınıyor. İkisini
+// birlikte payment_methods'a kaydediyoruz; "kredi kartı hatırlar mı" sorusunun
+// gerçek cevabı bu iki satır (bkz. supabase/payment_methods.sql).
+async function saveCardIfPresent(admin, form, profileId) {
+  const utoken = form.get("utoken");
+  if (!utoken) return;
+
+  const merchantId = process.env.PAYTR_MERCHANT_ID;
+  const merchantKey = process.env.PAYTR_MERCHANT_KEY;
+  const merchantSalt = process.env.PAYTR_MERCHANT_SALT;
+  if (!merchantId || !merchantKey || !merchantSalt) return;
+
+  try {
+    const paytrToken = computeCapiListHash({ utoken, merchantSalt, merchantKey });
+    const res = await fetch("https://www.paytr.com/odeme/capi/list", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ merchant_id: merchantId, utoken, paytr_token: paytrToken }).toString(),
+    });
+    const cards = await res.json();
+    const card = Array.isArray(cards) ? cards[0] : Array.isArray(cards?.cards) ? cards.cards[0] : null;
+    if (!card?.ctoken) return;
+
+    await admin.from("payment_methods").upsert({
+      profile_id: profileId,
+      utoken,
+      ctoken: card.ctoken,
+      last_4: card.last_4 || null,
+      card_brand: card.schema || card.c_brand || null,
+      card_bank: card.c_bank || null,
+      exp_month: card.month || null,
+      exp_year: card.year || null,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: "profile_id" });
+  } catch {
+    // Kart kaydı ikincil bir iyileştirme — başarısız olsa bile asıl ödeme
+    // onayı (aşağıdaki payment_orders/provider_subscriptions güncellemesi)
+    // etkilenmemeli.
+  }
+}
+
+// Ödeme makbuzu e-postası (2026-09-13) — "profesyonel sitelerde ödeme sonrası
+// makbuz gelir" eksikliğine cevap. send-notification-email Edge Function'ı
+// zaten var ama henüz deploy edilmedi (bkz. notify_new_message_email.sql'in
+// başındaki not) — o deploy edilene kadar bu da sessizce başarısız olur,
+// asıl ödeme onayı/aktivasyon etkilenmez (try/catch ile izole).
+async function sendReceiptEmail(admin, order, totalAmountKurus) {
+  try {
+    const { data: userRes } = await admin.auth.admin.getUserById(order.profile_id);
+    const email = userRes?.user?.email;
+    if (!email) return;
+
+    const tl = (Number(totalAmountKurus) / 100).toLocaleString("tr-TR", { minimumFractionDigits: 2 });
+    const itemLabel = order.order_type === "addon" ? order.plan_slug : `${order.plan_slug === "pro" ? "Pro Üyelik" : order.plan_slug} Üyelik`;
+
+    await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/send-notification-email`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({
+        to: email,
+        subject: "Ödemen alındı — İşinn",
+        body:
+          `Ödemen başarıyla alındı, teşekkürler!\n\n` +
+          `Ürün: ${itemLabel}\n` +
+          `Tutar: ${tl}₺\n` +
+          `Tarih: ${new Date().toLocaleDateString("tr-TR")}\n\n` +
+          `Bu bir otomatik makbuzdur. Sorularınız için ${COMPANY.email} adresine yazabilirsiniz.`,
+      }),
+    });
+  } catch {
+    // E-posta ikincil — asıl ödeme onayı/aktivasyon bundan etkilenmemeli.
+  }
+}
 
 export async function POST(request) {
   const merchantKey = process.env.PAYTR_MERCHANT_KEY;
@@ -140,6 +220,8 @@ export async function POST(request) {
     }
 
     await admin.from("payment_orders").update({ status: "success", paid_at: new Date().toISOString() }).eq("id", order.id);
+    await saveCardIfPresent(admin, form, order.profile_id);
+    await sendReceiptEmail(admin, order, totalAmount);
   } else {
     await admin.from("payment_orders").update({ status: "failed", failed_reason: failedReasonMsg }).eq("id", order.id);
   }
