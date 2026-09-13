@@ -898,53 +898,6 @@ function getOffersForCategory(categoryId) {
   return pool.map((o, i) => ({ id: i + 1, status: "pending", ...o }));
 }
 
-const NAIL_ARTISTS = [
-  {
-    id: 1, name: "Naz Nail Art", handle: "@naznailart", city: "Kadıköy, İstanbul", rating: 4.9, followers: "12.4K", avatar: "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=200",
-    portfolio: [
-      "https://images.unsplash.com/photo-1604654894610-df63bc536371?w=400",
-      "https://images.unsplash.com/photo-1610992015732-2449b76344bc?w=400",
-      "https://images.unsplash.com/photo-1519014816548-bf5fe059798b?w=400",
-      "https://images.unsplash.com/photo-1583001931096-959e9a1a6223?w=400",
-      "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=400",
-      "https://images.unsplash.com/photo-1604902396830-aca29e19b067?w=400",
-    ],
-  },
-  {
-    id: 2, name: "Ela Beauty", handle: "@elabeauty.nails", city: "Beşiktaş, İstanbul", rating: 4.8, followers: "8.1K", avatar: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=200",
-    portfolio: [
-      "https://images.unsplash.com/photo-1610992015732-2449b76344bc?w=400",
-      "https://images.unsplash.com/photo-1519014816548-bf5fe059798b?w=400",
-      "https://images.unsplash.com/photo-1604654894610-df63bc536371?w=400",
-      "https://images.unsplash.com/photo-1604902396830-aca29e19b067?w=400",
-      "https://images.unsplash.com/photo-1583001931096-959e9a1a6223?w=400",
-      "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=400",
-    ],
-  },
-  {
-    id: 3, name: "Cilalı Stüdyo", handle: "@cilalistudyo", city: "Çankaya, Ankara", rating: 4.9, followers: "15.7K", avatar: "https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?w=200",
-    portfolio: [
-      "https://images.unsplash.com/photo-1583001931096-959e9a1a6223?w=400",
-      "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=400",
-      "https://images.unsplash.com/photo-1604902396830-aca29e19b067?w=400",
-      "https://images.unsplash.com/photo-1610992015732-2449b76344bc?w=400",
-      "https://images.unsplash.com/photo-1519014816548-bf5fe059798b?w=400",
-      "https://images.unsplash.com/photo-1604654894610-df63bc536371?w=400",
-    ],
-  },
-  {
-    id: 4, name: "Glow Nails", handle: "@glownails.izmir", city: "Bornova, İzmir", rating: 4.7, followers: "5.9K", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200",
-    portfolio: [
-      "https://images.unsplash.com/photo-1519014816548-bf5fe059798b?w=400",
-      "https://images.unsplash.com/photo-1604654894610-df63bc536371?w=400",
-      "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=400",
-      "https://images.unsplash.com/photo-1583001931096-959e9a1a6223?w=400",
-      "https://images.unsplash.com/photo-1610992015732-2449b76344bc?w=400",
-      "https://images.unsplash.com/photo-1604902396830-aca29e19b067?w=400",
-    ],
-  },
-];
-
 const REVIEWS = [
   {
     id: 1, name: "Elif K.", initials: "EK", value: 5, verified: true, time: "2 gün önce",
@@ -2044,7 +1997,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
               </div>
               <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
                 {groupCategories.map((c, i) => (
-                  <CategoryTile key={c.id} c={c} i={i} onClick={() => (c.id === "tirnakci" ? onNav("nailart") : onSearch(c.name))} />
+                  <CategoryTile key={c.id} c={c} i={i} onClick={() => onSearch(c.name)} />
                 ))}
               </div>
             </div>
@@ -4743,102 +4696,6 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
   );
 }
 
-function NailArtView({ onBack, onContact }) {
-  const [openProfile, setOpenProfile] = useState(null); // artist object
-  const [lightbox, setLightbox] = useState(null); // { media, index }
-
-  if (openProfile) {
-    const media = openProfile.portfolio.map((url) => ({ type: "image", url }));
-    return (
-      <div className="max-w-2xl mx-auto px-5 py-8">
-        <button onClick={() => setOpenProfile(null)} className="flex items-center gap-1 text-sm mb-4" style={{ color: "#5C5744" }}>
-          <ChevronLeft size={16} /> Geri
-        </button>
-        <div className="flex items-center gap-4 mb-2">
-          <img src={openProfile.avatar} alt="" className="w-16 h-16 rounded-full object-cover" />
-          <div>
-            <p className="font-serif text-lg" style={{ color: "#1B2B24" }}>{openProfile.name}</p>
-            <p className="text-xs" style={{ color: "#8A8368" }}>{openProfile.handle} · {openProfile.city}</p>
-            <div className="flex items-center gap-3 mt-1 text-xs" style={{ color: "#5C5744" }}>
-              <span className="flex items-center gap-1"><Stars value={openProfile.rating} size={11} />{openProfile.rating}</span>
-              <span className="flex items-center gap-1"><Users size={11} />{openProfile.followers} takipçi</span>
-            </div>
-          </div>
-        </div>
-        {/* "İletişime Geç" bilerek kaldırıldı (2026-09-13) — bu galerideki
-            sanatçılar gerçek hesaplar değil, ilham amaçlı örnek portföyler.
-            Buton varken gerçek bir müşteri mesaj gönderip hiç cevap
-            alamayabiliyordu, özellikle artık platformda gerçek para akarken
-            bu güven kaybı riskiydi. Gerçek nail art sağlayıcıları katılınca
-            geri eklenebilir. */}
-        <p className="text-xs text-center my-4 px-3 py-2 rounded-lg" style={{ background: "#F3EDDD", color: "#8A8368" }}>
-          Bu bir ilham galerisi — gerçek nail art sağlayıcıları platforma katıldıkça burada göreceksin.
-        </p>
-        <div className="grid grid-cols-3 gap-1">
-          {openProfile.portfolio.map((url, i) => (
-            <button key={i} onClick={() => setLightbox({ media, index: i })} className="aspect-square overflow-hidden">
-              <img src={url} alt="" className="w-full h-full object-cover hover:scale-105 transition-transform duration-200" />
-            </button>
-          ))}
-        </div>
-        {lightbox && (
-          <MediaLightbox
-            media={lightbox.media}
-            index={lightbox.index}
-            onClose={() => setLightbox(null)}
-            onNav={(i) => setLightbox({ ...lightbox, index: i })}
-          />
-        )}
-      </div>
-    );
-  }
-
-  return (
-    <div className="max-w-2xl mx-auto px-5 py-8">
-      <button onClick={onBack} className="flex items-center gap-1 text-sm mb-4" style={{ color: "#5C5744" }}>
-        <ChevronLeft size={16} /> Geri
-      </button>
-      <div className="flex items-center gap-2 mb-1">
-        <Grid3x3 size={20} style={{ color: "#1B2B24" }} />
-        <h1 className="font-serif text-2xl" style={{ color: "#1B2B24" }}>Tırnakçı & Nail Art</h1>
-      </div>
-      <p className="text-sm mb-6" style={{ color: "#5C5744" }}>Portföylerine bakıp beğendiğin tasarıma sahip kişiyi seç</p>
-
-      <div className="space-y-6">
-        {NAIL_ARTISTS.map((artist) => (
-          <div key={artist.id} className="rounded-xl border overflow-hidden" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
-            <button onClick={() => setOpenProfile(artist)} className="w-full flex items-center gap-3 p-3.5 text-left">
-              <img src={artist.avatar} alt="" className="w-11 h-11 rounded-full object-cover" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium" style={{ color: "#1B2B24" }}>{artist.name}</p>
-                <p className="text-xs" style={{ color: "#8A8368" }}>{artist.handle} · {artist.city}</p>
-              </div>
-              <div className="text-right shrink-0">
-                <div className="flex items-center gap-1 justify-end">
-                  <Stars value={artist.rating} size={11} />
-                  <span className="text-xs" style={{ color: "#5C5744" }}>{artist.rating}</span>
-                </div>
-                <p className="text-[11px]" style={{ color: "#8A8368" }}>{artist.followers} takipçi</p>
-              </div>
-            </button>
-            <div className="grid grid-cols-3 gap-0.5">
-              {artist.portfolio.slice(0, 6).map((url, i) => (
-                <button
-                  key={i}
-                  onClick={() => setOpenProfile(artist)}
-                  className="relative aspect-square overflow-hidden"
-                >
-                  <img src={url} alt="" className="w-full h-full object-cover hover:opacity-90 transition-opacity" />
-                </button>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 // Yayın öncesi kullanıcı kararı: vitrinler hariç tüm demo/örnek içerik
 // kaldırıldı (gerçek kullanıcılar demo mesajları görüp kafası karışıyordu —
 // bkz. bugünkü "deneme mesajları onda da açık" geri bildirimi). Boş bırakmak,
@@ -6487,9 +6344,9 @@ function formatDaysUntilTr(iso) {
 // yorumu yaptıran "Pazar Analizi" vardı (bkz. ProfileView'daki kaldırılış
 // notu). Bunun yerine profiles/services/provider_subscriptions'tan gerçek
 // sayılar çekip gösteriyoruz: kaç kullanıcı, kaç sağlayıcı, büyüme, kimin
-// aboneliği ne zaman bitiyor. Gelir kartı bilinçli olarak "₺0" gösteriyor —
-// PayTR canlı ödeme entegrasyonu henüz açılmadığı için platformda gerçek
-// bir para akışı yok; sahte bir sayı göstermek yanıltıcı olurdu.
+// aboneliği ne zaman bitiyor. Gelir kartı da artık gerçek — PayTR
+// 2026-09-13'te canlıya geçti, payment_orders'taki başarılı ödemelerin
+// toplamını gösteriyor.
 function AdminDashboardView({ onBack }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -6497,6 +6354,7 @@ function AdminDashboardView({ onBack }) {
   const [services, setServices] = useState([]);
   const [subs, setSubs] = useState([]);
   const [pageViews, setPageViews] = useState([]);
+  const [orders, setOrders] = useState([]);
   const [rangeMode, setRangeMode] = useState("day"); // day | week | month
   const [selectedDetail, setSelectedDetail] = useState(null); // "users" | "providers" | "newThisWeek" | "subs" | null
   const detailPanelRef = useRef(null);
@@ -6516,15 +6374,17 @@ function AdminDashboardView({ onBack }) {
       setLoading(true);
       setError(false);
       try {
-        const [profilesRes, servicesRes, subsRes, plansRes, viewsRes] = await Promise.all([
+        const [profilesRes, servicesRes, subsRes, plansRes, viewsRes, ordersRes] = await Promise.all([
           supabase.from("profiles").select("id, user_type, created_at, full_name, business_name"),
           supabase.from("services").select("provider_id, title, created_at"),
           supabase.from("provider_subscriptions").select("id, profile_id, plan_id, status, billing_cycle, current_period_end"),
           supabase.from("subscription_plans").select("id, slug, name"),
           supabase.from("page_views").select("created_at"),
+          supabase.from("payment_orders").select("amount, status, paid_at").eq("status", "success"),
         ]);
         if (cancelled) return;
         setPageViews(viewsRes.data || []);
+        setOrders(ordersRes.data || []);
         const profilesData = profilesRes.data || [];
         const profilesById = {};
         profilesData.forEach((p) => { profilesById[p.id] = p; });
@@ -6557,6 +6417,14 @@ function AdminDashboardView({ onBack }) {
   const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
   const viewsToday = pageViews.filter((v) => new Date(v.created_at).getTime() >= todayStart.getTime()).length;
   const viewsThisWeek = pageViews.filter((v) => new Date(v.created_at).getTime() >= weekAgo).length;
+
+  // Gerçek gelir — PayTR 2026-09-13'te canlıya geçti, artık payment_orders'ta
+  // gerçekten başarılı (status='success') satırlar birikiyor.
+  const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
+  const totalRevenue = orders.reduce((sum, o) => sum + Number(o.amount || 0), 0);
+  const revenueThisMonth = orders
+    .filter((o) => o.paid_at && new Date(o.paid_at).getTime() >= monthStart.getTime())
+    .reduce((sum, o) => sum + Number(o.amount || 0), 0);
 
   const soon = now + 7 * 24 * 60 * 60 * 1000;
   const renewalsSoon = subs
@@ -6702,8 +6570,10 @@ function AdminDashboardView({ onBack }) {
               <Wallet size={15} style={{ color: "#9CA3AF" }} />
               <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>Gelir</p>
             </div>
-            <p className="text-2xl font-black mt-2" style={{ color: "#0F1115" }}>₺0</p>
-            <p className="text-xs mt-1" style={{ color: "#9CA3AF" }}>PayTR canlı ödeme entegrasyonu henüz açılmadı — gerçek gelir akmaya başlayınca burada görünecek.</p>
+            <p className="text-2xl font-black mt-2" style={{ color: "#0F1115" }}>{totalRevenue.toLocaleString("tr-TR")}₺</p>
+            <p className="text-xs mt-1" style={{ color: "#9CA3AF" }}>
+              Bu ay: {revenueThisMonth.toLocaleString("tr-TR")}₺ · PayTR üzerinden gerçekten tahsil edilmiş ödemeler (iade/başarısız hariç).
+            </p>
           </div>
 
           <div className="rounded-2xl border p-4 mb-4" style={{ borderColor: "#F0F0F0", background: "#FFFFFF" }}>
@@ -9067,7 +8937,7 @@ function VitrinMediaView({ userId, service, onBack, onListingsChanged }) {
 // listeyle sınırlı, diğerleri yenilenince ana sayfaya düşer.
 const RESTORABLE_VIEWS = new Set([
   "home", "profile", "createListing", "map", "post", "pricing", "messages",
-  "search", "nailart", "support", "adminReports", "adminModeration", "adminDashboard", "favorites",
+  "search", "support", "adminReports", "adminModeration", "adminDashboard", "favorites",
 ]);
 
 function getInitialView() {
@@ -9474,11 +9344,6 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
   }, [userId]);
 
   const runSearch = (q, city = "") => {
-    const normalized = q.trim().toLocaleLowerCase("tr-TR");
-    if (["tırnakçı", "tırnak", "nail", "nailart", "manikür", "manikur"].some((kw) => normalized.includes(kw))) {
-      setView("nailart");
-      return;
-    }
     setQuery(q);
     setCityFilter(city);
     setView("search");
@@ -9666,12 +9531,6 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
           onBack={() => setView("home")}
           onSelectListing={(l) => { setSelected(l); setView("detail"); }}
           realListings={realListings}
-        />
-      )}
-      {view === "nailart" && (
-        <NailArtView
-          onBack={() => setView("home")}
-          onContact={(contact) => { if (!userId) { onRequireAuth?.(); return; } setMessageContact(contact); setView("messages"); }}
         />
       )}
       {view === "messages" && (
