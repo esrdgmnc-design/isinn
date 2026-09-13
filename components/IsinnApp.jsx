@@ -7159,39 +7159,51 @@ function PricingView({ onBack, onJoined, userId }) {
   const [proJoined, setProJoined] = useState(false);
   const [proError, setProError] = useState("");
   const [paytrToken, setPaytrToken] = useState(null);
+  const [checkoutIntent, setCheckoutIntent] = useState(null); // { kind: "standart"|"boost", label }
   const proPrice = cycle === "monthly" ? PRO_PACKAGE.priceMonthly : PRO_PACKAGE.priceYearly;
   const plan = PLANS[0];
   const basePrice = cycle === "monthly" ? plan.priceMonthly : plan.priceYearly;
   const period = cycle === "monthly" ? "/ay" : "/yıl";
   const boostPrice = boostDuration === "weekly" ? WEEKLY_BOOST_PACKAGE.price : BOOST_PACKAGE.priceMonthly;
-  const total = basePrice + (boostSelected ? boostPrice : 0);
 
-  // Gerçek ödeme entegrasyonu ayrı bir faz (görev kapsamı dışı) — ama şemanın
-  // kendi 30 günlük ücretsiz deneme mekanizması (provider_subscriptions,
-  // status='trialing') hiçbir ödeme/kart bilgisi gerektirmeden gerçekten
-  // kurulabilir. provider_subscriptions/provider_addons tablolarında bilerek
-  // sadece SELECT RLS politikası var (insert/update yok) — istemciden doğrudan
-  // yazmaya izin vermek, herkesin kendine bedava "active" abonelik açmasına
-  // kapı aralardı. Onun yerine sadece auth.uid() için, sadece deneme başlatan,
-  // güvenli bir RPC fonksiyonu üzerinden yazıyoruz (bkz. billing_trial_rpc.sql).
-  const startTrial = async () => {
-    if (!userId) { setJoinError("Denemeye başlamak için giriş yapmış olmalısın."); return; }
+  // 2026-09-13 kararı: "kimse bir sorunla karşılaşmıyorsa neden deneme
+  // sürecini başlat desin ki" — deneme artık burada elle başlatılmıyor,
+  // kayıt olur olmaz otomatik başlıyor (bkz. IsinnApp.jsx'teki profil
+  // oluşturma fallback'i). Bu buton artık SADECE gerçek ödemeye yarıyor:
+  // ya deneme süresi dolduğunda devam etmek için, ya da biri denemeyi
+  // beklemeden hemen ödemek isterse. Öne Çıkarma Paketi de (boostSelected)
+  // artık aynı gerçek PayTR akışından geçiyor — eskiden bu bedavaydı
+  // (add_boost_addon RPC'sini doğrudan çağırıyordu), bugün Pro/Ek Vitrin'de
+  // kapattığımız boşluğun aynısı burada da vardı.
+  const startPaytrPurchase = async (body, intent) => {
+    if (!userId) { setJoinError("Ödeme için giriş yapmış olmalısın."); return; }
     setJoinError("");
     setJoining(true);
     try {
-      const { error: subErr } = await supabase.rpc("start_free_trial", { p_billing_cycle: cycle });
-      if (subErr) throw subErr;
-      if (boostSelected) {
-        const { error: addonErr } = await supabase.rpc(boostDuration === "weekly" ? "add_weekly_boost_addon" : "add_boost_addon");
-        if (addonErr) throw addonErr;
-      }
-      setJoined(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch("/api/paytr-init", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.message || "Ödeme başlatılamadı.");
+      setCheckoutIntent(intent);
+      setPaytrToken(data.token);
     } catch (err) {
-      setJoinError(`Kaydedilemedi: ${err?.message || "bilinmeyen hata"}`);
+      setJoinError(`Ödeme başlatılamadı: ${err?.message || "bilinmeyen hata"}`);
     } finally {
       setJoining(false);
     }
   };
+  const payForStandart = () => startPaytrPurchase({ planSlug: "standart", billingCycle: cycle }, { kind: "standart" });
+  const payForBoost = () => startPaytrPurchase(
+    { addonSlug: boostDuration === "weekly" ? "one-cikarma-haftalik" : "one-cikarma", billingCycle: "monthly" },
+    { kind: "boost" }
+  );
 
   // Pro Üyelik, Standart'ın denemesinden bağımsız, ayrı bir yükseltme —
   // birden fazla vitrin açmak isteyen (örn. iki farklı uzmanlık alanı) biri
@@ -7220,6 +7232,7 @@ function PricingView({ onBack, onJoined, userId }) {
       });
       const data = await res.json();
       if (!data.ok) throw new Error(data.message || "Ödeme başlatılamadı.");
+      setCheckoutIntent({ kind: "pro" });
       setPaytrToken(data.token);
     } catch (err) {
       setProError(`Geçilemedi: ${err?.message || "bilinmeyen hata"}`);
@@ -7234,13 +7247,11 @@ function PricingView({ onBack, onJoined, userId }) {
         <div className="w-14 h-14 rounded-full mx-auto mb-5 flex items-center justify-center" style={{ background: "rgba(37,99,235,0.12)" }}>
           <Check size={22} style={{ color: "#2563EB" }} />
         </div>
-        <h2 className="font-serif text-xl mb-2" style={{ color: "#1B2B24" }}>Aramıza hoş geldin! 🎉</h2>
-        <p className="text-sm mb-2" style={{ color: "#5C5744" }}>
-          İlk {plan.trialMonths} ayın tamamen ücretsiz — hiçbir kart çekimi olmayacak.
-        </p>
+        <h2 className="font-serif text-xl mb-2" style={{ color: "#1B2B24" }}>Ödemen alındı 🎉</h2>
         <p className="text-sm mb-6" style={{ color: "#5C5744" }}>
-          Deneme süresi bitince {cycle === "monthly" ? `ayda ${total}₺` : `yılda ${total}₺ (ilk yıla özel fiyat)`} olarak faturalandırılacaksın{boostSelected ? ` (Standart Üyelik + ${boostDuration === "weekly" ? WEEKLY_BOOST_PACKAGE.name : BOOST_PACKAGE.name})` : ""}. İstediğin zaman iptal edebilirsin, kazandığından hiçbir komisyon kesilmez.
-          {boostSelected && boostDuration === "weekly" && " Haftalık Öne Çıkarma 7 gün sonra kendiliğinden biter, otomatik yenilenmez — tekrar istersen profilinden yeniden alabilirsin."}
+          {checkoutIntent?.kind === "boost"
+            ? `${boostDuration === "weekly" ? WEEKLY_BOOST_PACKAGE.name : BOOST_PACKAGE.name} aktifleşti.`
+            : `${plan.name} aktifleşti (${cycle === "monthly" ? `ayda ${basePrice}₺` : `yılda ${basePrice}₺`}).`} İstediğin zaman iptal edebilirsin, kazandığından hiçbir komisyon kesilmez.
         </p>
         <div className="flex gap-2 justify-center">
           <button onClick={onJoined} className="px-5 py-2.5 rounded-full text-sm font-medium text-white" style={{ background: "#2563EB" }}>Profilini Tamamla</button>
@@ -7264,9 +7275,9 @@ function PricingView({ onBack, onJoined, userId }) {
           className="inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-full text-white"
           style={{ background: "linear-gradient(135deg, #F59E0B 0%, #D97706 100%)" }}
         >
-          <Sparkles size={13} /> İlk {plan.trialMonths} Ay Herkese Ücretsiz 🎉
+          <Sparkles size={13} /> İlk {plan.trialMonths} Ay Zaten Ücretsiz 🎉
         </span>
-        <p className="text-[11px] mt-2" style={{ color: "#8A8368" }}>Kredi kartı istemiyoruz — deneme süresi dolmadan haber veririz.</p>
+        <p className="text-[11px] mt-2" style={{ color: "#8A8368" }}>Kayıt olduğun andan itibaren otomatik başlar, hiçbir şey yapmana gerek yok. Devam etmek istersen aşağıdan ödeyebilirsin.</p>
       </div>
 
       <div className="flex justify-center mb-6">
@@ -7294,8 +7305,8 @@ function PricingView({ onBack, onJoined, userId }) {
             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "#DBEAFE", color: "#1D4ED8" }}>İlk yıla özel</span>
           )}
         </div>
-        <p className="text-xs font-medium mb-4" style={{ color: "#059669" }}>İlk {plan.trialMonths} ay ücretsiz, sonra bu fiyattan devam eder</p>
-        <div className="space-y-2.5">
+        <p className="text-xs font-medium mb-4" style={{ color: "#059669" }}>İlk {plan.trialMonths} ay otomatik ücretsiz, sonra bu fiyattan devam eder</p>
+        <div className="space-y-2.5 mb-4">
           {plan.features.map((f, i) => (
             <div key={i} className="flex items-start gap-2 text-xs" style={{ color: "#3D3B30" }}>
               <Check size={14} style={{ color: "#2563EB" }} className="mt-0.5 shrink-0" />
@@ -7303,6 +7314,21 @@ function PricingView({ onBack, onJoined, userId }) {
             </div>
           ))}
         </div>
+        {joinError && (
+          <p className="text-xs mb-3 px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{joinError}</p>
+        )}
+        <button
+          onClick={payForStandart}
+          disabled={joining}
+          className="w-full py-2.5 rounded-full text-sm font-medium text-white flex items-center justify-center gap-1.5"
+          style={{ background: "#2563EB", opacity: joining ? 0.7 : 1 }}
+        >
+          {joining && <Loader2 size={13} className="animate-spin" />}
+          {joining ? "Yönlendiriliyor..." : "Şimdi Öde / Deneme Bitince Devam Et"}
+        </button>
+        <p className="text-[11px] mt-2 text-center" style={{ color: "#8A8368" }}>
+          Bu butona basmak zorunda değilsin — 30 gün otomatik ücretsiz, sadece erken ödemek ya da deneme bitince devam etmek istersen kullan.
+        </p>
       </div>
 
       {/* Pro Üyelik artık her zaman görünür bir kart — önceden lansmanın ilk
@@ -7345,14 +7371,6 @@ function PricingView({ onBack, onJoined, userId }) {
           {proJoined ? "Pro Üyeliğe geçtin ✓" : "Pro Üyelik'e Geç"}
         </button>
       </div>
-
-      {paytrToken && (
-        <PaytrCheckoutModal
-          token={paytrToken}
-          onClose={() => setPaytrToken(null)}
-          onSuccess={() => { setPaytrToken(null); setProJoined(true); }}
-        />
-      )}
 
       {/* Öne Çıkarma Paketi bilerek en altta — kullanıcının kararı (2026-09-08):
           önce iki asıl üyelik seçilsin, bu ikisine eklenen isteğe bağlı bir
@@ -7403,7 +7421,7 @@ function PricingView({ onBack, onJoined, userId }) {
           })}
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-2 mb-4">
           {BOOST_PACKAGE.features.map((f, i) => (
             <div key={i} className="flex items-start gap-2 text-xs" style={{ color: "#3D3B30" }}>
               <Sparkles size={13} style={{ color: "#F59E0B" }} className="mt-0.5 shrink-0" />
@@ -7411,30 +7429,31 @@ function PricingView({ onBack, onJoined, userId }) {
             </div>
           ))}
         </div>
+        <button
+          onClick={payForBoost}
+          disabled={joining || !boostSelected}
+          className="w-full py-2.5 rounded-full text-sm font-medium text-white flex items-center justify-center gap-1.5"
+          style={{ background: "#F59E0B", opacity: joining || !boostSelected ? 0.5 : 1 }}
+        >
+          {joining && <Loader2 size={13} className="animate-spin" />}
+          {!boostSelected ? "Önce süre seç" : joining ? "Yönlendiriliyor..." : `${boostPrice}₺ — Şimdi Öde`}
+        </button>
       </div>
 
-      <div className="rounded-xl p-4 mb-4 flex items-center justify-between" style={{ background: "#0F1115" }}>
-        <div>
-          <span className="text-sm font-medium block" style={{ color: "#EFE8D8" }}>{cycle === "monthly" ? "Aylık toplam" : "Yıllık toplam"}</span>
-          <span className="text-[11px]" style={{ color: "#9CA3AF" }}>İlk {plan.trialMonths} ay: 0₺</span>
-        </div>
-        <span className="font-serif text-2xl font-bold text-white">{total}₺</span>
-      </div>
-
-      {joinError && (
-        <p className="text-xs mb-3 px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{joinError}</p>
+      {paytrToken && (
+        <PaytrCheckoutModal
+          token={paytrToken}
+          onClose={() => { setPaytrToken(null); setCheckoutIntent(null); }}
+          onSuccess={() => {
+            setPaytrToken(null);
+            if (checkoutIntent?.kind === "pro") { setProJoined(true); }
+            else { setJoined(true); }
+          }}
+        />
       )}
-      <button
-        onClick={startTrial}
-        disabled={joining}
-        className="w-full py-3 rounded-full text-sm font-bold text-white flex items-center justify-center gap-2"
-        style={{ background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)", opacity: joining ? 0.7 : 1 }}
-      >
-        {joining && <Loader2 size={14} className="animate-spin" />}
-        {joining ? "Kaydediliyor..." : "Ücretsiz Denemeye Başla"}
-      </button>
+
       <p className="text-xs text-center mt-6" style={{ color: "#8A8368" }}>
-        İstediğin zaman iptal edebilir ya da Öne Çıkarma Paketi'ni ekleyip çıkarabilirsin. Müşterilerden aldığın ödemelerden İşinn hiçbir kesinti yapmaz — kazancının tamamı sana kalır.
+        İstediğin zaman iptal edebilirsin. Müşterilerden aldığın ödemelerden İşinn hiçbir kesinti yapmaz — kazancının tamamı sana kalır.
       </p>
     </div>
   );
@@ -9333,6 +9352,12 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
         terms_accepted_at: session?.user?.user_metadata?.terms_accepted_at || null,
         terms_version: session?.user?.user_metadata?.terms_version || null,
       });
+      // 2026-09-13 kararı: "kimse bir sorunla karşılaşmıyorsa neden deneme
+      // sürecini başlat desin ki" — deneme artık elle başlatılan bir buton
+      // değil, kayıt olur olmaz otomatik başlıyor (30 günlük sayaç gerçekten
+      // işliyor olsun diye). Google ile girenler de (profiles satırı hiç
+      // yoktu, buraya düşer) dahil, tüm kayıt yolları bu tek noktadan geçiyor.
+      await supabase.rpc("start_free_trial", { p_billing_cycle: "monthly" });
     })();
     return () => { cancelled = true; };
   }, [userId]);

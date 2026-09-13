@@ -151,7 +151,19 @@ export async function POST(request) {
   }
 
   if (status === "success") {
-    const periodEnd = new Date(Date.now() + (order.billing_cycle === "yearly" ? 365 : 30) * 24 * 60 * 60 * 1000);
+    // GERÇEK HATA (2026-09-13, canlıya geçtikten sonra fark edildi): addon'lar
+    // için süre burada billing_cycle'a göre hesaplanıyordu ("yearly" değilse
+    // hep 30 gün) — ama addon'ların hiç yearly/monthly seçimi yok, bazıları
+    // (Haftalık Öne Çıkarma, "one-cikarma-haftalik") 7 GÜNLÜK. billing_cycle
+    // bu ayrımı hiç taşımıyordu, yani haftalık paket parası ödenmiş biri
+    // yanlışlıkla 30 gün alacaktı. Süre artık order_type'a göre doğru
+    // hesaplanıyor: plan için billing_cycle (yearly/monthly), addon için
+    // slug'ın kendisi ("haftalik" içeriyorsa 7 gün, değilse 30).
+    const periodDays =
+      order.order_type === "addon"
+        ? (order.plan_slug?.includes("haftalik") ? 7 : 30)
+        : (order.billing_cycle === "yearly" ? 365 : 30);
+    const periodEnd = new Date(Date.now() + periodDays * 24 * 60 * 60 * 1000);
 
     if (order.order_type === "addon") {
       const { data: addon } = await admin
@@ -198,6 +210,13 @@ export async function POST(request) {
           .eq("profile_id", order.profile_id)
           .maybeSingle();
 
+        // Pro'nun "ilk 7 gün açtığın her vitrin Öne Çıkarma hediyeli" hakkı
+        // — eski upgrade_to_pro RPC'sinde vardı (pro_boost_until = +7 gün),
+        // bugün gerçek ödemeye taşırken burada unutulmuştu (fark edildi ve
+        // düzeltildi, 2026-09-13). Sadece Pro planı için, orijinal RPC'yle
+        // birebir aynı davranış.
+        const proBoostUntil = order.plan_slug === "pro" ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() : null;
+
         if (existing) {
           await admin.from("provider_subscriptions").update({
             plan_id: plan.id,
@@ -205,6 +224,7 @@ export async function POST(request) {
             billing_cycle: order.billing_cycle,
             current_period_start: new Date().toISOString(),
             current_period_end: periodEnd.toISOString(),
+            ...(proBoostUntil ? { pro_boost_until: proBoostUntil } : {}),
           }).eq("id", existing.id);
         } else {
           await admin.from("provider_subscriptions").insert({
@@ -214,6 +234,7 @@ export async function POST(request) {
             billing_cycle: order.billing_cycle,
             current_period_start: new Date().toISOString(),
             current_period_end: periodEnd.toISOString(),
+            ...(proBoostUntil ? { pro_boost_until: proBoostUntil } : {}),
           });
         }
       }
