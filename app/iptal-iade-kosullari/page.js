@@ -1,4 +1,5 @@
 import LegalPageLayout from "../../components/LegalPageLayout";
+import { COMPANY } from "../../lib/companyInfo";
 
 const h2 = { fontWeight: 800, fontSize: "1.05rem", color: "#0F1115", marginTop: "1.75rem", marginBottom: "0.5rem" };
 const p = { marginBottom: "0.75rem" };
@@ -57,7 +58,7 @@ export default function IptalIadePage() {
       </p>
 
       <h2 style={h2}>İletişim</h2>
-      <p style={p}>İade talepleriniz için: esra.gunes@codegtechnology.com · 0536 460 36 82</p>
+      <p style={p}>İade talepleriniz için: {COMPANY.email} · {COMPANY.phone}</p>
     </LegalPageLayout>
   );
 }

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Cropper from "react-easy-crop";
 import { supabase } from "../lib/supabaseClient";
+import { COMPANY } from "../lib/companyInfo";
 import {
   Search, MapPin, Star, Heart, PlayCircle, ChevronLeft, ChevronRight,
   Wrench, Truck, Monitor, Paintbrush, Code2, Sparkles, ThumbsUp,
@@ -2068,7 +2069,7 @@ function SiteFooter({ onNav }) {
                 hangi tüzel kişiliğe (CODE G LTD) ait olduğu hiçbir yerde açıkça
                 yazmıyordu (kullanıcının isteği, 2026-09-12). */}
             <p className="text-xs mt-3 leading-relaxed max-w-[220px]" style={{ color: "#7A7F8A" }}>
-              İşinn, <b style={{ color: "#D1D5DB" }}>CODE G LTD</b> (Code G Teknoloji ve Ticaret Limited Şirketi) markasıdır.
+              İşinn, <b style={{ color: "#D1D5DB" }}>{COMPANY.brand}</b> ({COMPANY.legalName}) markasıdır.
             </p>
           </div>
           <div>
@@ -2093,15 +2094,15 @@ function SiteFooter({ onNav }) {
           <div>
             <p className="text-xs font-bold tracking-wide mb-3" style={{ color: "#FFFFFF" }}>İletişim</p>
             <div className="flex flex-col gap-2.5">
-              <a href="mailto:esra.gunes@codegtechnology.com" className="text-xs" style={{ color: "#9CA3AF" }}>esra.gunes@codegtechnology.com</a>
-              <a href="tel:+905364603682" className="text-xs" style={{ color: "#9CA3AF" }}>0536 460 36 82</a>
+              <a href={`mailto:${COMPANY.email}`} className="text-xs" style={{ color: "#9CA3AF" }}>{COMPANY.email}</a>
+              <a href={`tel:${COMPANY.phoneHref}`} className="text-xs" style={{ color: "#9CA3AF" }}>{COMPANY.phone}</a>
               <button onClick={() => onNav("support")} className="text-xs text-left" style={{ color: "#9CA3AF" }}>Destek Talebi Oluştur</button>
             </div>
           </div>
         </div>
         <div className="pt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2" style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}>
           <p className="text-[11px]" style={{ color: "#5C6070" }}>
-            © {new Date().getFullYear()} CODE G LTD — Code G Teknoloji ve Ticaret Limited Şirketi, Şişli, İstanbul. Tüm hakları saklıdır.
+            © {new Date().getFullYear()} {COMPANY.brand} — {COMPANY.legalName}, {COMPANY.address}. Tüm hakları saklıdır.
           </p>
           <p className="text-[11px]" style={{ color: "#5C6070" }}>İşinn bir aracı pazaryeridir; hizmetin tarafı değildir.</p>
         </div>

@@ -1,4 +1,5 @@
 import LegalPageLayout from "../../components/LegalPageLayout";
+import { COMPANY } from "../../lib/companyInfo";
 
 const h2 = { fontWeight: 800, fontSize: "1.05rem", color: "#0F1115", marginTop: "1.75rem", marginBottom: "0.5rem" };
 const p = { marginBottom: "0.75rem" };
@@ -9,8 +10,8 @@ export default function MesafeliSatisPage() {
     <LegalPageLayout title="Mesafeli Satış Sözleşmesi" updatedLabel="Son güncelleme: 09.09.2026">
       <h2 style={h2}>1. Taraflar</h2>
       <p style={p}>
-        <b>Satıcı:</b> Code G Teknoloji ve Ticaret Limited Şirketi (Şişli, İstanbul — "İşinn", "Satıcı"), vergi
-        no 2111455428, esra.gunes@codegtechnology.com.
+        <b>Satıcı:</b> {COMPANY.legalName} ({COMPANY.address} — "İşinn", "Satıcı"), vergi
+        no {COMPANY.vkn}, {COMPANY.email}.
       </p>
       <p style={p}>
         <b>Alıcı:</b> İşinn üzerinden ücretli üyelik (Standart Üyelik, Pro Üyelik) veya ek ürün (Öne Çıkarma
@@ -66,7 +67,7 @@ export default function MesafeliSatisPage() {
       </p>
 
       <h2 style={h2}>İletişim</h2>
-      <p style={p}>Sorularınız için: esra.gunes@codegtechnology.com · 0536 460 36 82</p>
+      <p style={p}>Sorularınız için: {COMPANY.email} · {COMPANY.phone}</p>
     </LegalPageLayout>
   );
 }

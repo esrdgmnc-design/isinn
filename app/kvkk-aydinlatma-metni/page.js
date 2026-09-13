@@ -1,4 +1,5 @@
 import LegalPageLayout from "../../components/LegalPageLayout";
+import { COMPANY } from "../../lib/companyInfo";
 
 const h2 = { fontWeight: 800, fontSize: "1.05rem", color: "#0F1115", marginTop: "1.75rem", marginBottom: "0.5rem" };
 const h3 = { fontWeight: 700, fontSize: "0.9rem", color: "#0F1115", marginTop: "1.1rem", marginBottom: "0.35rem" };
@@ -10,8 +11,8 @@ export default function KvkkPage() {
   return (
     <LegalPageLayout title="KVKK Aydınlatma Metni" updatedLabel="Son güncelleme: 09.09.2026 — avukat incelemesinden geçmiştir">
       <p style={p}>
-        6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") kapsamında Veri Sorumlusu Code G Teknoloji ve Ticaret
-        Limited Şirketi olarak bizlerle paylaştığınız kişisel verilerinizi aşağıda yer verdiğimiz şekil ve şartlarda
+        6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") kapsamında Veri Sorumlusu {COMPANY.legalName}{" "}
+        olarak bizlerle paylaştığınız kişisel verilerinizi aşağıda yer verdiğimiz şekil ve şartlarda
         işliyoruz.
       </p>
       <p style={p}>
@@ -22,11 +23,11 @@ export default function KvkkPage() {
 
       <h2 style={h2}>1. Veri Sorumlusu</h2>
       <ul style={ul}>
-        <li style={li}>Veri Sorumlusu: Code G Teknoloji ve Ticaret Limited Şirketi</li>
-        <li style={li}>Adres: Şişli, İstanbul</li>
-        <li style={li}>MERSİS No: 0211145542800001</li>
-        <li style={li}>VKN: 2111455428</li>
-        <li style={li}>E-posta: esra.gunes@codegtechnology.com</li>
+        <li style={li}>Veri Sorumlusu: {COMPANY.legalName}</li>
+        <li style={li}>Adres: {COMPANY.address}</li>
+        <li style={li}>MERSİS No: {COMPANY.mersis}</li>
+        <li style={li}>VKN: {COMPANY.vkn}</li>
+        <li style={li}>E-posta: {COMPANY.email}</li>
       </ul>
 
       <h2 style={h2}>2. İşlenen Kişisel Veriler</h2>
@@ -131,7 +132,7 @@ export default function KvkkPage() {
       <h2 style={h2}>11. Başvuru Yöntemi</h2>
       <p style={p}>
         KVKK kapsamındaki haklarınızı kullanmak ve taleplerinizi iletmek için (hesap silme talepleri dahil){" "}
-        <b>esra.gunes@codegtechnology.com</b> adresine başvurabilirsiniz. Başvurularınız, KVKK ve ilgili mevzuatta
+        <b>{COMPANY.email}</b> adresine başvurabilirsiniz. Başvurularınız, KVKK ve ilgili mevzuatta
         öngörülen usul ve esaslar ile yasal saklama zorunluluğu göz önünde bulundurularak değerlendirilir.
       </p>
 

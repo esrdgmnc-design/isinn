@@ -1,4 +1,5 @@
 import LegalPageLayout from "../../components/LegalPageLayout";
+import { COMPANY } from "../../lib/companyInfo";
 
 const h2 = { fontWeight: 800, fontSize: "1.05rem", color: "#0F1115", marginTop: "1.75rem", marginBottom: "0.5rem" };
 const p = { marginBottom: "0.75rem" };
@@ -46,7 +47,7 @@ export default function GizlilikPage() {
 
       <h2 style={h2}>4. Verilerinizi Nasıl Silebilirsiniz?</h2>
       <p style={p}>
-        Hesabınızı silmek için <b>esra.gunes@codegtechnology.com</b> üzerinden bize ulaşabilirsiniz. Hesap
+        Hesabınızı silmek için <b>{COMPANY.email}</b> üzerinden bize ulaşabilirsiniz. Hesap
         silindiğinde profil, vitrin ve belgeleriniz kaldırılır; yasal saklama yükümlülüğü olan kayıtlar
         mevzuatın öngördüğü süre kadar saklanabilir.
       </p>
@@ -69,7 +70,7 @@ export default function GizlilikPage() {
       <p style={p}>Bu politika zaman zaman güncellenebilir; önemli değişikliklerde kullanıcılar bilgilendirilir.</p>
 
       <h2 style={h2}>8. İletişim</h2>
-      <p style={p}>Gizlilikle ilgili sorularınız için: <b>esra.gunes@codegtechnology.com</b> · 0536 460 36 82</p>
+      <p style={p}>Gizlilikle ilgili sorularınız için: <b>{COMPANY.email}</b> · {COMPANY.phone}</p>
     </LegalPageLayout>
   );
 }
