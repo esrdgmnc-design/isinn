@@ -9112,13 +9112,21 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
   // istemedi ("sadece uygulamada bildirim verelim, aktif kullanıcı zaten
   // fark eder") — bu yüzden bunu tüm sayfalarda görünen, Header'ın altındaki
   // global bir banner olarak gösteriyoruz, sadece Profil sayfasına gömülü değil.
-  // Gerçek otomatik faturalama da yok — uygulama her açıldığında dönemi bitmiş
-  // ama hâlâ 'active' bir üyelik varsa "yenilenmiş" sayılır (bkz.
-  // supabase/pro_boost_recurring.sql) — Pro'da bu, 7 günlük öne çıkarma
-  // hediyesinin gerçekten ay ay tekrar açılmasını sağlıyor.
+  //
+  // GERÇEK HATA DÜZELTMESİ (2026-09-13, "tüm siteyi tara" taramasında
+  // bulundu): burada eskiden supabase.rpc("sync_subscription_period")
+  // çağrılıyordu — bu fonksiyon, dönemi geçmiş AMA hâlâ status='active' olan
+  // HER aboneliği, hiçbir ödeme kontrolü olmadan otomatik olarak bir dönem
+  // daha uzatıyordu. Yani biri bir kere gerçekten ödeme yapsın, sonrasında
+  // uygulamayı her açışında bedavaya "yenileniyordu" — bugün kurduğumuz
+  // gerçek otomatik yenileme sistemini (cron + kayıtlı kart, bkz.
+  // app/api/cron/renew-subscriptions) fiilen anlamsız kılıyordu. RPC'nin
+  // veritabanı izni kapatıldı (revoke_free_grant_rpcs.sql) ve çağrısı
+  // buradan kaldırıldı — artık dönemi geçmiş bir abonelik gerçekten
+  // "süresi geçmiş" görünüyor, devam etmek için Planlar'dan gerçek ödeme
+  // gerekiyor.
   const loadTrialInfo = async () => {
     if (!userId) { setTrialBanner(null); return; }
-    await supabase.rpc("sync_subscription_period"); // hata döner (throw etmez), sonucu zaten kullanmıyoruz
     const { data } = await supabase
       .from("provider_subscriptions")
       .select("status, current_period_end, billing_cycle, subscription_plans(name, slug)")
