@@ -15,7 +15,7 @@ export async function POST(request) {
   const merchantSalt = process.env.PAYTR_MERCHANT_SALT;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://isinn.com.tr";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.isinn.com.tr";
 
   if (!merchantId || !merchantKey || !merchantSalt) {
     return Response.json({ ok: false, message: "Ödeme servisi henüz yapılandırılmadı." }, { status: 500 });
