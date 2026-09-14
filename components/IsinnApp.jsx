@@ -556,6 +556,11 @@ function mapServiceRowToListing(row) {
     // vitrin_media.sql'deki sync_service_has_certificates — artık vitrin bazlı,
     // bir vitrindeki belge başka vitrini etkilemiyor).
     verified: row.has_certificates ? ["Belge Paylaştı"] : [],
+    // Meslek odası/lisans/sicil no — sağlayıcının kendi yazdığı serbest metin,
+    // DOĞRULANMADI (bkz. professional_credential.sql). ListingDetail bunu ayrı,
+    // açıkça "sağlayıcı beyanı" etiketiyle gösteriyor — verified rozetiyle
+    // karıştırılmasın diye bilerek ayrı bir alan.
+    professionalCredential: row.professional_credential || "",
     // Eskiden burada her zaman "evde" sabitlenmişti — sağlayıcının formda
     // ne seçtiğine hiç bakılmıyordu (alan zaten kaydedilmiyordu). Artık
     // gerçek services.home_service_type okunuyor, yoksa (eski satırlar için)
@@ -2893,6 +2898,19 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
           {listing.verified && listing.verified.length > 0 && (
             <div className="mb-4 pb-4 border-b" style={{ borderColor: "#D9D0BA" }}>
               <VerifiedBadges items={listing.verified} />
+            </div>
+          )}
+          {/* Meslek odası/sicil no — Seçenek A, şeffaflık katmanı (2026-09-14).
+              Bilerek VerifiedBadges'ten ayrı ve farklı stilde: biz bunu
+              doğrulamadık, sağlayıcının kendi beyanı — o yüzden yeşil
+              "doğrulanmış" rengiyle değil, nötr bir tonla ve açık etiketle. */}
+          {listing.professionalCredential && (
+            <div className="mb-4 pb-4 border-b flex items-start gap-1.5" style={{ borderColor: "#D9D0BA" }}>
+              <BadgeCheck size={14} style={{ color: "#8A8368" }} className="mt-0.5 shrink-0" />
+              <p className="text-xs" style={{ color: "#5C5744" }}>
+                {listing.professionalCredential}
+                <span className="block text-[10px] mt-0.5" style={{ color: "#8A8368" }}>Sağlayıcı beyanı — İşinn bu bilgiyi doğrulamamıştır</span>
+              </p>
             </div>
           )}
           <p className="text-lg font-medium mb-4" style={{ color: "#C2872B" }}>{listing.price}</p>
@@ -8606,6 +8624,19 @@ function VitrinMediaView({ userId, service, onBack, onListingsChanged }) {
   // kalsın — sahibi (müşterimiz) kendi kararını veriyor (bkz. ratings.service_id).
   const [shareReviews, setShareReviews] = useState(true);
   const [shareReviewsSaving, setShareReviewsSaving] = useState(false);
+  // Meslek odası/lisans/sicil no — Seçenek A (şeffaflık katmanı, 2026-09-14):
+  // biz doğrulamıyoruz, sadece sağlayıcının yazdığını görünür kılıyoruz.
+  const [professionalCredential, setProfessionalCredential] = useState("");
+  const [credentialSaving, setCredentialSaving] = useState(false);
+  const [credentialSaved, setCredentialSaved] = useState(false);
+  const saveCredential = async () => {
+    setCredentialSaving(true);
+    setCredentialSaved(false);
+    await supabase.from("services").update({ professional_credential: professionalCredential.trim() || null }).eq("id", serviceId);
+    setCredentialSaving(false);
+    setCredentialSaved(true);
+    onListingsChanged?.();
+  };
 
   // Vitrin performansı — gerçek, ölçülebilen sinyallerle: kaç görüşme
   // başladı, kaçı tamamlandı, ortalama puan, kaç kişi favoriledi. "Kaç kişi
@@ -8633,7 +8664,7 @@ function VitrinMediaView({ userId, service, onBack, onListingsChanged }) {
     (async () => {
       setLoading(true);
       const [{ data: serviceRow }, { data: docs }, { data: items }] = await Promise.all([
-        supabase.from("services").select("video_intro_url, video_intro_name, share_profile_reviews, images").eq("id", serviceId).maybeSingle(),
+        supabase.from("services").select("video_intro_url, video_intro_name, share_profile_reviews, images, professional_credential").eq("id", serviceId).maybeSingle(),
         supabase.from("provider_documents").select("*").eq("service_id", serviceId).order("created_at", { ascending: false }),
         supabase.from("portfolio_items").select("*").eq("service_id", serviceId).order("created_at", { ascending: true }),
       ]);
@@ -8641,6 +8672,7 @@ function VitrinMediaView({ userId, service, onBack, onListingsChanged }) {
       if (serviceRow?.video_intro_url) setVideoIntro({ url: serviceRow.video_intro_url, name: serviceRow.video_intro_name || "Tanıtım Videosu" });
       setShareReviews(serviceRow?.share_profile_reviews ?? true);
       setCoverUrl((Array.isArray(serviceRow?.images) && serviceRow.images[0]) || null);
+      setProfessionalCredential(serviceRow?.professional_credential || "");
 
       const docRows = docs || [];
       const certs = docRows.filter((d) => d.doc_type === "certificate");
@@ -9083,7 +9115,7 @@ function VitrinMediaView({ userId, service, onBack, onListingsChanged }) {
               <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>Sertifika & Belgeler</h2>
             </div>
             <p className="text-xs mb-4" style={{ color: "#8A8368" }}>
-              Bu vitrinle ilgili diploma, ustalık belgesi, lisans veya sertifikaları ekle — bu vitrinde "Doğrulanmış" rozeti olarak görünür.
+              Bu vitrinle ilgili diploma, ustalık belgesi, lisans veya sertifikaları ekle — bu vitrinde "Belge Paylaştı" rozeti olarak görünür (biz belgeyi incelemiyoruz, sadece paylaşıldığını dürüstçe gösteriyoruz).
             </p>
             {certError && (
               <p className="text-xs mb-3 px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{certError}</p>
@@ -9115,6 +9147,29 @@ function VitrinMediaView({ userId, service, onBack, onListingsChanged }) {
                 <input type="file" accept="image/*,application/pdf" multiple className="hidden" onChange={handleCertAdd} disabled={certUploading} />
               </label>
             )}
+          </div>
+
+          <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
+            <div className="flex items-center gap-2 mb-1">
+              <BadgeCheck size={16} style={{ color: "#3A5BA0" }} />
+              <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>Meslek Odası / Sicil No</h2>
+            </div>
+            <p className="text-xs mb-3" style={{ color: "#8A8368" }}>
+              Ruhsatlı bir meslekse (mimar, mühendis, avukat, mali müşavir vb.) oda/sicil bilginin görünmesi güven verir. Bunu doğrulamıyoruz — vitrinde "sağlayıcı beyanı, doğrulanmadı" etiketiyle, olduğu gibi gösteriyoruz. İstersen ziyaretçi ilgili odanın kendi sitesinden bu numarayı kontrol edebilir.
+            </p>
+            <input
+              type="text"
+              value={professionalCredential}
+              onChange={(e) => { setProfessionalCredential(e.target.value); setCredentialSaved(false); }}
+              onBlur={saveCredential}
+              placeholder="ör. TMMOB Mimarlar Odası — Sicil No: 12345"
+              className="w-full px-3 py-2.5 rounded-lg border text-xs mb-1"
+              style={{ borderColor: "#D9D0BA" }}
+            />
+            <p className="text-[11px] flex items-center gap-1" style={{ color: credentialSaved ? "#3F7D5C" : "#8A8368" }}>
+              {credentialSaving && <Loader2 size={10} className="animate-spin" />}
+              {credentialSaving ? "Kaydediliyor..." : credentialSaved ? "Kaydedildi ✓" : "Alandan çıkınca otomatik kaydedilir"}
+            </p>
           </div>
 
           <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
