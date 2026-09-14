@@ -151,6 +151,18 @@ export async function POST(request) {
   }
 
   if (status === "success") {
+    // GERÇEK HATA (2026-09-14, canlıda ilk gerçek boost ödemesinden sonra
+    // bulundu) — provider_addons/provider_subscriptions insert/update'lerinin
+    // dönen hatası hiç kontrol edilmiyordu. Yudum Bulut gerçek parayla
+    // Haftalık Öne Çıkarma aldı, ödeme başarılı oldu, ama insert eski bir
+    // unique kısıtlamaya (bkz. fix_addon_unique_constraint_leftover.sql)
+    // çarpıp sessizce başarısız oldu — müşteri parayı ödedi, ürünü hiç
+    // almadı, kimse fark etmedi. Artık her yazmanın hatası `grantError`'da
+    // toplanıyor; bir hata varsa ödeme yine "success" kalıyor (para gerçekten
+    // alındı, PayTR'a tekrar denetmemesi gerekiyor) ama payment_orders.
+    // grant_error'a açıkça yazılıyor ki admin panelinden/veritabanından
+    // görülüp elle düzeltilebilsin.
+    let grantError = null;
     // GERÇEK HATA (2026-09-13, canlıya geçtikten sonra fark edildi): addon'lar
     // için süre burada billing_cycle'a göre hesaplanıyordu ("yearly" değilse
     // hep 30 gün) — ama addon'ların hiç yearly/monthly seçimi yok, bazıları
@@ -190,13 +202,14 @@ export async function POST(request) {
         const { data: existingAddon } = await existingQuery.maybeSingle();
 
         if (existingAddon) {
-          await admin.from("provider_addons").update({
+          const { error } = await admin.from("provider_addons").update({
             status: "active",
             current_period_start: new Date().toISOString(),
             current_period_end: periodEnd.toISOString(),
           }).eq("id", existingAddon.id);
+          if (error) grantError = `provider_addons update: ${error.message}`;
         } else {
-          await admin.from("provider_addons").insert({
+          const { error } = await admin.from("provider_addons").insert({
             profile_id: order.profile_id,
             addon_id: addon.id,
             status: "active",
@@ -204,7 +217,10 @@ export async function POST(request) {
             current_period_end: periodEnd.toISOString(),
             service_id: order.service_id || null,
           });
+          if (error) grantError = `provider_addons insert: ${error.message}`;
         }
+      } else {
+        grantError = `addon_products bulunamadı: slug=${order.plan_slug}`;
       }
     } else {
       const { data: plan } = await admin
@@ -228,7 +244,7 @@ export async function POST(request) {
         const proBoostUntil = order.plan_slug === "pro" ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() : null;
 
         if (existing) {
-          await admin.from("provider_subscriptions").update({
+          const { error } = await admin.from("provider_subscriptions").update({
             plan_id: plan.id,
             status: "active",
             billing_cycle: order.billing_cycle,
@@ -236,8 +252,9 @@ export async function POST(request) {
             current_period_end: periodEnd.toISOString(),
             ...(proBoostUntil ? { pro_boost_until: proBoostUntil } : {}),
           }).eq("id", existing.id);
+          if (error) grantError = `provider_subscriptions update: ${error.message}`;
         } else {
-          await admin.from("provider_subscriptions").insert({
+          const { error } = await admin.from("provider_subscriptions").insert({
             profile_id: order.profile_id,
             plan_id: plan.id,
             status: "active",
@@ -246,11 +263,19 @@ export async function POST(request) {
             current_period_end: periodEnd.toISOString(),
             ...(proBoostUntil ? { pro_boost_until: proBoostUntil } : {}),
           });
+          if (error) grantError = `provider_subscriptions insert: ${error.message}`;
         }
+      } else {
+        grantError = `subscription_plans bulunamadı: slug=${order.plan_slug}`;
       }
     }
 
-    await admin.from("payment_orders").update({ status: "success", paid_at: new Date().toISOString() }).eq("id", order.id);
+    if (grantError) {
+      // Sunucu loglarında da görünsün (Vercel) — DB'deki grant_error asıl
+      // kalıcı kayıt, bu sadece anlık/gerçek-zamanlı görünürlük içindir.
+      console.error("[paytr-callback] Ürün/abonelik aktivasyonu başarısız:", grantError, "merchant_oid:", merchantOid);
+    }
+    await admin.from("payment_orders").update({ status: "success", paid_at: new Date().toISOString(), grant_error: grantError }).eq("id", order.id);
     await saveCardIfPresent(admin, form, order.profile_id);
     await sendReceiptEmail(admin, order, totalAmount);
   } else {
