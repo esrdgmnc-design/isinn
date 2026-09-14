@@ -7195,6 +7195,18 @@ function PricingView({ onBack, onJoined, userId }) {
     });
     return () => { cancelled = true; };
   }, [userId]);
+  // Kayıtlı kart var mı — varsa iframe açmadan tek tıkla ödeme kısayolu
+  // gösteriyoruz (2026-09-14, bkz. app/api/paytr-charge-saved). Sadece
+  // varlığını kontrol ediyoruz, utoken'ın kendisi hiç client'a gelmiyor.
+  const [hasSavedCard, setHasSavedCard] = useState(false);
+  useEffect(() => {
+    if (!userId) { setHasSavedCard(false); return; }
+    let cancelled = false;
+    supabase.from("payment_methods").select("id").eq("profile_id", userId).maybeSingle().then(({ data }) => {
+      if (!cancelled) setHasSavedCard(!!data);
+    });
+    return () => { cancelled = true; };
+  }, [userId]);
   const proPrice = cycle === "monthly" ? PRO_PACKAGE.priceMonthly : PRO_PACKAGE.priceYearly;
   const plan = PLANS[0];
   const basePrice = cycle === "monthly" ? plan.priceMonthly : plan.priceYearly;
@@ -7243,6 +7255,58 @@ function PricingView({ onBack, onJoined, userId }) {
     );
   };
 
+  // Kayıtlı kartla tek tıkla ödeme (2026-09-14) — iframe hiç açılmıyor,
+  // /api/paytr-charge-saved doğrudan PayTR'a gidiyor. Kesin onay yine
+  // paytr-callback'ten (webhook) geliyor, o yüzden burada kısaca
+  // payment_orders.status'un 'success'/'failed' olmasını polling ile
+  // bekliyoruz — PaytrCheckoutModal'ın iframe'de /odeme/basarili'yı
+  // yakalamasının client tarafındaki eşdeğeri.
+  const runSavedCardCharge = async (body) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch("/api/paytr-charge-saved", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+      },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!data.ok) return { ok: false, message: data.message || "Ödeme başlatılamadı." };
+    if (!data.merchantOid) return { ok: true };
+    for (let i = 0; i < 12; i++) {
+      await new Promise((r) => setTimeout(r, 2500));
+      const { data: order } = await supabase.from("payment_orders").select("status, failed_reason").eq("merchant_oid", data.merchantOid).maybeSingle();
+      if (order?.status === "success") return { ok: true };
+      if (order?.status === "failed") return { ok: false, message: order.failed_reason || "Ödeme reddedildi." };
+    }
+    return { ok: false, message: "Ödemen hâlâ işleniyor, birazdan profilini yenile — banka onayı normalden uzun sürüyor olabilir." };
+  };
+  // Hangi kart/aksiyonun "kayıtlı kartla" akışta olduğunu ayrı tutuyoruz —
+  // joining/proJoining zaten iframe akışıyla paylaşılıyor (aynı anda tek
+  // aksiyon olabilir), bu sadece doğru butonda doğru metni göstermek için.
+  const [savedCardMode, setSavedCardMode] = useState(null); // null | "standart" | "boost" | "pro"
+  const payForStandartSaved = async () => {
+    if (!userId) { setJoinError("Ödeme için giriş yapmış olmalısın."); return; }
+    setJoinError(""); setJoining(true); setSavedCardMode("standart");
+    const result = await runSavedCardCharge({ planSlug: "standart", billingCycle: cycle });
+    setJoining(false); setSavedCardMode(null);
+    if (result.ok) { setCheckoutIntent({ kind: "standart" }); setJoined(true); }
+    else setJoinError(result.message);
+  };
+  const payForBoostSaved = async () => {
+    if (!selectedVitrinId) { setJoinError("Öne çıkarmak istediğin vitrini seç."); return; }
+    setJoinError(""); setJoining(true); setSavedCardMode("boost");
+    const result = await runSavedCardCharge({
+      addonSlug: boostDuration === "weekly" ? "one-cikarma-haftalik" : "one-cikarma",
+      billingCycle: "monthly",
+      serviceId: selectedVitrinId,
+    });
+    setJoining(false); setSavedCardMode(null);
+    if (result.ok) { setCheckoutIntent({ kind: "boost" }); setJoined(true); }
+    else setJoinError(result.message);
+  };
+
   // Pro Üyelik, Standart'ın denemesinden bağımsız, ayrı bir yükseltme —
   // birden fazla vitrin açmak isteyen (örn. iki farklı uzmanlık alanı) biri
   // deneme beklemeden doğrudan buradan geçebilir.
@@ -7277,6 +7341,14 @@ function PricingView({ onBack, onJoined, userId }) {
     } finally {
       setProJoining(false);
     }
+  };
+  const joinProSaved = async () => {
+    if (!userId) { setProError("Pro Üyelik için giriş yapmış olmalısın."); return; }
+    setProError(""); setProJoining(true); setSavedCardMode("pro");
+    const result = await runSavedCardCharge({ planSlug: "pro", billingCycle: cycle });
+    setProJoining(false); setSavedCardMode(null);
+    if (result.ok) { setCheckoutIntent({ kind: "pro" }); setProJoined(true); }
+    else setProError(result.message);
   };
 
   if (joined) {
@@ -7361,9 +7433,20 @@ function PricingView({ onBack, onJoined, userId }) {
           className="w-full py-2.5 rounded-full text-sm font-medium text-white flex items-center justify-center gap-1.5"
           style={{ background: "#2563EB", opacity: joining ? 0.7 : 1 }}
         >
-          {joining && <Loader2 size={13} className="animate-spin" />}
-          {joining ? "Yönlendiriliyor..." : "Şimdi Öde / Deneme Bitince Devam Et"}
+          {joining && savedCardMode !== "standart" && <Loader2 size={13} className="animate-spin" />}
+          {joining && savedCardMode === "standart" ? "İşleniyor..." : joining ? "Yönlendiriliyor..." : "Şimdi Öde / Deneme Bitince Devam Et"}
         </button>
+        {hasSavedCard && (
+          <button
+            onClick={payForStandartSaved}
+            disabled={joining}
+            className="w-full py-2 mt-2 rounded-full text-xs font-medium border flex items-center justify-center gap-1.5"
+            style={{ borderColor: "#2563EB", color: "#2563EB", opacity: joining ? 0.6 : 1 }}
+          >
+            {joining && savedCardMode === "standart" && <Loader2 size={12} className="animate-spin" />}
+            {joining && savedCardMode === "standart" ? "İşleniyor..." : "Kayıtlı kartımla tek tıkla öde"}
+          </button>
+        )}
         <p className="text-[11px] mt-2 text-center" style={{ color: "#8A8368" }}>
           Bu butona basmak zorunda değilsin — 30 gün otomatik ücretsiz, sadece erken ödemek ya da deneme bitince devam etmek istersen kullan.
         </p>
@@ -7405,9 +7488,20 @@ function PricingView({ onBack, onJoined, userId }) {
           className="w-full py-2.5 rounded-full text-sm font-medium text-white flex items-center justify-center gap-1.5"
           style={{ background: "#8B5CF6", opacity: proJoining ? 0.7 : proJoined ? 0.6 : 1 }}
         >
-          {proJoining && <Loader2 size={13} className="animate-spin" />}
-          {proJoined ? "Pro Üyeliğe geçtin ✓" : "Pro Üyelik'e Geç"}
+          {proJoining && savedCardMode !== "pro" && <Loader2 size={13} className="animate-spin" />}
+          {proJoined ? "Pro Üyeliğe geçtin ✓" : proJoining && savedCardMode === "pro" ? "İşleniyor..." : "Pro Üyelik'e Geç"}
         </button>
+        {hasSavedCard && !proJoined && (
+          <button
+            onClick={joinProSaved}
+            disabled={proJoining}
+            className="w-full py-2 mt-2 rounded-full text-xs font-medium border flex items-center justify-center gap-1.5"
+            style={{ borderColor: "#8B5CF6", color: "#8B5CF6", opacity: proJoining ? 0.6 : 1 }}
+          >
+            {proJoining && savedCardMode === "pro" && <Loader2 size={12} className="animate-spin" />}
+            {proJoining && savedCardMode === "pro" ? "İşleniyor..." : "Kayıtlı kartımla tek tıkla öde"}
+          </button>
+        )}
       </div>
 
       {/* Öne Çıkarma Paketi bilerek en altta — kullanıcının kararı (2026-09-08):
@@ -7508,9 +7602,20 @@ function PricingView({ onBack, onJoined, userId }) {
           className="w-full py-2.5 rounded-full text-sm font-medium text-white flex items-center justify-center gap-1.5"
           style={{ background: "#F59E0B", opacity: joining || !boostSelected || !selectedVitrinId ? 0.5 : 1 }}
         >
-          {joining && <Loader2 size={13} className="animate-spin" />}
-          {!boostSelected ? "Önce süre seç" : !selectedVitrinId ? "Önce vitrin seç" : joining ? "Yönlendiriliyor..." : `${boostPrice}₺ — Şimdi Öde`}
+          {joining && savedCardMode !== "boost" && <Loader2 size={13} className="animate-spin" />}
+          {!boostSelected ? "Önce süre seç" : !selectedVitrinId ? "Önce vitrin seç" : joining && savedCardMode === "boost" ? "İşleniyor..." : joining ? "Yönlendiriliyor..." : `${boostPrice}₺ — Şimdi Öde`}
         </button>
+        {hasSavedCard && boostSelected && selectedVitrinId && (
+          <button
+            onClick={payForBoostSaved}
+            disabled={joining}
+            className="w-full py-2 mt-2 rounded-full text-xs font-medium border flex items-center justify-center gap-1.5"
+            style={{ borderColor: "#F59E0B", color: "#B45309", opacity: joining ? 0.6 : 1 }}
+          >
+            {joining && savedCardMode === "boost" && <Loader2 size={12} className="animate-spin" />}
+            {joining && savedCardMode === "boost" ? "İşleniyor..." : "Kayıtlı kartımla tek tıkla öde"}
+          </button>
+        )}
       </div>
 
       {paytrToken && (
