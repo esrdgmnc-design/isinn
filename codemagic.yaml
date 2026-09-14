@@ -58,20 +58,22 @@ workflows:
     environment:
       node: 22
       xcode: latest
-      cocoapods: default
     scripts:
       - name: Bağımlılıkları kur
         script: npm ci
       - name: Capacitor senkronize et
         script: npx cap sync ios
-      - name: CocoaPods kur
-        script: |
-          cd ios/App
-          pod install
+      # GERÇEK HATA (2026-09-15): burada bir "CocoaPods kur" adımı vardı
+      # ("pod install") ama bu proje CocoaPods DEĞİL, Capacitor'ın daha yeni
+      # varsayılanı Swift Package Manager kullanıyor — ios/App'te hiç
+      # Podfile yok, olması da gerekmiyor. O yüzden .xcworkspace da yok,
+      # sadece .xcodeproj — xcodebuild'e "-workspace" değil "-project"
+      # verilmesi gerekiyor. SPM bağımlılıkları xcodebuild'in kendisi,
+      # derleme sırasında otomatik indirip çözüyor, ayrı bir adım gerekmiyor.
       - name: iOS derle (simülatör için, imzasız)
         script: |
           cd ios/App
-          xcodebuild -workspace App.xcworkspace -scheme App \
+          xcodebuild -project App.xcodeproj -scheme App \
             -configuration Debug -sdk iphonesimulator \
             -derivedDataPath build CODE_SIGNING_ALLOWED=NO
     artifacts:
