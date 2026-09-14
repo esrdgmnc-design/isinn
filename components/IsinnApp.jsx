@@ -9391,20 +9391,34 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
         // Sıralama/"Öne Çıkan" mantığı bunu computeVisibilityScore ve
         // seededDailyShuffle ile sınırlı, adil bir bonusa çeviriyor (bkz. o
         // fonksiyonların üstündeki not).
+        //
+        // GERÇEK HATA DÜZELTMESİ (2026-09-14, "başka saçma bir yer var mı"
+        // taramasında bulundu): ilk versiyon `.not("service_id","is",null)`
+        // filtresiyle migration ÖNCESİ satın alınmış (service_id NULL, eski
+        // "tüm vitrinler" modeli) aktif boost satırlarını tamamen görünmez
+        // yapıyordu — biri gerçekten ödeyip aldığı öne çıkarmayı bir anda
+        // kaybediyordu (canlıda 2 gerçek örnek bulundu). Artık service_id
+        // NULL olan satırlar "eski model, sağlayıcının TÜM vitrinlerini
+        // kapsar" olarak geriye dönük destekleniyor — yeni satın alımlar
+        // paytr-init/paytr-charge-saved'de serviceId zorunlu olduğu için hiç
+        // NULL üretmiyor, bu sadece migration öncesi satırlar için.
         const { data: addonRows } = await supabase
           .from("provider_addons")
-          .select("service_id, current_period_end, addon_products!inner(slug)")
+          .select("profile_id, service_id, current_period_end, addon_products!inner(slug)")
           .in("profile_id", providerIds)
           .eq("status", "active")
-          .not("service_id", "is", null)
           .in("addon_products.slug", ["one-cikarma", "one-cikarma-haftalik"]);
-        const boostedServiceIds = new Set(
-          (addonRows || [])
-            .filter((r) => new Date(r.current_period_end) > new Date())
-            .map((r) => r.service_id)
-        );
-        if (boostedServiceIds.size > 0) {
-          mapped.forEach((l) => { l.isBoosted = boostedServiceIds.has(l.dbId); });
+        const boostedServiceIds = new Set();
+        const boostedAllVitrinsProviderIds = new Set(); // eski model (service_id NULL)
+        (addonRows || []).forEach((r) => {
+          if (new Date(r.current_period_end) <= new Date()) return;
+          if (r.service_id) boostedServiceIds.add(r.service_id);
+          else boostedAllVitrinsProviderIds.add(r.profile_id);
+        });
+        if (boostedServiceIds.size > 0 || boostedAllVitrinsProviderIds.size > 0) {
+          mapped.forEach((l) => {
+            l.isBoosted = boostedServiceIds.has(l.dbId) || boostedAllVitrinsProviderIds.has(l.providerId);
+          });
         }
 
         // Seviye rozeti (Yeni Satıcı/Level 1/Level 2/Top Rated) — eskiden
