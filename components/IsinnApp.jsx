@@ -1420,6 +1420,86 @@ const FEATURED_PROFILE_CARDS = [
   { listingId: 21, bg: "#1B3B3A", specialties: ["Doğum Sonrası Beslenme", "Emzirme Dönemi Diyeti", "Çocuk Beslenmesi"] },
 ];
 
+// "Uygulamayı Telefonuna Kur" bandı (2026-09-15) — bkz. HomeView'daki not.
+// Chrome/Android'de gerçek, tek tıkla native "Yükle" istemi (beforeinstallprompt)
+// yakalayıp gösteriyoruz; iOS Safari'de bu API hiç yok (Apple desteklemiyor),
+// orada statik "Paylaş → Ana Ekrana Ekle" adımları gösteriliyor. Zaten kurulu
+// (standalone modda açılmış) ya da daha önce kapatılmışsa hiç görünmüyor.
+function InstallAppBanner() {
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [dismissed, setDismissed] = useState(true); // ilk render'da localStorage okununcaya kadar gizli kal
+  const [platform, setPlatform] = useState(null); // "ios" | "android" | null
+
+  useEffect(() => {
+    try {
+      const isStandalone = window.matchMedia?.("(display-mode: standalone)")?.matches || window.navigator?.standalone === true;
+      const alreadyDismissed = localStorage.getItem("isinn_install_banner_dismissed") === "1";
+      if (isStandalone || alreadyDismissed) return; // dismissed=true kalır, hiç gösterilmez
+      const ua = window.navigator.userAgent || "";
+      if (/iphone|ipad|ipod/i.test(ua)) setPlatform("ios");
+      else if (/android/i.test(ua)) setPlatform("android");
+      else setPlatform("desktop");
+      setDismissed(false);
+    } catch {
+      // localStorage/matchMedia erişilemezse (gizli sekme vb.) bandı hiç gösterme — kritik değil.
+    }
+    const onPrompt = (e) => { e.preventDefault(); setDeferredPrompt(e); };
+    window.addEventListener("beforeinstallprompt", onPrompt);
+    return () => window.removeEventListener("beforeinstallprompt", onPrompt);
+  }, []);
+
+  const dismiss = () => {
+    setDismissed(true);
+    try { localStorage.setItem("isinn_install_banner_dismissed", "1"); } catch {}
+  };
+
+  const handleInstall = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    await deferredPrompt.userChoice;
+    setDeferredPrompt(null);
+    dismiss();
+  };
+
+  // Masaüstünde (platform==="desktop") sadece gerçek bir kurulum istemi
+  // (deferredPrompt — Chrome/Edge) varsa gösteriyoruz; Safari/Firefox
+  // masaüstünde PWA kurulumunu desteklemediği ve iyi bir statik talimat da
+  // olmadığı için orada bandı hiç göstermiyoruz.
+  if (dismissed || !platform || (platform === "desktop" && !deferredPrompt)) return null;
+
+  return (
+    <section className="max-w-6xl mx-auto px-5 mt-8">
+      <div className="rounded-2xl p-4 sm:p-5 flex items-center gap-4 shadow-sm" style={{ background: "#16321F" }}>
+        <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 text-lg font-black" style={{ background: "#FFFFFF", color: "#16321F" }}>
+          İ<span style={{ color: "#2563EB" }}>.</span>
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-bold" style={{ color: "#FFFFFF" }}>İşinn'i telefonuna kur</p>
+          <p className="text-xs mt-0.5" style={{ color: "#B8BCC4" }}>
+            {deferredPrompt
+              ? "Mağaza beklemeden, tek tıkla gerçek bir uygulama gibi kurulur."
+              : platform === "ios"
+              ? "Paylaş simgesine (kare + ok) dokun, sonra \"Ana Ekrana Ekle\" seç."
+              : "Sağ üstteki ⋮ menüsüne dokun, sonra \"Uygulamayı yükle\" ya da \"Ana ekrana ekle\" seç."}
+          </p>
+        </div>
+        {deferredPrompt && (
+          <button
+            onClick={handleInstall}
+            className="shrink-0 text-xs font-bold px-4 py-2.5 rounded-full text-white"
+            style={{ background: "#2563EB" }}
+          >
+            Yükle
+          </button>
+        )}
+        <button onClick={dismiss} className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center" title="Kapat">
+          <X size={14} style={{ color: "#8A9187" }} />
+        </button>
+      </div>
+    </section>
+  );
+}
+
 function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApplyJob, onOpenJob, realListings, listingsLoading, realJobs, favoriteIds, onToggleFavorite, onToggleJobFavorite, platformStats }) {
   const [heroQ, setHeroQ] = useState("");
   const [heroCity, setHeroCity] = useState("");
@@ -1685,6 +1765,14 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
           ))}
         </div>
       </section>
+
+      {/* "Uygulamayı Telefonuna Kur" — 2026-09-15, PWA desteği (bkz.
+          public/manifest.webmanifest) eklendikten sonra kullanıcının kendi
+          telefonunda deneyip "çok mutlu" olmasıyla eklendi. Mağaza
+          onayı beklemeden (Play Store/App Store günler-haftalar sürüyor)
+          bugünden gerçek bir "uygulamaya" sahip olduklarını ziyaretçilere
+          kendi kendine anlatıyor — her seferinde elle anlatmaya gerek kalmasın. */}
+      <InstallAppBanner />
 
       {featured.length > 0 && (
         <section className="max-w-6xl mx-auto px-5 mt-8">
