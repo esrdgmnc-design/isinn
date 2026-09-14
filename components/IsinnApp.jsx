@@ -2339,6 +2339,49 @@ function ListingDetail({ listing, onBack, onContact, userReviews, onAddReview, o
     return () => { mountedRef.current = false; };
   }, []);
 
+  // "Ortalama yanıt" — GERÇEK HATA DÜZELTMESİ (2026-09-14, kullanıcının
+  // "profesyonel bir mimar olsan ne eksik/hatalı gelirdi" sorusuyla bulundu):
+  // bu satır eskiden HER vitrinde, herkes için aynı sabit "2 saat" metniydi —
+  // gerçek bir hesaplama yoktu. Sitedeki "asla veri uydurma" ilkesine aykırıydı
+  // (bkz. hero istatistikleri, seviye rozetleri). Artık gerçek `messages`
+  // verisinden hesaplanıyor: bu sağlayıcının katıldığı her konuşmada, müşterinin
+  // ilk mesajıyla sağlayıcının o mesaja verdiği ilk yanıt arasındaki süre —
+  // provider genelinde (vitrine özel değil, "kaç dakikada yanıt veriyor" kişisel
+  // bir alışkanlık). Hiç gerçek yanıt verisi yoksa satır HİÇ gösterilmiyor —
+  // sahte bir varsayılana düşmek yerine, gösterecek bir şey yoksa susuyoruz.
+  const [avgResponseLabel, setAvgResponseLabel] = useState(null);
+  useEffect(() => {
+    if (!isRealListing || !listing.providerId) { setAvgResponseLabel(null); return; }
+    let cancelled = false;
+    supabase
+      .from("messages")
+      .select("job_id, sender_id, created_at")
+      .or(`sender_id.eq.${listing.providerId},receiver_id.eq.${listing.providerId}`)
+      .order("created_at", { ascending: true })
+      .then(({ data }) => {
+        if (cancelled || !data) return;
+        const byJob = {};
+        data.forEach((m) => { (byJob[m.job_id] = byJob[m.job_id] || []).push(m); });
+        const deltasMs = [];
+        Object.values(byJob).forEach((msgs) => {
+          const firstFromClient = msgs.find((m) => m.sender_id !== listing.providerId);
+          if (!firstFromClient) return;
+          const firstReply = msgs.find((m) => m.sender_id === listing.providerId && new Date(m.created_at) > new Date(firstFromClient.created_at));
+          if (!firstReply) return;
+          deltasMs.push(new Date(firstReply.created_at) - new Date(firstFromClient.created_at));
+        });
+        if (deltasMs.length === 0) { setAvgResponseLabel(null); return; }
+        const avgMs = deltasMs.reduce((s, v) => s + v, 0) / deltasMs.length;
+        const avgHours = avgMs / (1000 * 60 * 60);
+        let label;
+        if (avgHours < 1) label = `${Math.max(1, Math.round(avgHours * 60))} dk`;
+        else if (avgHours < 48) label = `${Math.round(avgHours)} saat`;
+        else label = `${Math.round(avgHours / 24)} gün`;
+        setAvgResponseLabel(label);
+      });
+    return () => { cancelled = true; };
+  }, [isRealListing, listing.providerId]);
+
   // Gerçek bir ilan için sağlayıcının vitrin bilgilerini (tanıtım videosu +
   // portföy galerisi) çekiyoruz — Instagram profili gibi sergileme burada,
   // müşterinin gerçekten göreceği yerde olmalı, sadece kendi profilinde değil.
@@ -2844,7 +2887,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
                 <p className="text-sm font-medium" style={{ color: "#1B2B24" }}>{listing.provider}</p>
                 <LevelBadge level={listing.level} />
               </div>
-              <p className="text-[11px]" style={{ color: "#8A8368" }}>Ortalama yanıt: 2 saat</p>
+              {avgResponseLabel && <p className="text-[11px]" style={{ color: "#8A8368" }}>Ortalama yanıt: {avgResponseLabel}</p>}
             </div>
           </div>
           {listing.verified && listing.verified.length > 0 && (
