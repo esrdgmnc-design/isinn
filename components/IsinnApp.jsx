@@ -6140,13 +6140,29 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
             </p>
           )}
           {/* Çoklu fotoğraf/video, tanıtım videosu, sertifika ve CV burada değil —
-              yayınladıktan sonra "Vitrinlerim" > yönetim ekranından (VitrinMediaView)
-              ekleniyor. Kullanıcı geri bildirimi: bu adım hiç belli olmuyordu, biri
-              tek kapak fotoğrafıyla kalıp "vitrin gibi çoklu fotoğraf/video
-              koyamıyoruz" sanıyordu — burada önceden not ediyoruz. */}
+              "Vitrinlerim" > yönetim ekranından (VitrinMediaView) ekleniyor.
+              Kullanıcı geri bildirimi: bu adım hiç belli olmuyordu, biri tek
+              kapak fotoğrafıyla kalıp "vitrin gibi çoklu fotoğraf/video
+              koyamıyoruz" sanıyordu — bir önceki düzeltme (bu metin) yeterli
+              olmadı: hâlâ aynı şikayet geldi (2026-09-14), çünkü metin sadece
+              "yayınladıktan SONRA" diyordu ve buradan gidilebilecek gerçek
+              bir buton yoktu — özellikle mevcut bir vitrini DÜZENLERKEN
+              (zaten yayında, "yayınladıktan sonra" cümlesi kafa karıştırıyor)
+              hiçbir çıkış yolu yoktu. Artık düzenleme sırasında doğrudan
+              tıklanabilir bir buton var, submit etmeyi beklemiyor. */}
           <p className="text-[11px] mt-1.5" style={{ color: "#8A8368" }}>
-            Yayınladıktan sonra bu vitrine özel çoklu fotoğraf, video, sertifika ve CV ekleyebilirsin.
+            Bu, tek bir kapak fotoğrafı — vitrine özel çoklu fotoğraf, video, sertifika ve CV eklemek ayrı bir ekranda.
           </p>
+          {isEditing && onManageMedia && (
+            <button
+              type="button"
+              onClick={() => onManageMedia(editingListing)}
+              className="text-[11px] font-bold mt-1 flex items-center gap-1"
+              style={{ color: "#2563EB" }}
+            >
+              <Camera size={11} /> Fotoğraf, Video, Sertifika Yönet →
+            </button>
+          )}
         </div>
 
         {mode === "local" && (
@@ -7698,7 +7714,7 @@ function PricingView({ onBack, onJoined, userId }) {
   );
 }
 
-function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOpenModeration, onOpenUserReports, onOpenListingReports, onOpenContentFlags, isAdmin, pendingMediaApprovals, onApproveMedia, onRejectMedia, onListingsChanged, onJobsChanged, onEditListing, onOpenVitrinMedia, onEditJob }) {
+function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOpenModeration, onOpenUserReports, onOpenListingReports, onOpenContentFlags, isAdmin, pendingMediaApprovals, onApproveMedia, onRejectMedia, onListingsChanged, onJobsChanged, onEditListing, onOpenVitrinMedia, onEditJob, onCreateListing }) {
   // Video tanıtım/portföy/sertifika/CV artık vitrine özel — bkz. VitrinMediaView
   // (supabase/vitrin_media.sql). Burada sadece paylaşılan profil fotoğrafı kalıyor
   // ("aynı kişinin gerçek yüzü her vitrinde aynı görünsün" — kullanıcının kararı).
@@ -8309,11 +8325,30 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
       )}
 
       <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
-        <div className="flex items-center gap-2 mb-3">
-          <Briefcase size={16} style={{ color: "#2FBF71" }} />
-          <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>
-            Vitrinlerim ({myListings.length}{vitrinCap ? `/${vitrinCap.cap}` : ""})
-          </h2>
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <div className="flex items-center gap-2">
+            <Briefcase size={16} style={{ color: "#2FBF71" }} />
+            <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>
+              Vitrinlerim ({myListings.length}{vitrinCap ? `/${vitrinCap.cap}` : ""})
+            </h2>
+          </div>
+          {/* GERÇEK EKSİK (2026-09-14, kullanıcının kendi bildirimiyle bulundu):
+              ilk vitrini oluşturduktan sonra bu kartta ikinci bir vitrin
+              eklemek için hiçbir buton yoktu — sadece boş durumda görünen bir
+              metin "Hizmet Ekle" diyordu, o da header'daki genel butonu
+              işaret ediyordu, buradan tıklanabilir bir şey değildi. Artık
+              vitrin sayısı ne olursa olsun buradan doğrudan eklenebiliyor —
+              tavana ulaşıldıysa zaten CreateListingView kendi "yükselt"
+              duvarını gösteriyor, burada ayrıca engellemeye gerek yok. */}
+          {onCreateListing && myListings.length > 0 && (
+            <button
+              onClick={onCreateListing}
+              className="text-[11px] font-bold px-2.5 py-1.5 rounded-full text-white shrink-0"
+              style={{ background: "#2FBF71" }}
+            >
+              + Yeni Vitrin
+            </button>
+          )}
         </div>
         {deleteError && (
           <p className="text-xs mb-2 px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{deleteError}</p>
@@ -8321,7 +8356,18 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
         {profileLoading ? (
           <p className="text-xs" style={{ color: "#8A8368" }}>Yükleniyor...</p>
         ) : myListings.length === 0 ? (
-          <p className="text-xs" style={{ color: "#8A8368" }}>Henüz bir vitrinin yok. "Hizmet Ekle" ile ilk vitrinini oluşturabilirsin.</p>
+          <div>
+            <p className="text-xs mb-3" style={{ color: "#8A8368" }}>Henüz bir vitrinin yok.</p>
+            {onCreateListing && (
+              <button
+                onClick={onCreateListing}
+                className="text-xs font-bold px-3.5 py-2 rounded-full text-white"
+                style={{ background: "#2FBF71" }}
+              >
+                + İlk Vitrinini Oluştur
+              </button>
+            )}
+          </div>
         ) : (
           <div className="space-y-2">
             {myListings.map((l) => (
@@ -9882,6 +9928,7 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
           onListingsChanged={fetchListings}
           onJobsChanged={fetchJobs}
           onEditListing={(l) => { setEditingListing(l); setView("createListing"); }}
+          onCreateListing={() => { setEditingListing(null); setView("createListing"); }}
           onEditJob={(j) => { setEditingJob(j); setView("post"); }}
           onBack={() => setView("home")}
           onOpenAdminReports={() => setView("adminReports")}
