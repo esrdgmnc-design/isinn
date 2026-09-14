@@ -9,7 +9,7 @@ import { supabase } from "../lib/supabaseClient";
 const TERMS_VERSION = "2026-09-07-taslak";
 
 export default function AuthView({ onAuthenticated, onCancel }) {
-  const [mode, setMode] = useState("login"); // login | signup
+  const [mode, setMode] = useState("login"); // login | signup | forgot
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -17,6 +17,28 @@ export default function AuthView({ onAuthenticated, onCancel }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [signupDone, setSignupDone] = useState(false);
+  // "Şifremi Unuttum" — gerçek bir kullanıcının şikayetiyle fark edildi
+  // (2026-09-14): bu ekranda hiç böyle bir bağlantı yoktu, "link gelmiyor"
+  // demişti çünkü aslında tıklayabileceği bir link/form hiç yoktu. Supabase'in
+  // resetPasswordForEmail'i + aşağıdaki app/reset-password sayfası ile
+  // gerçek bir şifre sıfırlama akışı kuruldu.
+  const [resetSent, setResetSent] = useState(false);
+
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    if (!email.trim()) { setError("Önce e-posta adresini yaz."); return; }
+    setError("");
+    setLoading(true);
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    setLoading(false);
+    if (resetError) { setError(resetError.message); return; }
+    // Supabase, e-posta kayıtlı olmasa bile aynı başarı yanıtını döner
+    // (kullanıcı numaralandırmasını önlemek için, bilinçli bir davranış) —
+    // o yüzden burada da her zaman "gönderildi" diyoruz.
+    setResetSent(true);
+  };
 
   // Google ile giriş (2026-09-13) — "kayıt sürtünmesini azaltmak için sosyal
   // giriş ekleyelim" kararı. Kayıt modunda da aynı KVKK/Gizlilik/Kullanım
@@ -109,6 +131,78 @@ export default function AuthView({ onAuthenticated, onCancel }) {
     setLoading(false);
   };
 
+  if (resetSent) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-5 relative" style={{ background: "#FFFFFF" }}>
+        {onCancel && (
+          <button type="button" onClick={onCancel} className="absolute top-5 left-5 text-sm font-medium" style={{ color: "#6B7280" }}>
+            ← Gezinmeye devam et
+          </button>
+        )}
+        <div className="max-w-sm w-full text-center">
+          <h1 className="font-sans text-2xl font-black mb-3" style={{ color: "#0F1115" }}>E-postanı kontrol et</h1>
+          <p className="text-sm mb-5" style={{ color: "#6B7280" }}>
+            {email} kayıtlıysa, şifreni sıfırlaman için bir bağlantı gönderdik. Gelmezse spam/gereksiz klasörüne bakmayı unutma.
+          </p>
+          <button
+            type="button"
+            onClick={() => { setResetSent(false); setMode("login"); }}
+            className="text-xs font-medium"
+            style={{ color: "#2563EB" }}
+          >
+            ← Girişe dön
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (mode === "forgot") {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-5 relative" style={{ background: "#FFFFFF" }}>
+        {onCancel && (
+          <button type="button" onClick={onCancel} className="absolute top-5 left-5 text-sm font-medium" style={{ color: "#6B7280" }}>
+            ← Gezinmeye devam et
+          </button>
+        )}
+        <form onSubmit={handleForgotPassword} className="max-w-sm w-full">
+          <h1 className="font-sans text-3xl font-black mb-1" style={{ color: "#0F1115" }}>
+            İşinn<span style={{ color: "#2563EB" }}>.</span>
+          </h1>
+          <p className="text-sm mb-6" style={{ color: "#6B7280" }}>Şifreni sıfırla</p>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Kayıtlı e-posta adresin"
+            required
+            className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none mb-4"
+            style={{ borderColor: "#E5E7EB", background: "#F9FAFB", color: "#0F1115" }}
+          />
+          {error && (
+            <p className="text-xs mb-4 px-3 py-2 rounded-lg" style={{ background: "#FEF2F2", color: "#9C4A3C" }}>{error}</p>
+          )}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-3 rounded-full text-sm font-bold text-white mb-4"
+            style={{ background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)", opacity: loading ? 0.6 : 1 }}
+          >
+            {loading ? "Gönderiliyor..." : "Sıfırlama Bağlantısı Gönder"}
+          </button>
+          <button
+            type="button"
+            onClick={() => { setMode("login"); setError(""); }}
+            className="w-full text-xs font-medium text-center"
+            style={{ color: "#2563EB" }}
+          >
+            ← Girişe dön
+          </button>
+        </form>
+      </div>
+    );
+  }
+
   if (signupDone) {
     return (
       <div className="min-h-screen flex items-center justify-center px-5 relative" style={{ background: "#FFFFFF" }}>
@@ -177,9 +271,22 @@ export default function AuthView({ onAuthenticated, onCancel }) {
           placeholder="Şifre (en az 6 karakter)"
           required
           minLength={6}
-          className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none mb-4"
+          className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none mb-2"
           style={{ borderColor: "#E5E7EB", background: "#F9FAFB", color: "#0F1115" }}
         />
+        {mode === "login" && (
+          <div className="flex justify-end mb-4">
+            <button
+              type="button"
+              onClick={() => { setMode("forgot"); setError(""); }}
+              className="text-xs font-medium"
+              style={{ color: "#2563EB" }}
+            >
+              Şifremi unuttum
+            </button>
+          </div>
+        )}
+        {mode === "signup" && <div className="mb-2" />}
 
         {mode === "signup" && (
           <label className="flex items-start gap-2 mb-4 cursor-pointer">
