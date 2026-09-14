@@ -36,6 +36,12 @@ workflows:
     instance_type: mac_mini_m2
     environment:
       node: 22
+      # GERÇEK HATA (2026-09-15): "invalid source release: 21" — Capacitor'ın
+      # ürettiği Gradle yapılandırması Java 21 hedefliyor
+      # (capacitor.build.gradle), ama build makinesinin varsayılan JDK'sı
+      # daha eskiydi. Codemagic'e açıkça hangi JDK'yı kullanacağını
+      # söylüyoruz.
+      java: 21
       vars:
         PACKAGE_NAME: "com.isinn.app"
     scripts:
