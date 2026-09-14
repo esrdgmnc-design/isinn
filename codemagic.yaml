@@ -27,7 +27,13 @@ workflows:
   android-debug:
     name: Android (test paketi, imzasız)
     max_build_duration: 30
-    instance_type: linux
+    # GERÇEK HATA (2026-09-15): "linux" ve "linux_x2" ikisi de faturalandırma
+    # açık hesap istiyor — Codemagic'in ücretsiz planı SADECE mac_mini_m2'de
+    # dakika veriyor (500 dk/ay), Linux'ta hiç ücretsiz dakika yok. Android'in
+    # Mac makinesinde derlenmesinde teknik bir sorun yok (Gradle/JDK/Android
+    # SDK Codemagic'in macOS imajında zaten hazır) — sadece bir makine
+    # seçimi, iOS'la aynı ücretsiz havuzu paylaşıyor.
+    instance_type: mac_mini_m2
     environment:
       node: 22
       vars:
