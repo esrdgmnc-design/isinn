@@ -561,6 +561,16 @@ function mapServiceRowToListing(row) {
     // açıkça "sağlayıcı beyanı" etiketiyle gösteriyor — verified rozetiyle
     // karıştırılmasın diye bilerek ayrı bir alan.
     professionalCredential: row.professional_credential || "",
+    // GERÇEK HATA (2026-09-15, kullanıcının "vitrinime giren kişi videomu
+    // göremiyor" şikayetiyle bulundu — bir önceki "yükleniyor" göstergesi
+    // yeterli değildi, gecikme hâlâ kötü bir ilk izlenimdi): ana select zaten
+    // "*" ile video_intro_url'i getiriyordu, ama mapServiceRowToListing onu
+    // hiç taşımıyordu — ListingDetail bu yüzden AYRI bir sorguyla, gecikmeli
+    // olarak çekmek zorunda kalıyordu. Artık video, vitrin listesi ilk
+    // yüklendiği anda (ana sayfa/arama/karusel) zaten elde — detay sayfası
+    // açılır açılmaz, hiç beklemeden gösterilebiliyor.
+    videoIntroUrl: row.video_intro_url || null,
+    videoIntroName: row.video_intro_name || null,
     // Eskiden burada her zaman "evde" sabitlenmişti — sağlayıcının formda
     // ne seçtiğine hiç bakılmıyordu (alan zaten kaydedilmiyordu). Artık
     // gerçek services.home_service_type okunuyor, yoksa (eski satırlar için)
@@ -2392,22 +2402,33 @@ function ListingDetail({ listing, onBack, onContact, userReviews, onAddReview, o
   // müşterinin gerçekten göreceği yerde olmalı, sadece kendi profilinde değil.
   // Not: sertifika/CV RLS ile sahibinden başkasına kapalı (kişisel bilgi
   // içerebiliyor), o yüzden burada gösterilmiyor — sadece profil sahibi görür.
-  const [providerShowcase, setProviderShowcase] = useState(null); // { video_intro_url, video_intro_name }
+  // GERÇEK HATA (2026-09-14/15, kullanıcının "koyduğum video görünmüyor" ve
+  // sonra "vitrinime giren kişi videomu göremiyor" şikayetleriyle bulundu):
+  // video gerçekten kaydediliyordu ama ListingDetail her açılışta onu AYRI,
+  // gecikmeli bir sorguyla çekiyordu (bazen 2-3 saniye) — ilk "yükleniyor"
+  // göstergesi eklendi ama gerçek çözüm bu değildi, gecikmenin kendisiydi.
+  // Asıl düzeltme: ana sayfa/arama zaten TÜM vitrin verisini "*" ile çekiyor
+  // (video_intro_url dahil, bkz. mapServiceRowToListing) — o zaman burada
+  // yeniden sorgulamaya hiç gerek yok, listing objesinden anında, sıfır
+  // gecikmeyle başlatıyoruz. Sorgu SADECE portföy galerisi (portfolio_items,
+  // ayrı bir tablo, listing objesinde yok) ve olası daha güncel bir video
+  // (biri video'yu az önce değiştirdiyse) için arka planda sessizce devam
+  // ediyor — video artık hiç boş görünmüyor.
+  const [providerShowcase, setProviderShowcase] = useState(() =>
+    listing.videoIntroUrl ? { video_intro_url: listing.videoIntroUrl, video_intro_name: listing.videoIntroName } : null
+  );
   const [providerPortfolio, setProviderPortfolio] = useState([]);
-  // GERÇEK HATA (2026-09-14, kullanıcının "koyduğum video görünmüyor"
-  // şikayetiyle bulundu): video/portföy gerçekten kaydediliyordu ve gerçekten
-  // geliyordu, ama bu sorgu tamamlanana kadar (bazen 2-3 saniye) hiçbir
-  // yükleniyor göstergesi yoktu — sayfa "video yok" gibi görünüyordu, sonra
-  // sessizce beliriyordu. Üç kez canlıda test edildi: bazen anında, bazen
-  // birkaç saniye gecikmeyle ama HER SEFERİNDE geldi — veri kaybı değil, saf
-  // bir "yükleniyor" göstergesi eksikliğiydi.
   const [providerShowcaseLoading, setProviderShowcaseLoading] = useState(false);
   const [showcaseLightbox, setShowcaseLightbox] = useState(null); // { media, index }
 
   useEffect(() => {
     if (!listing.isReal || !listing.dbId) return;
     let cancelled = false;
-    setProviderShowcaseLoading(true);
+    // Video zaten elimizde varsa (normal yol — ana sayfa/arama üzerinden
+    // gelindiyse) bekleme göstergesine hiç gerek yok, sadece portföy
+    // yükleniyor; video da yoksa (nadir — doğrudan bir bağlantıyla geldiyse)
+    // eski gecikme göstergesi devrede kalıyor.
+    setProviderShowcaseLoading(!listing.videoIntroUrl);
     (async () => {
       const [{ data: serviceData }, { data: portfolioData }] = await Promise.all([
         supabase.from("services").select("video_intro_url, video_intro_name").eq("id", listing.dbId).maybeSingle(),
@@ -7730,7 +7751,7 @@ function PricingView({ onBack, onJoined, userId }) {
   );
 }
 
-function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOpenModeration, onOpenUserReports, onOpenListingReports, onOpenContentFlags, isAdmin, pendingMediaApprovals, onApproveMedia, onRejectMedia, onListingsChanged, onJobsChanged, onEditListing, onOpenVitrinMedia, onEditJob, onCreateListing }) {
+function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOpenModeration, onOpenUserReports, onOpenListingReports, onOpenContentFlags, isAdmin, pendingMediaApprovals, onApproveMedia, onRejectMedia, onListingsChanged, onJobsChanged, onEditListing, onOpenVitrinMedia, onEditJob, onCreateListing, onViewListing, realListings }) {
   // Video tanıtım/portföy/sertifika/CV artık vitrine özel — bkz. VitrinMediaView
   // (supabase/vitrin_media.sql). Burada sadece paylaşılan profil fotoğrafı kalıyor
   // ("aynı kişinin gerçek yüzü her vitrinde aynı görünsün" — kullanıcının kararı).
@@ -8421,6 +8442,25 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
                   </div>
                 ) : (
                   <div className="flex items-center gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                    {/* GERÇEK EKSİK (2026-09-15, kullanıcının "vitrinlerimi Instagram
+                        profili gibi gezemiyorum, ya düzenle var ya sil" şikayetiyle
+                        bulundu): burada sadece "Düzenle" (form) ve "Sil" vardı —
+                        müşterinin gerçekten göreceği hâliyle (fotoğraf/video/
+                        yorumlar, tam ListingDetail) görüntülemenin hiçbir yolu yoktu.
+                        realListings'ten (zaten tam işlenmiş, mapServiceRowToListing'
+                        den geçmiş) kendi vitrinini bulup gerçek görünümü açıyoruz. */}
+                    {onViewListing && (
+                      <button
+                        onClick={() => {
+                          const full = realListings?.find((x) => x.dbId === l.id);
+                          if (full) onViewListing(full);
+                        }}
+                        className="w-8 h-8 rounded-full flex items-center justify-center"
+                        title="Vitrini görüntüle (müşterinin gördüğü hâli)"
+                      >
+                        <Eye size={14} style={{ color: "#3F7D5C" }} />
+                      </button>
+                    )}
                     <button
                       onClick={() => onEditListing?.(toEditableListing(l))}
                       className="w-8 h-8 rounded-full flex items-center justify-center"
@@ -9945,6 +9985,8 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
           onJobsChanged={fetchJobs}
           onEditListing={(l) => { setEditingListing(l); setView("createListing"); }}
           onCreateListing={() => { setEditingListing(null); setView("createListing"); }}
+          onViewListing={(l) => { setSelected(l); setView("detail"); }}
+          realListings={realListings}
           onEditJob={(j) => { setEditingJob(j); setView("post"); }}
           onBack={() => setView("home")}
           onOpenAdminReports={() => setView("adminReports")}
