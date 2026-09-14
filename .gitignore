@@ -3,3 +3,15 @@ node_modules
 .env*.local
 
 supabase/.temp/
+
+# Capacitor native projeleri (android/, ios/) commit'e GİRİYOR — sadece
+# derleme çıktıları/bağımlılık klasörleri hariç (bunlar `npx cap sync`
+# her çalıştığında yeniden üretiliyor, repoyu şişirmesin diye).
+android/app/build/
+android/.gradle/
+android/local.properties
+ios/App/Pods/
+ios/App/build/
+ios/App/App.xcworkspace/xcuserdata/
+ios/App/App.xcodeproj/xcuserdata/
+

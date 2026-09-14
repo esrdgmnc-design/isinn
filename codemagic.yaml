@@ -1,0 +1,72 @@
+# İşinn — Capacitor mobil uygulama, bulut derleme (Codemagic).
+#
+# Bu app "hosted web app" modunda çalışıyor — capacitor.config.json'daki
+# server.url zaten https://www.isinn.com.tr'yi gösteriyor, yani native kabuk
+# gerçek, canlı siteyi açıyor. Statik export YOK çünkü Next.js API route'ları
+# (ödeme, OTP, Claude, cron) server tarafında çalışmak zorunda — bunlar zaten
+# Vercel'de canlı. Bu dosya sadece native ANDROID/iOS PAKETİNİ (APK/IPA)
+# derliyor, web kodunu değil.
+#
+# NEDEN WINDOWS'TAN DEĞİL DE BURADAN: iOS derlemesi Apple'ın kuralı gereği
+# sadece Mac'te (ya da bulut Mac'inde, tam olarak burası) yapılabiliyor.
+# Android teknik olarak Windows'tan da derlenebilir ama bu bilgisayarda henüz
+# Android Studio/JDK kurulu değil — o yüzden ikisini de buradan, tek yerden
+# yönetmek en pratik yol.
+#
+# KURULUM (bir kereye mahsus, sen yapman gerekiyor):
+#   1. codemagic.io'da ücretsiz hesap aç, bu GitHub reposunu bağla.
+#   2. Codemagic bu dosyayı otomatik bulur — "Start new build" demen yeterli.
+#   3. Aşağıdaki iki iş akışı (android-debug, ios-debug) İMZASIZ, test
+#      amaçlı paketler üretir — telefonuna kurup deneyebilirsin ama Play
+#      Store/App Store'a YÜKLENEMEZ. Gerçek mağaza yüklemesi için (imzalama
+#      sertifikaları, App Store Connect API anahtarı vb.) Codemagic'in kendi
+#      panelinde "Code signing" ayarlarını sen gireceksin — bunlar özel
+#      anahtarlar, benim asla görmemem/girmemem gereken bilgiler.
+
+workflows:
+  android-debug:
+    name: Android (test paketi, imzasız)
+    max_build_duration: 30
+    instance_type: linux_x2
+    environment:
+      node: 20
+      vars:
+        PACKAGE_NAME: "com.isinn.app"
+    scripts:
+      - name: Bağımlılıkları kur
+        script: npm ci
+      - name: Capacitor senkronize et
+        script: npx cap sync android
+      - name: Android APK derle (debug)
+        script: |
+          cd android
+          chmod +x ./gradlew
+          ./gradlew assembleDebug
+    artifacts:
+      - android/app/build/outputs/**/*.apk
+
+  ios-debug:
+    name: iOS (simülatör test paketi)
+    max_build_duration: 30
+    instance_type: mac_mini_m2
+    environment:
+      node: 20
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Bağımlılıkları kur
+        script: npm ci
+      - name: Capacitor senkronize et
+        script: npx cap sync ios
+      - name: CocoaPods kur
+        script: |
+          cd ios/App
+          pod install
+      - name: iOS derle (simülatör için, imzasız)
+        script: |
+          cd ios/App
+          xcodebuild -workspace App.xcworkspace -scheme App \
+            -configuration Debug -sdk iphonesimulator \
+            -derivedDataPath build CODE_SIGNING_ALLOWED=NO
+    artifacts:
+      - ios/App/build/Build/Products/**/*.app

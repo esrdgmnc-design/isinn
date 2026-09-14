@@ -5,6 +5,10 @@ export const metadata = {
   metadataBase: new URL("https://www.isinn.com.tr"),
   title: "İşinn — Güvendiğin Ellere",
   description: "Yerinde ve uzaktan hizmet pazaryeri",
+  // Mobil uygulama çalışmasının (bkz. docs/mobile-app.md) yan ürünü — site
+  // artık gerçek bir PWA da (telefon tarayıcısından "Ana ekrana ekle").
+  // Asıl mağaza dağıtımı Capacitor/Codemagic üzerinden, bu sadece bonus.
+  manifest: "/manifest.webmanifest",
   // Bu alanlar olmadan link WhatsApp/Instagram/X'te paylaşıldığında çıplak
   // bir metin linki görünüyordu — og:image app/opengraph-image.js'ten
   // (özel dosya kuralı) otomatik bağlanıyor, burada ayrıca belirtmeye
@@ -22,6 +26,10 @@ export const metadata = {
     title: "İşinn — Güvendiğin Ellere",
     description: "İhtiyacın olan hizmeti bulduğun ya da kendi hizmetini sunduğun güvenilir yerel pazar yeri.",
   },
+};
+
+export const viewport = {
+  themeColor: "#16321F",
 };
 
 export default function RootLayout({ children }) {

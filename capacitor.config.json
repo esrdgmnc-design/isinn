@@ -1,0 +1,14 @@
+{
+  "appId": "com.isinn.app",
+  "appName": "İşinn",
+  "webDir": "public",
+  "server": {
+    "url": "https://www.isinn.com.tr",
+    "cleartext": false,
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": false
+  },
+  "backgroundColor": "#16321F"
+}
