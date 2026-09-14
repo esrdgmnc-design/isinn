@@ -2394,11 +2394,20 @@ function ListingDetail({ listing, onBack, onContact, userReviews, onAddReview, o
   // içerebiliyor), o yüzden burada gösterilmiyor — sadece profil sahibi görür.
   const [providerShowcase, setProviderShowcase] = useState(null); // { video_intro_url, video_intro_name }
   const [providerPortfolio, setProviderPortfolio] = useState([]);
+  // GERÇEK HATA (2026-09-14, kullanıcının "koyduğum video görünmüyor"
+  // şikayetiyle bulundu): video/portföy gerçekten kaydediliyordu ve gerçekten
+  // geliyordu, ama bu sorgu tamamlanana kadar (bazen 2-3 saniye) hiçbir
+  // yükleniyor göstergesi yoktu — sayfa "video yok" gibi görünüyordu, sonra
+  // sessizce beliriyordu. Üç kez canlıda test edildi: bazen anında, bazen
+  // birkaç saniye gecikmeyle ama HER SEFERİNDE geldi — veri kaybı değil, saf
+  // bir "yükleniyor" göstergesi eksikliğiydi.
+  const [providerShowcaseLoading, setProviderShowcaseLoading] = useState(false);
   const [showcaseLightbox, setShowcaseLightbox] = useState(null); // { media, index }
 
   useEffect(() => {
     if (!listing.isReal || !listing.dbId) return;
     let cancelled = false;
+    setProviderShowcaseLoading(true);
     (async () => {
       const [{ data: serviceData }, { data: portfolioData }] = await Promise.all([
         supabase.from("services").select("video_intro_url, video_intro_name").eq("id", listing.dbId).maybeSingle(),
@@ -2407,6 +2416,7 @@ function ListingDetail({ listing, onBack, onContact, userReviews, onAddReview, o
       if (cancelled) return;
       setProviderShowcase(serviceData || null);
       setProviderPortfolio(portfolioData || []);
+      setProviderShowcaseLoading(false);
     })();
     return () => { cancelled = true; };
   }, [listing.isReal, listing.dbId]);
@@ -3051,6 +3061,12 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
           <p className="text-xs mb-5" style={{ color: "#8A8368" }}>
             Sağlayıcının tanıtım videosu ve iş başında çektiği fotoğraf/videolar
           </p>
+
+          {providerShowcaseLoading && (
+            <p className="text-xs mb-5 flex items-center gap-1.5" style={{ color: "#8A8368" }}>
+              <Loader2 size={12} className="animate-spin" /> Yükleniyor...
+            </p>
+          )}
 
           {providerShowcase?.video_intro_url && (
             <div className="mb-6">
