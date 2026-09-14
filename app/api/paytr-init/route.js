@@ -37,7 +37,7 @@ export async function POST(request) {
   // Vitrin Paketi, Öne Çıkarma vb., addon_products) — ikisi de aynı akıştan
   // geçiyor, sadece fiyatı hangi tablodan okuduğumuz değişiyor. Addon'lar
   // şu an sadece aylık (addon_products'ta price_yearly yok).
-  const { planSlug, addonSlug, billingCycle } = await request.json();
+  const { planSlug, addonSlug, billingCycle, serviceId } = await request.json();
   const orderType = addonSlug ? "addon" : "plan";
   const itemSlug = addonSlug || planSlug;
   if (!itemSlug || !["monthly", "yearly"].includes(billingCycle)) {
@@ -49,6 +49,28 @@ export async function POST(request) {
 
   const admin = createClient(supabaseUrl, serviceRoleKey);
 
+  // Öne Çıkarma Paketi artık "seçtiğin bir vitrini öne çıkarır" sözünü
+  // gerçekten tutuyor (2026-09-14) — hangi vitrin olduğunu burada, ödeme
+  // başlamadan ÖNCE doğruluyoruz. Sahiplik kontrolü kritik: kullanıcı
+  // başkasının vitrinini seçip onu öne çıkaramamalı.
+  const boostSlugs = ["one-cikarma", "one-cikarma-haftalik"];
+  let boostedServiceTitle = null;
+  if (boostSlugs.includes(itemSlug)) {
+    if (!serviceId) {
+      return Response.json({ ok: false, message: "Öne çıkarmak istediğin vitrini seçmelisin." }, { status: 400 });
+    }
+    const { data: ownedService } = await admin
+      .from("services")
+      .select("id, title")
+      .eq("id", serviceId)
+      .eq("provider_id", user.id)
+      .maybeSingle();
+    if (!ownedService) {
+      return Response.json({ ok: false, message: "Bu vitrin sana ait değil ya da bulunamadı." }, { status: 403 });
+    }
+    boostedServiceTitle = ownedService.title;
+  }
+
   let itemName, price;
   if (orderType === "addon") {
     const { data: addon } = await admin
@@ -58,7 +80,7 @@ export async function POST(request) {
       .eq("active", true)
       .maybeSingle();
     if (!addon) return Response.json({ ok: false, message: "Paket bulunamadı." }, { status: 404 });
-    itemName = addon.name;
+    itemName = boostedServiceTitle ? `${addon.name} — ${boostedServiceTitle}` : addon.name;
     price = addon.price_monthly;
   } else {
     const { data: plan } = await admin
@@ -112,6 +134,7 @@ export async function POST(request) {
     billing_cycle: billingCycle,
     amount: price,
     status: "pending",
+    ...(boostSlugs.includes(itemSlug) ? { service_id: serviceId } : {}),
   });
   if (insertErr) {
     return Response.json({ ok: false, message: "Sipariş oluşturulamadı: " + insertErr.message }, { status: 500 });

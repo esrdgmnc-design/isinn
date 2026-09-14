@@ -134,7 +134,7 @@ export async function POST(request) {
 
   const { data: order } = await admin
     .from("payment_orders")
-    .select("id, profile_id, plan_slug, order_type, billing_cycle, status")
+    .select("id, profile_id, plan_slug, order_type, billing_cycle, status, service_id")
     .eq("merchant_oid", merchantOid)
     .maybeSingle();
 
@@ -173,12 +173,21 @@ export async function POST(request) {
         .maybeSingle();
 
       if (addon) {
-        const { data: existingAddon } = await admin
+        // Öne Çıkarma Paketi artık vitrine özel (order.service_id) — aynı
+        // sağlayıcı farklı vitrinlerini ayrı ayrı öne çıkarabildiği için
+        // eşleşme sadece profile_id+addon_id değil, service_id'yi de
+        // içermeli (bkz. boost_per_vitrin.sql). Ek Vitrin Paketi gibi
+        // vitrine bağlı olmayan addon'larda service_id null kalıyor, eski
+        // davranış aynen korunuyor.
+        let existingQuery = admin
           .from("provider_addons")
           .select("id")
           .eq("profile_id", order.profile_id)
-          .eq("addon_id", addon.id)
-          .maybeSingle();
+          .eq("addon_id", addon.id);
+        existingQuery = order.service_id
+          ? existingQuery.eq("service_id", order.service_id)
+          : existingQuery.is("service_id", null);
+        const { data: existingAddon } = await existingQuery.maybeSingle();
 
         if (existingAddon) {
           await admin.from("provider_addons").update({
@@ -193,6 +202,7 @@ export async function POST(request) {
             status: "active",
             current_period_start: new Date().toISOString(),
             current_period_end: periodEnd.toISOString(),
+            service_id: order.service_id || null,
           });
         }
       }

@@ -7179,6 +7179,22 @@ function PricingView({ onBack, onJoined, userId }) {
   const [proError, setProError] = useState("");
   const [paytrToken, setPaytrToken] = useState(null);
   const [checkoutIntent, setCheckoutIntent] = useState(null); // { kind: "standart"|"boost", label }
+  // Öne Çıkarma artık gerçekten "seçtiğin bir vitrini" öne çıkarıyor
+  // (2026-09-14) — hangi vitrinlerin var olduğunu burada yüklüyoruz ki
+  // gerçekten seçebilesin.
+  const [myVitrins, setMyVitrins] = useState([]);
+  const [selectedVitrinId, setSelectedVitrinId] = useState("");
+  useEffect(() => {
+    if (!userId) { setMyVitrins([]); return; }
+    let cancelled = false;
+    supabase.from("services").select("id, title").eq("provider_id", userId).eq("active", true).then(({ data }) => {
+      if (cancelled) return;
+      const rows = data || [];
+      setMyVitrins(rows);
+      if (rows.length === 1) setSelectedVitrinId(rows[0].id);
+    });
+    return () => { cancelled = true; };
+  }, [userId]);
   const proPrice = cycle === "monthly" ? PRO_PACKAGE.priceMonthly : PRO_PACKAGE.priceYearly;
   const plan = PLANS[0];
   const basePrice = cycle === "monthly" ? plan.priceMonthly : plan.priceYearly;
@@ -7219,10 +7235,13 @@ function PricingView({ onBack, onJoined, userId }) {
     }
   };
   const payForStandart = () => startPaytrPurchase({ planSlug: "standart", billingCycle: cycle }, { kind: "standart" });
-  const payForBoost = () => startPaytrPurchase(
-    { addonSlug: boostDuration === "weekly" ? "one-cikarma-haftalik" : "one-cikarma", billingCycle: "monthly" },
-    { kind: "boost" }
-  );
+  const payForBoost = () => {
+    if (!selectedVitrinId) { setJoinError("Öne çıkarmak istediğin vitrini seç."); return; }
+    startPaytrPurchase(
+      { addonSlug: boostDuration === "weekly" ? "one-cikarma-haftalik" : "one-cikarma", billingCycle: "monthly", serviceId: selectedVitrinId },
+      { kind: "boost" }
+    );
+  };
 
   // Pro Üyelik, Standart'ın denemesinden bağımsız, ayrı bir yükseltme —
   // birden fazla vitrin açmak isteyen (örn. iki farklı uzmanlık alanı) biri
@@ -7448,14 +7467,49 @@ function PricingView({ onBack, onJoined, userId }) {
             </div>
           ))}
         </div>
+
+        {/* Hangi vitrin öne çıkacak — "seçtiğin bir vitrini öne çıkarır"
+            sözünün gerçek karşılığı (2026-09-14). boostSelected olunca
+            görünür; tek vitrini varsa zaten otomatik seçili gelir. */}
+        {boostSelected && (
+          myVitrins.length === 0 ? (
+            <p className="text-xs mb-4 px-3 py-2 rounded-lg" style={{ background: "#FFFBEB", color: "#92400E" }}>
+              Öne çıkaracak aktif bir vitrinin yok — önce bir vitrin açman gerekiyor.
+            </p>
+          ) : (
+            <div className="mb-4">
+              <p className="text-xs font-bold mb-2" style={{ color: "#1B2B24" }}>Hangi vitrini öne çıkarmak istiyorsun?</p>
+              <div className="space-y-1.5">
+                {myVitrins.map((v) => (
+                  <button
+                    key={v.id}
+                    type="button"
+                    onClick={() => setSelectedVitrinId(v.id)}
+                    className="w-full flex items-center gap-2 rounded-lg border-2 px-3 py-2 text-left text-xs font-medium"
+                    style={selectedVitrinId === v.id ? { borderColor: "#F59E0B", background: "#FFFBEB", color: "#1B2B24" } : { borderColor: "#E5E1D3", background: "#FFFFFF", color: "#5C5744" }}
+                  >
+                    <div className="w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0" style={selectedVitrinId === v.id ? { borderColor: "#F59E0B", background: "#F59E0B" } : { borderColor: "#D9D0BA" }}>
+                      {selectedVitrinId === v.id && <Check size={10} className="text-white" />}
+                    </div>
+                    {v.title}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )
+        )}
+
+        {joinError && (
+          <p className="text-xs mb-3 px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{joinError}</p>
+        )}
         <button
           onClick={payForBoost}
-          disabled={joining || !boostSelected}
+          disabled={joining || !boostSelected || !selectedVitrinId}
           className="w-full py-2.5 rounded-full text-sm font-medium text-white flex items-center justify-center gap-1.5"
-          style={{ background: "#F59E0B", opacity: joining || !boostSelected ? 0.5 : 1 }}
+          style={{ background: "#F59E0B", opacity: joining || !boostSelected || !selectedVitrinId ? 0.5 : 1 }}
         >
           {joining && <Loader2 size={13} className="animate-spin" />}
-          {!boostSelected ? "Önce süre seç" : joining ? "Yönlendiriliyor..." : `${boostPrice}₺ — Şimdi Öde`}
+          {!boostSelected ? "Önce süre seç" : !selectedVitrinId ? "Önce vitrin seç" : joining ? "Yönlendiriliyor..." : `${boostPrice}₺ — Şimdi Öde`}
         </button>
       </div>
 
@@ -9224,23 +9278,28 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
           }
         });
 
-        // Aktif "Öne Çıkarma Paketi" (provider_addons, sağlayıcı bazlı — belirli
-        // bir vitrine değil) sahibi olan sağlayıcıları işaretliyoruz. Sıralama/
-        // "Öne Çıkan" mantığı bunu computeVisibilityScore ve seededDailyShuffle
-        // ile sınırlı, adil bir bonusa çeviriyor (bkz. o fonksiyonların üstündeki not).
+        // Aktif "Öne Çıkarma Paketi" — artık gerçekten vitrine özel
+        // (service_id, bkz. boost_per_vitrin.sql, 2026-09-14) — eskiden
+        // sağlayıcı bazlıydı, yani biri bir vitrinini öne çıkarınca TÜM
+        // vitrinleri birden öne çıkıyordu; Planlar sayfasındaki "seçtiğin bir
+        // vitrini öne çıkarır" metniyle tutarsızdı, artık gerçekten tutarlı.
+        // Sıralama/"Öne Çıkan" mantığı bunu computeVisibilityScore ve
+        // seededDailyShuffle ile sınırlı, adil bir bonusa çeviriyor (bkz. o
+        // fonksiyonların üstündeki not).
         const { data: addonRows } = await supabase
           .from("provider_addons")
-          .select("profile_id, current_period_end, addon_products!inner(slug)")
+          .select("service_id, current_period_end, addon_products!inner(slug)")
           .in("profile_id", providerIds)
           .eq("status", "active")
+          .not("service_id", "is", null)
           .in("addon_products.slug", ["one-cikarma", "one-cikarma-haftalik"]);
-        const boostedIds = new Set(
+        const boostedServiceIds = new Set(
           (addonRows || [])
             .filter((r) => new Date(r.current_period_end) > new Date())
-            .map((r) => r.profile_id)
+            .map((r) => r.service_id)
         );
-        if (boostedIds.size > 0) {
-          mapped.forEach((l) => { l.isBoosted = boostedIds.has(l.providerId); });
+        if (boostedServiceIds.size > 0) {
+          mapped.forEach((l) => { l.isBoosted = boostedServiceIds.has(l.dbId); });
         }
 
         // Seviye rozeti (Yeni Satıcı/Level 1/Level 2/Top Rated) — eskiden
