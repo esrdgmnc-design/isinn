@@ -1321,8 +1321,13 @@ function Header({ onNav, onSearch, pendingCount, session, onNotificationClick })
           gösterdi, 2026-09-15). */}
       {mobileMenuOpen && (
         <>
-          <div className="fixed inset-0 z-10 sm:hidden" onClick={() => setMobileMenuOpen(false)} />
-          <div className="sm:hidden fixed top-16 inset-x-0 z-20 border-t px-5 py-3 flex flex-col gap-1 max-h-[calc(100vh-4rem)] overflow-y-auto" style={{ borderColor: "#EAEAEA", background: "#FFFFFF" }}>
+          {/* z-50/z-[60]: sağ altta sürüklenebilir bir destek butonu (z-40,
+              ayrı bir bileşen, App kökünde render ediliyor — buradan
+              koşullandıramıyoruz) o bölgede backdrop'ın önüne geçip dokunuşu
+              yutuyordu, menü orada kapanmıyordu (kullanıcı bildirdi,
+              2026-09-15). Backdrop'ı ondan daha yükseğe çıkardık. */}
+          <div className="fixed inset-0 z-50 sm:hidden" onClick={() => setMobileMenuOpen(false)} />
+          <div className="sm:hidden fixed top-16 inset-x-0 z-[60] border-t px-5 py-3 flex flex-col gap-1 max-h-[calc(100vh-4rem)] overflow-y-auto" style={{ borderColor: "#EAEAEA", background: "#FFFFFF" }}>
             <div className="flex items-center relative mb-2">
               <Search size={16} className="absolute left-3.5" style={{ color: "#9CA3AF" }} />
               <input
