@@ -15,7 +15,7 @@ import {
   LifeBuoy, Bot, Loader2, AlertCircle, Inbox,
   UploadCloud, FileText, Trash2, Pencil, Phone, Lock, Bell,
   PaintBucket, AirVent, PawPrint, Music2, Calculator, Languages,
-  PenTool, Video, Mic, ClipboardList, TrendingUp, BarChart3, Wallet, CalendarClock
+  PenTool, Video, Mic, ClipboardList, TrendingUp, BarChart3, Wallet, CalendarClock, Puzzle, PencilRuler, Layers
 } from "lucide-react";
 
 // ---------------------------------------------------------------
@@ -82,6 +82,9 @@ const CATEGORIES = [
   { id: "video-duzenleme", name: "Video Düzenleme", mode: "remote", icon: Video },
   { id: "seslendirme", name: "Seslendirme", mode: "remote", icon: Mic },
   { id: "sanal-asistan", name: "Sanal Asistan", mode: "remote", icon: ClipboardList },
+  { id: "oyun-ablasi", name: "Oyun Ablası / Ağabeyi", mode: "local", icon: Puzzle },
+  { id: "ic-mimarlik", name: "İç Mimarlık / Dekorasyon", mode: "local", icon: PencilRuler },
+  { id: "moda-tekstil-tasarim", name: "Moda & Tekstil Tasarımı", mode: "both", icon: Layers },
 ];
 
 // Sabit listede olmayan bir kategori isteyen kullanıcı için — CATEGORIES'e
@@ -94,11 +97,11 @@ const CATEGORIES = [
 const CUSTOM_CATEGORY_ID = "diger-ozel";
 
 const PARENT_CATEGORIES = [
-  { id: "ev-hizmetleri", name: "Ev Hizmetleri", icon: Home, categoryIds: ["temizlik", "nakliye", "tadilat", "cilingir", "terzi", "elektrikci", "su-tesisatcisi", "hali-yikama", "yemek", "boya-badana", "klima-beyaz-esya"] },
+  { id: "ev-hizmetleri", name: "Ev Hizmetleri", icon: Home, categoryIds: ["temizlik", "nakliye", "tadilat", "cilingir", "terzi", "elektrikci", "su-tesisatcisi", "hali-yikama", "yemek", "boya-badana", "klima-beyaz-esya", "ic-mimarlik"] },
   { id: "guzellik-bakim", name: "Güzellik & Bakım", icon: Wand2, categoryIds: ["tirnakci", "makyaj", "bakim", "kuafor-berber"] },
   { id: "saglik", name: "Sağlık", icon: HeartPulse, categoryIds: ["hasta-bakici", "hemsire", "fizyoterapist", "diyetisyen", "psikolog", "yoga-koc", "spor-egitmeni"] },
-  { id: "egitim-aile", name: "Eğitim & Aile", icon: GraduationCap, categoryIds: ["ogretmen", "egitmen", "bakici", "logusa-bakicisi", "emzirme-danismani", "etkinlik-organizatoru", "muzik-egitmeni"] },
-  { id: "profesyonel", name: "Profesyonel Hizmetler", icon: Briefcase, categoryIds: ["tasarim", "yazilim", "dijital", "muhasebe", "ceviri", "icerik-yazarligi", "video-duzenleme", "seslendirme", "sanal-asistan"] },
+  { id: "egitim-aile", name: "Eğitim & Aile", icon: GraduationCap, categoryIds: ["ogretmen", "egitmen", "bakici", "logusa-bakicisi", "emzirme-danismani", "etkinlik-organizatoru", "muzik-egitmeni", "oyun-ablasi"] },
+  { id: "profesyonel", name: "Profesyonel Hizmetler", icon: Briefcase, categoryIds: ["tasarim", "yazilim", "dijital", "muhasebe", "ceviri", "icerik-yazarligi", "video-duzenleme", "seslendirme", "sanal-asistan", "moda-tekstil-tasarim"] },
   { id: "diger", name: "Diğer", icon: MoreHorizontal, categoryIds: ["bahce-bakim", "muhendis", "sosyal-medya", "profesyonel-fotograf", "evcil-hayvan"] },
 ];
 
@@ -3458,6 +3461,7 @@ function MapView({ onBack, onSelectProvider, onSelectJob, realListings, realJobs
     // güncellemek gerekiyor.
     "boya-badana": "#E07A5F", "klima-beyaz-esya": "#4A90A4", "kuafor-berber": "#A8527A",
     "evcil-hayvan": "#C68642", "muzik-egitmeni": "#8A5FBF", "muhasebe": "#4A6572", "ceviri": "#5FA8A0",
+    "oyun-ablasi": "#E0A458", "ic-mimarlik": "#7C6A9C", "moda-tekstil-tasarim": "#C15B5B",
   };
 
   const useMyLocation = () => {
