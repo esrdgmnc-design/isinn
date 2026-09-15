@@ -1867,11 +1867,16 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
                     <Award size={11} /> Top Rated
                   </span>
                 </div>
-                <div className="p-5 flex-1 flex flex-col justify-center">
+                <div className="p-5 flex-1 flex flex-col justify-center min-h-[228px]">
                   <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
                     <ModeTag mode={p.mode} />
                   </div>
-                  <p className="font-sans text-lg font-bold mb-1" style={{ color: "#0F1115" }}>{p.title}</p>
+                  {/* Başlık uzunluğuna göre sarma satır sayısı değişince kart
+                      yüksekliği de değişiyordu — bu kart 4.5sn'de bir otomatik
+                      döndüğü için (aşağıdaki setInterval), altındaki her şey
+                      periyodik olarak zıplıyordu ("kayma", kullanıcı 2026-09-16'da
+                      fark etti). line-clamp + sabit min-height ile sınırlandı. */}
+                  <p className="font-sans text-lg font-bold mb-1 line-clamp-2" style={{ color: "#0F1115" }}>{p.title}</p>
                   <p className="text-xs mb-2" style={{ color: "#9CA3AF" }}>{p.provider} · {p.city}</p>
                   <p className="text-xs leading-relaxed line-clamp-2 mb-3" style={{ color: "#6B7280" }}>{p.desc}</p>
                   <div className="flex items-center justify-between">
