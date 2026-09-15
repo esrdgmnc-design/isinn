@@ -1152,9 +1152,19 @@ function Header({ onNav, onSearch, pendingCount, session, onNotificationClick })
   // tıklanınca hiçbir şey açılmıyordu. Yani telefonda bu 4 linke ulaşmanın
   // HİÇBİR yolu yoktu (gizli bir menüde bile değildi, gerçekten erişilemezdi).
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  // Menü açıkken arka planın kayması "donmuş" hissi veriyordu (backdrop
+  // header'ın dışına taşınca artık kapanıyor ama yine de kaymasın diye
+  // gövde scroll'unu kilitliyoruz — bkz. yukarıdaki backdrop-filter notu).
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, [mobileMenuOpen]);
   const emailPrefix = session?.user?.email ? session.user.email.split("@")[0] : "";
   const initials = emailPrefix ? emailPrefix.slice(0, 2).toUpperCase() : "?";
   return (
+    <>
     <header className="sticky top-0 z-30 backdrop-blur border-b" style={{ background: "rgba(255,255,255,0.85)", borderColor: "#EAEAEA" }}>
       <div className="max-w-6xl mx-auto px-5 py-3 flex items-center gap-4">
         <button onClick={() => onNav("home")} className="font-sans text-xl font-black tracking-tight shrink-0" style={{ color: "#0F1115" }}>
@@ -1283,11 +1293,20 @@ function Header({ onNav, onSearch, pendingCount, session, onNotificationClick })
           </button>
         </div>
       </div>
+    </header>
 
+      {/* Bu blok bilerek <header>'in DIŞINDA — header'daki backdrop-blur
+          (backdrop-filter) CSS'i, içindeki position:fixed elemanlar için
+          viewport yerine header'ın kendisini containing block yapıyor.
+          Bu yüzden "dışarı tıkla kapat" backdrop'ı sadece header'ın dar
+          şeridini kapsıyordu, sayfanın geri kalanına (aşağı kaydırınca
+          görünen vitrin kartları) hiç ulaşmıyordu — menü hiç kapanmıyordu
+          ("hamburger menü donuyor" şikayeti, kullanıcı ekran kaydıyla
+          gösterdi, 2026-09-15). */}
       {mobileMenuOpen && (
         <>
           <div className="fixed inset-0 z-10 sm:hidden" onClick={() => setMobileMenuOpen(false)} />
-          <div className="sm:hidden relative z-20 border-t px-5 py-3 flex flex-col gap-1" style={{ borderColor: "#EAEAEA", background: "#FFFFFF" }}>
+          <div className="sm:hidden fixed top-16 inset-x-0 z-20 border-t px-5 py-3 flex flex-col gap-1 max-h-[calc(100vh-4rem)] overflow-y-auto" style={{ borderColor: "#EAEAEA", background: "#FFFFFF" }}>
             <div className="flex items-center relative mb-2">
               <Search size={16} className="absolute left-3.5" style={{ color: "#9CA3AF" }} />
               <input
@@ -1353,7 +1372,7 @@ function Header({ onNav, onSearch, pendingCount, session, onNotificationClick })
           </div>
         </>
       )}
-    </header>
+    </>
   );
 }
 
