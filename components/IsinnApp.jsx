@@ -1177,6 +1177,15 @@ function Header({ onNav, onSearch, pendingCount, session, onNotificationClick })
       window.scrollTo(0, scrollY);
     };
   }, [mobileMenuOpen]);
+  // Menüyü yukarı doğru sürükleyip kapatma (swipe-to-dismiss) — kullanıcı
+  // sezgisel olarak bunu denedi, sadece dokunarak kapatmak yetmiyordu.
+  const menuTouchStartY = useRef(null);
+  const onMenuTouchStart = (e) => { menuTouchStartY.current = e.touches[0].clientY; };
+  const onMenuTouchMove = (e) => {
+    if (menuTouchStartY.current == null) return;
+    const dy = e.touches[0].clientY - menuTouchStartY.current;
+    if (dy < -40) { setMobileMenuOpen(false); menuTouchStartY.current = null; }
+  };
   const emailPrefix = session?.user?.email ? session.user.email.split("@")[0] : "";
   const initials = emailPrefix ? emailPrefix.slice(0, 2).toUpperCase() : "?";
   return (
@@ -1327,7 +1336,12 @@ function Header({ onNav, onSearch, pendingCount, session, onNotificationClick })
               yutuyordu, menü orada kapanmıyordu (kullanıcı bildirdi,
               2026-09-15). Backdrop'ı ondan daha yükseğe çıkardık. */}
           <div className="fixed inset-0 z-50 sm:hidden" onClick={() => setMobileMenuOpen(false)} />
-          <div className="sm:hidden fixed top-16 inset-x-0 z-[60] border-t px-5 py-3 flex flex-col gap-1 max-h-[calc(100vh-4rem)] overflow-y-auto" style={{ borderColor: "#EAEAEA", background: "#FFFFFF" }}>
+          <div
+            onTouchStart={onMenuTouchStart}
+            onTouchMove={onMenuTouchMove}
+            className="sm:hidden fixed top-16 inset-x-0 z-[60] border-t px-5 py-3 flex flex-col gap-1 max-h-[calc(100vh-4rem)] overflow-y-auto"
+            style={{ borderColor: "#EAEAEA", background: "#FFFFFF" }}
+          >
             <div className="flex items-center relative mb-2">
               <Search size={16} className="absolute left-3.5" style={{ color: "#9CA3AF" }} />
               <input
