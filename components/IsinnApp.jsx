@@ -1650,7 +1650,17 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
                 <span
                   key={wordIndex}
                   className="inline-block pb-1.5 animate-[fadeSlide_0.4s_ease] bg-clip-text text-transparent"
-                  style={{ backgroundImage: "linear-gradient(90deg, #2563EB, #60A5FA)" }}
+                  style={{
+                    backgroundImage: "linear-gradient(90deg, #2563EB, #60A5FA)",
+                    // bg-clip-text + gradient + animasyon kombinasyonu Safari'de
+                    // bilinen bir çizim hatası tetikliyor (kelime her 1.8sn'de
+                    // değişirken hayalet/bulanık görünüyordu — "değişken yazı
+                    // ile ilgili kayma", kullanıcı 2026-09-15'te bildirdi).
+                    // Kendi GPU katmanına alınca Safari doğru çiziyor.
+                    transform: "translateZ(0)",
+                    WebkitTransform: "translateZ(0)",
+                    willChange: "transform, opacity",
+                  }}
                 >
                   {ROTATING_WORDS[wordIndex]}
                 </span>
