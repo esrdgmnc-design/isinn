@@ -4,8 +4,8 @@
   "description": "İhtiyacın olan hizmeti bulduğun ya da kendi hizmetini sunduğun, komisyonsuz yerel pazar yeri.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#16321F",
-  "theme_color": "#16321F",
+  "background_color": "#FFFFFF",
+  "theme_color": "#FFFFFF",
   "lang": "tr",
   "icons": [
     { "src": "/icons/icon-48.webp", "type": "image/webp", "sizes": "48x48", "purpose": "any maskable" },
