@@ -1155,11 +1155,27 @@ function Header({ onNav, onSearch, pendingCount, session, onNotificationClick })
   // Menü açıkken arka planın kayması "donmuş" hissi veriyordu (backdrop
   // header'ın dışına taşınca artık kapanıyor ama yine de kaymasın diye
   // gövde scroll'unu kilitliyoruz — bkz. yukarıdaki backdrop-filter notu).
+  // NOT: `overflow:hidden` tek başına iOS Safari'de scroll'u kilitlemiyor
+  // (çok bilinen bir Safari kısıtı — touchmove'u yine de sayfaya iletiyor).
+  // Gerçek telefonlarda hâlâ kayma bildirildi (2026-09-15) — body'yi
+  // `position:fixed`e alıp scroll konumunu elle saklayıp geri yükleyen
+  // daha güçlü yönteme geçildi.
   useEffect(() => {
     if (!mobileMenuOpen) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = prev; };
+    const scrollY = window.scrollY;
+    const body = document.body.style;
+    const prevPosition = body.position, prevTop = body.top, prevWidth = body.width, prevOverflow = body.overflow;
+    body.position = "fixed";
+    body.top = `-${scrollY}px`;
+    body.width = "100%";
+    body.overflow = "hidden";
+    return () => {
+      body.position = prevPosition;
+      body.top = prevTop;
+      body.width = prevWidth;
+      body.overflow = prevOverflow;
+      window.scrollTo(0, scrollY);
+    };
   }, [mobileMenuOpen]);
   const emailPrefix = session?.user?.email ? session.user.email.split("@")[0] : "";
   const initials = emailPrefix ? emailPrefix.slice(0, 2).toUpperCase() : "?";
