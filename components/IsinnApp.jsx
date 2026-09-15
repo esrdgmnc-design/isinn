@@ -1924,7 +1924,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
                 onClick={() => onSelectListing(l)}
                 onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onSelectListing(l); }}
                 className="text-left rounded-2xl overflow-hidden hover:-translate-y-1.5 transition-all group shadow-sm hover:shadow-xl cursor-pointer"
-                style={{ border: "1px solid #F0F0F0", background: "#FFFFFF" }}
+                style={{ border: "1px solid #F0F0F0", background: "#FFFFFF", transform: "translateZ(0)", WebkitTransform: "translateZ(0)", willChange: "transform" }}
               >
                 <div className="relative h-44 overflow-hidden">
                   <img src={l.img} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
