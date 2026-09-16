@@ -1540,7 +1540,7 @@ function InstallAppBanner() {
           <p className="text-sm font-bold" style={{ color: "#FFFFFF" }}>İşinn'i telefonuna kur</p>
           <p className="text-xs mt-0.5" style={{ color: "#B8BCC4" }}>
             {deferredPrompt
-              ? "Mağaza beklemeden, tek tıkla gerçek bir uygulama gibi kurulur."
+              ? "Tek tıkla gerçek bir uygulama gibi kurulur."
               : platform === "ios"
               ? "Paylaş simgesine (kare + ok) dokun, sonra \"Ana Ekrana Ekle\" seç."
               : "Sağ üstteki ⋮ menüsüne dokun, sonra \"Uygulamayı yükle\" ya da \"Ana ekrana ekle\" seç."}
