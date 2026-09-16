@@ -5736,6 +5736,141 @@ function CreateListingView({ onBack, onCreated, userId, editingListing, onGoToPr
   const [recommendation, setRecommendation] = useState(null); // { product, pitch }
   const [recLoading, setRecLoading] = useState(false);
 
+  // Kullanıcı geri bildirimi (2026-09-16): kapak fotoğrafı dışındaki her şey
+  // (sertifika, CV, iş başında portföy, tanıtım videosu) ayrı bir ekrana
+  // (VitrinMediaView) gitmeyi gerektiriyordu — "Fotoğraf, Video, Sertifika
+  // Ekle" butonu bile bunu çözmüyordu, çünkü hâlâ iki ayrı adımdı. Artık
+  // yayınlandıktan hemen sonra, AYNI ekranda (aşağıdaki "success" adımında)
+  // hepsi tek seferde yüklenebiliyor — hiç sayfa değiştirmeden.
+  const [certificates, setCertificates] = useState([]);
+  const [certUploading, setCertUploading] = useState(false);
+  const [certError, setCertError] = useState("");
+  const [cv, setCv] = useState(null);
+  const [cvUploading, setCvUploading] = useState(false);
+  const [cvError, setCvError] = useState("");
+  const [portfolio, setPortfolio] = useState([]);
+  const [portfolioUploading, setPortfolioUploading] = useState(false);
+  const [portfolioError, setPortfolioError] = useState("");
+  // Kullanıcı geri bildirimi (2026-09-16): fotoğraf otomatik yükleniyor ama
+  // kullanıcı emin olamıyor — "koydum ama yüklendi mi?" Yükleme zaten aynı
+  // anda oluyor, bu buton teknik olarak gereksiz ama kullanıcıya net,
+  // tıklanabilir bir "onaylandı" anı veriyor.
+  const [portfolioConfirmed, setPortfolioConfirmed] = useState(false);
+  const [certConfirmed, setCertConfirmed] = useState(false);
+  const [videoIntro, setVideoIntro] = useState(null);
+  const [videoUploading, setVideoUploading] = useState(false);
+  const [videoError, setVideoError] = useState("");
+
+  const uploadToProfileMedia = async (file, prefix) => {
+    const ext = (file.name.split(".").pop() || "bin").toLowerCase();
+    const path = `${userId}/${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const { error: uploadError } = await supabase.storage.from("profile-media").upload(path, file);
+    if (uploadError) throw uploadError;
+    const { data } = supabase.storage.from("profile-media").getPublicUrl(path);
+    return { path, publicUrl: data.publicUrl };
+  };
+
+  const handleVideoAdd = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    const serviceId = created?.dbId;
+    if (!file || !userId || !serviceId) return;
+    setVideoError("");
+    setVideoUploading(true);
+    try {
+      const { publicUrl } = await uploadToProfileMedia(file, "video-intro");
+      const { error } = await supabase.from("services").update({ video_intro_url: publicUrl, video_intro_name: file.name }).eq("id", serviceId);
+      if (error) throw error;
+      setVideoIntro({ url: publicUrl, name: file.name });
+    } catch (err) {
+      setVideoError(`Yüklenemedi: ${err.message}`);
+    } finally {
+      setVideoUploading(false);
+    }
+  };
+
+  const handlePortfolioAdd = async (e) => {
+    const files = Array.from(e.target.files || []).slice(0, 9 - portfolio.length);
+    e.target.value = "";
+    const serviceId = created?.dbId;
+    if (!userId || !serviceId || files.length === 0) return;
+    setPortfolioError("");
+    setPortfolioUploading(true);
+    try {
+      for (const file of files) {
+        const type = file.type.startsWith("video/") ? "video" : "image";
+        const { publicUrl } = await uploadToProfileMedia(file, "portfolio");
+        const { data: row, error } = await supabase
+          .from("portfolio_items")
+          .insert({ profile_id: userId, service_id: serviceId, media_type: type, url: publicUrl, file_name: file.name })
+          .select()
+          .single();
+        if (error) throw error;
+        setPortfolio((prev) => [...prev, { id: row.id, type, url: publicUrl, name: file.name }].slice(0, 9));
+      }
+    } catch (err) {
+      setPortfolioError(`Yüklenemedi: ${err.message}`);
+    } finally {
+      setPortfolioUploading(false);
+    }
+  };
+
+  const handleCertAdd = async (e) => {
+    const files = Array.from(e.target.files || []).slice(0, 5 - certificates.length);
+    e.target.value = "";
+    const serviceId = created?.dbId;
+    if (!userId || !serviceId || files.length === 0) return;
+    setCertError("");
+    setCertUploading(true);
+    try {
+      for (const file of files) {
+        const ext = (file.name.split(".").pop() || "bin").toLowerCase();
+        const path = `${userId}/cert-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+        const { error: upErr } = await supabase.storage.from("provider-documents").upload(path, file);
+        if (upErr) throw upErr;
+        const { data: docRow, error: insErr } = await supabase
+          .from("provider_documents")
+          .insert({ profile_id: userId, service_id: serviceId, doc_type: "certificate", file_url: path, file_name: file.name })
+          .select()
+          .single();
+        if (insErr) throw insErr;
+        const { data: signed } = await supabase.storage.from("provider-documents").createSignedUrl(path, 3600);
+        setCertificates((prev) => [...prev, { id: docRow.id, name: file.name, url: signed?.signedUrl || "", isPdf: file.type === "application/pdf" }].slice(0, 5));
+      }
+    } catch (err) {
+      setCertError(`Yüklenemedi: ${err.message}`);
+    } finally {
+      setCertUploading(false);
+    }
+  };
+
+  const handleCvAdd = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    const serviceId = created?.dbId;
+    if (!file || !userId || !serviceId) return;
+    setCvError("");
+    setCvUploading(true);
+    try {
+      const ext = (file.name.split(".").pop() || "pdf").toLowerCase();
+      const path = `${userId}/cv-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("provider-documents").upload(path, file);
+      if (upErr) throw upErr;
+      const { data: signed } = await supabase.storage.from("provider-documents").createSignedUrl(path, 3600);
+      const { data: docRow, error: insErr } = await supabase
+        .from("provider_documents")
+        .insert({ profile_id: userId, service_id: serviceId, doc_type: "cv", file_url: path, file_name: file.name })
+        .select()
+        .single();
+      if (insErr) throw insErr;
+      setCv({ id: docRow.id, path, name: file.name, url: signed?.signedUrl || "" });
+    } catch (err) {
+      setCvError(`Yüklenemedi: ${err.message}`);
+    } finally {
+      setCvUploading(false);
+    }
+  };
+
   // Kullanıcı geri bildirimi: profil/telefon eksikse önceden bu kontrol
   // sadece "Yayınla"ya basınca yapılıyordu — biri tüm formu doldurup
   // gönderdiğinde reddediliyor, formdan çıkıp profilini tamamlamaya
@@ -6086,19 +6221,128 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
           </div>
         )}
 
-        {/* Kullanıcı geri bildirimi: kapak fotoğrafı dışında (çoklu fotoğraf,
-            video, sertifika, CV) her şey ayrı bir ekranda (VitrinMediaView) —
-            ama biri buraya nasıl geleceğini hiç bilmiyordu. Yayın anında,
-            en yüksek dikkat anında, doğrudan oraya götürüyoruz. */}
-        {onManageMedia && created && (
-          <button
-            onClick={() => onManageMedia(created)}
-            className="w-full flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-full text-sm font-medium text-white mb-2.5"
-            style={{ background: "#2563EB" }}
-          >
-            <Camera size={14} /> Fotoğraf, Video, Sertifika Ekle
-          </button>
-        )}
+        {/* Kullanıcı geri bildirimi (2026-09-16): sertifika/CV/portföy/video
+            için ayrı bir ekrana gitmek gerekiyordu, "iki basamaklı bir işlem"
+            gibi hissettiriyordu — kapak fotoğrafı zaten formdaydı ama gerisi
+            değildi. Artık hepsi burada, aynı yerde, sayfa değiştirmeden. */}
+        <div className="text-left rounded-2xl border p-5 mb-6" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
+          <p className="text-sm font-bold mb-4 text-center" style={{ color: "#1B2B24" }}>Vitrinini güçlendir (opsiyonel)</p>
+
+          {/* Tanıtım videosu */}
+          <div className="mb-4 pb-4 border-b" style={{ borderColor: "#EAE3CE" }}>
+            <p className="text-xs font-bold mb-2" style={{ color: "#5C5744" }}>Tanıtım Videosu</p>
+            {videoIntro ? (
+              <div className="flex items-center justify-between text-xs rounded-lg px-3 py-2" style={{ background: "#FFFFFF", border: "1px solid #EAE3CE" }}>
+                <span className="truncate" style={{ color: "#1B2B24" }}>{videoIntro.name}</span>
+                <Check size={14} style={{ color: "#2FBF71" }} />
+              </div>
+            ) : (
+              <label className="flex items-center justify-center gap-2 text-xs font-semibold px-4 py-2.5 rounded-full cursor-pointer" style={{ background: "#FFFFFF", border: "1px solid #D9D0BA", color: "#1B2B24" }}>
+                {videoUploading ? <Loader2 size={14} className="animate-spin" /> : <UploadCloud size={14} />} Video Ekle
+                <input type="file" accept="video/*" className="hidden" onChange={handleVideoAdd} disabled={videoUploading} />
+              </label>
+            )}
+            {videoError && <p className="text-[11px] mt-1.5" style={{ color: "#D14D4D" }}>{videoError}</p>}
+          </div>
+
+          {/* İş başında portföy */}
+          <div className="mb-4 pb-4 border-b" style={{ borderColor: "#EAE3CE" }}>
+            <p className="text-xs font-bold mb-2" style={{ color: "#5C5744" }}>İş Başında Fotoğraf/Video ({portfolio.length}/9)</p>
+            {portfolio.length > 0 && (
+              <div className="grid grid-cols-3 gap-2 mb-2">
+                {portfolio.map((p) => (
+                  <div key={p.id} className="aspect-square rounded-lg overflow-hidden" style={{ background: "#EAE3CE" }}>
+                    {p.type === "video" ? (
+                      <video src={p.url} className="w-full h-full object-cover" />
+                    ) : (
+                      <img src={p.url} alt="" className="w-full h-full object-cover" />
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+            {portfolio.length < 9 && (
+              <label className="flex items-center justify-center gap-2 text-xs font-semibold px-4 py-2.5 rounded-full cursor-pointer" style={{ background: "#FFFFFF", border: "1px solid #D9D0BA", color: "#1B2B24" }}>
+                {portfolioUploading ? <Loader2 size={14} className="animate-spin" /> : <UploadCloud size={14} />} Fotoğraf/Video Ekle
+                <input type="file" accept="image/*,video/*" multiple className="hidden" onChange={(e) => { setPortfolioConfirmed(false); handlePortfolioAdd(e); }} disabled={portfolioUploading} />
+              </label>
+            )}
+            {portfolioError && <p className="text-[11px] mt-1.5" style={{ color: "#D14D4D" }}>{portfolioError}</p>}
+            {portfolio.length > 0 && (
+              portfolioConfirmed ? (
+                <p className="flex items-center gap-1.5 text-xs font-bold mt-2" style={{ color: "#2FBF71" }}>
+                  <Check size={14} /> Kaydedildi — {portfolio.length} fotoğraf/video vitrininde görünüyor.
+                </p>
+              ) : (
+                <button
+                  onClick={() => setPortfolioConfirmed(true)}
+                  disabled={portfolioUploading}
+                  className="w-full mt-2 text-xs font-bold px-4 py-2.5 rounded-full text-white"
+                  style={{ background: "#2FBF71" }}
+                >
+                  Kaydet
+                </button>
+              )
+            )}
+          </div>
+
+          {/* Sertifika */}
+          <div className="mb-4 pb-4 border-b" style={{ borderColor: "#EAE3CE" }}>
+            <p className="text-xs font-bold mb-2" style={{ color: "#5C5744" }}>Sertifika/Belge ({certificates.length}/5)</p>
+            {certificates.length > 0 && (
+              <div className="flex flex-col gap-1.5 mb-2">
+                {certificates.map((c) => (
+                  <div key={c.id} className="flex items-center gap-2 text-xs rounded-lg px-3 py-2" style={{ background: "#FFFFFF", border: "1px solid #EAE3CE" }}>
+                    <FileText size={13} style={{ color: "#8A8368" }} />
+                    <span className="truncate flex-1" style={{ color: "#1B2B24" }}>{c.name}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {certificates.length < 5 && (
+              <label className="flex items-center justify-center gap-2 text-xs font-semibold px-4 py-2.5 rounded-full cursor-pointer" style={{ background: "#FFFFFF", border: "1px solid #D9D0BA", color: "#1B2B24" }}>
+                {certUploading ? <Loader2 size={14} className="animate-spin" /> : <UploadCloud size={14} />} Sertifika Ekle
+                <input type="file" accept="image/*,.pdf" multiple className="hidden" onChange={(e) => { setCertConfirmed(false); handleCertAdd(e); }} disabled={certUploading} />
+              </label>
+            )}
+            {certError && <p className="text-[11px] mt-1.5" style={{ color: "#D14D4D" }}>{certError}</p>}
+            {certificates.length > 0 && (
+              certConfirmed ? (
+                <p className="flex items-center gap-1.5 text-xs font-bold mt-2" style={{ color: "#2FBF71" }}>
+                  <Check size={14} /> Kaydedildi — {certificates.length} belge vitrininde görünüyor.
+                </p>
+              ) : (
+                <button
+                  onClick={() => setCertConfirmed(true)}
+                  disabled={certUploading}
+                  className="w-full mt-2 text-xs font-bold px-4 py-2.5 rounded-full text-white"
+                  style={{ background: "#2FBF71" }}
+                >
+                  Kaydet
+                </button>
+              )
+            )}
+          </div>
+
+          {/* CV */}
+          <div>
+            <p className="text-xs font-bold mb-2" style={{ color: "#5C5744" }}>CV</p>
+            {cv ? (
+              <div className="flex items-center gap-2 text-xs rounded-lg px-3 py-2" style={{ background: "#FFFFFF", border: "1px solid #EAE3CE" }}>
+                <FileText size={13} style={{ color: "#8A8368" }} />
+                <span className="truncate flex-1" style={{ color: "#1B2B24" }}>{cv.name}</span>
+                <Check size={14} style={{ color: "#2FBF71" }} />
+              </div>
+            ) : (
+              <label className="flex items-center justify-center gap-2 text-xs font-semibold px-4 py-2.5 rounded-full cursor-pointer" style={{ background: "#FFFFFF", border: "1px solid #D9D0BA", color: "#1B2B24" }}>
+                {cvUploading ? <Loader2 size={14} className="animate-spin" /> : <UploadCloud size={14} />} CV Ekle
+                <input type="file" accept=".pdf,.doc,.docx" className="hidden" onChange={handleCvAdd} disabled={cvUploading} />
+              </label>
+            )}
+            {cvError && <p className="text-[11px] mt-1.5" style={{ color: "#D14D4D" }}>{cvError}</p>}
+          </div>
+        </div>
+
         <div className="flex gap-2 justify-center">
           <button onClick={onBack} className="px-5 py-2.5 rounded-full text-sm font-medium text-white" style={{ background: "#C2872B" }}>Ana Sayfaya Dön</button>
         </div>
