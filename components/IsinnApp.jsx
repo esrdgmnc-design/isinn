@@ -6600,7 +6600,9 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
               hiçbir çıkış yolu yoktu. Artık düzenleme sırasında doğrudan
               tıklanabilir bir buton var, submit etmeyi beklemiyor. */}
           <p className="text-[11px] mt-1.5" style={{ color: "#8A8368" }}>
-            Bu, tek bir kapak fotoğrafı — vitrine özel çoklu fotoğraf, video, sertifika ve CV eklemek ayrı bir ekranda.
+            {isEditing
+              ? "Bu, tek bir kapak fotoğrafı — vitrine özel çoklu fotoğraf, video, sertifika ve CV aşağıdaki linkten yönetilir."
+              : "Bu, kapak fotoğrafı — vitrini yayınladıktan hemen sonra, aynı ekranda çoklu fotoğraf, video, sertifika ve CV de ekleyebileceksin."}
           </p>
           {isEditing && onManageMedia && (
             <button
