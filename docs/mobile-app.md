@@ -54,9 +54,45 @@ Mac'inde derliyor, senin bir Mac'e ihtiyacın yok.
   görüntüsü gereksinimleri, kategori vb.) birlikte hazırlarız.
 
 ## İkon/splash değiştirmek istersen
-`resources/icon.png` ve `resources/splash.png`'i değiştirip şunu çalıştır:
+
+Kategori eklemek gibi kod değişikliklerinden farklı olarak, ikon/splash
+**native tarafı** değiştirdiği için Codemagic'te Android ve iOS'u ayrı ayrı
+yeniden derletmen gerekiyor — site tarafı otomatik yansımıyor.
+
+### 1. Kaynak görseli hazırla
+İki seçenek var:
+- **Hazır bir PNG'in varsa**: doğrudan `resources/icon.png` (1024×1024) ve
+  `resources/splash.png` (2732×2732) olarak değiştir, adım 3'e geç.
+- **Yazı/logo tasarımını kod ile üretmek istersen**: `scripts/app-icon-source.html`
+  ve `scripts/app-splash-source.html`'i düzenle (renk, yazı boyutu vb.), sonra
+  headless Chrome ile PNG'e render et:
+  ```bash
+  "/c/Program Files/Google/Chrome/Application/chrome.exe" --headless --disable-gpu --window-size=1024x1024 --screenshot="resources/icon.png" "file:///C:/Users/Pc/Desktop/isinn/scripts/app-icon-source.html"
+  "/c/Program Files/Google/Chrome/Application/chrome.exe" --headless --disable-gpu --window-size=2732x2732 --screenshot="resources/splash.png" "file:///C:/Users/Pc/Desktop/isinn/scripts/app-splash-source.html"
+  ```
+
+### 2. Tüm platform boyutlarını üret
 ```bash
 npx capacitor-assets generate
 npx cap sync
 ```
-Sonra Codemagic'te ilgili iş akışını tekrar çalıştır.
+
+### 3. Otomatik üretimin bozduğu 2 şeyi elle düzelt (her seferinde gerekiyor)
+`capacitor-assets` şu 2 hatayı her çalıştırmada yapıyor:
+- `icons/` klasörünü proje **kökünde** bırakıyor, `public/` içine değil:
+  ```bash
+  mkdir -p public/icons && mv icons/*.webp public/icons/ && rmdir icons
+  ```
+- `public/manifest.webmanifest`'i yanlış path'lerle (`../icons/...`) ve yanlış
+  mimetype'la (`image/png`) eziyor — `icons` dizisindeki her satırı
+  `"src": "/icons/icon-XX.webp"` ve `"type": "image/webp"` olacak şekilde
+  elle düzelt (bkz. dosyanın mevcut hali, format örneği orada duruyor).
+
+### 4. Yayınla
+```bash
+git add resources/ public/icons public/manifest.webmanifest ios android
+git commit -m "..."
+git push
+```
+Sonra Codemagic'te **hem `android-debug` hem `ios-debug`** iş akışlarını
+tekrar çalıştır (ikisi ayrı native paket, biri diğerini güncellemez).
