@@ -9,6 +9,9 @@ export const metadata = {
   // artık gerçek bir PWA da (telefon tarayıcısından "Ana ekrana ekle").
   // Asıl mağaza dağıtımı Capacitor/Codemagic üzerinden, bu sadece bonus.
   manifest: "/manifest.webmanifest",
+  verification: {
+    google: "BjUpLpu5lRotGu1NKjfHrxpymXlrntgrWW_CdlTx0pk",
+  },
   // Bu alanlar olmadan link WhatsApp/Instagram/X'te paylaşıldığında çıplak
   // bir metin linki görünüyordu — og:image app/opengraph-image.js'ten
   // (özel dosya kuralı) otomatik bağlanıyor, burada ayrıca belirtmeye
