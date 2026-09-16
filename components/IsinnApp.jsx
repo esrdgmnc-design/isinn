@@ -5760,6 +5760,47 @@ function CreateListingView({ onBack, onCreated, userId, editingListing, onGoToPr
   const [videoIntro, setVideoIntro] = useState(null);
   const [videoUploading, setVideoUploading] = useState(false);
   const [videoError, setVideoError] = useState("");
+  const [existingMediaLoading, setExistingMediaLoading] = useState(isEditing);
+
+  // Düzenlerken (isEditing) servis zaten var — yeni açılışta ise "success"
+  // adımına geçince (created) var olacak. İkisi de aynı upload
+  // fonksiyonlarını kullanabilsin diye tek bir id burada birleştiriliyor.
+  const activeServiceId = created?.dbId || (isEditing ? editingListing?.dbId : null);
+
+  // Düzenleme modunda, o vitrine daha önce eklenmiş sertifika/CV/portföy/
+  // video varsa yükleyip formda gösteriyoruz — yoksa kullanıcı "zaten
+  // eklemiştim, gitti mi?" diye düşünür (bkz. VitrinMediaView'daki aynı sorgu).
+  useEffect(() => {
+    if (!isEditing || !activeServiceId) { setExistingMediaLoading(false); return; }
+    let cancelled = false;
+    (async () => {
+      setExistingMediaLoading(true);
+      const [{ data: serviceRow }, { data: docs }, { data: items }] = await Promise.all([
+        supabase.from("services").select("video_intro_url, video_intro_name").eq("id", activeServiceId).maybeSingle(),
+        supabase.from("provider_documents").select("*").eq("service_id", activeServiceId).order("created_at", { ascending: false }),
+        supabase.from("portfolio_items").select("*").eq("service_id", activeServiceId).order("created_at", { ascending: true }),
+      ]);
+      if (cancelled) return;
+      if (serviceRow?.video_intro_url) setVideoIntro({ url: serviceRow.video_intro_url, name: serviceRow.video_intro_name || "Tanıtım Videosu" });
+      const docRows = docs || [];
+      const certs = docRows.filter((d) => d.doc_type === "certificate");
+      const cvDoc = docRows.find((d) => d.doc_type === "cv");
+      const certsWithUrls = await Promise.all(certs.map(async (d) => {
+        const { data: signed } = await supabase.storage.from("provider-documents").createSignedUrl(d.file_url, 3600);
+        return { id: d.id, name: d.file_name || d.label || "Belge", url: signed?.signedUrl || "", isPdf: (d.file_name || "").toLowerCase().endsWith(".pdf") };
+      }));
+      if (cancelled) return;
+      if (certsWithUrls.length > 0) { setCertificates(certsWithUrls); setCertConfirmed(true); }
+      if (cvDoc) {
+        const { data: signed } = await supabase.storage.from("provider-documents").createSignedUrl(cvDoc.file_url, 3600);
+        setCv({ id: cvDoc.id, path: cvDoc.file_url, name: cvDoc.file_name || "CV", url: signed?.signedUrl || "" });
+      }
+      const portfolioItems = (items || []).map((p) => ({ id: p.id, type: p.media_type, url: p.url, name: p.file_name }));
+      if (portfolioItems.length > 0) { setPortfolio(portfolioItems); setPortfolioConfirmed(true); }
+      setExistingMediaLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [isEditing, activeServiceId]);
 
   const uploadToProfileMedia = async (file, prefix) => {
     const ext = (file.name.split(".").pop() || "bin").toLowerCase();
@@ -5773,7 +5814,7 @@ function CreateListingView({ onBack, onCreated, userId, editingListing, onGoToPr
   const handleVideoAdd = async (e) => {
     const file = e.target.files?.[0];
     e.target.value = "";
-    const serviceId = created?.dbId;
+    const serviceId = activeServiceId;
     if (!file || !userId || !serviceId) return;
     setVideoError("");
     setVideoUploading(true);
@@ -5792,7 +5833,7 @@ function CreateListingView({ onBack, onCreated, userId, editingListing, onGoToPr
   const handlePortfolioAdd = async (e) => {
     const files = Array.from(e.target.files || []).slice(0, 9 - portfolio.length);
     e.target.value = "";
-    const serviceId = created?.dbId;
+    const serviceId = activeServiceId;
     if (!userId || !serviceId || files.length === 0) return;
     setPortfolioError("");
     setPortfolioUploading(true);
@@ -5818,7 +5859,7 @@ function CreateListingView({ onBack, onCreated, userId, editingListing, onGoToPr
   const handleCertAdd = async (e) => {
     const files = Array.from(e.target.files || []).slice(0, 5 - certificates.length);
     e.target.value = "";
-    const serviceId = created?.dbId;
+    const serviceId = activeServiceId;
     if (!userId || !serviceId || files.length === 0) return;
     setCertError("");
     setCertUploading(true);
@@ -5847,7 +5888,7 @@ function CreateListingView({ onBack, onCreated, userId, editingListing, onGoToPr
   const handleCvAdd = async (e) => {
     const file = e.target.files?.[0];
     e.target.value = "";
-    const serviceId = created?.dbId;
+    const serviceId = activeServiceId;
     if (!file || !userId || !serviceId) return;
     setCvError("");
     setCvUploading(true);
@@ -6193,41 +6234,20 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
     if (!isEditing) getRecommendation(listing);
   };
 
-  if (step === "success") {
-    return (
-      <div className="max-w-md mx-auto px-5 py-24 text-center">
-        <div className="w-14 h-14 rounded-full mx-auto mb-5 flex items-center justify-center" style={{ background: "rgba(47,191,113,0.15)" }}>
-          <Check size={22} style={{ color: "#2FBF71" }} />
+  // Hem "yayınlandı" ekranında (yeni vitrin) hem de düzenleme formunda
+  // (mevcut vitrin) aynı yükleme bloğu kullanılıyor — activeServiceId hangi
+  // durumda olduğumuzu zaten ayırt ediyor, JSX'i tekrar yazmaya gerek yok.
+  const mediaUploadSection = (
+    <div className="text-left rounded-2xl border p-5 mb-6" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
+      <p className="text-sm font-bold mb-4 text-center" style={{ color: "#1B2B24" }}>Vitrinini güçlendir (opsiyonel)</p>
+
+      {existingMediaLoading ? (
+        <div className="flex items-center justify-center gap-2 py-6">
+          <Loader2 size={14} className="animate-spin" style={{ color: "#8A8368" }} />
+          <span className="text-xs" style={{ color: "#8A8368" }}>Yükleniyor...</span>
         </div>
-        <h2 className="font-serif text-xl mb-2" style={{ color: "#1B2B24" }}>{isEditing ? "Vitrinin güncellendi ✓" : "Vitrinin yayında! 🎉"}</h2>
-        <p className="text-sm mb-6" style={{ color: "#5C5744" }}>
-          {isEditing ? `"${created?.title}" değişiklikleri kaydedildi.` : `"${created?.title}" artık ana sayfada ve aramada görünüyor.`}
-        </p>
-
-        {!isEditing && recLoading && (
-          <div className="rounded-2xl border p-4 mb-6 text-xs flex items-center justify-center gap-2" style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#8A8368" }}>
-            <Loader2 size={13} className="animate-spin" /> Senin için kişisel bir öneri hazırlanıyor...
-          </div>
-        )}
-        {recommendation && (
-          <div className="rounded-2xl border-2 p-5 mb-6 text-left" style={{ borderColor: "#2563EB", background: "#EFF6FF" }}>
-            <div className="flex items-center gap-1.5 mb-2">
-              <Sparkles size={13} style={{ color: "#2563EB" }} />
-              <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: "#2563EB" }}>Senin İçin Önerimiz</span>
-            </div>
-            <p className="text-sm font-bold mb-1.5" style={{ color: "#0F1115" }}>{recommendation.product}</p>
-            <p className="text-xs leading-relaxed" style={{ color: "#4B5563" }}>{recommendation.pitch}</p>
-            <button className="mt-3 text-xs font-bold px-3.5 py-2 rounded-full text-white" style={{ background: "#2563EB" }}>İncele</button>
-          </div>
-        )}
-
-        {/* Kullanıcı geri bildirimi (2026-09-16): sertifika/CV/portföy/video
-            için ayrı bir ekrana gitmek gerekiyordu, "iki basamaklı bir işlem"
-            gibi hissettiriyordu — kapak fotoğrafı zaten formdaydı ama gerisi
-            değildi. Artık hepsi burada, aynı yerde, sayfa değiştirmeden. */}
-        <div className="text-left rounded-2xl border p-5 mb-6" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
-          <p className="text-sm font-bold mb-4 text-center" style={{ color: "#1B2B24" }}>Vitrinini güçlendir (opsiyonel)</p>
-
+      ) : (
+        <>
           {/* Tanıtım videosu */}
           <div className="mb-4 pb-4 border-b" style={{ borderColor: "#EAE3CE" }}>
             <p className="text-xs font-bold mb-2" style={{ color: "#5C5744" }}>Tanıtım Videosu</p>
@@ -6341,7 +6361,44 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
             )}
             {cvError && <p className="text-[11px] mt-1.5" style={{ color: "#D14D4D" }}>{cvError}</p>}
           </div>
+        </>
+      )}
+    </div>
+  );
+
+  if (step === "success") {
+    return (
+      <div className="max-w-md mx-auto px-5 py-24 text-center">
+        <div className="w-14 h-14 rounded-full mx-auto mb-5 flex items-center justify-center" style={{ background: "rgba(47,191,113,0.15)" }}>
+          <Check size={22} style={{ color: "#2FBF71" }} />
         </div>
+        <h2 className="font-serif text-xl mb-2" style={{ color: "#1B2B24" }}>{isEditing ? "Vitrinin güncellendi ✓" : "Vitrinin yayında! 🎉"}</h2>
+        <p className="text-sm mb-6" style={{ color: "#5C5744" }}>
+          {isEditing ? `"${created?.title}" değişiklikleri kaydedildi.` : `"${created?.title}" artık ana sayfada ve aramada görünüyor.`}
+        </p>
+
+        {!isEditing && recLoading && (
+          <div className="rounded-2xl border p-4 mb-6 text-xs flex items-center justify-center gap-2" style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#8A8368" }}>
+            <Loader2 size={13} className="animate-spin" /> Senin için kişisel bir öneri hazırlanıyor...
+          </div>
+        )}
+        {recommendation && (
+          <div className="rounded-2xl border-2 p-5 mb-6 text-left" style={{ borderColor: "#2563EB", background: "#EFF6FF" }}>
+            <div className="flex items-center gap-1.5 mb-2">
+              <Sparkles size={13} style={{ color: "#2563EB" }} />
+              <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: "#2563EB" }}>Senin İçin Önerimiz</span>
+            </div>
+            <p className="text-sm font-bold mb-1.5" style={{ color: "#0F1115" }}>{recommendation.product}</p>
+            <p className="text-xs leading-relaxed" style={{ color: "#4B5563" }}>{recommendation.pitch}</p>
+            <button className="mt-3 text-xs font-bold px-3.5 py-2 rounded-full text-white" style={{ background: "#2563EB" }}>İncele</button>
+          </div>
+        )}
+
+        {/* Kullanıcı geri bildirimi (2026-09-16): sertifika/CV/portföy/video
+            için ayrı bir ekrana gitmek gerekiyordu, "iki basamaklı bir işlem"
+            gibi hissettiriyordu — kapak fotoğrafı zaten formdaydı ama gerisi
+            değildi. Artık hepsi burada, aynı yerde, sayfa değiştirmeden. */}
+        {mediaUploadSection}
 
         <div className="flex gap-2 justify-center">
           <button onClick={onBack} className="px-5 py-2.5 rounded-full text-sm font-medium text-white" style={{ background: "#C2872B" }}>Ana Sayfaya Dön</button>
@@ -6592,29 +6649,19 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
               "Vitrinlerim" > yönetim ekranından (VitrinMediaView) ekleniyor.
               Kullanıcı geri bildirimi: bu adım hiç belli olmuyordu, biri tek
               kapak fotoğrafıyla kalıp "vitrin gibi çoklu fotoğraf/video
-              koyamıyoruz" sanıyordu — bir önceki düzeltme (bu metin) yeterli
-              olmadı: hâlâ aynı şikayet geldi (2026-09-14), çünkü metin sadece
-              "yayınladıktan SONRA" diyordu ve buradan gidilebilecek gerçek
-              bir buton yoktu — özellikle mevcut bir vitrini DÜZENLERKEN
-              (zaten yayında, "yayınladıktan sonra" cümlesi kafa karıştırıyor)
-              hiçbir çıkış yolu yoktu. Artık düzenleme sırasında doğrudan
-              tıklanabilir bir buton var, submit etmeyi beklemiyor. */}
+              koyamıyoruz" sanıyordu. Ayrı bir ekrana yönlendiren buton da
+              (2026-09-14 düzeltmesi) yetmedi — hâlâ "iki basamaklı bir işlem"
+              gibi hissettiriyordu (2026-09-16). Artık düzenlerken de aynı
+              form içinde, aşağıda, doğrudan yükleniyor — hiç sayfa
+              değiştirmeden. */}
           <p className="text-[11px] mt-1.5" style={{ color: "#8A8368" }}>
             {isEditing
-              ? "Bu, tek bir kapak fotoğrafı — vitrine özel çoklu fotoğraf, video, sertifika ve CV aşağıdaki linkten yönetilir."
+              ? "Bu, kapak fotoğrafı — çoklu fotoğraf, video, sertifika ve CV'yi aşağıda, aynı formda ekleyip yönetebilirsin."
               : "Bu, kapak fotoğrafı — vitrini yayınladıktan hemen sonra, aynı ekranda çoklu fotoğraf, video, sertifika ve CV de ekleyebileceksin."}
           </p>
-          {isEditing && onManageMedia && (
-            <button
-              type="button"
-              onClick={() => onManageMedia(editingListing)}
-              className="text-[11px] font-bold mt-1 flex items-center gap-1"
-              style={{ color: "#2563EB" }}
-            >
-              <Camera size={11} /> Fotoğraf, Video, Sertifika Yönet →
-            </button>
-          )}
         </div>
+
+        {isEditing && mediaUploadSection}
 
         {mode === "local" && (
           <>
