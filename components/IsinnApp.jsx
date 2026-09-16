@@ -1792,7 +1792,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
                         animationDelay: `${i * 70}ms`,
                       }}
                     >
-                      <img src={l.img} alt="" className="w-full h-full object-cover" style={isCenter ? {} : { filter: "brightness(0.55) saturate(0.85)" }} />
+                      <img src={l.img} alt={l.title} className="w-full h-full object-cover" style={isCenter ? {} : { filter: "brightness(0.55) saturate(0.85)" }} />
                       <div className="absolute inset-x-0 bottom-0 p-2 pt-7" style={{ background: "linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.88) 100%)" }}>
                         <p className={`font-bold text-white truncate ${isCenter ? "text-xs" : "text-[10px]"}`}>{l.provider}</p>
                       </div>
@@ -1859,7 +1859,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
                 style={{ border: "1px solid #F0F0F0", background: "#FFFFFF" }}
               >
                 <div className="sm:w-64 h-44 sm:h-auto shrink-0 relative overflow-hidden">
-                  <img src={p.img} alt="" className="w-full h-full object-cover" />
+                  <img src={p.img} alt={p.title} className="w-full h-full object-cover" />
                   <span
                     className="absolute top-2 left-2 text-[11px] font-bold px-2 py-0.5 rounded-full text-white flex items-center gap-1"
                     style={{ background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)" }}
@@ -1942,7 +1942,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
                 style={{ border: "1px solid #F0F0F0", background: "#FFFFFF", transform: "translateZ(0)", WebkitTransform: "translateZ(0)", willChange: "transform" }}
               >
                 <div className="relative h-44 overflow-hidden">
-                  <img src={l.img} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
+                  <img src={l.img} alt={l.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
                   <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
                     <ModeTag mode={l.mode} />
                     {l.isBoosted && (
@@ -2128,7 +2128,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
                 className="text-left rounded-2xl overflow-hidden hover:-translate-y-1.5 transition-all group shadow-sm hover:shadow-xl cursor-pointer"
               >
                 <div className="relative h-44 overflow-hidden" style={{ background: item.bg }}>
-                  <img src={l.img} alt="" className="w-full h-full object-cover opacity-90 group-hover:scale-110 transition-transform duration-300" />
+                  <img src={l.img} alt={l.title} className="w-full h-full object-cover opacity-90 group-hover:scale-110 transition-transform duration-300" />
                   <button
                     onClick={(e) => { e.stopPropagation(); onToggleFavorite?.(l); }}
                     className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full bg-white/90 flex items-center justify-center hover:scale-110 transition-transform"
@@ -3062,7 +3062,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
       </button>
 
       <div className="rounded-xl overflow-hidden mb-6">
-        <img src={listing.img} alt="" className="w-full h-72 object-cover" />
+        <img src={listing.img} alt={listing.title} className="w-full h-72 object-cover" />
       </div>
 
       <div className="flex items-start justify-between gap-6 flex-wrap">
@@ -4209,7 +4209,7 @@ function SearchResultsView({ query, cityFilter, onBack, onSelectListing, realLis
               style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}
             >
               <div className="relative h-40 overflow-hidden">
-                <img src={l.img} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                <img src={l.img} alt={l.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                 <div className="absolute top-2 left-2 flex items-center gap-1.5">
                   <ModeTag mode={l.mode} />
                   {l.isBoosted && (
@@ -4273,7 +4273,7 @@ function FavoritesView({ onBack, onSelectListing, onOpenJob, realListings, realJ
                   <div key={l.id} className="rounded-xl overflow-hidden border" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
                     <button onClick={() => onSelectListing(l)} className="w-full text-left">
                       <div className="relative h-40 overflow-hidden">
-                        <img src={l.img} alt="" className="w-full h-full object-cover" />
+                        <img src={l.img} alt={l.title} className="w-full h-full object-cover" />
                       </div>
                       <div className="p-3.5">
                         <p className="text-sm font-medium leading-snug line-clamp-2" style={{ color: "#1B2B24" }}>{l.title}</p>
@@ -9904,6 +9904,26 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
   const [staffModerationQueue, setStaffModerationQueue] = useState([]); // platform çalışanının içerik güvenliği kuyruğu (şu an sadece video)
 
   const userId = session?.user?.id;
+
+  // SEO için eklenen /vitrin/[id] sayfaları (bkz. app/vitrin/[id]/page.js),
+  // asıl etkileşimli deneyim için buraya "?vitrin=<id>" ile yönlendiriyor —
+  // burada o tek ilanı çekip doğrudan detay ekranını açıyoruz, sanki
+  // kullanıcı anasayfada karta tıklamış gibi. URL'i de temizliyoruz ki
+  // geri tuşu anasayfaya değil, gerçekten bir önceki adıma dönsün.
+  useEffect(() => {
+    const vitrinId = new URLSearchParams(window.location.search).get("vitrin");
+    if (!vitrinId) return;
+    let cancelled = false;
+    supabase.from("services").select("*, profiles(*), categories(*)").eq("id", vitrinId).eq("active", true).maybeSingle().then(({ data }) => {
+      if (cancelled || !data) return;
+      setSelected(mapServiceRowToListing(data));
+      setView("detail");
+      const url = new URL(window.location.href);
+      url.searchParams.delete("vitrin");
+      window.history.replaceState({}, "", url);
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   // Gerçek bir admin rolü — bkz. supabase/admin_role.sql. Tam bir rol/izin
   // sistemi değil, tek bir bayrak: kullanıcının kendi hesabını (profiles.
