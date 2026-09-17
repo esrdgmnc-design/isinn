@@ -6609,6 +6609,14 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
             className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none resize-none"
             style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
           />
+          {/* Google ve müşteriler kısa/boş açıklamalı vitrinleri daha az
+              ciddiye alıyor (bkz. SEO stratejisi dokümanı, madde 2) — engel
+              değil, sadece nazik bir yönlendirme. */}
+          {desc.trim().split(/\s+/).filter(Boolean).length > 0 && desc.trim().split(/\s+/).filter(Boolean).length < 40 && (
+            <p className="text-xs mt-1.5" style={{ color: "#B08A3E" }}>
+              Biraz daha uzun ve detaylı bir açıklama hem müşterilerin güvenini kazanır hem de vitrinin Google'da daha kolay bulunmasını sağlar.
+            </p>
+          )}
         </div>
 
         <div>

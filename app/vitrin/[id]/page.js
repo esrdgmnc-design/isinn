@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { supabase } from "../../../lib/supabaseClient";
+import ShareButton from "../../../components/ShareButton";
 
 // SEO için eklendi (2026-09-16): İşinn'in tamamı eskiden tek bir "/" sayfası
 // üzerinde, istemci tarafı görünüm durumuyla çalışıyordu — her vitrin kendi
@@ -72,6 +73,8 @@ export default async function VitrinPage({ params }) {
   const img = (Array.isArray(row.images) && row.images[0]) || FALLBACK_IMG;
   const category = row.categories?.name || "";
   const description = row.description?.trim() || "";
+  const url = `${BASE_URL}/vitrin/${row.id}`;
+  const title = `${row.title} — İşinn`;
 
   // Google'ın hizmet sayfaları için beklediği yapılandırılmış veri — arama
   // sonuçlarında zengin snippet (fiyat, konum, sağlayıcı adı) ihtimalini artırır.
@@ -107,13 +110,16 @@ export default async function VitrinPage({ params }) {
             <p className="text-sm mb-1" style={{ color: "#6B7280" }}>{provider} · {city}</p>
             <p className="text-sm font-black mb-4" style={{ color: "#0F1115" }}>{price}</p>
             {description && <p className="text-sm leading-relaxed mb-6" style={{ color: "#374151" }}>{description}</p>}
-            <a
-              href={`/?vitrin=${row.id}`}
-              className="inline-block text-sm font-bold px-6 py-3 rounded-full text-white"
-              style={{ background: "#2563EB" }}
-            >
-              İşinn'de Görüntüle ve Mesaj Gönder
-            </a>
+            <div className="flex flex-wrap items-center gap-3">
+              <a
+                href={`/?vitrin=${row.id}`}
+                className="inline-block text-sm font-bold px-6 py-3 rounded-full text-white"
+                style={{ background: "#2563EB" }}
+              >
+                İşinn'de Görüntüle ve Mesaj Gönder
+              </a>
+              <ShareButton url={url} title={title} />
+            </div>
           </div>
         </div>
       </div>

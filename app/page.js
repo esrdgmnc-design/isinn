@@ -26,14 +26,14 @@ export default function Page() {
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  if (session === undefined) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "#FFFFFF" }}>
-        <p className="text-sm" style={{ color: "#6B7280" }}>Yükleniyor...</p>
-      </div>
-    );
-  }
-
+  // Eskiden session === undefined (oturum kontrolü sürerken) burada boş bir
+  // "Yükleniyor..." ekranı dönüyordu — Google'ın ve gerçek kullanıcının ilk
+  // gördüğü şey içerik değil, boş bir bekleme metniydi (bkz. SEO stratejisi
+  // dokümanı, "ana sayfa render riski"). IsinnApp zaten session'ı her yerde
+  // optional chaining ile okuyor (userId = session?.user?.id), yani undefined
+  // ile null arasında fark gözetmiyor — session henüz çözülmemişken bile
+  // güvenle "anonim" gibi render edilebilir, birkaç yüz ms sonra gerçek
+  // session gelince kendiliğinden güncellenir.
   if (!session && showAuth) {
     return (
       <ErrorBoundary>
