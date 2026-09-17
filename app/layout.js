@@ -11,6 +11,10 @@ export const metadata = {
   manifest: "/manifest.webmanifest",
   verification: {
     google: "BjUpLpu5lRotGu1NKjfHrxpymXlrntgrWW_CdlTx0pk",
+    // Bing Webmaster Tools doğrulaması (2026-09-17).
+    other: {
+      "msvalidate.01": "F04FEEAE89AC31F5BAA4440ACBAEB3C4",
+    },
   },
   // Bu alanlar olmadan link WhatsApp/Instagram/X'te paylaşıldığında çıplak
   // bir metin linki görünüyordu — og:image app/opengraph-image.js'ten
