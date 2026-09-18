@@ -8955,6 +8955,23 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
         )}
       </div>
 
+      {/* Rozet daha önce sadece ayrı, bağlantısız bir sayfaydı (/rozet) —
+          kullanıcı "profilimde görünmüyor" diye haklı olarak şaşırdı. Artık
+          gerçek bir vitrini olan her sağlayıcının profilinde görünüyor. */}
+      {myListings.length > 0 && (
+        <div className="rounded-xl border p-5 mb-4 flex items-center gap-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/rozet.svg" alt="İşinn'de Doğrulanmış Sağlayıcı" width={140} height={40} className="shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-bold mb-1" style={{ color: "#1B2B24" }}>Rozetin hazır</p>
+            <p className="text-[11px] mb-2" style={{ color: "#8A8368" }}>Kendi sitene ya da Instagram'ına ekleyebilirsin.</p>
+            <a href="/rozet" target="_blank" rel="noopener noreferrer" className="text-[11px] font-bold underline" style={{ color: "#3A5BA0" }}>
+              Rozeti Al →
+            </a>
+          </div>
+        </div>
+      )}
+
       <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
         <div className="flex items-center gap-2 mb-3">
           <Megaphone size={16} style={{ color: "#C2872B" }} />
