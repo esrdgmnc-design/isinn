@@ -112,6 +112,29 @@ const PARENT_CATEGORIES = [
   { id: "diger", name: "Diğer", icon: MoreHorizontal, categoryIds: ["bahce-bakim", "muhendis", "sosyal-medya", "profesyonel-fotograf", "evcil-hayvan"] },
 ];
 
+// Faz 4: kategori/grup görünen adları artık lib/i18n/{tr,en}.js'deki
+// categories/categoryGroups sözlüklerinden geliyor (id slug'ları anahtar) —
+// id'ler CATEGORIES/PARENT_CATEGORIES'te sabit kalıyor (DB/URL bağımlı),
+// sadece görüntülenen isim dile göre değişiyor. t() zaten bilinmeyen bir key
+// için "tr"ye düşüyor (bkz. LanguageContext) ama henüz sözlüğe eklenmemiş
+// (örn. ileride eklenecek yeni bir kategori) bir id için CATEGORIES/
+// PARENT_CATEGORIES'teki orijinal .name alanına düşüyoruz.
+function getCategoryName(id, t) {
+  if (!id) return "";
+  const key = `categories.${id}`;
+  const translated = t(key);
+  if (translated !== key) return translated;
+  return CATEGORIES.find((c) => c.id === id)?.name || "";
+}
+
+function getCategoryGroupName(id, t) {
+  if (!id) return "";
+  const key = `categoryGroups.${id}`;
+  const translated = t(key);
+  if (translated !== key) return translated;
+  return PARENT_CATEGORIES.find((g) => g.id === id)?.name || "";
+}
+
 const LEVEL_META = {
   "top-rated": { label: "Top Rated", color: "#C2872B" },
   "level-2": { label: "Level 2", color: "#6B4FA0" },
@@ -972,6 +995,7 @@ function Stars({ value, size = 14 }) {
 }
 
 function ModeTag({ mode }) {
+  const { t } = useLanguage();
   const isLocal = mode === "local";
   return (
     <span
@@ -981,31 +1005,34 @@ function ModeTag({ mode }) {
         color: isLocal ? "#3F7D5C" : "#3A5BA0",
       }}
     >
-      {isLocal ? "Yerinde" : "Uzaktan"}
+      {isLocal ? t("common.tagLocal") : t("common.tagRemote")}
     </span>
   );
 }
 
 function LevelBadge({ level, size = "sm" }) {
+  const { t } = useLanguage();
   const meta = LEVEL_META[level] || LEVEL_META["new"];
   const isTop = level === "top-rated";
+  const label = LEVEL_META[level] && level !== "new" ? meta.label : t("common.levelNew");
   return (
     <span
       className={`inline-flex items-center gap-1 font-bold rounded-full ${size === "sm" ? "text-[10px] px-1.5 py-0.5" : "text-xs px-2.5 py-1"}`}
       style={{ background: `${meta.color}1F`, color: meta.color }}
     >
       {isTop && <Award size={size === "sm" ? 10 : 12} />}
-      {meta.label}
+      {label}
     </span>
   );
 }
 
 function VerifiedBadges({ items, compact }) {
+  const { t } = useLanguage();
   if (!items || items.length === 0) return null;
   if (compact) {
     return (
       <span className="inline-flex items-center gap-1 text-[11px] font-medium" style={{ color: "#3F7D5C" }}>
-        <ShieldCheck size={12} /> Doğrulanmış
+        <ShieldCheck size={12} /> {t("common.verifiedBadge")}
       </span>
     );
   }
@@ -1022,11 +1049,12 @@ function VerifiedBadges({ items, compact }) {
 }
 
 function HomeServiceBadge({ value, size = "sm" }) {
+  const { t } = useLanguage();
   if (!value) return null;
   const meta = {
-    evde: { label: "Evinize Gelir", icon: Home, color: "#3F7D5C" },
-    mekanda: { label: "Mekanına Gidilir", icon: MapPin, color: "#3A5BA0" },
-    esnek: { label: "Evde veya Mekanda", icon: Check, color: "#C2872B" },
+    evde: { label: t("common.homeServiceComesToYou"), icon: Home, color: "#3F7D5C" },
+    mekanda: { label: t("common.homeServiceGoToThem"), icon: MapPin, color: "#3A5BA0" },
+    esnek: { label: t("common.homeServiceEitherBadge"), icon: Check, color: "#C2872B" },
   }[value];
   if (!meta) return null;
   const Icon = meta.icon;
@@ -1487,6 +1515,7 @@ const CATEGORY_EMOJI = {
 // stil sahibi" isteği). Rozet gradyanı hâlâ canlı ama küçük bir alanda,
 // kartın geneli site genelindeki temiz beyaz dille uyumlu kalıyor.
 function CategoryTile({ c, i, onClick }) {
+  const { t } = useLanguage();
   const [from, to] = CATEGORY_TILE_GRADIENTS[i % CATEGORY_TILE_GRADIENTS.length];
   const emoji = CATEGORY_EMOJI[c.id] || "✨";
   return (
@@ -1502,7 +1531,7 @@ function CategoryTile({ c, i, onClick }) {
         <span style={{ filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.08))" }}>{emoji}</span>
       </div>
       <span className="text-xs font-semibold leading-snug" style={{ color: "#0F1115" }}>
-        {c.name}
+        {getCategoryName(c.id, t)}
       </span>
     </button>
   );
@@ -2093,7 +2122,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
                         <Icon size={16} className="text-white" />
                       </div>
                     )}
-                    <span className="text-[11px] font-bold truncate" style={{ color: tileColor }}>{cat?.name}</span>
+                    <span className="text-[11px] font-bold truncate" style={{ color: tileColor }}>{getCategoryName(cat?.id, t)}</span>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
                     {job.isReal && (
@@ -2212,7 +2241,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
             <div key={group.id}>
               <div className="flex items-center gap-2 mb-3">
                 <GroupIcon size={16} style={{ color: "#1D4ED8" }} />
-                <h3 className="text-sm font-bold tracking-wide" style={{ color: "#374151" }}>{group.name}</h3>
+                <h3 className="text-sm font-bold tracking-wide" style={{ color: "#374151" }}>{getCategoryGroupName(group.id, t)}</h3>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
                 {groupCategories.map((c, i) => (
@@ -2240,7 +2269,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
               <div>
                 <div className="flex items-center gap-2 mb-3">
                   <GroupIcon size={16} style={{ color: "#1D4ED8" }} />
-                  <h3 className="text-sm font-bold tracking-wide" style={{ color: "#374151" }}>{group.name}</h3>
+                  <h3 className="text-sm font-bold tracking-wide" style={{ color: "#374151" }}>{getCategoryGroupName(group.id, t)}</h3>
                   <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "#EFF6FF", color: "#3B82F6" }}>Uzaktan</span>
                   <button
                     onClick={() => setShowRemote(false)}
@@ -2519,6 +2548,7 @@ function ReviewCard({ review, onOpenMedia, isReal, currentUserId, providerId }) 
 }
 
 function ListingDetail({ listing, onBack, onContact, userReviews, onAddReview, onSubmitPendingMedia, onSubmitStaffReview, currentUserId, favoriteIds, onToggleFavorite }) {
+  const { t } = useLanguage();
   const isRealListing = !!(listing.isReal && listing.providerId);
   const [lightbox, setLightbox] = useState(null); // { media, index }
   const isFavorited = !!favoriteIds?.has(listing.dbId);
@@ -2539,7 +2569,7 @@ function ListingDetail({ listing, onBack, onContact, userReviews, onAddReview, o
       reporter_id: currentUserId, service_id: listing.dbId, reason: listingReportReason, detail: listingReportDetail.trim() || null,
     });
     setListingReportSubmitting(false);
-    if (error) { setListingReportError(`Bildirilemedi: ${error.message}`); return; }
+    if (error) { setListingReportError(t("listingDetail.errReportFailed", { message: error.message })); return; }
     setListingReportSubmitted(true);
   };
 
@@ -2856,8 +2886,8 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
   // bırakmak herkesi sonsuza kadar kilitler (canlı testte fark edildi — gerçek
   // bir tutarsızlıktı). Anahtarlar eklenince otomatik sertleşir, kod değişmez.
   const checkReviewEligibility = async () => {
-    if (!currentUserId) return { ok: false, reason: "Değerlendirme bırakmak için giriş yapmış olmalısın." };
-    if (currentUserId === listing.providerId) return { ok: false, reason: "Kendi vitrinini değerlendiremezsin." };
+    if (!currentUserId) return { ok: false, reason: t("listingDetail.errNeedLogin") };
+    if (currentUserId === listing.providerId) return { ok: false, reason: t("listingDetail.errCannotReviewSelf") };
 
     let smsConfigured = true;
     try {
@@ -2874,10 +2904,10 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
       const myVerified = profilesData?.find((p) => p.id === currentUserId)?.phone_verified;
       const providerVerified = profilesData?.find((p) => p.id === listing.providerId)?.phone_verified;
       if (!myVerified) {
-        return { ok: false, reason: "Değerlendirme yapabilmek için önce kendi telefonunu doğrulaman gerekiyor (Profilim → Telefon Doğrulama)." };
+        return { ok: false, reason: t("listingDetail.errNeedPhoneVerify") };
       }
       if (!providerVerified) {
-        return { ok: false, reason: "Bu sağlayıcı henüz telefonunu doğrulamadığı için şu an değerlendirilemiyor." };
+        return { ok: false, reason: t("listingDetail.errProviderNotVerified") };
       }
     }
 
@@ -2890,10 +2920,10 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
       .limit(1)
       .maybeSingle();
     if (!jobRow) {
-      return { ok: false, reason: "Değerlendirme yapabilmek için önce bu sağlayıcıyla iletişime geçmelisin.", needsContact: true };
+      return { ok: false, reason: t("listingDetail.errNeedContact"), needsContact: true };
     }
     if (jobRow.state !== "delivered") {
-      return { ok: false, reason: "Değerlendirme yapabilmek için önce hizmeti aldığını mesajlaşma ekranından \"Hizmeti Aldım\" diyerek işaretlemen gerekiyor.", needsDelivery: true };
+      return { ok: false, reason: t("listingDetail.errNeedDelivery"), needsDelivery: true };
     }
 
     // Daha önce bu vitrini değerlendirdiysen (ratings tablosunda zaten bir
@@ -2974,7 +3004,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
     const jobId = reviewEligibility?.jobId;
     const existing = reviewEligibility?.existingRating;
     if (!jobId) {
-      setReviewError("Değerlendirme yapabilmek için önce bu sağlayıcıyla iletişime geçmelisin.");
+      setReviewError(t("listingDetail.errNeedContact"));
       return null;
     }
     try {
@@ -3005,8 +3035,8 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
       return mediaResult || (existing ? "updated" : "auto");
     } catch (err) {
       const msg = (err?.message || "").includes("duplicate") || err?.code === "23505"
-        ? "Bu sağlayıcıyı zaten değerlendirdin."
-        : `Değerlendirme kaydedilemedi: ${err?.message || "bilinmeyen hata"}`;
+        ? t("listingDetail.errAlreadyReviewed")
+        : t("listingDetail.errSaveFailed", { message: err?.message || t("common.errUnknown") });
       setReviewError(msg);
       return null;
     }
@@ -3020,7 +3050,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
     // kaydediliyor. Başarısız olursa formda kal, sahte akışa düşme.
     if (isRealListing) {
       if (!currentUserId) {
-        setReviewError("Değerlendirme bırakmak için giriş yapmış olmalısın.");
+        setReviewError(t("listingDetail.errNeedLogin"));
         setReviewSubmitting(false);
         return;
       }
@@ -3035,7 +3065,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
     }
 
     const reviewId = Date.now();
-    const name = reviewName.trim() || "Misafir Kullanıcı";
+    const name = reviewName.trim() || t("listingDetail.guestUserName");
     let media = [];
     let resultMessage = "auto";
 
@@ -3099,7 +3129,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
   return (
     <div className="max-w-4xl mx-auto px-5 py-8">
       <button onClick={onBack} className="flex items-center gap-1 text-sm mb-5" style={{ color: "#5C5744" }}>
-        <ChevronLeft size={16} /> Geri
+        <ChevronLeft size={16} /> {t("common.back")}
       </button>
 
       <div className="rounded-xl overflow-hidden mb-6">
@@ -3115,7 +3145,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
           <h1 className="font-serif text-2xl mt-2.5 mb-2" style={{ color: "#1B2B24" }}>{listing.title}</h1>
           <div className="flex items-center gap-3 text-sm mb-4" style={{ color: "#5C5744" }}>
             <span className="flex items-center gap-1"><MapPin size={14} />{listing.city}</span>
-            <span className="flex items-center gap-1"><Stars value={listing.rating} size={13} />{listing.rating} ({listing.reviewCount} değerlendirme)</span>
+            <span className="flex items-center gap-1"><Stars value={listing.rating} size={13} />{listing.rating} {t("listingDetail.reviewCount", { count: listing.reviewCount })}</span>
           </div>
           <p className="text-sm leading-relaxed" style={{ color: "#3D3B30" }}>{listing.desc}</p>
         </div>
@@ -3130,7 +3160,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
                 <p className="text-sm font-medium" style={{ color: "#1B2B24" }}>{listing.provider}</p>
                 <LevelBadge level={listing.level} />
               </div>
-              {avgResponseLabel && <p className="text-[11px]" style={{ color: "#8A8368" }}>Ortalama yanıt: {avgResponseLabel}</p>}
+              {avgResponseLabel && <p className="text-[11px]" style={{ color: "#8A8368" }}>{t("listingDetail.avgResponse", { time: avgResponseLabel })}</p>}
             </div>
           </div>
           {listing.verified && listing.verified.length > 0 && (
@@ -3147,13 +3177,13 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
               <BadgeCheck size={14} style={{ color: "#8A8368" }} className="mt-0.5 shrink-0" />
               <p className="text-xs" style={{ color: "#5C5744" }}>
                 {listing.professionalCredential}
-                <span className="block text-[10px] mt-0.5" style={{ color: "#8A8368" }}>Sağlayıcı beyanı — İşinn bu bilgiyi doğrulamamıştır</span>
+                <span className="block text-[10px] mt-0.5" style={{ color: "#8A8368" }}>{t("listingDetail.credentialDisclaimer")}</span>
               </p>
             </div>
           )}
           <p className="text-lg font-medium mb-4" style={{ color: "#C2872B" }}>{listing.price}</p>
           <button onClick={onContact} className="w-full py-2.5 rounded-full text-sm font-medium text-white mb-2" style={{ background: "#C2872B" }}>
-            İletişime Geç
+            {t("listingDetail.contactButton")}
           </button>
           <button
             onClick={() => onToggleFavorite?.(listing)}
@@ -3161,7 +3191,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
             style={isFavorited ? { borderColor: "#9C4A3C", color: "#9C4A3C", background: "rgba(156,74,60,0.06)" } : { borderColor: "#D9D0BA", color: "#1B2B24" }}
           >
             <Heart size={14} fill={isFavorited ? "#9C4A3C" : "none"} />
-            {isFavorited ? "Favorilerden Çıkar" : "Favorilere Ekle"}
+            {isFavorited ? t("listingDetail.removeFavorite") : t("listingDetail.addFavorite")}
           </button>
 
           {canReportListing && !listingReportSubmitted && (
@@ -3170,11 +3200,11 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
               className="w-full py-2 mt-2 rounded-full text-xs font-medium"
               style={{ color: "#9C4A3C" }}
             >
-              Vitrini Bildir
+              {t("listingDetail.reportListingButton")}
             </button>
           )}
           {listingReportSubmitted && (
-            <p className="text-xs text-center mt-2" style={{ color: "#3F7D5C" }}>Bildirimin alındı, teşekkürler.</p>
+            <p className="text-xs text-center mt-2" style={{ color: "#3F7D5C" }}>{t("listingDetail.reportSubmitted")}</p>
           )}
           {showListingReportForm && !listingReportSubmitted && (
             <div className="mt-2 pt-3 border-t" style={{ borderColor: "#D9D0BA" }}>
@@ -3184,13 +3214,13 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
                 className="w-full px-3 py-2 rounded-lg border text-xs outline-none mb-2"
                 style={{ borderColor: "#D9D0BA", background: "#FFFFFF", color: "#1B2B24" }}
               >
-                {Object.entries(LISTING_REPORT_REASON_LABELS).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
+                {Object.keys(LISTING_REPORT_REASON_LABELS).map((k) => <option key={k} value={k}>{t(`common.listingReportReasons.${k}`)}</option>)}
               </select>
               <textarea
                 value={listingReportDetail}
                 onChange={(e) => setListingReportDetail(e.target.value)}
                 rows={2}
-                placeholder="Ek detay (opsiyonel)"
+                placeholder={t("listingDetail.reportDetailPlaceholder")}
                 className="w-full px-3 py-2 rounded-lg border text-xs outline-none mb-2 resize-none"
                 style={{ borderColor: "#D9D0BA", background: "#FFFFFF", color: "#1B2B24" }}
               />
@@ -3201,7 +3231,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
                 className="w-full py-2 rounded-full text-xs font-bold text-white"
                 style={{ background: "#9C4A3C", opacity: listingReportSubmitting ? 0.7 : 1 }}
               >
-                {listingReportSubmitting ? "Gönderiliyor..." : "Şikayeti Gönder"}
+                {listingReportSubmitting ? t("listingDetail.reportSubmitting") : t("listingDetail.reportSubmitButton")}
               </button>
             </div>
           )}
@@ -3212,16 +3242,16 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
         <div className="mt-10 pt-8 border-t" style={{ borderColor: "#D9D0BA" }}>
           <div className="flex items-center gap-2 mb-1">
             <ShieldCheck size={18} style={{ color: "#3F7D5C" }} />
-            <h2 className="font-serif text-xl" style={{ color: "#1B2B24" }}>Güven Merkezi</h2>
+            <h2 className="font-serif text-xl" style={{ color: "#1B2B24" }}>{t("listingDetail.trustCenterHeading")}</h2>
           </div>
           <p className="text-xs mb-5" style={{ color: "#8A8368" }}>
-            Bu sağlayıcı için gerçekleştirdiğimiz doğrulamalar ve tanıtımı
+            {t("listingDetail.trustCenterSubtext")}
           </p>
 
           <div className="grid md:grid-cols-2 gap-6">
             {listing.videoIntro && (
               <div>
-                <p className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: "#5C5744" }}>Video Tanıtım</p>
+                <p className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: "#5C5744" }}>{t("listingDetail.videoIntroLabel")}</p>
                 {listing.videoIntro.videoUrl ? (
                   <video
                     controls
@@ -3248,7 +3278,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
 
             {listing.backgroundChecks && (
               <div>
-                <p className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: "#5C5744" }}>Güvenlik Kontrolleri</p>
+                <p className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: "#5C5744" }}>{t("listingDetail.backgroundChecksLabel")}</p>
                 <div className="space-y-2.5">
                   {listing.backgroundChecks.map((check, i) => (
                     <div key={i} className="flex items-start gap-2.5 text-xs">
@@ -3266,7 +3296,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
 
           {listing.references && (
             <div className="mt-6">
-              <p className="text-xs font-bold uppercase tracking-wide mb-3" style={{ color: "#5C5744" }}>Diğer Ebeveynlerden Referanslar</p>
+              <p className="text-xs font-bold uppercase tracking-wide mb-3" style={{ color: "#5C5744" }}>{t("listingDetail.referencesLabel")}</p>
               <div className="grid sm:grid-cols-2 gap-3">
                 {listing.references.map((ref, i) => (
                   <div key={i} className="rounded-xl border p-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
@@ -3284,21 +3314,21 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
         <div className="mt-10 pt-8 border-t" style={{ borderColor: "#D9D0BA" }}>
           <div className="flex items-center gap-2 mb-1">
             <Grid3x3 size={18} style={{ color: "#3F7D5C" }} />
-            <h2 className="font-serif text-xl" style={{ color: "#1B2B24" }}>{listing.provider} — Vitrin</h2>
+            <h2 className="font-serif text-xl" style={{ color: "#1B2B24" }}>{t("listingDetail.showcaseHeading", { provider: listing.provider })}</h2>
           </div>
           <p className="text-xs mb-5" style={{ color: "#8A8368" }}>
-            Sağlayıcının tanıtım videosu ve iş başında çektiği fotoğraf/videolar
+            {t("listingDetail.showcaseSubtext")}
           </p>
 
           {providerShowcaseLoading && (
             <p className="text-xs mb-5 flex items-center gap-1.5" style={{ color: "#8A8368" }}>
-              <Loader2 size={12} className="animate-spin" /> Yükleniyor...
+              <Loader2 size={12} className="animate-spin" /> {t("common.loading")}
             </p>
           )}
 
           {providerShowcase?.video_intro_url && (
             <div className="mb-6">
-              <p className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: "#5C5744" }}>Video Tanıtım</p>
+              <p className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: "#5C5744" }}>{t("listingDetail.videoIntroLabel")}</p>
               <video controls playsInline className="w-full rounded-xl bg-black" style={{ maxHeight: "320px" }}>
                 <source src={providerShowcase.video_intro_url} />
               </video>
@@ -3307,7 +3337,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
 
           {(hasRealCover || providerPortfolio.length > 0) && (
             <div>
-              <p className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: "#5C5744" }}>Portföy — İş Başında</p>
+              <p className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: "#5C5744" }}>{t("listingDetail.portfolioLabel")}</p>
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
                 {/* Kullanıcı geri bildirimi: kapak fotoğrafı vitrine girince
                     (burada) görünmüyordu — sadece üstteki hero'da vardı, sanki
@@ -3332,7 +3362,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
                       </div>
                     )}
                     {item.isCover && (
-                      <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded text-[9px] font-bold text-white" style={{ background: "rgba(0,0,0,0.55)" }}>Kapak</span>
+                      <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded text-[9px] font-bold text-white" style={{ background: "rgba(0,0,0,0.55)" }}>{t("vitrinMedia.coverBadge")}</span>
                     )}
                   </button>
                 ))}
@@ -3354,9 +3384,9 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
       <div className="mt-10 pt-8 border-t" style={{ borderColor: "#D9D0BA" }}>
         <div className="flex items-center justify-between flex-wrap gap-2 mb-1">
           <div className="flex items-center gap-3">
-            <h2 className="font-serif text-xl" style={{ color: "#1B2B24" }}>Değerlendirmeler</h2>
+            <h2 className="font-serif text-xl" style={{ color: "#1B2B24" }}>{t("vitrinMedia.reviewsHeading")}</h2>
             <span className="text-sm" style={{ color: "#5C5744" }}>
-              {avg ? `${avg} ortalama · ${allReviews.length} yorum` : "Henüz değerlendirme yok"}
+              {avg ? t("listingDetail.avgSummary", { avg, count: allReviews.length }) : t("listingDetail.noReviewsYet")}
             </span>
           </div>
           {/* Ortalama, sağlayıcının "Birleştir" dediği durumda tüm vitrinlerini
@@ -3365,7 +3395,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
               listeleniyor gibi) kafa karışmasın diye açıkça belirtiyoruz. */}
           {isRealListing && shareProfileReviews && allReviews.length !== displayReviews.length && (
             <p className="text-[11px] w-full" style={{ color: "#8A8368" }}>
-              Ortalama puan, sağlayıcının tüm vitrinlerindeki değerlendirmeleri kapsar; aşağıdaki yorumlar sadece bu vitrine yazılanlardır.
+              {t("listingDetail.mergedReviewsNote")}
             </p>
           )}
           <button
@@ -3386,16 +3416,16 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
             className="text-xs font-bold px-3.5 py-2 rounded-full text-white"
             style={{ background: "#2563EB" }}
           >
-            Değerlendirme Yaz
+            {t("messages.writeReview")}
           </button>
         </div>
-        <p className="text-xs mb-4" style={{ color: "#8A8368" }}>Fotoğraf ve video içeren yorumlar önce gösterilir</p>
+        <p className="text-xs mb-4" style={{ color: "#8A8368" }}>{t("listingDetail.reviewsSortNote")}</p>
 
         {isRealListing && (summaryLoading || reviewSummary) && (
           <div className="flex items-start gap-2 rounded-xl p-3.5 mb-4" style={{ background: "#EFF6FF" }}>
             <Sparkles size={14} style={{ color: "#2563EB" }} className="mt-0.5 shrink-0" />
             {summaryLoading && !reviewSummary ? (
-              <p className="text-xs" style={{ color: "#5C5744" }}>Yorumlar AI ile özetleniyor...</p>
+              <p className="text-xs" style={{ color: "#5C5744" }}>{t("listingDetail.aiSummaryLoading")}</p>
             ) : (
               <p className="text-xs leading-relaxed" style={{ color: "#1B2B24" }}>{reviewSummary}</p>
             )}
@@ -3412,52 +3442,52 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
                   <Check size={22} style={{ color: "#3F7D5C" }} className="mx-auto mb-2" />
                 )}
                 <p className="text-sm font-medium mb-1" style={{ color: "#1B2B24" }}>
-                  {reviewSubmitted === "rejected" ? "Yorumun yayınlandı, görsel eklenemedi"
-                    : reviewSubmitted === "child" ? "Yorumun yayınlandı, görsel eklenemedi"
-                    : reviewSubmitted === "updated" ? "Değerlendirmen güncellendi!"
-                    : "Yorumun yayınlandı!"}
+                  {reviewSubmitted === "rejected" ? t("listingDetail.reviewPublishedNoMedia")
+                    : reviewSubmitted === "child" ? t("listingDetail.reviewPublishedNoMedia")
+                    : reviewSubmitted === "updated" ? t("listingDetail.reviewUpdated")
+                    : t("listingDetail.reviewPublished")}
                 </p>
                 {reviewSubmitted === "pending" && (
-                  <p className="text-xs" style={{ color: "#8A8368" }}>Eklediğin görsel, sağlayıcının kimliğini içerebileceği için önce onayına sunuldu — onaylarsa görünür olacak.</p>
+                  <p className="text-xs" style={{ color: "#8A8368" }}>{t("listingDetail.pendingMediaNote")}</p>
                 )}
                 {reviewSubmitted === "staff-review" && (
-                  <p className="text-xs" style={{ color: "#8A8368" }}>Eklediğin video, AI tarafından otomatik kontrol edilemediği için önce platform ekibinin incelemesine gönderildi, ardından sağlayıcının onayına sunulacak.</p>
+                  <p className="text-xs" style={{ color: "#8A8368" }}>{t("listingDetail.staffReviewNote")}</p>
                 )}
                 {reviewSubmitted === "rejected" && (
-                  <p className="text-xs" style={{ color: "#8A8368" }}>Eklediğin görsel platform kurallarına uygun görünmediği için paylaşılamadı.</p>
+                  <p className="text-xs" style={{ color: "#8A8368" }}>{t("listingDetail.rejectedMediaNote")}</p>
                 )}
                 {reviewSubmitted === "child" && (
-                  <p className="text-xs" style={{ color: "#8A8368" }}>Görselde bir çocuğun yüzü tespit edildi, gizlilik nedeniyle bu tür görseller hiçbir şekilde paylaşılamıyor.</p>
+                  <p className="text-xs" style={{ color: "#8A8368" }}>{t("listingDetail.childMediaNote")}</p>
                 )}
-                <button onClick={() => { setShowReviewForm(false); setReviewSubmitted(null); }} className="text-xs font-medium mt-2" style={{ color: "#2563EB" }}>Kapat</button>
+                <button onClick={() => { setShowReviewForm(false); setReviewSubmitted(null); }} className="text-xs font-medium mt-2" style={{ color: "#2563EB" }}>{t("listingDetail.close")}</button>
               </div>
             ) : isRealListing && reviewEligibility?.checking ? (
               <div className="flex items-center gap-2 py-3 justify-center">
                 <Loader2 size={14} className="animate-spin" style={{ color: "#8A8368" }} />
-                <span className="text-xs" style={{ color: "#8A8368" }}>Kontrol ediliyor...</span>
+                <span className="text-xs" style={{ color: "#8A8368" }}>{t("listingDetail.checkingEligibility")}</span>
               </div>
             ) : isRealListing && !reviewEligibility?.ok ? (
               <div className="text-center py-3">
-                <p className="text-xs" style={{ color: "#5C5744" }}>{reviewEligibility?.reason || "Değerlendirme yapabilmen için önce bu sağlayıcıyla iletişime geçmen gerekiyor."}</p>
+                <p className="text-xs" style={{ color: "#5C5744" }}>{reviewEligibility?.reason || t("listingDetail.errNeedContactFallback")}</p>
                 {reviewEligibility?.needsContact && (
-                  <button onClick={onContact} className="text-xs font-bold mt-2" style={{ color: "#2563EB" }}>İletişime Geç</button>
+                  <button onClick={onContact} className="text-xs font-bold mt-2" style={{ color: "#2563EB" }}>{t("listingDetail.contactButton")}</button>
                 )}
                 {reviewEligibility?.needsDelivery && (
-                  <button onClick={onContact} className="text-xs font-bold mt-2" style={{ color: "#2563EB" }}>Mesajlara Git</button>
+                  <button onClick={onContact} className="text-xs font-bold mt-2" style={{ color: "#2563EB" }}>{t("listingDetail.goToMessagesButton")}</button>
                 )}
               </div>
             ) : (
               <>
                 {isRealListing && reviewEligibility?.existingRating && (
                   <p className="text-xs mb-2.5 px-3 py-2 rounded-lg" style={{ background: "rgba(37,99,235,0.08)", color: "#2563EB" }}>
-                    Bu sağlayıcıyı zaten değerlendirmiştin — aşağıdakini düzenleyip güncelleyebilirsin.
+                    {t("listingDetail.alreadyReviewedNote")}
                   </p>
                 )}
                 {!isRealListing && (
                   <input
                     value={reviewName}
                     onChange={(e) => setReviewName(e.target.value)}
-                    placeholder="Adın (isteğe bağlı)"
+                    placeholder={t("listingDetail.namePlaceholder")}
                     className="w-full px-3 py-2 rounded-lg border text-sm outline-none mb-2.5"
                     style={{ borderColor: "#D9D0BA", background: "#FFFFFF", color: "#1B2B24" }}
                   />
@@ -3473,7 +3503,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
                   value={reviewComment}
                   onChange={(e) => setReviewComment(e.target.value)}
                   rows={3}
-                  placeholder="Deneyimini anlat..."
+                  placeholder={t("listingDetail.commentPlaceholder")}
                   className="w-full px-3 py-2 rounded-lg border text-sm outline-none resize-none mb-2.5"
                   style={{ borderColor: "#D9D0BA", background: "#FFFFFF", color: "#1B2B24" }}
                 />
@@ -3489,7 +3519,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
                       )}
                       <label className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg border-2 border-dashed cursor-pointer" style={{ borderColor: "#D9D0BA", color: "#5C5744" }}>
                         <Camera size={13} />
-                        {reviewMediaFile ? "Değiştir" : isRealListing ? "Fotoğraf Ekle" : "Fotoğraf/Video Ekle"}
+                        {reviewMediaFile ? t("listingDetail.changeMediaButton") : isRealListing ? t("listingDetail.addPhotoButton") : t("listingDetail.addPhotoVideoButton")}
                         {/* Gerçek vitrinlerde video bilerek desteklenmiyor — bkz.
                             attachRealReviewMedia'daki not (AI videoyu kontrol
                             edemiyor, gerçek veride henüz bir staff inceleme
@@ -3498,7 +3528,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
                       </label>
                     </div>
                     <p className="text-[11px] mb-3" style={{ color: "#8A8368" }}>
-                      Eklediğin görsel sağlayıcının kendisini gösteriyorsa, yayınlanmadan önce sağlayıcının onayına sunulur. Yazılı yorumun her zaman anında yayınlanır.
+                      {t("listingDetail.mediaConsentNote")}
                     </p>
                   </>
                 )}
@@ -3511,7 +3541,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
                   className="w-full py-2.5 rounded-full text-sm font-bold text-white"
                   style={{ background: "#2563EB", opacity: reviewSubmitting ? 0.6 : 1 }}
                 >
-                  {reviewSubmitting ? "Gönderiliyor..." : reviewEligibility?.existingRating ? "Değerlendirmeyi Güncelle" : "Yorumu Gönder"}
+                  {reviewSubmitting ? t("listingDetail.reviewSubmitting") : reviewEligibility?.existingRating ? t("listingDetail.updateReviewButton") : t("listingDetail.submitReviewButton")}
                 </button>
               </>
             )}
@@ -3538,6 +3568,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
 }
 
 function MapView({ onBack, onSelectProvider, onSelectJob, realListings, realJobs }) {
+  const { t } = useLanguage();
   const [mapQuery, setMapQuery] = useState("");
   const [homeOnly, setHomeOnly] = useState(false);
   // Harita eskiden vitrinleri ve iş ilanlarını hep karışık gösteriyordu —
@@ -3622,22 +3653,22 @@ function MapView({ onBack, onSelectProvider, onSelectJob, realListings, realJobs
   return (
     <div className="max-w-6xl mx-auto px-5 py-6">
       <button onClick={onBack} className="flex items-center gap-1 text-sm mb-4" style={{ color: "#5C5744" }}>
-        <ChevronLeft size={16} /> Geri
+        <ChevronLeft size={16} /> {t("common.back")}
       </button>
       <div className="flex items-center justify-between flex-wrap gap-3 mb-3">
-        <h1 className="font-serif text-2xl" style={{ color: "#1B2B24" }}>Dünya Genelinde Hizmet Sağlayanlar</h1>
+        <h1 className="font-serif text-2xl" style={{ color: "#1B2B24" }}>{t("mapView.title")}</h1>
         <button
           onClick={useMyLocation}
           className="text-xs font-medium px-3.5 py-2 rounded-full flex items-center gap-1.5"
           style={{ background: locStatus === "granted" ? "#3F7D5C" : "#C2872B", color: "white" }}
         >
           <MapPin size={13} />
-          {locStatus === "loading" ? "Konum alınıyor..." : locStatus === "granted" ? "Konumun kullanılıyor" : "Konumumu Kullan"}
+          {locStatus === "loading" ? t("mapView.locLoading") : locStatus === "granted" ? t("mapView.locGranted") : t("mapView.useMyLocation")}
         </button>
       </div>
 
       <div className="flex items-center gap-1.5 mb-4">
-        {[["vitrin", "Hizmet Sağlayanlar"], ["job", "İş İlanları"]].map(([key, label]) => (
+        {[["vitrin", t("mapView.pinTypeProviders")], ["job", t("mapView.pinTypeJobs")]].map(([key, label]) => (
           <button
             key={key}
             onClick={() => setPinType(key)}
@@ -3651,7 +3682,7 @@ function MapView({ onBack, onSelectProvider, onSelectJob, realListings, realJobs
 
       {locStatus === "denied" && (
         <p className="text-xs mb-3 px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>
-          Konum izni alınamadı. Aşağıdan şehir seçerek manuel olarak arayabilirsin.
+          {t("mapView.locDenied")}
         </p>
       )}
 
@@ -3663,8 +3694,8 @@ function MapView({ onBack, onSelectProvider, onSelectJob, realListings, realJobs
           className="text-sm font-medium px-3 py-2 rounded-lg border outline-none"
           style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
         >
-          {["Türkiye", "Hindistan", "Avrupa", "Kuzey Amerika", "Orta Doğu", "Asya-Pasifik"].map((region) => (
-            <optgroup key={region} label={region}>
+          {[["Türkiye", "turkey"], ["Hindistan", "india"], ["Avrupa", "europe"], ["Kuzey Amerika", "northAmerica"], ["Orta Doğu", "middleEast"], ["Asya-Pasifik", "asiaPacific"]].map(([region, regionKey]) => (
+            <optgroup key={region} label={t(`common.regions.${regionKey}`)}>
               {CITIES.filter((c) => c.region === region).map((c) => (
                 <option key={c.id} value={c.id}>{c.name}, {c.country}</option>
               ))}
@@ -3672,7 +3703,7 @@ function MapView({ onBack, onSelectProvider, onSelectJob, realListings, realJobs
           ))}
         </select>
         {userLoc && (
-          <span className="text-[11px]" style={{ color: "#3F7D5C" }}>· sana en yakın şehir otomatik seçildi</span>
+          <span className="text-[11px]" style={{ color: "#3F7D5C" }}>{t("mapView.nearestCityAuto")}</span>
         )}
       </div>
 
@@ -3682,7 +3713,7 @@ function MapView({ onBack, onSelectProvider, onSelectJob, realListings, realJobs
           <input
             value={mapQuery}
             onChange={(e) => setMapQuery(e.target.value)}
-            placeholder="Ara... örn. nefes terapisti, çilingir, kuaför"
+            placeholder={t("mapView.searchPlaceholder")}
             className="w-full pl-10 pr-3 py-2.5 rounded-full border text-sm outline-none"
             style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
           />
@@ -3693,7 +3724,7 @@ function MapView({ onBack, onSelectProvider, onSelectJob, realListings, realJobs
           )}
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[11px] font-medium" style={{ color: "#8A8368" }}>Sık aranan:</span>
+          <span className="text-[11px] font-medium" style={{ color: "#8A8368" }}>{t("mapView.popularLabel")}</span>
           {["Çilingir", "Temizlik", "Bakıcı", "Kuaför", "Hemşire", "Yoga & Meditasyon"].map((term) => (
             <button
               key={term}
@@ -3720,7 +3751,7 @@ function MapView({ onBack, onSelectProvider, onSelectJob, realListings, realJobs
           }}
         >
           <div className="absolute top-3 left-3 text-[11px] px-2.5 py-1 rounded-full" style={{ background: "rgba(255,255,255,0.85)", color: "#5C5744" }}>
-            {city?.name} · {sorted.length} sağlayıcı listeleniyor
+            {t("mapView.cityProviderCount", { city: city?.name, count: sorted.length })}
           </div>
           {sorted.map((p) => (
             <button
@@ -3753,10 +3784,10 @@ function MapView({ onBack, onSelectProvider, onSelectJob, realListings, realJobs
         <div className="rounded-2xl border p-4 h-[480px] overflow-y-auto" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
           {active ? (
             <div>
-              <button onClick={() => setActive(null)} className="text-xs mb-3" style={{ color: "#8A8368" }}>← Listeye dön</button>
+              <button onClick={() => setActive(null)} className="text-xs mb-3" style={{ color: "#8A8368" }}>{t("mapView.backToList")}</button>
               {active.kind === "job" && (
                 <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full mb-2" style={{ background: "#FFF3E0", color: "#C2872B" }}>
-                  <Megaphone size={10} /> İş İlanı
+                  <Megaphone size={10} /> {t("mapView.jobBadge")}
                 </span>
               )}
               <img src={active.img} alt="" className="w-full h-28 object-cover rounded-lg mb-3" />
@@ -3769,7 +3800,7 @@ function MapView({ onBack, onSelectProvider, onSelectJob, realListings, realJobs
                 </div>
               )}
               {active.distance != null && (
-                <p className="text-xs mb-2" style={{ color: "#3F7D5C" }}>Senden yaklaşık {active.distance.toFixed(1)} km uzakta</p>
+                <p className="text-xs mb-2" style={{ color: "#3F7D5C" }}>{t("mapView.distanceAway", { distance: active.distance.toFixed(1) })}</p>
               )}
               <p className="text-sm font-medium mb-3 mt-2" style={{ color: "#C2872B" }}>{active.price}</p>
               <button
@@ -3777,16 +3808,16 @@ function MapView({ onBack, onSelectProvider, onSelectJob, realListings, realJobs
                 className="w-full py-2 rounded-full text-sm font-medium text-white"
                 style={{ background: "#C2872B" }}
               >
-                {active.kind === "job" ? "Teklif Ver" : "Profili Gör"}
+                {active.kind === "job" ? t("mapView.applyButton") : t("mapView.viewProfileButton")}
               </button>
             </div>
           ) : (
             <div className="space-y-2">
               <p className="text-xs font-medium mb-2" style={{ color: "#8A8368" }}>
-                {userLoc ? "Sana en yakın sağlayıcılar" : "Haritadaki sağlayıcılar"}
+                {userLoc ? t("mapView.nearestProviders") : t("mapView.mapProviders")}
               </p>
               {sorted.length === 0 && (
-                <p className="text-xs" style={{ color: "#8A8368" }}>Bu şehir ve kategori için sağlayıcı bulunamadı.</p>
+                <p className="text-xs" style={{ color: "#8A8368" }}>{t("mapView.noProviders")}</p>
               )}
               {sorted.map((p) => (
                 <button
@@ -3811,7 +3842,7 @@ function MapView({ onBack, onSelectProvider, onSelectJob, realListings, realJobs
         </div>
       </div>
       <p className="text-xs mt-3" style={{ color: "#8A8368" }}>
-        Not: Şehir içi harita konumları stilize gösterimdir, ama mesafeler ("Konumumu Kullan" ile) tarayıcının gerçek GPS konumundan hesaplanır. Gerçek üründe pin konumları da Google Maps/Mapbox ile gerçek koordinatlarda gösterilecek.
+        {t("mapView.disclaimerNote")}
       </p>
     </div>
   );
@@ -3826,6 +3857,7 @@ const LISTING_REPORT_REASON_LABELS = {
 };
 
 function JobDetailView({ job, onBack, onContact, currentUserId }) {
+  const { t } = useLanguage();
   const cat = CATEGORIES.find((c) => c.id === job?.category);
   const Icon = cat?.icon;
   const isOwner = job?.isReal && currentUserId && job.posterId === currentUserId;
@@ -3845,7 +3877,7 @@ function JobDetailView({ job, onBack, onContact, currentUserId }) {
       reporter_id: currentUserId, job_id: job.dbId, reason: reportReason, detail: reportDetail.trim() || null,
     });
     setReportSubmitting(false);
-    if (error) { setReportError(`Bildirilemedi: ${error.message}`); return; }
+    if (error) { setReportError(t("listingDetail.errReportFailed", { message: error.message })); return; }
     setReportSubmitted(true);
   };
 
@@ -3866,7 +3898,7 @@ function JobDetailView({ job, onBack, onContact, currentUserId }) {
   return (
     <div className="max-w-3xl mx-auto px-5 py-8">
       <button onClick={onBack} className="flex items-center gap-1 text-sm mb-5" style={{ color: "#5C5744" }}>
-        <ChevronLeft size={16} /> Geri
+        <ChevronLeft size={16} /> {t("common.back")}
       </button>
 
       <div className="rounded-2xl p-7 mb-6 relative overflow-hidden" style={{ background: "linear-gradient(135deg, #0F1115 0%, #1A1D23 60%, #16321F 100%)" }}>
@@ -3877,33 +3909,33 @@ function JobDetailView({ job, onBack, onContact, currentUserId }) {
               <Icon size={16} style={{ color: "#F59E0B" }} />
             </div>
           )}
-          <span className="text-xs font-semibold" style={{ color: "#B8BCC4" }}>{cat?.name}{job?.postedTime ? ` · ${job.postedTime}` : ""}</span>
+          <span className="text-xs font-semibold" style={{ color: "#B8BCC4" }}>{getCategoryName(cat?.id, t)}{job?.postedTime ? ` · ${job.postedTime}` : ""}</span>
         </div>
         <h1 className="font-sans text-2xl font-black relative" style={{ color: "#FFFFFF" }}>{job?.title}</h1>
       </div>
 
       <div className="grid sm:grid-cols-[1fr_240px] gap-6">
         <div>
-          <h2 className="text-sm font-bold mb-2" style={{ color: "#0F1115" }}>İş Detayı</h2>
+          <h2 className="text-sm font-bold mb-2" style={{ color: "#0F1115" }}>{t("jobDetail.detailsHeading")}</h2>
           <p className="text-sm leading-relaxed whitespace-pre-line" style={{ color: "#374151" }}>
-            {job?.desc || "Bu ilan için ek bir açıklama eklenmemiş."}
+            {job?.desc || t("jobDetail.noDescription")}
           </p>
         </div>
         <div className="rounded-xl border p-5 h-fit" style={{ borderColor: "#F0F0F0", background: "#FAFAFA" }}>
-          <p className="text-xs font-medium mb-1" style={{ color: "#9CA3AF" }}>Bütçe</p>
+          <p className="text-xs font-medium mb-1" style={{ color: "#9CA3AF" }}>{t("jobDetail.budgetLabel")}</p>
           <p className="text-lg font-black mb-4" style={{ color: "#F59E0B" }}>{job?.budget}</p>
-          <p className="text-xs font-medium mb-1" style={{ color: "#9CA3AF" }}>Konum</p>
+          <p className="text-xs font-medium mb-1" style={{ color: "#9CA3AF" }}>{t("jobDetail.locationLabel")}</p>
           <p className="text-sm mb-4 flex items-center gap-1" style={{ color: "#374151" }}>
             <MapPin size={13} />{job?.district}
           </p>
-          <p className="text-xs font-medium mb-1" style={{ color: "#9CA3AF" }}>İlan Sahibi</p>
+          <p className="text-xs font-medium mb-1" style={{ color: "#9CA3AF" }}>{t("jobDetail.posterLabel")}</p>
           <p className="text-sm mb-5" style={{ color: "#374151" }}>{job?.posterName || "—"}</p>
           <button
             onClick={onContact}
             className="w-full py-2.5 rounded-full text-sm font-bold text-white"
             style={{ background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)" }}
           >
-            Teklif Ver
+            {t("jobDetail.applyButton")}
           </button>
 
           {isOwner && (
@@ -3914,7 +3946,7 @@ function JobDetailView({ job, onBack, onContact, currentUserId }) {
               style={{ borderColor: "#D9D0BA", color: bumped ? "#3F7D5C" : "#5C5744", opacity: bumping ? 0.6 : 1 }}
             >
               {bumping ? <Loader2 size={12} className="animate-spin" /> : bumped ? <Check size={12} /> : null}
-              {bumped ? "Yenilendi" : "İlanı Yenile"}
+              {bumped ? t("jobDetail.bumpedLabel") : t("jobDetail.bumpButton")}
             </button>
           )}
 
@@ -3924,11 +3956,11 @@ function JobDetailView({ job, onBack, onContact, currentUserId }) {
               className="w-full py-2 mt-2 rounded-full text-xs font-medium"
               style={{ color: "#9C4A3C" }}
             >
-              İlanı Bildir
+              {t("jobDetail.reportButton")}
             </button>
           )}
           {reportSubmitted && (
-            <p className="text-xs text-center mt-2" style={{ color: "#3F7D5C" }}>Bildirimin alındı, teşekkürler.</p>
+            <p className="text-xs text-center mt-2" style={{ color: "#3F7D5C" }}>{t("listingDetail.reportSubmitted")}</p>
           )}
           {showReportForm && !reportSubmitted && (
             <div className="mt-2 pt-3 border-t" style={{ borderColor: "#F0F0F0" }}>
@@ -3938,13 +3970,13 @@ function JobDetailView({ job, onBack, onContact, currentUserId }) {
                 className="w-full px-3 py-2 rounded-lg border text-xs outline-none mb-2"
                 style={{ borderColor: "#D9D0BA", background: "#FFFFFF", color: "#1B2B24" }}
               >
-                {Object.entries(LISTING_REPORT_REASON_LABELS).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
+                {Object.keys(LISTING_REPORT_REASON_LABELS).map((k) => <option key={k} value={k}>{t(`common.listingReportReasons.${k}`)}</option>)}
               </select>
               <textarea
                 value={reportDetail}
                 onChange={(e) => setReportDetail(e.target.value)}
                 rows={2}
-                placeholder="Ek detay (opsiyonel)"
+                placeholder={t("listingDetail.reportDetailPlaceholder")}
                 className="w-full px-3 py-2 rounded-lg border text-xs outline-none mb-2 resize-none"
                 style={{ borderColor: "#D9D0BA", background: "#FFFFFF", color: "#1B2B24" }}
               />
@@ -3955,7 +3987,7 @@ function JobDetailView({ job, onBack, onContact, currentUserId }) {
                 className="w-full py-2 rounded-full text-xs font-bold text-white"
                 style={{ background: "#9C4A3C", opacity: reportSubmitting ? 0.7 : 1 }}
               >
-                {reportSubmitting ? "Gönderiliyor..." : "Şikayeti Gönder"}
+                {reportSubmitting ? t("listingDetail.reportSubmitting") : t("listingDetail.reportSubmitButton")}
               </button>
             </div>
           )}
@@ -4089,6 +4121,7 @@ function OffersView({ onBack, job }) {
 }
 
 function SearchResultsView({ query, cityFilter, onBack, onSelectListing, realListings, currentUserId }) {
+  const { t } = useLanguage();
   const [homeOnly, setHomeOnly] = useState(false);
   // Kayıtlı arama — sahibinden.com'un "aramanı kaydet, yeni ilan gelince
   // haber ver" özelliği. bkz. supabase/sahibinden_features.sql (saved_searches
@@ -4194,14 +4227,16 @@ function SearchResultsView({ query, cityFilter, onBack, onSelectListing, realLis
   return (
     <div className="max-w-6xl mx-auto px-5 py-8">
       <button onClick={onBack} className="flex items-center gap-1 text-sm mb-4" style={{ color: "#5C5744" }}>
-        <ChevronLeft size={16} /> Geri
+        <ChevronLeft size={16} /> {t("common.back")}
       </button>
       <h1 className="font-serif text-2xl mb-1" style={{ color: "#1B2B24" }}>
-        {query.trim() && cityFilter ? `"${query}" — ${cityFilter}` : query.trim() ? `"${query}"` : cityFilter}
-        {" "}için {results.length} sonuç
+        {t("searchResults.resultsHeading", {
+          label: query.trim() && cityFilter ? `"${query}" — ${cityFilter}` : query.trim() ? `"${query}"` : cityFilter,
+          count: results.length,
+        })}
       </h1>
       <div className="flex items-center justify-between flex-wrap gap-3 mb-3">
-        <p className="text-sm" style={{ color: "#5C5744" }}>Başlık, hizmet sağlayan ve bölgeye göre eşleşenler</p>
+        <p className="text-sm" style={{ color: "#5C5744" }}>{t("searchResults.subheading")}</p>
         <div className="flex items-center gap-2">
           {currentUserId && query.trim() && (
             <button
@@ -4211,7 +4246,7 @@ function SearchResultsView({ query, cityFilter, onBack, onSelectListing, realLis
               style={searchSaved ? { background: "#3F7D5C", color: "white", borderColor: "#3F7D5C" } : { borderColor: "#D9D0BA", color: "#5C5744" }}
             >
               <Bell size={13} />
-              {searchSaved ? "Kaydedildi" : savingSearch ? "Kaydediliyor..." : "Bu Aramayı Kaydet"}
+              {searchSaved ? t("searchResults.searchSaved") : savingSearch ? t("searchResults.savingSearch") : t("searchResults.saveSearch")}
             </button>
           )}
           <button
@@ -4220,25 +4255,25 @@ function SearchResultsView({ query, cityFilter, onBack, onSelectListing, realLis
             style={homeOnly ? { background: "#3F7D5C", color: "white", borderColor: "#3F7D5C" } : { borderColor: "#D9D0BA", color: "#5C5744" }}
           >
             <Home size={13} />
-            Sadece evime gelsin
+            {t("searchResults.homeOnlyToggle")}
           </button>
         </div>
       </div>
 
       {aiExpanding && (
         <p className="flex items-center gap-1.5 text-xs mb-3" style={{ color: "#2563EB" }}>
-          <Loader2 size={12} className="animate-spin" /> Tam eşleşme yok, AI ile aramanı genişletiyorum...
+          <Loader2 size={12} className="animate-spin" /> {t("searchResults.aiExpanding")}
         </p>
       )}
       {isAiBoosted && !aiExpanding && (
         <p className="flex items-center gap-1.5 text-xs mb-3" style={{ color: "#2563EB" }}>
-          <Sparkles size={12} /> Tam eşleşme bulunamadı, bunlar AI ile ilgili görülüp önerildi
+          <Sparkles size={12} /> {t("searchResults.aiBoosted")}
         </p>
       )}
 
       {results.length === 0 ? (
         <div className="rounded-xl border p-8 text-center" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
-          <p className="text-sm" style={{ color: "#5C5744" }}>Bu aramayla eşleşen bir sonuç bulunamadı. Farklı bir kelime dene, ya da bir iş ilanı vererek uygun kişilerin sana ulaşmasını sağla.</p>
+          <p className="text-sm" style={{ color: "#5C5744" }}>{t("searchResults.empty")}</p>
         </div>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -4254,10 +4289,10 @@ function SearchResultsView({ query, cityFilter, onBack, onSelectListing, realLis
                 <div className="absolute top-2 left-2 flex items-center gap-1.5">
                   <ModeTag mode={l.mode} />
                   {l.isBoosted && (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white flex items-center gap-0.5" style={{ background: "#F59E0B" }}><Sparkles size={9} />Öne Çıkan</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white flex items-center gap-0.5" style={{ background: "#F59E0B" }}><Sparkles size={9} />{t("searchResults.featuredBadge")}</span>
                   )}
                   {l.isReal && (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: "#2FBF71" }}>Yeni</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: "#2FBF71" }}>{t("searchResults.newBadge")}</span>
                   )}
                 </div>
               </div>
@@ -4270,7 +4305,7 @@ function SearchResultsView({ query, cityFilter, onBack, onSelectListing, realLis
                 <div className="flex items-center justify-between mt-2.5">
                   <div className="flex items-center gap-1">
                     <Stars value={l.rating} size={12} />
-                    <span className="text-xs" style={{ color: "#5C5744" }}>{l.reviewCount > 0 ? `(${l.reviewCount})` : "Yeni vitrin"}</span>
+                    <span className="text-xs" style={{ color: "#5C5744" }}>{l.reviewCount > 0 ? `(${l.reviewCount})` : t("searchResults.newListingLabel")}</span>
                   </div>
                   <span className="text-sm font-medium" style={{ color: "#C2872B" }}>{l.price}</span>
                 </div>
@@ -5754,6 +5789,34 @@ const PRO_PACKAGE = {
     "Her ayın ilk haftası tüm vitrinlerin Öne Çıkarma Paketi hediyeli", "AI eşleştirmede öncelik",
   ],
 };
+
+// Faz 4: PricingView'daki plan adı/tanıtım/özellik listelerini lib/i18n/
+// {tr,en}.js'deki pricingPlans sözlüğünden çekiyoruz — kategori/grup
+// isimlerinde kullandığımız aynı desen (id -> dictionary key, bulunamazsa
+// yukarıdaki sabit objenin kendi alanına düş). Fiyatlar (₺) hiç buradan
+// geçmiyor, PLANS/PRO_PACKAGE/BOOST_PACKAGE'ın sayısal alanları aynen kullanılıyor.
+const PLAN_ID_TO_DICT_KEY = { standart: "standart", pro: "pro", "one-cikarma": "boost", "one-cikarma-haftalik": "weeklyBoost" };
+function getPlanName(pkg, t) {
+  const key = pkg && PLAN_ID_TO_DICT_KEY[pkg.id];
+  if (!key) return pkg?.name || "";
+  const dictKey = `pricingPlans.${key}.name`;
+  const translated = t(dictKey);
+  return translated !== dictKey ? translated : pkg.name;
+}
+function getPlanTagline(pkg, t) {
+  const key = pkg && PLAN_ID_TO_DICT_KEY[pkg.id];
+  if (!key) return pkg?.tagline || "";
+  const dictKey = `pricingPlans.${key}.tagline`;
+  const translated = t(dictKey);
+  return translated !== dictKey ? translated : pkg.tagline;
+}
+function getPlanFeatures(pkg, t) {
+  const key = pkg && PLAN_ID_TO_DICT_KEY[pkg.id];
+  if (!key) return pkg?.features || [];
+  const dictKey = `pricingPlans.${key}.features`;
+  const translated = t(dictKey);
+  return translated !== dictKey && Array.isArray(translated) ? translated : (pkg.features || []);
+}
 
 function CreateListingView({ onBack, onCreated, userId, editingListing, onGoToProfile, onManageMedia }) {
   const { t } = useLanguage();
@@ -7821,6 +7884,7 @@ function PaytrCheckoutModal({ token, onClose, onSuccess }) {
 }
 
 function PricingView({ onBack, onJoined, userId }) {
+  const { t } = useLanguage();
   const [joined, setJoined] = useState(false);
   const [boostSelected, setBoostSelected] = useState(false);
   const [boostDuration, setBoostDuration] = useState("monthly"); // monthly | weekly
@@ -7863,7 +7927,7 @@ function PricingView({ onBack, onJoined, userId }) {
   const proPrice = cycle === "monthly" ? PRO_PACKAGE.priceMonthly : PRO_PACKAGE.priceYearly;
   const plan = PLANS[0];
   const basePrice = cycle === "monthly" ? plan.priceMonthly : plan.priceYearly;
-  const period = cycle === "monthly" ? "/ay" : "/yıl";
+  const period = cycle === "monthly" ? t("pricing.unitMonthly") : t("pricing.unitYearly");
   const boostPrice = boostDuration === "weekly" ? WEEKLY_BOOST_PACKAGE.price : BOOST_PACKAGE.priceMonthly;
 
   // 2026-09-13 kararı: "kimse bir sorunla karşılaşmıyorsa neden deneme
@@ -7876,7 +7940,7 @@ function PricingView({ onBack, onJoined, userId }) {
   // (add_boost_addon RPC'sini doğrudan çağırıyordu), bugün Pro/Ek Vitrin'de
   // kapattığımız boşluğun aynısı burada da vardı.
   const startPaytrPurchase = async (body, intent) => {
-    if (!userId) { setJoinError("Ödeme için giriş yapmış olmalısın."); return; }
+    if (!userId) { setJoinError(t("pricing.errNeedLoginPayment")); return; }
     setJoinError("");
     setJoining(true);
     try {
@@ -7890,18 +7954,18 @@ function PricingView({ onBack, onJoined, userId }) {
         body: JSON.stringify(body),
       });
       const data = await res.json();
-      if (!data.ok) throw new Error(data.message || "Ödeme başlatılamadı.");
+      if (!data.ok) throw new Error(data.message || t("pricing.errPaymentInitFailed"));
       setCheckoutIntent(intent);
       setPaytrToken(data.token);
     } catch (err) {
-      setJoinError(`Ödeme başlatılamadı: ${err?.message || "bilinmeyen hata"}`);
+      setJoinError(t("pricing.errPaymentStartFailed", { message: err?.message || t("common.errUnknown") }));
     } finally {
       setJoining(false);
     }
   };
   const payForStandart = () => startPaytrPurchase({ planSlug: "standart", billingCycle: cycle }, { kind: "standart" });
   const payForBoost = () => {
-    if (!selectedVitrinId) { setJoinError("Öne çıkarmak istediğin vitrini seç."); return; }
+    if (!selectedVitrinId) { setJoinError(t("pricing.errSelectVitrin")); return; }
     startPaytrPurchase(
       { addonSlug: boostDuration === "weekly" ? "one-cikarma-haftalik" : "one-cikarma", billingCycle: "monthly", serviceId: selectedVitrinId },
       { kind: "boost" }
@@ -7925,22 +7989,22 @@ function PricingView({ onBack, onJoined, userId }) {
       body: JSON.stringify(body),
     });
     const data = await res.json();
-    if (!data.ok) return { ok: false, message: data.message || "Ödeme başlatılamadı." };
+    if (!data.ok) return { ok: false, message: data.message || t("pricing.errPaymentInitFailed") };
     if (!data.merchantOid) return { ok: true };
     for (let i = 0; i < 12; i++) {
       await new Promise((r) => setTimeout(r, 2500));
       const { data: order } = await supabase.from("payment_orders").select("status, failed_reason").eq("merchant_oid", data.merchantOid).maybeSingle();
       if (order?.status === "success") return { ok: true };
-      if (order?.status === "failed") return { ok: false, message: order.failed_reason || "Ödeme reddedildi." };
+      if (order?.status === "failed") return { ok: false, message: order.failed_reason || t("pricing.errPaymentRejected") };
     }
-    return { ok: false, message: "Ödemen hâlâ işleniyor, birazdan profilini yenile — banka onayı normalden uzun sürüyor olabilir." };
+    return { ok: false, message: t("pricing.errPaymentPending") };
   };
   // Hangi kart/aksiyonun "kayıtlı kartla" akışta olduğunu ayrı tutuyoruz —
   // joining/proJoining zaten iframe akışıyla paylaşılıyor (aynı anda tek
   // aksiyon olabilir), bu sadece doğru butonda doğru metni göstermek için.
   const [savedCardMode, setSavedCardMode] = useState(null); // null | "standart" | "boost" | "pro"
   const payForStandartSaved = async () => {
-    if (!userId) { setJoinError("Ödeme için giriş yapmış olmalısın."); return; }
+    if (!userId) { setJoinError(t("pricing.errNeedLoginPayment")); return; }
     setJoinError(""); setJoining(true); setSavedCardMode("standart");
     const result = await runSavedCardCharge({ planSlug: "standart", billingCycle: cycle });
     setJoining(false); setSavedCardMode(null);
@@ -7948,7 +8012,7 @@ function PricingView({ onBack, onJoined, userId }) {
     else setJoinError(result.message);
   };
   const payForBoostSaved = async () => {
-    if (!selectedVitrinId) { setJoinError("Öne çıkarmak istediğin vitrini seç."); return; }
+    if (!selectedVitrinId) { setJoinError(t("pricing.errSelectVitrin")); return; }
     setJoinError(""); setJoining(true); setSavedCardMode("boost");
     const result = await runSavedCardCharge({
       addonSlug: boostDuration === "weekly" ? "one-cikarma-haftalik" : "one-cikarma",
@@ -7972,7 +8036,7 @@ function PricingView({ onBack, onJoined, userId }) {
   // ödemeyi gerçekten onayladıktan sonra, paytr-callback route'u tarafından
   // aktifleştiriliyor (bkz. o dosya).
   const joinPro = async () => {
-    if (!userId) { setProError("Pro Üyelik için giriş yapmış olmalısın."); return; }
+    if (!userId) { setProError(t("pricing.errNeedLoginPro")); return; }
     setProError("");
     setProJoining(true);
     try {
@@ -7986,17 +8050,17 @@ function PricingView({ onBack, onJoined, userId }) {
         body: JSON.stringify({ planSlug: "pro", billingCycle: cycle }),
       });
       const data = await res.json();
-      if (!data.ok) throw new Error(data.message || "Ödeme başlatılamadı.");
+      if (!data.ok) throw new Error(data.message || t("pricing.errPaymentInitFailed"));
       setCheckoutIntent({ kind: "pro" });
       setPaytrToken(data.token);
     } catch (err) {
-      setProError(`Geçilemedi: ${err?.message || "bilinmeyen hata"}`);
+      setProError(t("pricing.errProUpgradeFailed", { message: err?.message || t("common.errUnknown") }));
     } finally {
       setProJoining(false);
     }
   };
   const joinProSaved = async () => {
-    if (!userId) { setProError("Pro Üyelik için giriş yapmış olmalısın."); return; }
+    if (!userId) { setProError(t("pricing.errNeedLoginPro")); return; }
     setProError(""); setProJoining(true); setSavedCardMode("pro");
     const result = await runSavedCardCharge({ planSlug: "pro", billingCycle: cycle });
     setProJoining(false); setSavedCardMode(null);
@@ -8010,15 +8074,15 @@ function PricingView({ onBack, onJoined, userId }) {
         <div className="w-14 h-14 rounded-full mx-auto mb-5 flex items-center justify-center" style={{ background: "rgba(37,99,235,0.12)" }}>
           <Check size={22} style={{ color: "#2563EB" }} />
         </div>
-        <h2 className="font-serif text-xl mb-2" style={{ color: "#1B2B24" }}>Ödemen alındı 🎉</h2>
+        <h2 className="font-serif text-xl mb-2" style={{ color: "#1B2B24" }}>{t("pricing.paymentReceivedTitle")}</h2>
         <p className="text-sm mb-6" style={{ color: "#5C5744" }}>
           {checkoutIntent?.kind === "boost"
-            ? `${boostDuration === "weekly" ? WEEKLY_BOOST_PACKAGE.name : BOOST_PACKAGE.name} aktifleşti.`
-            : `${plan.name} aktifleşti (${cycle === "monthly" ? `ayda ${basePrice}₺` : `yılda ${basePrice}₺`}).`} İstediğin zaman iptal edebilirsin, kazandığından hiçbir komisyon kesilmez.
+            ? t("pricing.activatedBoost", { name: boostDuration === "weekly" ? getPlanName(WEEKLY_BOOST_PACKAGE, t) : getPlanName(BOOST_PACKAGE, t) })
+            : t("pricing.activatedPlan", { name: getPlanName(plan, t), priceLabel: cycle === "monthly" ? t("pricing.perMonthPrice", { price: basePrice }) : t("pricing.perYearPrice", { price: basePrice }) })} {t("pricing.noCommissionNote")}
         </p>
         <div className="flex gap-2 justify-center">
-          <button onClick={onJoined} className="px-5 py-2.5 rounded-full text-sm font-medium text-white" style={{ background: "#2563EB" }}>Profilini Tamamla</button>
-          <button onClick={onBack} className="px-5 py-2.5 rounded-full text-sm font-medium border" style={{ borderColor: "#D9D0BA", color: "#1B2B24" }}>Ana Sayfaya Dön</button>
+          <button onClick={onJoined} className="px-5 py-2.5 rounded-full text-sm font-medium text-white" style={{ background: "#2563EB" }}>{t("pricing.completeProfileButton")}</button>
+          <button onClick={onBack} className="px-5 py-2.5 rounded-full text-sm font-medium border" style={{ borderColor: "#D9D0BA", color: "#1B2B24" }}>{t("common.backToHome")}</button>
         </div>
       </div>
     );
@@ -8027,50 +8091,50 @@ function PricingView({ onBack, onJoined, userId }) {
   return (
     <div className="max-w-md mx-auto px-5 py-14">
       <button onClick={onBack} className="flex items-center gap-1 text-sm mb-6" style={{ color: "#5C5744" }}>
-        <ChevronLeft size={16} /> Geri
+        <ChevronLeft size={16} /> {t("common.back")}
       </button>
       <div className="text-center mb-6">
-        <h1 className="font-serif text-3xl mb-3" style={{ color: "#1B2B24" }}>İlk vitrinin bizden</h1>
+        <h1 className="font-serif text-3xl mb-3" style={{ color: "#1B2B24" }}>{t("pricing.heroTitle")}</h1>
         <p className="text-sm mb-4" style={{ color: "#5C5744" }}>
-          İşini göster, fırsatlara teklif ver, İşinn'de yerini al. Kazandığından hiçbir komisyon almıyoruz.
+          {t("pricing.heroSubtitle")}
         </p>
         <span
           className="inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-full text-white"
           style={{ background: "linear-gradient(135deg, #F59E0B 0%, #D97706 100%)" }}
         >
-          <Sparkles size={13} /> İlk {plan.trialMonths} Ay Zaten Ücretsiz 🎉
+          <Sparkles size={13} /> {t("pricing.trialBadge", { months: plan.trialMonths })}
         </span>
-        <p className="text-[11px] mt-2" style={{ color: "#8A8368" }}>Kayıt olduğun andan itibaren otomatik başlar, hiçbir şey yapmana gerek yok. Devam etmek istersen aşağıdan ödeyebilirsin.</p>
+        <p className="text-[11px] mt-2" style={{ color: "#8A8368" }}>{t("pricing.trialAutoStartNote")}</p>
       </div>
 
       <div className="flex justify-center mb-6">
         <div className="inline-flex items-center gap-1 p-1 rounded-full" style={{ background: "#F8F4E9", border: "1px solid #D9D0BA" }}>
-          {[["monthly", "Aylık"], ["yearly", "Yıllık"]].map(([key, label]) => (
+          {[["monthly", t("pricing.monthly")], ["yearly", t("pricing.yearly")]].map(([key, label]) => (
             <button
               key={key}
               onClick={() => setCycle(key)}
               className="text-sm font-bold px-4 py-1.5 rounded-full transition-all"
               style={cycle === key ? { background: "#2563EB", color: "#FFFFFF" } : { color: "#8A8368" }}
             >
-              {label} {key === "yearly" && <span className="text-[10px]" style={{ color: cycle === key ? "#DBEAFE" : "#2563EB" }}>İlk yıla özel</span>}
+              {label} {key === "yearly" && <span className="text-[10px]" style={{ color: cycle === key ? "#DBEAFE" : "#2563EB" }}>{t("pricing.firstYearDeal")}</span>}
             </button>
           ))}
         </div>
       </div>
 
       <div className="rounded-2xl border-2 p-6 flex flex-col mb-4" style={{ borderColor: "#2563EB", background: "#F8F4E9" }}>
-        <p className="font-serif text-lg mb-1" style={{ color: "#1B2B24" }}>{plan.name}</p>
-        <p className="text-xs mb-4" style={{ color: "#8A8368" }}>{plan.tagline}</p>
+        <p className="font-serif text-lg mb-1" style={{ color: "#1B2B24" }}>{getPlanName(plan, t)}</p>
+        <p className="text-xs mb-4" style={{ color: "#8A8368" }}>{getPlanTagline(plan, t)}</p>
         <div className="mb-1 flex items-baseline gap-1">
           <span className="font-serif text-4xl" style={{ color: "#1B2B24" }}>{basePrice}₺</span>
           <span className="text-sm" style={{ color: "#8A8368" }}>{period}</span>
           {cycle === "yearly" && (
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "#DBEAFE", color: "#1D4ED8" }}>İlk yıla özel</span>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "#DBEAFE", color: "#1D4ED8" }}>{t("pricing.firstYearDeal")}</span>
           )}
         </div>
-        <p className="text-xs font-medium mb-4" style={{ color: "#059669" }}>İlk {plan.trialMonths} ay otomatik ücretsiz, sonra bu fiyattan devam eder</p>
+        <p className="text-xs font-medium mb-4" style={{ color: "#059669" }}>{t("pricing.trialThenPrice", { months: plan.trialMonths })}</p>
         <div className="space-y-2.5 mb-4">
-          {plan.features.map((f, i) => (
+          {getPlanFeatures(plan, t).map((f, i) => (
             <div key={i} className="flex items-start gap-2 text-xs" style={{ color: "#3D3B30" }}>
               <Check size={14} style={{ color: "#2563EB" }} className="mt-0.5 shrink-0" />
               {f}
@@ -8087,7 +8151,7 @@ function PricingView({ onBack, onJoined, userId }) {
           style={{ background: "#2563EB", opacity: joining ? 0.7 : 1 }}
         >
           {joining && savedCardMode !== "standart" && <Loader2 size={13} className="animate-spin" />}
-          {joining && savedCardMode === "standart" ? "İşleniyor..." : joining ? "Yönlendiriliyor..." : "Şimdi Öde / Deneme Bitince Devam Et"}
+          {joining && savedCardMode === "standart" ? t("pricing.processing") : joining ? t("pricing.redirecting") : t("pricing.payNowButton")}
         </button>
         {hasSavedCard && (
           <button
@@ -8097,11 +8161,11 @@ function PricingView({ onBack, onJoined, userId }) {
             style={{ borderColor: "#2563EB", color: "#2563EB", opacity: joining ? 0.6 : 1 }}
           >
             {joining && savedCardMode === "standart" && <Loader2 size={12} className="animate-spin" />}
-            {joining && savedCardMode === "standart" ? "İşleniyor..." : "Kayıtlı kartımla tek tıkla öde"}
+            {joining && savedCardMode === "standart" ? t("pricing.processing") : t("pricing.payWithSavedCard")}
           </button>
         )}
         <p className="text-[11px] mt-2 text-center" style={{ color: "#8A8368" }}>
-          Bu butona basmak zorunda değilsin — 30 gün otomatik ücretsiz, sadece erken ödemek ya da deneme bitince devam etmek istersen kullan.
+          {t("pricing.standartHintNote")}
         </p>
       </div>
 
@@ -8111,21 +8175,21 @@ function PricingView({ onBack, onJoined, userId }) {
           net olduğu için tam kart olarak gösteriliyor (kullanıcının kararı). */}
       <div className="rounded-2xl border-2 p-6 flex flex-col mb-6" style={{ borderColor: proJoined ? "#2FBF71" : "#8B5CF6", background: "#F8F4E9" }}>
         <div className="flex items-center justify-between mb-1">
-          <p className="font-serif text-lg" style={{ color: "#1B2B24" }}>{PRO_PACKAGE.name}</p>
+          <p className="font-serif text-lg" style={{ color: "#1B2B24" }}>{getPlanName(PRO_PACKAGE, t)}</p>
           {proJoined && (
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: "#2FBF71" }}>Aktif</span>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: "#2FBF71" }}>{t("pricing.activeBadge")}</span>
           )}
         </div>
-        <p className="text-xs mb-4" style={{ color: "#8A8368" }}>{PRO_PACKAGE.tagline} — deneme kapsamında değil, doğrudan üyelik</p>
+        <p className="text-xs mb-4" style={{ color: "#8A8368" }}>{t("pricing.proTaglineFull", { tagline: getPlanTagline(PRO_PACKAGE, t) })}</p>
         <div className="mb-4 flex items-baseline gap-1">
           <span className="font-serif text-2xl" style={{ color: "#1B2B24" }}>{proPrice}₺</span>
           <span className="text-sm" style={{ color: "#8A8368" }}>{period}</span>
           {cycle === "yearly" && (
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "#EDE9FE", color: "#6D28D9" }}>İlk yıla özel</span>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "#EDE9FE", color: "#6D28D9" }}>{t("pricing.firstYearDeal")}</span>
           )}
         </div>
         <div className="space-y-2 mb-4">
-          {PRO_PACKAGE.features.map((f, i) => (
+          {getPlanFeatures(PRO_PACKAGE, t).map((f, i) => (
             <div key={i} className="flex items-start gap-2 text-xs" style={{ color: "#3D3B30" }}>
               <Sparkles size={13} style={{ color: "#8B5CF6" }} className="mt-0.5 shrink-0" />
               {f}
@@ -8142,7 +8206,7 @@ function PricingView({ onBack, onJoined, userId }) {
           style={{ background: "#8B5CF6", opacity: proJoining ? 0.7 : proJoined ? 0.6 : 1 }}
         >
           {proJoining && savedCardMode !== "pro" && <Loader2 size={13} className="animate-spin" />}
-          {proJoined ? "Pro Üyeliğe geçtin ✓" : proJoining && savedCardMode === "pro" ? "İşleniyor..." : "Pro Üyelik'e Geç"}
+          {proJoined ? t("pricing.proJoinedLabel") : proJoining && savedCardMode === "pro" ? t("pricing.processing") : t("pricing.proJoinButton")}
         </button>
         {hasSavedCard && !proJoined && (
           <button
@@ -8152,7 +8216,7 @@ function PricingView({ onBack, onJoined, userId }) {
             style={{ borderColor: "#8B5CF6", color: "#8B5CF6", opacity: proJoining ? 0.6 : 1 }}
           >
             {proJoining && savedCardMode === "pro" && <Loader2 size={12} className="animate-spin" />}
-            {proJoining && savedCardMode === "pro" ? "İşleniyor..." : "Kayıtlı kartımla tek tıkla öde"}
+            {proJoining && savedCardMode === "pro" ? t("pricing.processing") : t("pricing.payWithSavedCard")}
           </button>
         )}
       </div>
@@ -8168,13 +8232,13 @@ function PricingView({ onBack, onJoined, userId }) {
           seçeneğe tekrar tıklamak kaldırır. Standart bir "plan seç" deseni —
           sayfanın en üstündeki Aylık/Yıllık toggle'ıyla aynı mantık. */}
       <div className="w-full rounded-2xl border-2 p-6 flex flex-col mb-6" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
-        <p className="font-serif text-lg mb-1" style={{ color: "#1B2B24" }}>{BOOST_PACKAGE.name}</p>
-        <p className="text-xs mb-4" style={{ color: "#8A8368" }}>{BOOST_PACKAGE.tagline}, deneme kapsamında değil</p>
+        <p className="font-serif text-lg mb-1" style={{ color: "#1B2B24" }}>{getPlanName(BOOST_PACKAGE, t)}</p>
+        <p className="text-xs mb-4" style={{ color: "#8A8368" }}>{t("pricing.boostTaglineFull", { tagline: getPlanTagline(BOOST_PACKAGE, t) })}</p>
 
         <div className="grid grid-cols-2 gap-2.5 mb-4">
           {[
-            { key: "monthly", label: "Aylık", price: BOOST_PACKAGE.priceMonthly, unit: "/ay" },
-            { key: "weekly", label: "Haftalık", price: WEEKLY_BOOST_PACKAGE.price, unit: "/7 gün" },
+            { key: "monthly", label: t("pricing.monthly"), price: BOOST_PACKAGE.priceMonthly, unit: t("pricing.unitMonthly") },
+            { key: "weekly", label: t("pricing.weekly"), price: WEEKLY_BOOST_PACKAGE.price, unit: t("pricing.unitWeekly") },
           ].map((opt) => {
             const isActive = boostSelected && boostDuration === opt.key;
             return (
@@ -8207,7 +8271,7 @@ function PricingView({ onBack, onJoined, userId }) {
         </div>
 
         <div className="space-y-2 mb-4">
-          {BOOST_PACKAGE.features.map((f, i) => (
+          {getPlanFeatures(BOOST_PACKAGE, t).map((f, i) => (
             <div key={i} className="flex items-start gap-2 text-xs" style={{ color: "#3D3B30" }}>
               <Sparkles size={13} style={{ color: "#F59E0B" }} className="mt-0.5 shrink-0" />
               {f}
@@ -8221,11 +8285,11 @@ function PricingView({ onBack, onJoined, userId }) {
         {boostSelected && (
           myVitrins.length === 0 ? (
             <p className="text-xs mb-4 px-3 py-2 rounded-lg" style={{ background: "#FFFBEB", color: "#92400E" }}>
-              Öne çıkaracak aktif bir vitrinin yok — önce bir vitrin açman gerekiyor.
+              {t("pricing.noActiveVitrinForBoost")}
             </p>
           ) : (
             <div className="mb-4">
-              <p className="text-xs font-bold mb-2" style={{ color: "#1B2B24" }}>Hangi vitrini öne çıkarmak istiyorsun?</p>
+              <p className="text-xs font-bold mb-2" style={{ color: "#1B2B24" }}>{t("pricing.chooseVitrinPrompt")}</p>
               <div className="space-y-1.5">
                 {myVitrins.map((v) => (
                   <button
@@ -8256,7 +8320,7 @@ function PricingView({ onBack, onJoined, userId }) {
           style={{ background: "#F59E0B", opacity: joining || !boostSelected || !selectedVitrinId ? 0.5 : 1 }}
         >
           {joining && savedCardMode !== "boost" && <Loader2 size={13} className="animate-spin" />}
-          {!boostSelected ? "Önce süre seç" : !selectedVitrinId ? "Önce vitrin seç" : joining && savedCardMode === "boost" ? "İşleniyor..." : joining ? "Yönlendiriliyor..." : `${boostPrice}₺ — Şimdi Öde`}
+          {!boostSelected ? t("pricing.chooseDurationFirst") : !selectedVitrinId ? t("pricing.chooseVitrinFirst") : joining && savedCardMode === "boost" ? t("pricing.processing") : joining ? t("pricing.redirecting") : t("pricing.payNowWithPrice", { price: boostPrice })}
         </button>
         {hasSavedCard && boostSelected && selectedVitrinId && (
           <button
@@ -8266,7 +8330,7 @@ function PricingView({ onBack, onJoined, userId }) {
             style={{ borderColor: "#F59E0B", color: "#B45309", opacity: joining ? 0.6 : 1 }}
           >
             {joining && savedCardMode === "boost" && <Loader2 size={12} className="animate-spin" />}
-            {joining && savedCardMode === "boost" ? "İşleniyor..." : "Kayıtlı kartımla tek tıkla öde"}
+            {joining && savedCardMode === "boost" ? t("pricing.processing") : t("pricing.payWithSavedCard")}
           </button>
         )}
       </div>
@@ -8284,7 +8348,7 @@ function PricingView({ onBack, onJoined, userId }) {
       )}
 
       <p className="text-xs text-center mt-6" style={{ color: "#8A8368" }}>
-        İstediğin zaman iptal edebilirsin. Müşterilerden aldığın ödemelerden İşinn hiçbir kesinti yapmaz — kazancının tamamı sana kalır.
+        {t("pricing.footerNote")}
       </p>
     </div>
   );
