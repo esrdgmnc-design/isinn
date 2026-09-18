@@ -1045,6 +1045,7 @@ function HomeServiceBadge({ value, size = "sm" }) {
 // trigger'lar hazır duruyordu ama hiç okunmuyordu (bkz. notifications_center.sql).
 // E-posta bilerek yok — kullanıcının "sadece uygulama içi" kararı burada da geçerli.
 function NotificationBell({ userId, onNavigate }) {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -1117,12 +1118,12 @@ function NotificationBell({ userId, onNavigate }) {
             style={{ borderColor: "#F0F0F0", background: "#FFFFFF" }}
           >
             <div className="px-4 py-3 border-b sticky top-0" style={{ borderColor: "#F0F0F0", background: "#FFFFFF" }}>
-              <p className="text-sm font-bold" style={{ color: "#0F1115" }}>Bildirimler</p>
+              <p className="text-sm font-bold" style={{ color: "#0F1115" }}>{t("notifications.heading")}</p>
             </div>
             {loading ? (
               <div className="px-4 py-8 text-center"><Loader2 size={16} className="animate-spin mx-auto" style={{ color: "#9CA3AF" }} /></div>
             ) : items.length === 0 ? (
-              <p className="px-4 py-8 text-center text-xs" style={{ color: "#9CA3AF" }}>Henüz bir bildirimin yok.</p>
+              <p className="px-4 py-8 text-center text-xs" style={{ color: "#9CA3AF" }}>{t("notifications.empty")}</p>
             ) : (
               items.map((n) => (
                 <button
@@ -4287,27 +4288,28 @@ function SearchResultsView({ query, cityFilter, onBack, onSelectListing, realLis
 // gerçekten kullanılıyor). Kalp ikonuna bastığında burada birikir, sayfa
 // yenilenince kaybolmaz.
 function FavoritesView({ onBack, onSelectListing, onOpenJob, realListings, realJobs, favoriteIds, onToggleFavorite, onToggleJobFavorite }) {
+  const { t } = useLanguage();
   const favoriteListings = (realListings || []).filter((l) => favoriteIds?.has(l.dbId));
   const favoriteJobs = (realJobs || []).filter((j) => favoriteIds?.has(j.dbId));
   const isEmpty = favoriteListings.length === 0 && favoriteJobs.length === 0;
   return (
     <div className="max-w-6xl mx-auto px-5 py-8">
       <button onClick={onBack} className="flex items-center gap-1 text-sm mb-4" style={{ color: "#5C5744" }}>
-        <ChevronLeft size={16} /> Geri
+        <ChevronLeft size={16} /> {t("common.back")}
       </button>
-      <h1 className="font-serif text-2xl mb-1" style={{ color: "#1B2B24" }}>Favorilerim</h1>
-      <p className="text-sm mb-6" style={{ color: "#5C5744" }}>Kalp ikonuyla işaretlediğin vitrinler ve iş ilanları burada birikir.</p>
+      <h1 className="font-serif text-2xl mb-1" style={{ color: "#1B2B24" }}>{t("favorites.title")}</h1>
+      <p className="text-sm mb-6" style={{ color: "#5C5744" }}>{t("favorites.subtitle")}</p>
 
       {isEmpty ? (
         <div className="rounded-xl border p-8 text-center" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
           <Heart size={22} style={{ color: "#D9D0BA" }} className="mx-auto mb-2" />
-          <p className="text-sm" style={{ color: "#5C5744" }}>Henüz favorin yok. Beğendiğin bir vitrin ya da iş ilanında kalp ikonuna basarak buraya ekleyebilirsin.</p>
+          <p className="text-sm" style={{ color: "#5C5744" }}>{t("favorites.empty")}</p>
         </div>
       ) : (
         <>
           {favoriteListings.length > 0 && (
             <div className="mb-8">
-              <h2 className="text-sm font-bold mb-3" style={{ color: "#1B2B24" }}>Vitrinler ({favoriteListings.length})</h2>
+              <h2 className="text-sm font-bold mb-3" style={{ color: "#1B2B24" }}>{t("favorites.listingsHeading", { count: favoriteListings.length })}</h2>
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {favoriteListings.map((l) => (
                   <div key={l.id} className="rounded-xl overflow-hidden border" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
@@ -4325,7 +4327,7 @@ function FavoritesView({ onBack, onSelectListing, onOpenJob, realListings, realJ
                       className="w-full flex items-center justify-center gap-1.5 text-xs font-medium py-2 border-t"
                       style={{ borderColor: "#D9D0BA", color: "#9C4A3C" }}
                     >
-                      <Heart size={13} fill="#9C4A3C" /> Favorilerden çıkar
+                      <Heart size={13} fill="#9C4A3C" /> {t("favorites.removeFavorite")}
                     </button>
                   </div>
                 ))}
@@ -4335,7 +4337,7 @@ function FavoritesView({ onBack, onSelectListing, onOpenJob, realListings, realJ
 
           {favoriteJobs.length > 0 && (
             <div>
-              <h2 className="text-sm font-bold mb-3" style={{ color: "#1B2B24" }}>İş İlanları ({favoriteJobs.length})</h2>
+              <h2 className="text-sm font-bold mb-3" style={{ color: "#1B2B24" }}>{t("favorites.jobsHeading", { count: favoriteJobs.length })}</h2>
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {favoriteJobs.map((j) => (
                   <div key={j.id} className="rounded-xl overflow-hidden border" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
@@ -4348,7 +4350,7 @@ function FavoritesView({ onBack, onSelectListing, onOpenJob, realListings, realJ
                       className="w-full flex items-center justify-center gap-1.5 text-xs font-medium py-2 border-t"
                       style={{ borderColor: "#D9D0BA", color: "#9C4A3C" }}
                     >
-                      <Heart size={13} fill="#9C4A3C" /> Favorilerden çıkar
+                      <Heart size={13} fill="#9C4A3C" /> {t("favorites.removeFavorite")}
                     </button>
                   </div>
                 ))}
@@ -5028,6 +5030,7 @@ const AUTO_REPLIES = [
 ];
 
 function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) {
+  const { t } = useLanguage();
   const [conversations, setConversations] = useState(INITIAL_CONVERSATIONS.map((c) => ({ ...c, demo: true })));
   const [threads, setThreads] = useState(INITIAL_THREADS);
   const [activeId, setActiveId] = useState(null);
@@ -5115,7 +5118,7 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
         // konuşmasında ise bu koşul sağlanmaz, paylaşılan isme düşülür.
         const vitrin = servicesById[jobsById[jid]?.service_id];
         const vitrinName = vitrin && vitrin.provider_id === otherId ? (vitrin.display_name || "").trim() : "";
-        const otherName = vitrinName || (otherProfile?.business_name && otherProfile.business_name.trim()) || otherProfile?.full_name || "Kullanıcı";
+        const otherName = vitrinName || (otherProfile?.business_name && otherProfile.business_name.trim()) || otherProfile?.full_name || t("messages.unknownUser");
         realThreads[jid] = msgs.map((m) => ({
           id: m.id, sender: m.sender_id === currentUserId ? "me" : "them", text: m.body, time: formatMessageTime(m.created_at),
         }));
@@ -5166,7 +5169,7 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
         setThreads((t) => ({ ...t, [newId]: [] }));
         setActiveId(newId);
         return [
-          { id: newId, demo: true, name: initialContact.name, initials: initialContact.name.split(" ").map((w) => w[0]).join("").slice(0, 2), lastMessage: "Yeni sohbet", time: "Şimdi", unread: 0, listingTitle: initialContact.listingTitle },
+          { id: newId, demo: true, name: initialContact.name, initials: initialContact.name.split(" ").map((w) => w[0]).join("").slice(0, 2), lastMessage: t("messages.newChat"), time: t("messages.justNow"), unread: 0, listingTitle: initialContact.listingTitle },
           ...prev,
         ];
       });
@@ -5182,7 +5185,7 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
       // var — yeni bir tane oluşturmaya gerek yok, doğrudan onu kullanıyoruz.
       let jobId = initialContact.existingJobId || null;
       if (!jobId) {
-        const threadTitle = `${initialContact.listingTitle} hakkında görüşme`;
+        const threadTitle = t("messages.threadTitle", { title: initialContact.listingTitle });
         // Eskiden burada iki ayrı sorgu vardı (var mı diye bak, yoksa
         // insert et) — aralarında kilit olmadığı için art arda iki kez
         // tetiklenince (örn. StrictMode) aynı client+vitrin için iki jobs
@@ -5208,7 +5211,7 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
             id: jobId,
             name: initialContact.name,
             initials: initialContact.name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase(),
-            lastMessage: "Yeni sohbet", time: "Şimdi", unread: 0, listingTitle: initialContact.listingTitle, otherId: initialContact.providerId,
+            lastMessage: t("messages.newChat"), time: t("messages.justNow"), unread: 0, listingTitle: initialContact.listingTitle, otherId: initialContact.providerId,
           });
         }
         return merged;
@@ -5259,12 +5262,12 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
   // bir uyarı, tek tıkla geçilmiyor.
   const markDelivered = async () => {
     if (!activeId || !currentUserId || activeJob?.clientId !== currentUserId) return;
-    if (!window.confirm("Hizmeti gerçekten aldığını onaylıyor musun? Bu bilgi değerlendirme hakkı doğurur — yanlış beyan (hizmeti almadan onaylamak) platform kurallarına aykırıdır ve hesabının kısıtlanmasına yol açabilir.")) return;
+    if (!window.confirm(t("messages.confirmMarkDelivered"))) return;
     setDeliveredError("");
     setMarkingDelivered(true);
     const { error } = await supabase.from("jobs").update({ state: "delivered" }).eq("id", activeId).eq("client_id", currentUserId);
     setMarkingDelivered(false);
-    if (error) { setDeliveredError(`İşaretlenemedi: ${error.message}`); return; }
+    if (error) { setDeliveredError(t("messages.errMarkFailed", { message: error.message })); return; }
     setActiveJob((j) => (j ? { ...j, state: "delivered" } : j));
   };
 
@@ -5276,12 +5279,12 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
   // (bkz. supabase/provider_delivery_confirmation.sql).
   const markProviderDelivered = async () => {
     if (!activeId || !currentUserId || activeJob?.providerId !== currentUserId) return;
-    if (!window.confirm("Hizmeti gerçekten verdiğini onaylıyor musun? Yanlış beyan platform kurallarına aykırıdır ve hesabının kısıtlanmasına yol açabilir.")) return;
+    if (!window.confirm(t("messages.confirmMarkProviderDelivered"))) return;
     setDeliveredError("");
     setMarkingDelivered(true);
     const { error } = await supabase.from("jobs").update({ state: "delivered", provider_delivered_at: new Date().toISOString() }).eq("id", activeId);
     setMarkingDelivered(false);
-    if (error) { setDeliveredError(`İşaretlenemedi: ${error.message}`); return; }
+    if (error) { setDeliveredError(t("messages.errMarkFailed", { message: error.message })); return; }
     setActiveJob((j) => (j ? { ...j, state: "delivered" } : j));
   };
 
@@ -5333,12 +5336,12 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
     if (myBlockOfThem) {
       const { error } = await supabase.from("user_blocks").delete().eq("blocker_id", currentUserId).eq("blocked_id", active.otherId);
       setBlockChecking(false);
-      if (error) { setBlockError(`Engel kaldırılamadı: ${error.message}`); return; }
+      if (error) { setBlockError(t("messages.errUnblockFailed", { message: error.message })); return; }
       setMyBlockOfThem(false);
     } else {
       const { error } = await supabase.from("user_blocks").insert({ blocker_id: currentUserId, blocked_id: active.otherId });
       setBlockChecking(false);
-      if (error) { setBlockError(`Engellenemedi: ${error.message}`); return; }
+      if (error) { setBlockError(t("messages.errBlockFailed", { message: error.message })); return; }
       setMyBlockOfThem(true);
     }
   };
@@ -5355,7 +5358,7 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
       job_id: active.demo ? null : activeId,
     });
     setReportSubmitting(false);
-    if (error) { setReportError(`Şikayet gönderilemedi: ${error.message}`); return; }
+    if (error) { setReportError(t("messages.errReportFailed", { message: error.message })); return; }
     setReportSubmitted(true);
     setReportDetail("");
   };
@@ -5388,7 +5391,7 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
     const { data: blocked } = await supabase.rpc("is_blocked_between", { other_id: active.otherId });
     if (blocked) {
       setSending(false);
-      setGateError("Bu kişiyle mesajlaşamıyorsun.");
+      setGateError(t("messages.errBlockedCannotSend"));
       return;
     }
     const profileGate = await checkProfileGate(currentUserId);
@@ -5414,7 +5417,7 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
       // kullanıcı yazdığı mesajı kaybediyordu, hiçbir açıklama görmüyordu.
       // Artık hız sınırı gibi gerçek bir red sebebi varsa (bkz.
       // growth_features_batch.sql) görünür oluyor, metin de kaybolmuyor.
-      setGateError(error?.message || "Mesaj gönderilemedi, tekrar dener misin?");
+      setGateError(error?.message || t("messages.errSendFailedDefault"));
       return;
     }
     setInput("");
@@ -5435,7 +5438,7 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
     return (
       <div className="max-w-2xl mx-auto px-5 py-6 flex flex-col" style={{ height: "calc(100vh - 64px)" }}>
         <button onClick={() => setActiveId(null)} className="flex items-center gap-1 text-sm mb-3 shrink-0" style={{ color: "#5C5744" }}>
-          <ArrowLeft size={16} /> Sohbetler
+          <ArrowLeft size={16} /> {t("messages.backToList")}
         </button>
         <div className="flex items-center gap-2.5 pb-3 border-b mb-3 shrink-0" style={{ borderColor: "#D9D0BA" }}>
           <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-medium text-white shrink-0" style={{ background: "#1B2B24" }}>{active.initials}</div>
@@ -5443,7 +5446,7 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
             <div className="flex items-center gap-1.5">
               <p className="text-sm font-medium" style={{ color: "#1B2B24" }}>{active.name}</p>
               {active.demo && (
-                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "#F0EAD6", color: "#8A8368" }}>Örnek</span>
+                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "#F0EAD6", color: "#8A8368" }}>{t("messages.demoBadge")}</span>
               )}
             </div>
             <p className="text-[11px]" style={{ color: "#8A8368" }}>{active.listingTitle}</p>
@@ -5456,14 +5459,14 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
                 className="text-[11px] font-medium px-2.5 py-1.5 rounded-full"
                 style={myBlockOfThem ? { background: "#3F7D5C", color: "white" } : { color: "#9C4A3C" }}
               >
-                {myBlockOfThem ? "Engeli Kaldır" : "Engelle"}
+                {myBlockOfThem ? t("messages.unblock") : t("messages.block")}
               </button>
               <button
                 onClick={() => setShowReportForm((v) => !v)}
                 className="text-[11px] font-medium px-2.5 py-1.5 rounded-full"
                 style={{ color: "#8A8368" }}
               >
-                Şikayet Et
+                {t("messages.report")}
               </button>
             </div>
           )}
@@ -5478,26 +5481,26 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
             {reportSubmitted ? (
               <div className="text-center py-2">
                 <Check size={16} style={{ color: "#3F7D5C" }} className="mx-auto mb-1" />
-                <p className="text-xs" style={{ color: "#5C5744" }}>Şikayetin kaydedildi.</p>
+                <p className="text-xs" style={{ color: "#5C5744" }}>{t("messages.reportSubmitted")}</p>
               </div>
             ) : (
               <>
-                <p className="text-xs font-bold mb-2" style={{ color: "#1B2B24" }}>Bu kişiyi şikayet et</p>
+                <p className="text-xs font-bold mb-2" style={{ color: "#1B2B24" }}>{t("messages.reportHeading")}</p>
                 <select
                   value={reportReason}
                   onChange={(e) => setReportReason(e.target.value)}
                   className="w-full px-3 py-2 rounded-lg border text-xs outline-none mb-2"
                   style={{ borderColor: "#D9D0BA", background: "#FFFFFF", color: "#1B2B24" }}
                 >
-                  <option value="uygunsuz_mesaj">Taciz / uygunsuz mesaj</option>
-                  <option value="sahte_profil">Sahte profil</option>
-                  <option value="dolandiricilik">Dolandırıcılık şüphesi</option>
-                  <option value="diger">Diğer</option>
+                  <option value="uygunsuz_mesaj">{t("messages.reportReasonHarassment")}</option>
+                  <option value="sahte_profil">{t("messages.reportReasonFakeProfile")}</option>
+                  <option value="dolandiricilik">{t("messages.reportReasonFraud")}</option>
+                  <option value="diger">{t("messages.reportReasonOther")}</option>
                 </select>
                 <textarea
                   value={reportDetail}
                   onChange={(e) => setReportDetail(e.target.value)}
-                  placeholder="Kısaca ne olduğunu anlat (isteğe bağlı)"
+                  placeholder={t("messages.reportDetailPlaceholder")}
                   rows={2}
                   className="w-full px-3 py-2 rounded-lg border text-xs outline-none mb-2"
                   style={{ borderColor: "#D9D0BA", background: "#FFFFFF", color: "#1B2B24" }}
@@ -5510,7 +5513,7 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
                   style={{ background: "#9C4A3C", opacity: reportSubmitting ? 0.7 : 1 }}
                 >
                   {reportSubmitting && <Loader2 size={12} className="animate-spin" />}
-                  Şikayeti Gönder
+                  {t("messages.reportSubmit")}
                 </button>
               </>
             )}
@@ -5529,21 +5532,21 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
               <span className="flex items-center gap-2">
                 <Check size={13} className="shrink-0" />
                 {activeJob.clientId === currentUserId
-                  ? "Hizmeti aldığını işaretledin — değerlendirme yazabilirsin."
+                  ? t("messages.deliveredClientNote")
                   : activeJob.providerId === currentUserId
-                  ? "İşi teslim ettin olarak işaretledin."
-                  : "İş teslim edildi olarak işaretlendi."}
+                  ? t("messages.deliveredProviderNote")
+                  : t("messages.deliveredGenericNote")}
               </span>
               {activeJob.clientId === currentUserId && activeJob.serviceId && (
                 <button onClick={goToReview} disabled={openingReview} className="font-bold shrink-0 flex items-center gap-1" style={{ color: "#2563EB" }}>
                   {openingReview && <Loader2 size={11} className="animate-spin" />}
-                  Değerlendirme Yaz
+                  {t("messages.writeReview")}
                 </button>
               )}
             </div>
           ) : activeJob.clientId === currentUserId ? (
             <div className="rounded-lg p-2.5 mb-3 shrink-0" style={{ background: "#F8F4E9", border: "1px solid #D9D0BA" }}>
-              <p className="text-xs mb-1.5" style={{ color: "#5C5744" }}>Hizmeti aldıysan işaretle — değerlendirme yazabilmen için gerekiyor.</p>
+              <p className="text-xs mb-1.5" style={{ color: "#5C5744" }}>{t("messages.pendingClientNote")}</p>
               {deliveredError && <p className="text-xs mb-1.5" style={{ color: "#9C4A3C" }}>{deliveredError}</p>}
               <button
                 onClick={markDelivered}
@@ -5552,7 +5555,7 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
                 style={{ background: "#3F7D5C", opacity: markingDelivered ? 0.7 : 1 }}
               >
                 {markingDelivered && <Loader2 size={12} className="animate-spin" />}
-                Hizmeti Aldım
+                {t("messages.markDelivered")}
               </button>
             </div>
           ) : activeJob.providerId === currentUserId ? (
@@ -5560,7 +5563,7 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
             // sağlayıcının hiçbir hakkı yoktu, değerlendirme de hiç
             // açılmıyordu. Artık sağlayıcı da kendi tarafından işaretleyebiliyor.
             <div className="rounded-lg p-2.5 mb-3 shrink-0" style={{ background: "#F8F4E9", border: "1px solid #D9D0BA" }}>
-              <p className="text-xs mb-1.5" style={{ color: "#5C5744" }}>Hizmeti verdiysen işaretle — müşteri onaylamasa bile bu, teslim edildiğini kayda geçirir.</p>
+              <p className="text-xs mb-1.5" style={{ color: "#5C5744" }}>{t("messages.pendingProviderNote")}</p>
               {deliveredError && <p className="text-xs mb-1.5" style={{ color: "#9C4A3C" }}>{deliveredError}</p>}
               <button
                 onClick={markProviderDelivered}
@@ -5569,7 +5572,7 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
                 style={{ background: "#3F7D5C", opacity: markingDelivered ? 0.7 : 1 }}
               >
                 {markingDelivered && <Loader2 size={12} className="animate-spin" />}
-                Hizmeti Verdim
+                {t("messages.markProviderDelivered")}
               </button>
             </div>
           ) : null
@@ -5578,7 +5581,7 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
         <div className="flex-1 overflow-y-auto space-y-2.5 pr-1">
           {activeMessages.length === 0 && (
             <div className="text-center mt-8">
-              <p className="text-xs mb-2" style={{ color: "#8A8368" }}>Henüz mesaj yok, ilk mesajı sen gönder.</p>
+              <p className="text-xs mb-2" style={{ color: "#8A8368" }}>{t("messages.emptyThread")}</p>
               {!active.demo && (
                 <button
                   onClick={suggestOpeningMessage}
@@ -5587,7 +5590,7 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
                   style={{ background: "#EFF6FF", color: "#2563EB", opacity: draftingMessage ? 0.7 : 1 }}
                 >
                   {draftingMessage ? <Loader2 size={11} className="animate-spin" /> : <Sparkles size={11} />}
-                  {draftingMessage ? "Yazılıyor..." : "AI ile Taslak Öner"}
+                  {draftingMessage ? t("messages.aiDraftWriting") : t("messages.aiDraftButton")}
                 </button>
               )}
             </div>
@@ -5608,7 +5611,7 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
           {typing && (
             <div className="flex justify-start">
               <div className="rounded-2xl px-3.5 py-2 text-xs" style={{ background: "#F8F4E9", border: "1px solid #D9D0BA", color: "#8A8368" }}>
-                yazıyor...
+                {t("messages.typingIndicator")}
               </div>
             </div>
           )}
@@ -5617,13 +5620,13 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
         {gateError && (
           <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs mt-2 shrink-0" style={{ background: "#FDECEC", color: "#B3261E" }}>
             <Lock size={13} className="shrink-0" />
-            <span>{gateError}{gateError.includes("doğrula") && <> — <span className="underline">Profilinden doğrula</span>.</>}</span>
+            <span>{gateError}{gateError.includes("doğrula") && <> — <span className="underline">{t("messages.verifyFromProfile")}</span>.</>}</span>
           </div>
         )}
         {!active.demo && myBlockOfThem ? (
           <div className="flex items-center justify-between gap-2 pt-3 mt-2 border-t shrink-0" style={{ borderColor: "#D9D0BA" }}>
-            <p className="text-xs" style={{ color: "#8A8368" }}>Bu kişiyi engelledin, mesaj gönderemezsin.</p>
-            <button onClick={toggleBlock} className="text-xs font-bold shrink-0" style={{ color: "#3F7D5C" }}>Engeli Kaldır</button>
+            <p className="text-xs" style={{ color: "#8A8368" }}>{t("messages.blockedNotice")}</p>
+            <button onClick={toggleBlock} className="text-xs font-bold shrink-0" style={{ color: "#3F7D5C" }}>{t("messages.unblock")}</button>
           </div>
         ) : (
           <div className="flex items-center gap-2 pt-3 mt-2 border-t shrink-0" style={{ borderColor: "#D9D0BA" }}>
@@ -5631,7 +5634,7 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
               value={input}
               onChange={(e) => { setInput(e.target.value); if (gateError) setGateError(""); }}
               onKeyDown={(e) => { if (e.key === "Enter") sendMessage(); }}
-              placeholder="Mesaj yaz..."
+              placeholder={t("messages.inputPlaceholder")}
               className="flex-1 px-3.5 py-2.5 rounded-full border text-sm outline-none"
               style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
             />
@@ -5647,13 +5650,13 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
   return (
     <div className="max-w-2xl mx-auto px-5 py-8">
       <button onClick={onBack} className="flex items-center gap-1 text-sm mb-4" style={{ color: "#5C5744" }}>
-        <ChevronLeft size={16} /> Geri
+        <ChevronLeft size={16} /> {t("common.back")}
       </button>
-      <h1 className="font-serif text-2xl mb-6" style={{ color: "#1B2B24" }}>Mesajlar</h1>
+      <h1 className="font-serif text-2xl mb-6" style={{ color: "#1B2B24" }}>{t("messages.title")}</h1>
       {loading && (
         <div className="flex items-center gap-2 mb-4">
           <Loader2 size={14} className="animate-spin" style={{ color: "#8A8368" }} />
-          <span className="text-xs" style={{ color: "#8A8368" }}>Konuşmalar yükleniyor...</span>
+          <span className="text-xs" style={{ color: "#8A8368" }}>{t("messages.loadingConversations")}</span>
         </div>
       )}
       <div className="space-y-1">
@@ -5676,7 +5679,7 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
                 <div className="flex items-center gap-1.5 min-w-0">
                   <p className="text-sm font-medium truncate" style={{ color: "#1B2B24" }}>{c.name}</p>
                   {c.demo && (
-                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0" style={{ background: "#F0EAD6", color: "#8A8368" }}>Örnek</span>
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0" style={{ background: "#F0EAD6", color: "#8A8368" }}>{t("messages.demoBadge")}</span>
                   )}
                 </div>
                 <span className="text-[11px] shrink-0" style={{ color: "#8A8368" }}>{c.time}</span>
@@ -8389,8 +8392,8 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
           real: true,
           mediaType: m.media_type,
           mediaUrl: m.url,
-          reviewerName: (p?.business_name && p.business_name.trim()) || p?.full_name || "Bir kullanıcı",
-          listingTitle: rating?.comment ? `"${rating.comment.slice(0, 40)}${rating.comment.length > 40 ? "…" : ""}"` : "Bir değerlendirme",
+          reviewerName: (p?.business_name && p.business_name.trim()) || p?.full_name || t("profile.someUser"),
+          listingTitle: rating?.comment ? `"${rating.comment.slice(0, 40)}${rating.comment.length > 40 ? "…" : ""}"` : t("profile.someReview"),
           submittedAt: "",
         };
       })
@@ -8492,7 +8495,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
   };
 
   const sendPhoneCode = async () => {
-    if (!phoneInput.trim()) { setPhoneError("Telefon numarası gir."); return; }
+    if (!phoneInput.trim()) { setPhoneError(t("profile.errPhoneRequired")); return; }
     setPhoneError("");
     // Bir önceki denemede "yakında aktif olacak" uyarısı gösterildiyse hiç
     // sıfırlanmıyordu — Netgsm sonradan gerçekten yapılandırılsa bile sayfa
@@ -8519,10 +8522,10 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
         setPhoneStage("idle");
         return;
       }
-      if (!result.sent) throw new Error(result.message || "SMS gönderilemedi.");
+      if (!result.sent) throw new Error(result.message || t("profile.errSmsFailed"));
       setPhoneStage("code_sent");
     } catch (err) {
-      setPhoneError(err.message || "Bir hata oluştu.");
+      setPhoneError(err.message || t("profile.errGeneric"));
       setPhoneStage("idle");
     }
   };
@@ -8534,13 +8537,13 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
     try {
       const { data: ok, error } = await supabase.rpc("verify_phone_otp", { p_code: otpInput.trim() });
       if (error) throw error;
-      if (!ok) { setPhoneError("Kod yanlış, tekrar dene."); setPhoneStage("code_sent"); return; }
+      if (!ok) { setPhoneError(t("profile.errWrongCode")); setPhoneStage("code_sent"); return; }
       await loadMyPhone();
       setProfile((p) => (p ? { ...p, phone_verified: true } : p));
       setPhoneStage("idle");
       setOtpInput("");
     } catch (err) {
-      setPhoneError(err.message || "Bir hata oluştu.");
+      setPhoneError(err.message || t("profile.errGeneric"));
       setPhoneStage("code_sent");
     }
   };
@@ -8559,7 +8562,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
     const { error } = await supabase.from("jobs").update({ active: false }).eq("id", jobId);
     setDeactivatingJobId(null);
     setConfirmDeactivateJobId(null);
-    if (error) { setJobsError(`Kaldırılamadı: ${error.message}`); return; }
+    if (error) { setJobsError(t("profile.errJobRemoveFailed", { message: error.message })); return; }
     setMyJobs((prev) => prev.filter((j) => j.id !== jobId));
     onJobsChanged?.();
   };
@@ -8609,21 +8612,21 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
     const { error } = await supabase.from("services").delete().eq("id", listingId);
     setDeletingId(null);
     setConfirmDeleteId(null);
-    if (error) { setDeleteError(`Silinemedi: ${error.message}`); return; }
+    if (error) { setDeleteError(t("profile.errDeleteFailed", { message: error.message })); return; }
     setMyListings((prev) => prev.filter((l) => l.id !== listingId));
     onListingsChanged?.();
   };
 
   const saveProfile = async () => {
     if (!userId) return;
-    if (!fullName.trim()) { setSaveError("Ad Soyad boş olamaz."); return; }
+    if (!fullName.trim()) { setSaveError(t("profile.errFullNameRequired")); return; }
     setSaveError("");
     setSaving(true);
     const cityName = CITIES.find((c) => c.id === cityId)?.name || null;
     const patch = { full_name: fullName.trim(), city: cityName, bio: bio.trim() || null };
     const { data, error } = await supabase.from("profiles").update(patch).eq("id", userId).select("*").maybeSingle();
     setSaving(false);
-    if (error) { setSaveError(`Kaydedilemedi: ${error.message}`); return; }
+    if (error) { setSaveError(t("profile.errSaveFailed", { message: error.message })); return; }
     setProfile(data || { ...profile, ...patch });
     setEditing(false);
     setSaveDone(true);
@@ -8656,7 +8659,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
       setProfilePhoto({ url: publicUrl });
       setProfile((p) => (p ? { ...p, avatar_url: publicUrl } : p));
     } catch (err) {
-      setPhotoError(`Yüklenemedi: ${err.message}`);
+      setPhotoError(t("profile.errPhotoUploadFailed", { message: err.message }));
     } finally {
       setPhotoUploading(false);
     }
@@ -8675,7 +8678,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
         />
       )}
       <button onClick={onBack} className="flex items-center gap-1 text-sm mb-5" style={{ color: "#5C5744" }}>
-        <ChevronLeft size={16} /> Geri
+        <ChevronLeft size={16} /> {t("common.back")}
       </button>
       <div className="flex items-center gap-4 mb-8">
         <label className="relative w-16 h-16 rounded-full cursor-pointer shrink-0 group">
@@ -8693,19 +8696,19 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
         </label>
         <div>
           <h1 className="font-serif text-xl" style={{ color: "#1B2B24" }}>
-            {profileLoading ? "Yükleniyor..." : profile?.full_name || "Profilini tamamla"}
+            {profileLoading ? t("common.loading") : profile?.full_name || t("profile.completeYourProfile")}
           </h1>
           <p className="text-sm" style={{ color: "#5C5744" }}>
-            {profile?.city ? `${profile.city} · ` : ""}{joinedLabel ? `Üye: ${joinedLabel}` : ""}
+            {profile?.city ? `${profile.city} · ` : ""}{joinedLabel ? t("profile.memberSince", { date: joinedLabel }) : ""}
           </p>
           {photoError && <p className="text-xs mt-1" style={{ color: "#9C4A3C" }}>{photoError}</p>}
         </div>
       </div>
       <div className="grid grid-cols-3 gap-3 mb-8">
         {[
-          [String(myListings.length), "Vitrin"],
-          [myRating ? String(myRating.count) : "0", "Değerlendirme"],
-          [myRating ? myRating.avg : "—", "Puan"],
+          [String(myListings.length), t("profile.statListings")],
+          [myRating ? String(myRating.count) : "0", t("profile.statReviews")],
+          [myRating ? myRating.avg : "—", t("profile.statRating")],
         ].map(([val, label]) => (
           <div key={label} className="rounded-xl border p-4 text-center" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
             <p className="font-serif text-xl" style={{ color: "#1B2B24" }}>{val}</p>
@@ -8718,25 +8721,25 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-2">
             <Users size={16} style={{ color: "#2FBF71" }} />
-            <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>Profil Bilgileri</h2>
+            <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("profile.infoHeading")}</h2>
           </div>
           {!editing && (
-            <button onClick={() => setEditing(true)} className="text-xs font-bold" style={{ color: "#2563EB" }}>Düzenle</button>
+            <button onClick={() => setEditing(true)} className="text-xs font-bold" style={{ color: "#2563EB" }}>{t("profile.edit")}</button>
           )}
         </div>
         {profileLoading ? (
-          <p className="text-xs mt-3" style={{ color: "#8A8368" }}>Yükleniyor...</p>
+          <p className="text-xs mt-3" style={{ color: "#8A8368" }}>{t("common.loading")}</p>
         ) : !editing ? (
           <div className="mt-3 space-y-1.5 text-sm" style={{ color: "#3D3B30" }}>
-            <p><span style={{ color: "#8A8368" }}>Ad Soyad:</span> {profile?.full_name || "—"}</p>
-            <p><span style={{ color: "#8A8368" }}>Şehir:</span> {profile?.city || "—"}</p>
-            <p><span style={{ color: "#8A8368" }}>Hakkımda / Uzmanlık:</span> {profile?.bio || "—"}</p>
-            {saveDone && <p className="text-xs" style={{ color: "#2FBF71" }}>Kaydedildi ✓</p>}
+            <p><span style={{ color: "#8A8368" }}>{t("profile.fieldFullName")}</span> {profile?.full_name || "—"}</p>
+            <p><span style={{ color: "#8A8368" }}>{t("profile.fieldCity")}</span> {profile?.city || "—"}</p>
+            <p><span style={{ color: "#8A8368" }}>{t("profile.fieldBio")}</span> {profile?.bio || "—"}</p>
+            {saveDone && <p className="text-xs" style={{ color: "#2FBF71" }}>{t("profile.savedCheck")}</p>}
           </div>
         ) : (
           <div className="mt-3 space-y-3">
             <div>
-              <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>Ad Soyad</label>
+              <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("profile.labelFullName")}</label>
               <input
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
@@ -8745,15 +8748,15 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
               />
             </div>
             <div>
-              <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>Şehir</label>
+              <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("profile.labelCity")}</label>
               <select
                 value={cityId}
                 onChange={(e) => setCityId(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
                 style={{ borderColor: "#D9D0BA", background: "#FFFFFF", color: "#1B2B24" }}
               >
-                {["Türkiye", "Hindistan", "Avrupa", "Kuzey Amerika", "Orta Doğu", "Asya-Pasifik"].map((region) => (
-                  <optgroup key={region} label={region}>
+                {[["Türkiye", "turkey"], ["Hindistan", "india"], ["Avrupa", "europe"], ["Kuzey Amerika", "northAmerica"], ["Orta Doğu", "middleEast"], ["Asya-Pasifik", "asiaPacific"]].map(([region, regionKey]) => (
+                  <optgroup key={region} label={t(`common.regions.${regionKey}`)}>
                     {CITIES.filter((c) => c.region === region).map((c) => (
                       <option key={c.id} value={c.id}>{c.name}</option>
                     ))}
@@ -8762,12 +8765,12 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
               </select>
             </div>
             <div>
-              <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>Hakkımda / Uzmanlık kategorin</label>
+              <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("profile.labelBio")}</label>
               <textarea
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
                 rows={3}
-                placeholder="Örn. 5 yıldır çocuk bakıcılığı yapıyorum, İstanbul Anadolu yakasında hizmet veriyorum..."
+                placeholder={t("profile.bioPlaceholder")}
                 className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none resize-none"
                 style={{ borderColor: "#D9D0BA", background: "#FFFFFF", color: "#1B2B24" }}
               />
@@ -8783,7 +8786,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
                 style={{ background: "#2FBF71", color: "#1B2B24", opacity: saving ? 0.7 : 1 }}
               >
                 {saving && <Loader2 size={14} className="animate-spin" />}
-                {saving ? "Kaydediliyor..." : "Kaydet"}
+                {saving ? t("common.savingEllipsis") : t("common.save")}
               </button>
               <button
                 onClick={() => {
@@ -8796,7 +8799,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
                 className="px-4 py-2.5 rounded-full text-sm font-medium border"
                 style={{ borderColor: "#D9D0BA", color: "#5C5744" }}
               >
-                Vazgeç
+                {t("common.cancel")}
               </button>
             </div>
           </div>
@@ -8806,13 +8809,13 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
       <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
         <div className="flex items-center gap-2 mb-1">
           <Phone size={16} style={{ color: myPhone?.verified ? "#3F7D5C" : "#C2872B" }} />
-          <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>Telefon Doğrulama</h2>
+          <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("profile.phoneHeading")}</h2>
           {myPhone?.verified && (
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: "#3F7D5C" }}>Doğrulandı</span>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: "#3F7D5C" }}>{t("profile.phoneVerifiedBadge")}</span>
           )}
         </div>
         <p className="text-xs mb-4" style={{ color: "#8A8368" }}>
-          Mesaj gönderme ve vitrin/iş ilanı yayınlama için telefon doğrulaması gerekiyor. Numaran gizli tutulur — profilinde göstermek istersen ayrıca izin vermen gerekir.
+          {t("profile.phoneIntro")}
         </p>
 
         {phoneError && (
@@ -8820,7 +8823,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
         )}
         {phoneNotConfigured && (
           <p className="text-xs mb-3 px-3 py-2 rounded-lg flex items-center gap-1.5" style={{ background: "#FFFBEB", color: "#92640B" }}>
-            <AlertCircle size={13} /> SMS doğrulama servisi yakında aktif olacak, şimdilik bu adımı atlayabilirsin.
+            <AlertCircle size={13} /> {t("profile.phoneNotConfigured")}
           </p>
         )}
 
@@ -8833,7 +8836,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
                 checked={!!myPhone.show_publicly}
                 onChange={(e) => togglePhonePublic(e.target.checked)}
               />
-              Profilimde telefon numaramı göster
+              {t("profile.phoneShowPublicly")}
             </label>
           </div>
         ) : phoneStage === "code_sent" ? (
@@ -8841,7 +8844,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
             <input
               value={otpInput}
               onChange={(e) => setOtpInput(e.target.value)}
-              placeholder="6 haneli kod"
+              placeholder={t("profile.otpPlaceholder")}
               inputMode="numeric"
               className="flex-1 px-3.5 py-2.5 rounded-lg border text-sm outline-none"
               style={{ borderColor: "#D9D0BA", background: "#FFFFFF", color: "#1B2B24" }}
@@ -8853,7 +8856,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
               style={{ background: "#3F7D5C", opacity: phoneStage === "verifying" ? 0.7 : 1 }}
             >
               {phoneStage === "verifying" && <Loader2 size={13} className="animate-spin" />}
-              Doğrula
+              {t("profile.verifyButton")}
             </button>
           </div>
         ) : (
@@ -8861,7 +8864,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
             <input
               value={phoneInput}
               onChange={(e) => setPhoneInput(e.target.value)}
-              placeholder="05xx xxx xx xx"
+              placeholder={t("profile.phonePlaceholder")}
               className="flex-1 px-3.5 py-2.5 rounded-lg border text-sm outline-none"
               style={{ borderColor: "#D9D0BA", background: "#FFFFFF", color: "#1B2B24" }}
             />
@@ -8872,7 +8875,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
               style={{ background: "#C2872B", opacity: phoneStage === "sending" ? 0.7 : 1 }}
             >
               {phoneStage === "sending" && <Loader2 size={13} className="animate-spin" />}
-              Kod Gönder
+              {t("profile.sendCodeButton")}
             </button>
           </div>
         )}
@@ -8882,14 +8885,14 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
         <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
           <div className="flex items-center gap-2 mb-3">
             <Bell size={16} style={{ color: "#2563EB" }} />
-            <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>Kayıtlı Aramalarım ({savedSearches.length})</h2>
+            <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("profile.savedSearchesHeading", { count: savedSearches.length })}</h2>
           </div>
-          <p className="text-xs mb-3" style={{ color: "#8A8368" }}>Bu aramalara uyan yeni bir vitrin yayına girince bildirim alırsın.</p>
+          <p className="text-xs mb-3" style={{ color: "#8A8368" }}>{t("profile.savedSearchesIntro")}</p>
           <div className="space-y-2">
             {savedSearches.map((s) => (
               <div key={s.id} className="flex items-center justify-between gap-2 p-2.5 rounded-lg" style={{ background: "#EFE8D8" }}>
                 <span className="text-xs font-medium" style={{ color: "#1B2B24" }}>"{s.query}"</span>
-                <button onClick={() => deleteSavedSearch(s.id)} className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" title="Kaldır">
+                <button onClick={() => deleteSavedSearch(s.id)} className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" title={t("common.remove")}>
                   <X size={13} style={{ color: "#8A8368" }} />
                 </button>
               </div>
@@ -8903,7 +8906,9 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
           <div className="flex items-center gap-2">
             <Briefcase size={16} style={{ color: "#2FBF71" }} />
             <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>
-              Vitrinlerim ({myListings.length}{vitrinCap ? `/${vitrinCap.cap}` : ""})
+              {vitrinCap
+                ? t("profile.listingsHeadingWithCap", { count: myListings.length, cap: vitrinCap.cap })
+                : t("profile.listingsHeadingNoCap", { count: myListings.length })}
             </h2>
           </div>
           {/* GERÇEK EKSİK (2026-09-14, kullanıcının kendi bildirimiyle bulundu):
@@ -8920,7 +8925,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
               className="text-[11px] font-bold px-2.5 py-1.5 rounded-full text-white shrink-0"
               style={{ background: "#2FBF71" }}
             >
-              + Yeni Vitrin
+              {t("profile.addListingButton")}
             </button>
           )}
         </div>
@@ -8928,17 +8933,17 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
           <p className="text-xs mb-2 px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{deleteError}</p>
         )}
         {profileLoading ? (
-          <p className="text-xs" style={{ color: "#8A8368" }}>Yükleniyor...</p>
+          <p className="text-xs" style={{ color: "#8A8368" }}>{t("common.loading")}</p>
         ) : myListings.length === 0 ? (
           <div>
-            <p className="text-xs mb-3" style={{ color: "#8A8368" }}>Henüz bir vitrinin yok.</p>
+            <p className="text-xs mb-3" style={{ color: "#8A8368" }}>{t("profile.noListings")}</p>
             {onCreateListing && (
               <button
                 onClick={onCreateListing}
                 className="text-xs font-bold px-3.5 py-2 rounded-full text-white"
                 style={{ background: "#2FBF71" }}
               >
-                + İlk Vitrinini Oluştur
+                {t("profile.createFirstListingButton")}
               </button>
             )}
           </div>
@@ -8954,7 +8959,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-medium truncate" style={{ color: "#1B2B24" }}>{l.title}</p>
                   <p className="text-[11px] truncate" style={{ color: "#8A8368" }}>
-                    {l.is_remote ? "Uzaktan" : l.city || "—"} · {formatPriceLabel(l.price, l.price_type)} · <span className="underline">fotoğraf/video/belge yönet</span>
+                    {l.is_remote ? t("profile.remoteLabel") : l.city || "—"} · {formatPriceLabel(l.price, l.price_type)} · <span className="underline">{t("profile.manageMediaLinkText")}</span>
                   </p>
                 </div>
                 {confirmDeleteId === l.id ? (
@@ -8966,7 +8971,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
                       style={{ background: "#9C4A3C", opacity: deletingId === l.id ? 0.6 : 1 }}
                     >
                       {deletingId === l.id && <Loader2 size={11} className="animate-spin" />}
-                      Evet, sil
+                      {t("profile.confirmDeleteYes")}
                     </button>
                     <button
                       onClick={() => setConfirmDeleteId(null)}
@@ -8974,7 +8979,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
                       className="text-[11px] font-medium px-2.5 py-1.5 rounded-full"
                       style={{ color: "#5C5744" }}
                     >
-                      Vazgeç
+                      {t("common.cancel")}
                     </button>
                   </div>
                 ) : (
@@ -8993,7 +8998,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
                           if (full) onViewListing(full);
                         }}
                         className="w-8 h-8 rounded-full flex items-center justify-center"
-                        title="Vitrini görüntüle (müşterinin gördüğü hâli)"
+                        title={t("profile.viewListingTitle")}
                       >
                         <Eye size={14} style={{ color: "#3F7D5C" }} />
                       </button>
@@ -9001,14 +9006,14 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
                     <button
                       onClick={() => onEditListing?.(toEditableListing(l))}
                       className="w-8 h-8 rounded-full flex items-center justify-center"
-                      title="Vitrini düzenle"
+                      title={t("profile.editListingTitle")}
                     >
                       <Pencil size={13} style={{ color: "#3A5BA0" }} />
                     </button>
                     <button
                       onClick={() => setConfirmDeleteId(l.id)}
                       className="w-8 h-8 rounded-full flex items-center justify-center"
-                      title="Vitrini sil"
+                      title={t("profile.deleteListingTitle")}
                     >
                       <Trash2 size={14} style={{ color: "#9C4A3C" }} />
                     </button>
@@ -9026,12 +9031,12 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
       {myListings.length > 0 && (
         <div className="rounded-xl border p-5 mb-4 flex items-center gap-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/rozet.svg" alt="İşinn'de Doğrulanmış Sağlayıcı" width={140} height={40} className="shrink-0" />
+          <img src="/rozet.svg" alt={t("profile.verifiedProviderBadgeAlt")} width={140} height={40} className="shrink-0" />
           <div className="flex-1 min-w-0">
             <p className="text-xs font-bold mb-1" style={{ color: "#1B2B24" }}>{t("profile.badgeReadyTitle")}</p>
             <p className="text-[11px] mb-2" style={{ color: "#8A8368" }}>{t("profile.badgeReadyDesc")}</p>
             <a href="/rozet" target="_blank" rel="noopener noreferrer" className="text-[11px] font-bold underline" style={{ color: "#3A5BA0" }}>
-              Rozeti Al →
+              {t("profile.getBadgeLink")}
             </a>
           </div>
         </div>
@@ -9040,15 +9045,15 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
       <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
         <div className="flex items-center gap-2 mb-3">
           <Megaphone size={16} style={{ color: "#C2872B" }} />
-          <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>İş İlanlarım ({myJobs.length})</h2>
+          <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("profile.jobsHeading", { count: myJobs.length })}</h2>
         </div>
         {jobsError && (
           <p className="text-xs mb-2 px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{jobsError}</p>
         )}
         {profileLoading ? (
-          <p className="text-xs" style={{ color: "#8A8368" }}>Yükleniyor...</p>
+          <p className="text-xs" style={{ color: "#8A8368" }}>{t("common.loading")}</p>
         ) : myJobs.length === 0 ? (
-          <p className="text-xs" style={{ color: "#8A8368" }}>Henüz bir iş ilanı vermedin. "İlan Ver" ile ihtiyacını anlatabilirsin.</p>
+          <p className="text-xs" style={{ color: "#8A8368" }}>{t("profile.noJobs")}</p>
         ) : (
           <div className="space-y-2">
             {myJobs.map((j) => (
@@ -9056,7 +9061,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-medium truncate" style={{ color: "#1B2B24" }}>{j.title}</p>
                   <p className="text-[11px] truncate" style={{ color: "#8A8368" }}>
-                    {j.is_remote ? "Uzaktan" : j.city || "—"}
+                    {j.is_remote ? t("profile.remoteLabel") : j.city || "—"}
                     {(j.budget_min != null || j.budget_max != null) &&
                       ` · ${j.budget_min != null ? Number(j.budget_min).toLocaleString("tr-TR") + "₺" : ""}${j.budget_min != null && j.budget_max != null ? "–" : ""}${j.budget_max != null ? Number(j.budget_max).toLocaleString("tr-TR") + "₺" : ""}`}
                   </p>
@@ -9070,7 +9075,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
                       style={{ background: "#9C4A3C", opacity: deactivatingJobId === j.id ? 0.6 : 1 }}
                     >
                       {deactivatingJobId === j.id && <Loader2 size={11} className="animate-spin" />}
-                      Evet, kaldır
+                      {t("profile.confirmDeactivateYes")}
                     </button>
                     <button
                       onClick={() => setConfirmDeactivateJobId(null)}
@@ -9078,7 +9083,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
                       className="text-[11px] font-medium px-2.5 py-1.5 rounded-full"
                       style={{ color: "#5C5744" }}
                     >
-                      Vazgeç
+                      {t("common.cancel")}
                     </button>
                   </div>
                 ) : (
@@ -9090,14 +9095,14 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
                     <button
                       onClick={() => onEditJob?.(toEditableJob(j))}
                       className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
-                      title="İlanı düzenle"
+                      title={t("profile.editJobTitle")}
                     >
                       <Pencil size={14} style={{ color: "#5C5744" }} />
                     </button>
                     <button
                       onClick={() => setConfirmDeactivateJobId(j.id)}
                       className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
-                      title="İlanı kaldır"
+                      title={t("profile.removeJobTitle")}
                     >
                       <Trash2 size={14} style={{ color: "#9C4A3C" }} />
                     </button>
@@ -9114,10 +9119,10 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
         <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#F59E0B", background: "#FFFBEB" }}>
           <div className="flex items-center gap-2 mb-1">
             <AlertCircle size={16} style={{ color: "#F59E0B" }} />
-            <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>Onay Bekleyen Medyalarım ({(pendingMediaApprovals?.length || 0) + realPendingMedia.length})</h2>
+            <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("profile.pendingMediaHeading", { count: (pendingMediaApprovals?.length || 0) + realPendingMedia.length })}</h2>
           </div>
           <p className="text-xs mb-4" style={{ color: "#8A8368" }}>
-            Bir müşteri, seni gösterebilecek bir fotoğraf ile seni değerlendirdi. Yayınlanması için onayın gerekiyor.
+            {t("profile.pendingMediaIntro")}
           </p>
           <div className="space-y-3">
             {[...realPendingMedia, ...(pendingMediaApprovals || [])].map((item) => (
@@ -9131,7 +9136,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
                   <p className="text-xs font-bold truncate" style={{ color: "#1B2B24" }}>{item.reviewerName}</p>
                   <p className="text-[11px] truncate" style={{ color: "#8A8368" }}>{item.listingTitle} · {item.submittedAt}</p>
                   {item.isVideo && (
-                    <p className="text-[10px]" style={{ color: "#9C4A3C" }}>Video — otomatik içerik kontrolü yapılamadı, dikkatli incele</p>
+                    <p className="text-[10px]" style={{ color: "#9C4A3C" }}>{t("profile.pendingMediaVideoWarning")}</p>
                   )}
                 </div>
                 <div className="flex gap-1.5 shrink-0">
@@ -9167,8 +9172,8 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
           <Inbox size={16} style={{ color: "#2563EB" }} />
         </div>
         <div className="flex-1">
-          <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>{isAdmin ? "Destek Talepleri (Yönetim)" : "Destek Taleplerim"}</p>
-          <p className="text-xs" style={{ color: "#8A8368" }}>{isAdmin ? "Tüm kullanıcıların destek talepleri" : "Destek asistanına yazdığın ve bildirdiğin geçmiş talepler"}</p>
+          <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>{isAdmin ? t("profile.supportRequestsAdmin") : t("profile.supportRequestsMine")}</p>
+          <p className="text-xs" style={{ color: "#8A8368" }}>{isAdmin ? t("profile.supportRequestsAdminDesc") : t("profile.supportRequestsMineDesc")}</p>
         </div>
         <ChevronRight size={16} style={{ color: "#8A8368" }} />
       </button>
@@ -9183,8 +9188,8 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
             <BarChart3 size={16} style={{ color: "#2563EB" }} />
           </div>
           <div className="flex-1">
-            <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>Yönetim Paneli</p>
-            <p className="text-xs" style={{ color: "#8A8368" }}>Kullanıcı, sağlayıcı ve abonelik sayıları</p>
+            <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("profile.adminDashboardTitle")}</p>
+            <p className="text-xs" style={{ color: "#8A8368" }}>{t("profile.adminDashboardDesc")}</p>
           </div>
           <ChevronRight size={16} style={{ color: "#8A8368" }} />
         </button>
@@ -9200,8 +9205,8 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
             <ShieldCheck size={16} style={{ color: "#9C4A3C" }} />
           </div>
           <div className="flex-1">
-            <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>Kullanıcı Şikayetleri (Yönetim)</p>
-            <p className="text-xs" style={{ color: "#8A8368" }}>Mesajlaşmadan bildirilen kullanıcı şikayetlerini incele</p>
+            <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("profile.userReportsTitle")}</p>
+            <p className="text-xs" style={{ color: "#8A8368" }}>{t("profile.userReportsDesc")}</p>
           </div>
           <ChevronRight size={16} style={{ color: "#8A8368" }} />
         </button>
@@ -9217,8 +9222,8 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
             <AlertCircle size={16} style={{ color: "#9C4A3C" }} />
           </div>
           <div className="flex-1">
-            <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>İlan Şikayetleri (Yönetim)</p>
-            <p className="text-xs" style={{ color: "#8A8368" }}>Vitrin/iş ilanları için bildirilen şikayetleri incele</p>
+            <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("profile.listingReportsTitle")}</p>
+            <p className="text-xs" style={{ color: "#8A8368" }}>{t("profile.listingReportsDesc")}</p>
           </div>
           <ChevronRight size={16} style={{ color: "#8A8368" }} />
         </button>
@@ -9234,8 +9239,8 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
             <ShieldCheck size={16} style={{ color: "#9C4A3C" }} />
           </div>
           <div className="flex-1">
-            <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>İçerik Uyarıları (Yönetim)</p>
-            <p className="text-xs" style={{ color: "#8A8368" }}>AI'nin şüpheli bulduğu mesaj/vitrin/iş ilanı metinleri</p>
+            <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("profile.contentFlagsTitle")}</p>
+            <p className="text-xs" style={{ color: "#8A8368" }}>{t("profile.contentFlagsDesc")}</p>
           </div>
           <ChevronRight size={16} style={{ color: "#8A8368" }} />
         </button>
@@ -9967,6 +9972,7 @@ function DraggableSupportButton({ onClick }) {
 }
 
 export default function IsinnPrototype({ session, onRequireAuth }) {
+  const { t } = useLanguage();
   const [view, setView] = useState(getInitialView);
   const [selected, setSelected] = useState(null);
   const [selectedJob, setSelectedJob] = useState(null);
@@ -10096,7 +10102,7 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
       : (isYearly ? `${PLANS[0].priceYearly}₺/yıl` : `${PLANS[0].priceMonthly}₺/ay`);
     setTrialBanner({
       status: data.status,
-      planName: data.subscription_plans?.name || "Standart Üyelik",
+      planName: data.subscription_plans?.name || t("createListing.planNameStandard"),
       planSlug,
       priceLabel,
       daysLeft,
@@ -10421,13 +10427,13 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
           <AlertCircle size={15} style={{ color: "#C2872B" }} className="shrink-0" />
           <p className="text-xs flex-1" style={{ color: "#5C5744" }}>
             {trialBanner.daysLeft <= 0
-              ? "Ücretsiz deneme süren bugün doluyor."
+              ? t("trialBanner.endingToday")
               : trialBanner.daysLeft === 1
-              ? "Ücretsiz deneme süren yarın doluyor."
-              : `Ücretsiz deneme süren ${trialBanner.daysLeft} gün sonra doluyor.`}{" "}
-            Sonrasında {trialBanner.planName} {trialBanner.priceLabel} olarak devam eder — istediğin zaman iptal edebilirsin.
+              ? t("trialBanner.endingTomorrow")
+              : t("trialBanner.endingInDays", { days: trialBanner.daysLeft })}{" "}
+            {t("trialBanner.continuesAs", { planName: trialBanner.planName, priceLabel: trialBanner.priceLabel })}
           </p>
-          <button onClick={() => handleNav("pricing")} className="text-xs font-bold shrink-0" style={{ color: "#C2872B" }}>Planlar</button>
+          <button onClick={() => handleNav("pricing")} className="text-xs font-bold shrink-0" style={{ color: "#C2872B" }}>{t("header.plans")}</button>
           <button onClick={() => setTrialBannerDismissed(true)} className="shrink-0">
             <X size={14} style={{ color: "#8A8368" }} />
           </button>
