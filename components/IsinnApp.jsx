@@ -136,11 +136,20 @@ function getCategoryGroupName(id, t) {
 }
 
 const LEVEL_META = {
-  "top-rated": { label: "Top Rated", color: "#C2872B" },
-  "level-2": { label: "Level 2", color: "#6B4FA0" },
-  "level-1": { label: "Level 1", color: "#3A5BA0" },
-  "new": { label: "Yeni Vitrin", color: "#8A8368" },
+  "top-rated": { labelKey: "common.levelTopRated", label: "Top Rated", color: "#C2872B" },
+  "level-2": { labelKey: "common.levelLevel2", label: "Level 2", color: "#6B4FA0" },
+  "level-1": { labelKey: "common.levelLevel1", label: "Level 1", color: "#3A5BA0" },
+  "new": { labelKey: "common.levelNew", label: "Yeni Vitrin", color: "#8A8368" },
 };
+
+// getCategoryName/getCategoryGroupName ile aynı t()-ile-fallback deseni —
+// LEVEL_META.label alanları artık sadece bilinmeyen bir level id'si için
+// (veya sözlükte henüz karşılığı yoksa) düşülen son çare.
+function getLevelLabel(level, t) {
+  const meta = LEVEL_META[level] || LEVEL_META["new"];
+  const translated = t(meta.labelKey);
+  return translated !== meta.labelKey ? translated : meta.label;
+}
 
 // Gerçek vitrinler için seviye — tamamen otomatik, kimse manuel atamıyor
 // (bkz. fetchListings). Fiverr'ın seviye mantığından esinlenildi ama bu
@@ -1014,7 +1023,7 @@ function LevelBadge({ level, size = "sm" }) {
   const { t } = useLanguage();
   const meta = LEVEL_META[level] || LEVEL_META["new"];
   const isTop = level === "top-rated";
-  const label = LEVEL_META[level] && level !== "new" ? meta.label : t("common.levelNew");
+  const label = getLevelLabel(level, t);
   return (
     <span
       className={`inline-flex items-center gap-1 font-bold rounded-full ${size === "sm" ? "text-[10px] px-1.5 py-0.5" : "text-xs px-2.5 py-1"}`}
@@ -1864,7 +1873,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
                           className="absolute top-2 left-2 text-[10px] font-bold px-2 py-0.5 rounded-full text-white flex items-center gap-1"
                           style={{ background: "linear-gradient(135deg, #F59E0B 0%, #D97706 100%)" }}
                         >
-                          <Sparkles size={9} /> Öne Çıkan
+                          <Sparkles size={9} /> {t("searchResults.featuredBadge")}
                         </span>
                       )}
                     </button>
@@ -1879,7 +1888,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
                 izlenimi veriyordu (rakip site kıyaslamasında fark edildi).
                 Hero'da güven, satış sayfada (Planlar) yapılmalı. */}
             <p className="text-[11px] mt-4 text-center" style={{ color: "#6B7280" }}>
-              Şu an platformda gerçek, aktif vitrinler.
+              {t("home.activeListingsNote")}
             </p>
           </div>
         )}
@@ -1912,7 +1921,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
 
       {featured.length > 0 && (
         <section className="max-w-6xl mx-auto px-5 mt-8">
-          <h2 className="font-sans text-2xl font-black mb-4" style={{ color: "#0F1115" }}>Öne Çıkan Sağlayıcılar ⭐</h2>
+          <h2 className="font-sans text-2xl font-black mb-4" style={{ color: "#0F1115" }}>{t("home.featuredHeading")}</h2>
           {(() => {
             const p = featured[featuredIndex];
             return (
@@ -1927,7 +1936,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
                     className="absolute top-2 left-2 text-[11px] font-bold px-2 py-0.5 rounded-full text-white flex items-center gap-1"
                     style={{ background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)" }}
                   >
-                    <Award size={11} /> Top Rated
+                    <Award size={11} /> {getLevelLabel("top-rated", t)}
                   </span>
                 </div>
                 <div className="p-5 flex-1 flex flex-col justify-center min-h-[228px]">
@@ -1946,7 +1955,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
                     <div className="flex items-center gap-1.5">
                       <Stars value={p.rating} size={13} />
                       <span className="text-xs font-bold" style={{ color: "#0F1115" }}>{p.rating}</span>
-                      <span className="text-xs" style={{ color: "#9CA3AF" }}>({p.reviewCount} değerlendirme)</span>
+                      <span className="text-xs" style={{ color: "#9CA3AF" }}>{t("listingDetail.reviewCount", { count: p.reviewCount })}</span>
                     </div>
                     <span className="text-sm font-black" style={{ color: "#F59E0B" }}>{p.price}</span>
                   </div>
@@ -1979,18 +1988,18 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
           </div>
           {!listingsLoading && filtered.length > 0 && (
             <span className="text-xs font-bold px-3 py-1.5 rounded-full" style={{ background: "#EFF6FF", color: "#2563EB" }}>
-              {filtered.length} vitrin
+              {t("home.listingsCountBadge", { count: filtered.length })}
             </span>
           )}
         </div>
         {listingsLoading ? (
           <div className="flex items-center gap-2 py-16 justify-center">
             <Loader2 size={16} className="animate-spin" style={{ color: "#9CA3AF" }} />
-            <span className="text-sm" style={{ color: "#9CA3AF" }}>Vitrinler yükleniyor...</span>
+            <span className="text-sm" style={{ color: "#9CA3AF" }}>{t("home.listingsLoadingText")}</span>
           </div>
         ) : filtered.length === 0 ? (
           <div className="rounded-2xl p-8 text-center" style={{ border: "1px solid #F0F0F0", background: "#FAFAFA" }}>
-            <p className="text-sm" style={{ color: "#6B7280" }}>Bu filtreyle eşleşen bir vitrin bulunamadı.</p>
+            <p className="text-sm" style={{ color: "#6B7280" }}>{t("home.noListingsMatch")}</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
@@ -2009,10 +2018,10 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
                   <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
                     <ModeTag mode={l.mode} />
                     {l.isBoosted && (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white flex items-center gap-0.5" style={{ background: "#F59E0B" }}><Sparkles size={9} />Öne Çıkan</span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white flex items-center gap-0.5" style={{ background: "#F59E0B" }}><Sparkles size={9} />{t("searchResults.featuredBadge")}</span>
                     )}
                     {l.isReal && (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: "#2FBF71" }}>Yeni</span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: "#2FBF71" }}>{t("searchResults.newBadge")}</span>
                     )}
                   </div>
                   <button
@@ -2033,7 +2042,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
                   <p className="text-xs mt-1 truncate" style={{ color: "#9CA3AF" }}>{l.provider} · {l.city}</p>
                   <div className="flex items-center gap-1 mt-2">
                     <Stars value={l.rating} size={12} />
-                    <span className="text-xs" style={{ color: "#6B7280" }}>{l.reviewCount > 0 ? `(${l.reviewCount})` : "Yeni vitrin"}</span>
+                    <span className="text-xs" style={{ color: "#6B7280" }}>{l.reviewCount > 0 ? `(${l.reviewCount})` : t("searchResults.newListingLabel")}</span>
                   </div>
                 </div>
               </div>
@@ -2045,34 +2054,34 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
       <section className="max-w-6xl mx-auto px-5 mt-10">
         <div className="rounded-3xl p-7 relative overflow-hidden" style={{ background: "linear-gradient(135deg, #0F1115 0%, #1A1D23 60%, #16321F 100%)" }}>
           <div className="absolute -bottom-10 -right-10 w-52 h-52 rounded-full blur-3xl opacity-20" style={{ background: "#8B5CF6" }} />
-          <p className="text-xs tracking-[0.2em] uppercase font-bold mb-1.5 relative" style={{ color: "#2563EB" }}>Nasıl Çalışıyoruz</p>
-          <h2 className="font-sans text-2xl font-black mb-6 relative" style={{ color: "#FFFFFF" }}>Kontrol tamamen sende</h2>
+          <p className="text-xs tracking-[0.2em] uppercase font-bold mb-1.5 relative" style={{ color: "#2563EB" }}>{t("home.howItWorksEyebrow")}</p>
+          <h2 className="font-sans text-2xl font-black mb-6 relative" style={{ color: "#FFFFFF" }}>{t("home.howItWorksHeading")}</h2>
           <div className="grid sm:grid-cols-3 gap-5 relative">
             <div>
               <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-3" style={{ background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)" }}>
                 <Unlock size={17} className="text-white" />
               </div>
-              <p className="text-sm font-bold mb-1.5" style={{ color: "#FFFFFF" }}>Herkesi gör, sen seç</p>
+              <p className="text-sm font-bold mb-1.5" style={{ color: "#FFFFFF" }}>{t("home.step1Title")}</p>
               <p className="text-xs leading-relaxed" style={{ color: "#9CA3AF" }}>
-                Haritadaki <span className="font-semibold" style={{ color: "#E5E7EB" }}>tüm sağlayıcıları</span> özgürce keşfet, profillerini incele, istediğine doğrudan ulaş.
+                {t("home.step1BodyPre")}<span className="font-semibold" style={{ color: "#E5E7EB" }}>{t("home.step1BodyHighlight")}</span>{t("home.step1BodySuf")}
               </p>
             </div>
             <div>
               <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-3" style={{ background: "linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%)" }}>
                 <Megaphone size={17} className="text-white" />
               </div>
-              <p className="text-sm font-bold mb-1.5" style={{ color: "#FFFFFF" }}>Açık ilan panosu</p>
+              <p className="text-sm font-bold mb-1.5" style={{ color: "#FFFFFF" }}>{t("home.step2Title")}</p>
               <p className="text-xs leading-relaxed" style={{ color: "#9CA3AF" }}>
-                İlanını ver, ilgilenen herkes teklif versin. Gelen tüm teklifleri fiyata, puana ve zamana göre karşılaştırıp kararı sen ver.
+                {t("home.step2Body")}
               </p>
             </div>
             <div>
               <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-3" style={{ background: "linear-gradient(135deg, #F59E0B 0%, #D97706 100%)" }}>
                 <ShieldCheck size={17} className="text-white" />
               </div>
-              <p className="text-sm font-bold mb-1.5" style={{ color: "#FFFFFF" }}>Gerçek güven, görünür güven</p>
+              <p className="text-sm font-bold mb-1.5" style={{ color: "#FFFFFF" }}>{t("home.step3Title")}</p>
               <p className="text-xs leading-relaxed" style={{ color: "#9CA3AF" }}>
-                Video tanıtım, arka plan kontrolü detayı ve diğer ebeveynlerden referanslar — kimi eve aldığını gerçekten bilerek karar ver.
+                {t("home.step3Body")}
               </p>
             </div>
           </div>
@@ -2082,11 +2091,11 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
       <section className="max-w-6xl mx-auto px-5 mt-12">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="font-sans text-2xl font-black" style={{ color: "#0F1115" }}>Aranıyor 📢</h2>
-            <p className="text-xs mt-0.5" style={{ color: "#9CA3AF" }}>Başkalarının verdiği ilanlar — belki tam sana göre bir iş var</p>
+            <h2 className="font-sans text-2xl font-black" style={{ color: "#0F1115" }}>{t("home.jobsHeading")}</h2>
+            <p className="text-xs mt-0.5" style={{ color: "#9CA3AF" }}>{t("home.jobsSubtext")}</p>
           </div>
           <button onClick={() => onNav("post")} className="text-xs font-bold px-3.5 py-2 rounded-full shrink-0" style={{ background: "#F7F7F8", color: "#0F1115" }}>
-            Sen de ilan ver
+            {t("home.postJobCta")}
           </button>
         </div>
         <div className="relative -mx-5">
@@ -2126,7 +2135,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
                     {job.isReal && (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: "#2FBF71" }}>Yeni</span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: "#2FBF71" }}>{t("searchResults.newBadge")}</span>
                     )}
                     {job.isReal && (
                       <button
@@ -2145,14 +2154,14 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
                   <p className="text-xs mb-3 flex items-center gap-1" style={{ color: "#6B7280" }}><Clock size={11} />{job.schedule}</p>
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-base font-black" style={{ color: "#F59E0B" }}>{job.budget}</span>
-                    <span className="text-[11px] font-medium" style={{ color: "#9CA3AF" }}>{job.offerCount} teklif var</span>
+                    <span className="text-[11px] font-medium" style={{ color: "#9CA3AF" }}>{t("home.offerCountLabel", { count: job.offerCount })}</span>
                   </div>
                   <span
                     onClick={(e) => { e.stopPropagation(); onApplyJob(job); }}
                     className="w-full py-2 rounded-full text-xs font-bold text-white flex items-center justify-center"
                     style={{ background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)" }}
                   >
-                    Teklif Ver
+                    {t("jobDetail.applyButton")}
                   </span>
                 </div>
               </div>
@@ -2163,8 +2172,8 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
       </section>
 
       <section className="max-w-6xl mx-auto px-5 mt-12">
-        <h2 className="font-sans text-2xl font-black mb-1" style={{ color: "#0F1115" }}>Öne çıkan profiller</h2>
-        <p className="text-sm mb-5" style={{ color: "#6B7280" }}>Doğrulanmış sağlayıcıların gerçek uzmanlıkları</p>
+        <h2 className="font-sans text-2xl font-black mb-1" style={{ color: "#0F1115" }}>{t("home.topProfilesHeading")}</h2>
+        <p className="text-sm mb-5" style={{ color: "#6B7280" }}>{t("home.topProfilesSubtext")}</p>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[
             // Gerçek değerlendirme almış sağlayıcılar, sabit demo kartlardan
@@ -2229,8 +2238,8 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
           önden dayatılan bir kategori seçimi değil (kullanıcının kararı). */}
       <section className="max-w-6xl mx-auto px-5 mt-12 pb-16 space-y-9">
         <div>
-          <h2 className="font-sans text-2xl font-black mb-1" style={{ color: "#0F1115" }}>Aradığını bulamadın mı? 👀</h2>
-          <p className="text-sm" style={{ color: "#6B7280" }}>Kategorilere göz at, bir fikir versin</p>
+          <h2 className="font-sans text-2xl font-black mb-1" style={{ color: "#0F1115" }}>{t("home.notFoundHeading")}</h2>
+          <p className="text-sm" style={{ color: "#6B7280" }}>{t("home.notFoundSubtext")}</p>
         </div>
         {PARENT_CATEGORIES.filter((g) => g.id !== "profesyonel").map((group) => {
           const GroupIcon = group.icon;
@@ -2258,7 +2267,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
             className="text-xs font-bold flex items-center gap-1"
             style={{ color: "#1D4ED8" }}
           >
-            + Uzaktan hizmetleri de göster
+            {t("home.showRemoteToggle")}
           </button>
         ) : (
           (() => {
@@ -2270,13 +2279,13 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
                 <div className="flex items-center gap-2 mb-3">
                   <GroupIcon size={16} style={{ color: "#1D4ED8" }} />
                   <h3 className="text-sm font-bold tracking-wide" style={{ color: "#374151" }}>{getCategoryGroupName(group.id, t)}</h3>
-                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "#EFF6FF", color: "#3B82F6" }}>Uzaktan</span>
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "#EFF6FF", color: "#3B82F6" }}>{t("common.tagRemote")}</span>
                   <button
                     onClick={() => setShowRemote(false)}
                     className="text-[11px] font-bold ml-auto"
                     style={{ color: "#9CA3AF" }}
                   >
-                    Gizle
+                    {t("home.hideRemoteToggle")}
                   </button>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
@@ -4898,6 +4907,7 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
 }
 
 function AIMatchView({ job, onBack, onSelectListing, realListings }) {
+  const { t } = useLanguage();
   const [status, setStatus] = useState("loading"); // loading | done | error
   const [matches, setMatches] = useState([]);
   const [errorMsg, setErrorMsg] = useState("");
@@ -4926,7 +4936,7 @@ function AIMatchView({ job, onBack, onSelectListing, realListings }) {
     async function runMatch() {
       if (!job || candidates.length === 0) {
         setStatus("error");
-        setErrorMsg("Bu kategoride karşılaştırılacak yeterli sağlayıcı profili bulunamadı.");
+        setErrorMsg(t("aiMatch.errorNoCandidates"));
         return;
       }
       setStatus("loading");
@@ -4975,7 +4985,7 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
       } catch (err) {
         if (cancelled) return;
         setStatus("error");
-        setErrorMsg("Eşleştirme sırasında bir sorun oluştu. Tekrar deneyebilirsin.");
+        setErrorMsg(t("aiMatch.errorGeneric"));
       }
     }
 
@@ -4986,18 +4996,18 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
   return (
     <div className="max-w-2xl mx-auto px-5 py-8">
       <button onClick={onBack} className="flex items-center gap-1 text-sm mb-4" style={{ color: "#5C5744" }}>
-        <ChevronLeft size={16} /> Geri
+        <ChevronLeft size={16} /> {t("common.back")}
       </button>
       <div className="flex items-center gap-2 mb-1">
         <Sparkles size={20} style={{ color: "#2FBF71" }} />
-        <h1 className="font-serif text-2xl" style={{ color: "#1B2B24" }}>Yapay Zeka Eşleştirmesi</h1>
+        <h1 className="font-serif text-2xl" style={{ color: "#1B2B24" }}>{t("aiMatch.heading")}</h1>
       </div>
-      <p className="text-sm mb-6" style={{ color: "#5C5744" }}>"{job?.title}" ilanın, kategorideki gerçek profillerle canlı olarak karşılaştırılıyor.</p>
+      <p className="text-sm mb-6" style={{ color: "#5C5744" }}>{t("aiMatch.subheading", { title: job?.title })}</p>
 
       {status === "loading" && (
         <div className="rounded-xl border p-8 text-center" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
           <div className="w-8 h-8 mx-auto mb-3 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "#2FBF71", borderTopColor: "transparent" }} />
-          <p className="text-sm" style={{ color: "#5C5744" }}>İlanın analiz ediliyor, en uygun profiller belirleniyor...</p>
+          <p className="text-sm" style={{ color: "#5C5744" }}>{t("aiMatch.loadingText")}</p>
         </div>
       )}
 
@@ -5033,7 +5043,7 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
                     className="text-xs font-bold px-2.5 py-1 rounded-full"
                     style={{ background: "rgba(47,191,113,0.15)", color: "#2FBF71" }}
                   >
-                    %{m.matchScore} uyum
+                    {t("aiMatch.matchScoreLabel", { score: m.matchScore })}
                   </span>
                 </div>
                 <p className="text-xs leading-relaxed" style={{ color: "#5C5744" }}>{m.reason}</p>
@@ -5042,7 +5052,7 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
             );
           })}
           <p className="text-xs mt-2" style={{ color: "#8A8368" }}>
-            Bu eşleştirme gerçek zamanlı olarak Claude tarafından, ilanının içeriğine göre üretildi.
+            {t("aiMatch.disclaimer")}
           </p>
         </div>
       )}
@@ -6898,8 +6908,9 @@ const SUPPORT_CATEGORY_META = {
 };
 
 function SupportChatView({ onBack, onReport, currentUserId }) {
+  const { t } = useLanguage();
   const [messages, setMessages] = useState([
-    { sender: "ai", text: "Merhaba! Ben İşinn destek asistanıyım. Yaşadığın teknik sorunu, isteğini ya da şikayetini buraya yazabilirsin, sana yardımcı olmaya çalışırım." },
+    { sender: "ai", text: t("supportChat.greeting") },
   ]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
@@ -6932,9 +6943,9 @@ function SupportChatView({ onBack, onReport, currentUserId }) {
       });
       const data = await response.json();
       const text = (data.content || []).map((b) => b.text || "").join("\n");
-      setMessages((prev) => [...prev, { sender: "ai", text: text || "Üzgünüm, şu an yanıt veremiyorum, birazdan tekrar dener misin?" }]);
+      setMessages((prev) => [...prev, { sender: "ai", text: text || t("supportChat.aiFallbackNoResponse") }]);
     } catch (err) {
-      setMessages((prev) => [...prev, { sender: "ai", text: "Bağlantı sorunu oluştu, birazdan tekrar dener misin?" }]);
+      setMessages((prev) => [...prev, { sender: "ai", text: t("supportChat.aiFallbackConnectionError") }]);
     } finally {
       setSending(false);
     }
@@ -6967,10 +6978,10 @@ ${convoText}`;
           reporter_id: currentUserId, title: parsed.title, category: parsed.category, summary: parsed.summary, transcript: convoText,
         });
       }
-      onReport({ ...parsed, id: Date.now(), time: "az önce" });
+      onReport({ ...parsed, id: Date.now(), time: t("messages.justNow") });
       setReported(true);
     } catch (err) {
-      setReportError("Rapor oluşturulamadı, tekrar dener misin?");
+      setReportError(t("supportChat.reportError"));
     } finally {
       setSending(false);
     }
@@ -6979,15 +6990,15 @@ ${convoText}`;
   return (
     <div className="max-w-2xl mx-auto px-5 py-6 flex flex-col" style={{ height: "calc(100vh - 64px)" }}>
       <button onClick={onBack} className="flex items-center gap-1 text-sm mb-3 shrink-0" style={{ color: "#6B7280" }}>
-        <ChevronLeft size={16} /> Geri
+        <ChevronLeft size={16} /> {t("common.back")}
       </button>
       <div className="flex items-center gap-2.5 pb-3 border-b mb-3 shrink-0" style={{ borderColor: "#F0F0F0" }}>
         <div className="w-9 h-9 rounded-full flex items-center justify-center text-white" style={{ background: "linear-gradient(135deg, #2563EB, #1D4ED8)" }}>
           <Bot size={16} />
         </div>
         <div>
-          <p className="text-sm font-bold" style={{ color: "#0F1115" }}>Destek Asistanı</p>
-          <p className="text-[11px]" style={{ color: "#9CA3AF" }}>Yapay zeka destekli · yönetime raporlanabilir</p>
+          <p className="text-sm font-bold" style={{ color: "#0F1115" }}>{t("supportChat.headerTitle")}</p>
+          <p className="text-[11px]" style={{ color: "#9CA3AF" }}>{t("supportChat.headerSubtitle")}</p>
         </div>
       </div>
 
@@ -7007,7 +7018,7 @@ ${convoText}`;
         {sending && (
           <div className="flex justify-start">
             <div className="rounded-2xl px-3.5 py-2 text-xs flex items-center gap-1.5" style={{ background: "#F7F7F8", color: "#9CA3AF" }}>
-              <Loader2 size={12} className="animate-spin" /> yazıyor...
+              <Loader2 size={12} className="animate-spin" /> {t("messages.typingIndicator")}
             </div>
           </div>
         )}
@@ -7020,7 +7031,7 @@ ${convoText}`;
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") sendMessage(); }}
-              placeholder="Sorununu yaz..."
+              placeholder={t("supportChat.inputPlaceholder")}
               disabled={sending}
               className="flex-1 px-3.5 py-2.5 rounded-full border text-sm outline-none"
               style={{ borderColor: "#F0F0F0", background: "#F7F7F8", color: "#0F1115" }}
@@ -7036,7 +7047,7 @@ ${convoText}`;
               className="w-full mt-3 py-2.5 rounded-full text-xs font-bold flex items-center justify-center gap-1.5"
               style={{ background: "#FEF3C7", color: "#92400E" }}
             >
-              <AlertCircle size={13} /> Bu Sorunu Yönetime Bildir
+              <AlertCircle size={13} /> {t("supportChat.reportButton")}
             </button>
           )}
           {reportError && <p className="text-xs mt-2 text-center" style={{ color: "#EF4444" }}>{reportError}</p>}
@@ -7044,7 +7055,7 @@ ${convoText}`;
       ) : (
         <div className="mt-3 pt-3 border-t text-center" style={{ borderColor: "#F0F0F0" }}>
           <p className="text-xs font-medium flex items-center justify-center gap-1.5" style={{ color: "#059669" }}>
-            <Check size={13} /> Sorunun yönetime iletildi
+            <Check size={13} /> {t("supportChat.reportedConfirmation")}
           </p>
         </div>
       )}
