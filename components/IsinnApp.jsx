@@ -4362,6 +4362,7 @@ function FavoritesView({ onBack, onSelectListing, onOpenJob, realListings, realJ
 }
 
 function PostJobView({ onBack, onSubmitted, onViewOffers, onMatchAI, userId, onJobPosted, editingJob, onJobUpdated, onGoToProfile }) {
+  const { t } = useLanguage();
   // İlan verildikten sonra düzenleme yolu hiç yoktu (kullanıcının fark
   // ettiği gerçek bir eksiklik — "balkon temizliğinden bahsetmeyi unutmuş,
   // düzenleyemiyor" gibi bir durumda tek çare ilanı silip yeniden girmekti).
@@ -4420,7 +4421,7 @@ function PostJobView({ onBack, onSubmitted, onViewOffers, onMatchAI, userId, onJ
       if (cancelled) return;
       const jobCap = subRow?.subscription_plans?.max_active_jobs ?? 5;
       if ((count || 0) >= jobCap) {
-        setGateCheck({ checking: false, ok: false, reason: `Aynı anda en fazla ${jobCap} aktif ilanın olabilir. Yeni bir ilan açmak için önce Profilim → İlanlarım'dan eski bir tanesini pasife al.` });
+        setGateCheck({ checking: false, ok: false, reason: t("postJob.gateReasonCap", { cap: jobCap }) });
         return;
       }
       setGateCheck({ checking: false, ok: true, reason: "" });
@@ -4459,7 +4460,7 @@ function PostJobView({ onBack, onSubmitted, onViewOffers, onMatchAI, userId, onJ
   // CreateListingView'daki writeWithAI ile aynı desen — vitrin tarafında
   // vardı, iş ilanı tarafında hiç yoktu (tutarsızlık).
   const writeWithAI = async () => {
-    if (!categoryId) { setError("Önce bir kategori seç, AI ona göre yazsın."); return; }
+    if (!categoryId) { setError(t("common.errAiCategoryFirst")); return; }
     setAiWriting(true);
     setError("");
     try {
@@ -4479,22 +4480,22 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
       setTitle(parsed.title || title);
       setDesc(parsed.desc || desc);
     } catch (err) {
-      setError("AI şu an yazamadı, tekrar dener misin?");
+      setError(t("common.errAiFailed"));
     } finally {
       setAiWriting(false);
     }
   };
 
   const handleSubmit = async () => {
-    if (!title.trim()) { setError("Bir başlık yazmalısın."); return; }
-    if (!categoryId) { setError("Bir kategori seçmelisin."); return; }
-    if (categoryId === CUSTOM_CATEGORY_ID && !customCategoryLabel.trim()) { setError("Hangi hizmet olduğunu yazmalısın."); return; }
-    if (!desc.trim()) { setError("İşin ne olduğunu kısaca anlat."); return; }
-    if (!userId) { setError("İlan vermek için giriş yapmış olmalısın."); return; }
+    if (!title.trim()) { setError(t("postJob.errTitle")); return; }
+    if (!categoryId) { setError(t("common.errCategoryRequired")); return; }
+    if (categoryId === CUSTOM_CATEGORY_ID && !customCategoryLabel.trim()) { setError(t("common.errCustomCategoryRequired")); return; }
+    if (!desc.trim()) { setError(t("postJob.errDesc")); return; }
+    if (!userId) { setError(t("postJob.errAuthRequired")); return; }
     // "Diğer" seçilince gerçek FK hedefi hep "diger" kategorisi — kullanıcının
     // yazdığı serbest metin ayrı bir kolonda duruyor (bkz. custom_category_label).
     const categoryDbId = categoryId === CUSTOM_CATEGORY_ID ? categoryIdBySlug["diger"] : categoryIdBySlug[categoryId];
-    if (!categoryDbId) { setError("Bu kategori veritabanında henüz tanımlı değil."); return; }
+    if (!categoryDbId) { setError(t("postJob.errCategoryNotSeeded")); return; }
     setError("");
     setSubmitting(true);
     if (!isEditing) {
@@ -4527,7 +4528,7 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
 
     setSubmitting(false);
     if (dbError || !data) {
-      setError(`İlan kaydedilemedi: ${dbError?.message || "bilinmeyen bir hata oluştu"}`);
+      setError(t("postJob.errSaveFailed", { message: dbError?.message || t("common.errUnknown") }));
       return;
     }
     if (isEditing) {
@@ -4552,23 +4553,26 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
   };
 
   if (step === "success") {
-    const eta = urgency === "now" ? "10-15 dakika" : urgency === "today" ? "birkaç saat" : "1-2 gün";
+    const eta = urgency === "now" ? t("postJob.etaNow") : urgency === "today" ? t("postJob.etaToday") : t("postJob.etaFlexible");
+    const notifiedText = mode === "local"
+      ? t(nearbyCount > 0 ? "postJob.successNotifiedLocalCount" : "postJob.successNotifiedLocalGeneric", { category: selectedCategory?.name, city: cityName, count: nearbyCount })
+      : t(nearbyCount > 0 ? "postJob.successNotifiedRemoteCount" : "postJob.successNotifiedRemoteGeneric", { category: selectedCategory?.name, count: nearbyCount });
     return (
       <div className="max-w-md mx-auto px-5 py-24 text-center">
         <div className="w-14 h-14 rounded-full mx-auto mb-5 flex items-center justify-center" style={{ background: "rgba(63,125,92,0.12)" }}>
           <Send size={22} style={{ color: "#3F7D5C" }} />
         </div>
-        <h2 className="font-serif text-xl mb-2" style={{ color: "#1B2B24" }}>"{title}" ilanı yayında</h2>
+        <h2 className="font-serif text-xl mb-2" style={{ color: "#1B2B24" }}>{t("postJob.successTitle", { title })}</h2>
         <p className="text-sm mb-1" style={{ color: "#5C5744" }}>
-          {selectedCategory?.name} kategorisinde{mode === "local" ? ` ${cityName}'de` : ""} {nearbyCount > 0 ? `${nearbyCount} sağlayıcıya` : "uygun sağlayıcılara"} bildirim gönderildi.
+          {notifiedText}
         </p>
-        <p className="text-xs mb-6" style={{ color: "#8A8368" }}>İlk teklifin genelde {eta} içinde gelmesini bekleyebilirsin.</p>
+        <p className="text-xs mb-6" style={{ color: "#8A8368" }}>{t("postJob.etaHint", { eta })}</p>
         <button
           onClick={() => onMatchAI({ title, categoryId, desc, cityId, mode, urgency, homeServicePref })}
           className="w-full mb-3 py-3 rounded-full text-sm font-medium text-white flex items-center justify-center gap-2"
           style={{ background: "#2FBF71" }}
         >
-          <Sparkles size={15} /> Yapay Zeka ile En Uygun Kişileri Bul
+          <Sparkles size={15} /> {t("postJob.aiMatchButton")}
         </button>
         <div className="flex gap-2 justify-center">
           <button
@@ -4576,12 +4580,12 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
             className="px-5 py-2.5 rounded-full text-sm font-medium text-white"
             style={{ background: "#C2872B" }}
           >
-            Teklifleri Gör
+            {t("postJob.viewOffersButton")}
           </button>
-          <button onClick={onSubmitted} className="px-5 py-2.5 rounded-full text-sm font-medium border" style={{ borderColor: "#D9D0BA", color: "#1B2B24" }}>Ana Sayfaya Dön</button>
+          <button onClick={onSubmitted} className="px-5 py-2.5 rounded-full text-sm font-medium border" style={{ borderColor: "#D9D0BA", color: "#1B2B24" }}>{t("common.backToHome")}</button>
         </div>
         <p className="text-[11px] mt-4" style={{ color: "#8A8368" }}>
-          Not: İlanın gerçekten kaydedildi. "Teklifleri Gör" ekranındaki teklifler ise henüz örnek veri — sağlayıcıların gerçek teklif göndermesi ayrı bir özellik, istersen onu da ekleyebiliriz.
+          {t("postJob.noteOffersDemo")}
         </p>
       </div>
     );
@@ -4601,11 +4605,11 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
         <div className="w-14 h-14 rounded-full mx-auto mb-5 flex items-center justify-center" style={{ background: "rgba(194,135,43,0.15)" }}>
           <AlertCircle size={22} style={{ color: "#C2872B" }} />
         </div>
-        <h2 className="font-serif text-xl mb-2" style={{ color: "#1B2B24" }}>Önce profilini tamamla</h2>
+        <h2 className="font-serif text-xl mb-2" style={{ color: "#1B2B24" }}>{t("common.completeProfileFirst")}</h2>
         <p className="text-sm mb-6" style={{ color: "#5C5744" }}>{gateCheck.reason}</p>
         <div className="flex gap-2 justify-center">
-          <button onClick={onGoToProfile || onBack} className="px-5 py-2.5 rounded-full text-sm font-medium text-white" style={{ background: "#2563EB" }}>Profilime Git</button>
-          <button onClick={onBack} className="px-5 py-2.5 rounded-full text-sm font-medium border" style={{ borderColor: "#D9D0BA", color: "#1B2B24" }}>Vazgeç</button>
+          <button onClick={onGoToProfile || onBack} className="px-5 py-2.5 rounded-full text-sm font-medium text-white" style={{ background: "#2563EB" }}>{t("common.goToProfile")}</button>
+          <button onClick={onBack} className="px-5 py-2.5 rounded-full text-sm font-medium border" style={{ borderColor: "#D9D0BA", color: "#1B2B24" }}>{t("common.cancel")}</button>
         </div>
       </div>
     );
@@ -4614,13 +4618,13 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
   return (
     <div className="max-w-xl mx-auto px-5 py-10">
       <button onClick={onBack} className="flex items-center gap-1 text-sm mb-5" style={{ color: "#5C5744" }}>
-        <ChevronLeft size={16} /> Geri
+        <ChevronLeft size={16} /> {t("common.back")}
       </button>
-      <h1 className="font-serif text-2xl mb-1" style={{ color: "#1B2B24" }}>{isEditing ? "İlanı Düzenle" : "İş İlanı Ver"}</h1>
-      <p className="text-sm mb-6" style={{ color: "#5C5744" }}>{isEditing ? "İlanında eksik/yanlış bir şey mi vardı? Düzelt, kaydet." : "İhtiyacını anlat, uygun kişiler sana anlık teklif göndersin."}</p>
+      <h1 className="font-serif text-2xl mb-1" style={{ color: "#1B2B24" }}>{isEditing ? t("postJob.editTitle") : t("postJob.createTitle")}</h1>
+      <p className="text-sm mb-6" style={{ color: "#5C5744" }}>{isEditing ? t("postJob.editSubtitle") : t("postJob.createSubtitle")}</p>
 
       <div className="flex gap-2 mb-6">
-        {[["local", "Yerinde iş"], ["remote", "Uzaktan iş"]].map(([key, label]) => (
+        {[["local", t("postJob.modeLocal")], ["remote", t("postJob.modeRemote")]].map(([key, label]) => (
           <button
             key={key}
             onClick={() => { setMode(key); setCategoryId(""); }}
@@ -4634,14 +4638,14 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
 
       <div className="space-y-4">
         <div>
-          <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>Kategori</label>
+          <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("common.categoryLabel")}</label>
           <select
             value={categoryId}
             onChange={(e) => setCategoryId(e.target.value)}
             className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
             style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
           >
-            <option value="">Kategori seç...</option>
+            <option value="">{t("common.categorySelectPlaceholder")}</option>
             {PARENT_CATEGORIES.map((group) => {
               const opts = availableCategories.filter((c) => group.categoryIds.includes(c.id));
               if (opts.length === 0) return null;
@@ -4652,13 +4656,13 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
               );
             })}
             {/* Listede aradığını bulamayan için — bkz. CUSTOM_CATEGORY_ID notu. */}
-            <option value={CUSTOM_CATEGORY_ID}>Diğer (belirtiniz)</option>
+            <option value={CUSTOM_CATEGORY_ID}>{t("common.categoryOther")}</option>
           </select>
           {categoryId && categoryId !== CUSTOM_CATEGORY_ID && (
             <p className="text-xs mt-1.5" style={{ color: "#3F7D5C" }}>
               {mode === "local"
-                ? `${cityName}'de bu kategoride ${nearbyCount} kayıtlı sağlayıcı var`
-                : `Bu kategoride ${nearbyCount > 0 ? nearbyCount : "çok sayıda"} uzaktan çalışan sağlayıcı var`}
+                ? t("postJob.nearbyLocal", { city: cityName, count: nearbyCount })
+                : t("postJob.nearbyRemote", { count: nearbyCount > 0 ? nearbyCount : t("postJob.manyLabel") })}
             </p>
           )}
           {categoryId === CUSTOM_CATEGORY_ID && (
@@ -4666,12 +4670,12 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
               <input
                 value={customCategoryLabel}
                 onChange={(e) => setCustomCategoryLabel(e.target.value)}
-                placeholder="Hangi hizmet? Örn. Halı saha kurulumu"
+                placeholder={t("postJob.customCategoryPlaceholder")}
                 className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
                 style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
               />
               <p className="text-xs mt-1.5" style={{ color: "#8A8368" }}>
-                Bu kategori henüz listede yok — ilanın "Diğer" altında yayınlanır ve ekibimize bir kategori talebi olarak iletilir.
+                {t("postJob.customCategoryNote")}
               </p>
             </div>
           )}
@@ -4679,7 +4683,7 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
 
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <label className="text-xs font-medium" style={{ color: "#5C5744" }}>Başlık</label>
+            <label className="text-xs font-medium" style={{ color: "#5C5744" }}>{t("postJob.titleLabel")}</label>
             <button
               onClick={writeWithAI}
               disabled={aiWriting}
@@ -4687,22 +4691,22 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
               style={{ background: "#EFF6FF", color: "#2563EB" }}
             >
               {aiWriting ? <Loader2 size={11} className="animate-spin" /> : <Sparkles size={11} />}
-              {aiWriting ? "Yazıyor..." : "AI ile Yaz"}
+              {aiWriting ? t("common.aiWriting") : t("common.aiWrite")}
             </button>
           </div>
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Örn. 2+1 daire boyama işi"
+            placeholder={t("postJob.titlePlaceholder")}
             className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
             style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
           />
         </div>
 
         <div>
-          <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>Ne zaman ihtiyacın var?</label>
+          <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("postJob.urgencyLabel")}</label>
           <div className="flex gap-2">
-            {[["now", "Hemen / Acil"], ["today", "Bugün"], ["flexible", "Esnek"]].map(([key, label]) => (
+            {[["now", t("postJob.urgencyNow")], ["today", t("postJob.urgencyToday")], ["flexible", t("postJob.urgencyFlexible")]].map(([key, label]) => (
               <button
                 key={key}
                 onClick={() => setUrgency(key)}
@@ -4720,9 +4724,9 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
 
         {mode === "local" && (
           <div>
-            <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>Nerede yapılsın?</label>
+            <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("postJob.whereLabel")}</label>
             <div className="flex gap-2">
-              {[["evde", "Evime gelsin"], ["mekanda", "Mekana giderim"], ["esnek", "Fark etmez"]].map(([key, label]) => (
+              {[["evde", t("postJob.whereHome")], ["mekanda", t("postJob.whereVenue")], ["esnek", t("postJob.whereEither")]].map(([key, label]) => (
                 <button
                   key={key}
                   onClick={() => setHomeServicePref(key)}
@@ -4737,25 +4741,25 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
               ))}
             </div>
             <p className="text-[11px] mt-1.5" style={{ color: "#8A8368" }}>
-              "Evime gelsin" seçersen, sadece evde hizmet veren sağlayıcılardan teklif gelir.
+              {t("postJob.whereHint")}
             </p>
           </div>
         )}
 
         <div>
-          <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>Açıklama</label>
+          <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("postJob.descLabel")}</label>
           <textarea
             value={desc}
             onChange={(e) => setDesc(e.target.value)}
             rows={4}
-            placeholder="İşin detaylarını yaz..."
+            placeholder={t("postJob.descPlaceholder")}
             className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none resize-none"
             style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
           />
         </div>
 
         <div>
-          <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>Fotoğraf ekle (opsiyonel, en fazla 3)</label>
+          <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("postJob.photosLabel")}</label>
           <div className="flex gap-2 flex-wrap">
             {photos.map((p, i) => (
               <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden">
@@ -4774,7 +4778,7 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
                 style={{ borderColor: "#D9D0BA", color: "#8A8368" }}
               >
                 <span className="text-lg leading-none">+</span>
-                <span className="text-[9px]">Ekle</span>
+                <span className="text-[9px]">{t("postJob.photosAdd")}</span>
                 <input type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoAdd} />
               </label>
             )}
@@ -4784,15 +4788,15 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
         {mode === "local" && (
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>Şehir</label>
+              <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("common.cityLabel")}</label>
               <select
                 value={cityId}
                 onChange={(e) => setCityId(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
                 style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
               >
-                {["Türkiye", "Hindistan", "Avrupa", "Kuzey Amerika", "Orta Doğu", "Asya-Pasifik"].map((region) => (
-                  <optgroup key={region} label={region}>
+                {[["Türkiye", "turkey"], ["Hindistan", "india"], ["Avrupa", "europe"], ["Kuzey Amerika", "northAmerica"], ["Orta Doğu", "middleEast"], ["Asya-Pasifik", "asiaPacific"]].map(([region, regionKey]) => (
+                  <optgroup key={region} label={t(`common.regions.${regionKey}`)}>
                     {CITIES.filter((c) => c.region === region).map((c) => (
                       <option key={c.id} value={c.id}>{c.name}</option>
                     ))}
@@ -4801,11 +4805,11 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
               </select>
             </div>
             <div>
-              <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>Semt / Bölge</label>
+              <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("common.districtLabel")}</label>
               <input
                 value={district}
                 onChange={(e) => setDistrict(e.target.value)}
-                placeholder="Örn. Kadıköy"
+                placeholder={t("common.districtPlaceholder")}
                 className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
                 style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
               />
@@ -4815,7 +4819,7 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>Min. Bütçe</label>
+            <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("postJob.minBudgetLabel")}</label>
             <input
               value={minBudget}
               onChange={(e) => setMinBudget(e.target.value)}
@@ -4826,7 +4830,7 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
             />
           </div>
           <div>
-            <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>Max. Bütçe</label>
+            <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("postJob.maxBudgetLabel")}</label>
             <input
               value={maxBudget}
               onChange={(e) => setMaxBudget(e.target.value)}
@@ -4849,7 +4853,7 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
           style={{ background: "#C2872B", opacity: submitting ? 0.7 : 1 }}
         >
           {submitting && <Loader2 size={14} className="animate-spin" />}
-          {submitting ? (isEditing ? "Kaydediliyor..." : "Yayınlanıyor...") : (isEditing ? "Değişiklikleri Kaydet" : "İlanı Yayınla")}
+          {submitting ? (isEditing ? t("common.savingEllipsis") : t("common.publishingEllipsis")) : (isEditing ? t("common.saveChanges") : t("postJob.submitPublishJob"))}
         </button>
       </div>
     </div>
@@ -5749,6 +5753,7 @@ const PRO_PACKAGE = {
 };
 
 function CreateListingView({ onBack, onCreated, userId, editingListing, onGoToProfile, onManageMedia }) {
+  const { t } = useLanguage();
   const isEditing = !!editingListing;
   const [mode, setMode] = useState(editingListing?.mode || "local");
   const [providerName, setProviderName] = useState(editingListing?.provider || "");
@@ -5825,13 +5830,13 @@ function CreateListingView({ onBack, onCreated, userId, editingListing, onGoToPr
         supabase.from("portfolio_items").select("*").eq("service_id", activeServiceId).order("created_at", { ascending: true }),
       ]);
       if (cancelled) return;
-      if (serviceRow?.video_intro_url) setVideoIntro({ url: serviceRow.video_intro_url, name: serviceRow.video_intro_name || "Tanıtım Videosu" });
+      if (serviceRow?.video_intro_url) setVideoIntro({ url: serviceRow.video_intro_url, name: serviceRow.video_intro_name || t("createListing.videoLabel") });
       const docRows = docs || [];
       const certs = docRows.filter((d) => d.doc_type === "certificate");
       const cvDoc = docRows.find((d) => d.doc_type === "cv");
       const certsWithUrls = await Promise.all(certs.map(async (d) => {
         const { data: signed } = await supabase.storage.from("provider-documents").createSignedUrl(d.file_url, 3600);
-        return { id: d.id, name: d.file_name || d.label || "Belge", url: signed?.signedUrl || "", isPdf: (d.file_name || "").toLowerCase().endsWith(".pdf") };
+        return { id: d.id, name: d.file_name || d.label || t("createListing.docFallbackName"), url: signed?.signedUrl || "", isPdf: (d.file_name || "").toLowerCase().endsWith(".pdf") };
       }));
       if (cancelled) return;
       if (certsWithUrls.length > 0) { setCertificates(certsWithUrls); setCertConfirmed(true); }
@@ -5868,7 +5873,7 @@ function CreateListingView({ onBack, onCreated, userId, editingListing, onGoToPr
       if (error) throw error;
       setVideoIntro({ url: publicUrl, name: file.name });
     } catch (err) {
-      setVideoError(`Yüklenemedi: ${err.message}`);
+      setVideoError(t("createListing.mediaUploadFailed", { message: err.message }));
     } finally {
       setVideoUploading(false);
     }
@@ -5894,7 +5899,7 @@ function CreateListingView({ onBack, onCreated, userId, editingListing, onGoToPr
         setPortfolio((prev) => [...prev, { id: row.id, type, url: publicUrl, name: file.name }].slice(0, 9));
       }
     } catch (err) {
-      setPortfolioError(`Yüklenemedi: ${err.message}`);
+      setPortfolioError(t("createListing.mediaUploadFailed", { message: err.message }));
     } finally {
       setPortfolioUploading(false);
     }
@@ -5923,7 +5928,7 @@ function CreateListingView({ onBack, onCreated, userId, editingListing, onGoToPr
         setCertificates((prev) => [...prev, { id: docRow.id, name: file.name, url: signed?.signedUrl || "", isPdf: file.type === "application/pdf" }].slice(0, 5));
       }
     } catch (err) {
-      setCertError(`Yüklenemedi: ${err.message}`);
+      setCertError(t("createListing.mediaUploadFailed", { message: err.message }));
     } finally {
       setCertUploading(false);
     }
@@ -5950,7 +5955,7 @@ function CreateListingView({ onBack, onCreated, userId, editingListing, onGoToPr
       if (insErr) throw insErr;
       setCv({ id: docRow.id, path, name: file.name, url: signed?.signedUrl || "" });
     } catch (err) {
-      setCvError(`Yüklenemedi: ${err.message}`);
+      setCvError(t("createListing.mediaUploadFailed", { message: err.message }));
     } finally {
       setCvUploading(false);
     }
@@ -6023,10 +6028,10 @@ function CreateListingView({ onBack, onCreated, userId, editingListing, onGoToPr
         body: JSON.stringify(body),
       });
       const data = await res.json();
-      if (!data.ok) throw new Error(data.message || "Ödeme başlatılamadı.");
+      if (!data.ok) throw new Error(data.message || t("createListing.errPaymentFailed"));
       setPaytrToken(data.token);
     } catch (err) {
-      setError(err?.message || "Ödeme başlatılamadı.");
+      setError(err?.message || t("createListing.errPaymentFailed"));
     } finally {
       setUpgrading(false);
     }
@@ -6062,7 +6067,7 @@ function CreateListingView({ onBack, onCreated, userId, editingListing, onGoToPr
   }, [editingListing]);
 
   const writeWithAI = async () => {
-    if (!categoryId) { setError("Önce bir kategori seç, AI ona göre yazsın."); return; }
+    if (!categoryId) { setError(t("common.errAiCategoryFirst")); return; }
     setAiWriting(true);
     setError("");
     try {
@@ -6085,7 +6090,7 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
       setTitle(parsed.title || title);
       setDesc(parsed.desc || desc);
     } catch (err) {
-      setError("AI şu an yazamadı, tekrar dener misin?");
+      setError(t("common.errAiFailed"));
     } finally {
       setAiWriting(false);
     }
@@ -6114,7 +6119,7 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
       setModeration({ status: data.approved ? "approved" : "flagged", reason: data.reason });
     } catch (err) {
       // Fail-safe: eğer otomatik kontrol başarısız olursa, ONAYLAMA — incelemeye al.
-      setModeration({ status: "flagged", reason: "Otomatik kontrol başarısız oldu, manuel incelemeye alındı." });
+      setModeration({ status: "flagged", reason: t("createListing.moderationFailSafe") });
     }
   };
 
@@ -6170,28 +6175,28 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
       // sunucu tarafı kontrolü tetikliyoruz (bkz. checkPhotoContent notu).
       checkPhotoContent(data.publicUrl, file.type);
     } catch (err) {
-      setPhotoError(`Fotoğraf yüklenemedi: ${err.message}`);
+      setPhotoError(t("createListing.errPhotoUploadFailed", { message: err.message }));
     } finally {
       setPhotoUploading(false);
     }
   };
 
   const handleSubmit = async () => {
-    if (!providerName.trim()) { setError("Görünecek isim/işletme adını yaz."); return; }
-    if (!categoryId) { setError("Bir kategori seçmelisin."); return; }
-    if (categoryId === CUSTOM_CATEGORY_ID && !customCategoryLabel.trim()) { setError("Hangi hizmet olduğunu yazmalısın."); return; }
-    if (!title.trim()) { setError("Vitrin başlığı yazmalısın."); return; }
-    if (!desc.trim()) { setError("Sunduğun hizmeti kısaca anlat."); return; }
-    if (!price.trim()) { setError("Bir fiyat belirtmelisin."); return; }
-    if (!photo?.url) { setError("Bir kapak fotoğrafı yüklemelisin — vitrinsiz vitrin olmaz."); return; }
-    if (moderation?.status === "checking") { setError("Fotoğraf içerik kontrolü bitene kadar bekle."); return; }
-    if (moderation?.status === "flagged") { setError("Kapak fotoğrafın incelemeye alındı, vitrini yayınlamadan önce fotoğrafı kaldır ya da değiştir."); return; }
-    if (!userId) { setError("Vitrin yayınlamak için giriş yapmış olmalısın."); return; }
+    if (!providerName.trim()) { setError(t("createListing.errDisplayName")); return; }
+    if (!categoryId) { setError(t("common.errCategoryRequired")); return; }
+    if (categoryId === CUSTOM_CATEGORY_ID && !customCategoryLabel.trim()) { setError(t("common.errCustomCategoryRequired")); return; }
+    if (!title.trim()) { setError(t("createListing.errTitle")); return; }
+    if (!desc.trim()) { setError(t("createListing.errDesc")); return; }
+    if (!price.trim()) { setError(t("createListing.errPrice")); return; }
+    if (!photo?.url) { setError(t("createListing.errPhoto")); return; }
+    if (moderation?.status === "checking") { setError(t("createListing.errModerationChecking")); return; }
+    if (moderation?.status === "flagged") { setError(t("createListing.errModerationFlagged")); return; }
+    if (!userId) { setError(t("createListing.errAuthRequired")); return; }
     // "Diğer" seçilince gerçek FK hedefi hep "diger" kategorisi — kullanıcının
     // yazdığı serbest metin ayrı bir kolonda duruyor (bkz. custom_category_label).
     const categoryDbId = categoryId === CUSTOM_CATEGORY_ID ? categoryIdBySlug["diger"] : categoryIdBySlug[categoryId];
     if (!categoryDbId) {
-      setError("Bu kategori veritabanında henüz tanımlı değil (supabase/categories_seed.sql çalıştırıldı mı?).");
+      setError(t("createListing.errCategoryNotSeeded"));
       return;
     }
     setError("");
@@ -6245,7 +6250,7 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
 
     if (dbError || !data) {
       setSubmitting(false);
-      setError(`Vitrin kaydedilemedi: ${dbError?.message || "bilinmeyen bir hata oluştu"}`);
+      setError(t("createListing.errSaveFailed", { message: dbError?.message || t("common.errUnknown") }));
       return;
     }
 
@@ -6283,18 +6288,18 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
   // durumda olduğumuzu zaten ayırt ediyor, JSX'i tekrar yazmaya gerek yok.
   const mediaUploadSection = (
     <div className="text-left rounded-2xl border p-5 mb-6" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
-      <p className="text-sm font-bold mb-4 text-center" style={{ color: "#1B2B24" }}>Vitrinini güçlendir (opsiyonel)</p>
+      <p className="text-sm font-bold mb-4 text-center" style={{ color: "#1B2B24" }}>{t("createListing.mediaHeading")}</p>
 
       {existingMediaLoading ? (
         <div className="flex items-center justify-center gap-2 py-6">
           <Loader2 size={14} className="animate-spin" style={{ color: "#8A8368" }} />
-          <span className="text-xs" style={{ color: "#8A8368" }}>Yükleniyor...</span>
+          <span className="text-xs" style={{ color: "#8A8368" }}>{t("common.loading")}</span>
         </div>
       ) : (
         <>
           {/* Tanıtım videosu */}
           <div className="mb-4 pb-4 border-b" style={{ borderColor: "#EAE3CE" }}>
-            <p className="text-xs font-bold mb-2" style={{ color: "#5C5744" }}>Tanıtım Videosu</p>
+            <p className="text-xs font-bold mb-2" style={{ color: "#5C5744" }}>{t("createListing.videoLabel")}</p>
             {videoIntro ? (
               <div className="flex items-center justify-between text-xs rounded-lg px-3 py-2" style={{ background: "#FFFFFF", border: "1px solid #EAE3CE" }}>
                 <span className="truncate" style={{ color: "#1B2B24" }}>{videoIntro.name}</span>
@@ -6302,7 +6307,7 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
               </div>
             ) : (
               <label className="flex items-center justify-center gap-2 text-xs font-semibold px-4 py-2.5 rounded-full cursor-pointer" style={{ background: "#FFFFFF", border: "1px solid #D9D0BA", color: "#1B2B24" }}>
-                {videoUploading ? <Loader2 size={14} className="animate-spin" /> : <UploadCloud size={14} />} Video Ekle
+                {videoUploading ? <Loader2 size={14} className="animate-spin" /> : <UploadCloud size={14} />} {t("createListing.videoAdd")}
                 <input type="file" accept="video/*" className="hidden" onChange={handleVideoAdd} disabled={videoUploading} />
               </label>
             )}
@@ -6311,7 +6316,7 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
 
           {/* İş başında portföy */}
           <div className="mb-4 pb-4 border-b" style={{ borderColor: "#EAE3CE" }}>
-            <p className="text-xs font-bold mb-2" style={{ color: "#5C5744" }}>İş Başında Fotoğraf/Video ({portfolio.length}/9)</p>
+            <p className="text-xs font-bold mb-2" style={{ color: "#5C5744" }}>{t("createListing.portfolioLabel", { count: portfolio.length, max: 9 })}</p>
             {portfolio.length > 0 && (
               <div className="grid grid-cols-3 gap-2 mb-2">
                 {portfolio.map((p, i) => (
@@ -6338,7 +6343,7 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
             )}
             {portfolio.length < 9 && (
               <label className="flex items-center justify-center gap-2 text-xs font-semibold px-4 py-2.5 rounded-full cursor-pointer" style={{ background: "#FFFFFF", border: "1px solid #D9D0BA", color: "#1B2B24" }}>
-                {portfolioUploading ? <Loader2 size={14} className="animate-spin" /> : <UploadCloud size={14} />} Fotoğraf/Video Ekle
+                {portfolioUploading ? <Loader2 size={14} className="animate-spin" /> : <UploadCloud size={14} />} {t("createListing.portfolioAdd")}
                 <input type="file" accept="image/*,video/*" multiple className="hidden" onChange={(e) => { setPortfolioConfirmed(false); handlePortfolioAdd(e); }} disabled={portfolioUploading} />
               </label>
             )}
@@ -6346,7 +6351,7 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
             {portfolio.length > 0 && (
               portfolioConfirmed ? (
                 <p className="flex items-center gap-1.5 text-xs font-bold mt-2" style={{ color: "#2FBF71" }}>
-                  <Check size={14} /> Kaydedildi — {portfolio.length} fotoğraf/video vitrininde görünüyor.
+                  <Check size={14} /> {t("createListing.portfolioSaved", { count: portfolio.length })}
                 </p>
               ) : (
                 <button
@@ -6355,7 +6360,7 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
                   className="w-full mt-2 text-xs font-bold px-4 py-2.5 rounded-full text-white"
                   style={{ background: "#2FBF71" }}
                 >
-                  Kaydet
+                  {t("common.save")}
                 </button>
               )
             )}
@@ -6363,7 +6368,7 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
 
           {/* Sertifika */}
           <div className="mb-4 pb-4 border-b" style={{ borderColor: "#EAE3CE" }}>
-            <p className="text-xs font-bold mb-2" style={{ color: "#5C5744" }}>Sertifika/Belge ({certificates.length}/5)</p>
+            <p className="text-xs font-bold mb-2" style={{ color: "#5C5744" }}>{t("createListing.certLabel", { count: certificates.length, max: 5 })}</p>
             {certificates.length > 0 && (
               <div className="flex flex-col gap-1.5 mb-2">
                 {certificates.map((c) => (
@@ -6376,7 +6381,7 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
             )}
             {certificates.length < 5 && (
               <label className="flex items-center justify-center gap-2 text-xs font-semibold px-4 py-2.5 rounded-full cursor-pointer" style={{ background: "#FFFFFF", border: "1px solid #D9D0BA", color: "#1B2B24" }}>
-                {certUploading ? <Loader2 size={14} className="animate-spin" /> : <UploadCloud size={14} />} Sertifika Ekle
+                {certUploading ? <Loader2 size={14} className="animate-spin" /> : <UploadCloud size={14} />} {t("createListing.certAdd")}
                 <input type="file" accept="image/*,.pdf" multiple className="hidden" onChange={(e) => { setCertConfirmed(false); handleCertAdd(e); }} disabled={certUploading} />
               </label>
             )}
@@ -6384,7 +6389,7 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
             {certificates.length > 0 && (
               certConfirmed ? (
                 <p className="flex items-center gap-1.5 text-xs font-bold mt-2" style={{ color: "#2FBF71" }}>
-                  <Check size={14} /> Kaydedildi — {certificates.length} belge vitrininde görünüyor.
+                  <Check size={14} /> {t("createListing.certSaved", { count: certificates.length })}
                 </p>
               ) : (
                 <button
@@ -6393,7 +6398,7 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
                   className="w-full mt-2 text-xs font-bold px-4 py-2.5 rounded-full text-white"
                   style={{ background: "#2FBF71" }}
                 >
-                  Kaydet
+                  {t("common.save")}
                 </button>
               )
             )}
@@ -6401,7 +6406,7 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
 
           {/* CV */}
           <div>
-            <p className="text-xs font-bold mb-2" style={{ color: "#5C5744" }}>CV</p>
+            <p className="text-xs font-bold mb-2" style={{ color: "#5C5744" }}>{t("createListing.cvLabel")}</p>
             {cv ? (
               <div className="flex items-center gap-2 text-xs rounded-lg px-3 py-2" style={{ background: "#FFFFFF", border: "1px solid #EAE3CE" }}>
                 <FileText size={13} style={{ color: "#8A8368" }} />
@@ -6410,7 +6415,7 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
               </div>
             ) : (
               <label className="flex items-center justify-center gap-2 text-xs font-semibold px-4 py-2.5 rounded-full cursor-pointer" style={{ background: "#FFFFFF", border: "1px solid #D9D0BA", color: "#1B2B24" }}>
-                {cvUploading ? <Loader2 size={14} className="animate-spin" /> : <UploadCloud size={14} />} CV Ekle
+                {cvUploading ? <Loader2 size={14} className="animate-spin" /> : <UploadCloud size={14} />} {t("createListing.cvAdd")}
                 <input type="file" accept=".pdf,.doc,.docx" className="hidden" onChange={handleCvAdd} disabled={cvUploading} />
               </label>
             )}
@@ -6427,25 +6432,25 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
         <div className="w-14 h-14 rounded-full mx-auto mb-5 flex items-center justify-center" style={{ background: "rgba(47,191,113,0.15)" }}>
           <Check size={22} style={{ color: "#2FBF71" }} />
         </div>
-        <h2 className="font-serif text-xl mb-2" style={{ color: "#1B2B24" }}>{isEditing ? "Vitrinin güncellendi ✓" : "Vitrinin yayında! 🎉"}</h2>
+        <h2 className="font-serif text-xl mb-2" style={{ color: "#1B2B24" }}>{isEditing ? t("createListing.successTitleEdit") : t("createListing.successTitleCreate")}</h2>
         <p className="text-sm mb-6" style={{ color: "#5C5744" }}>
-          {isEditing ? `"${created?.title}" değişiklikleri kaydedildi.` : `"${created?.title}" artık ana sayfada ve aramada görünüyor.`}
+          {isEditing ? t("createListing.successBodyEdit", { title: created?.title }) : t("createListing.successBodyCreate", { title: created?.title })}
         </p>
 
         {!isEditing && recLoading && (
           <div className="rounded-2xl border p-4 mb-6 text-xs flex items-center justify-center gap-2" style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#8A8368" }}>
-            <Loader2 size={13} className="animate-spin" /> Senin için kişisel bir öneri hazırlanıyor...
+            <Loader2 size={13} className="animate-spin" /> {t("createListing.recLoading")}
           </div>
         )}
         {recommendation && (
           <div className="rounded-2xl border-2 p-5 mb-6 text-left" style={{ borderColor: "#2563EB", background: "#EFF6FF" }}>
             <div className="flex items-center gap-1.5 mb-2">
               <Sparkles size={13} style={{ color: "#2563EB" }} />
-              <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: "#2563EB" }}>Senin İçin Önerimiz</span>
+              <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: "#2563EB" }}>{t("createListing.recHeading")}</span>
             </div>
             <p className="text-sm font-bold mb-1.5" style={{ color: "#0F1115" }}>{recommendation.product}</p>
             <p className="text-xs leading-relaxed" style={{ color: "#4B5563" }}>{recommendation.pitch}</p>
-            <button className="mt-3 text-xs font-bold px-3.5 py-2 rounded-full text-white" style={{ background: "#2563EB" }}>İncele</button>
+            <button className="mt-3 text-xs font-bold px-3.5 py-2 rounded-full text-white" style={{ background: "#2563EB" }}>{t("createListing.recButton")}</button>
           </div>
         )}
 
@@ -6456,7 +6461,7 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
         {mediaUploadSection}
 
         <div className="flex gap-2 justify-center">
-          <button onClick={onBack} className="px-5 py-2.5 rounded-full text-sm font-medium text-white" style={{ background: "#C2872B" }}>Ana Sayfaya Dön</button>
+          <button onClick={onBack} className="px-5 py-2.5 rounded-full text-sm font-medium text-white" style={{ background: "#C2872B" }}>{t("common.backToHome")}</button>
         </div>
       </div>
     );
@@ -6476,38 +6481,39 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
         <div className="w-14 h-14 rounded-full mx-auto mb-5 flex items-center justify-center" style={{ background: "rgba(194,135,43,0.15)" }}>
           <AlertCircle size={22} style={{ color: "#C2872B" }} />
         </div>
-        <h2 className="font-serif text-xl mb-2" style={{ color: "#1B2B24" }}>Önce profilini tamamla</h2>
+        <h2 className="font-serif text-xl mb-2" style={{ color: "#1B2B24" }}>{t("common.completeProfileFirst")}</h2>
         <p className="text-sm mb-6" style={{ color: "#5C5744" }}>{gateCheck.reason}</p>
         <div className="flex gap-2 justify-center">
-          <button onClick={onGoToProfile || onBack} className="px-5 py-2.5 rounded-full text-sm font-medium text-white" style={{ background: "#2563EB" }}>Profilime Git</button>
-          <button onClick={onBack} className="px-5 py-2.5 rounded-full text-sm font-medium border" style={{ borderColor: "#D9D0BA", color: "#1B2B24" }}>Vazgeç</button>
+          <button onClick={onGoToProfile || onBack} className="px-5 py-2.5 rounded-full text-sm font-medium text-white" style={{ background: "#2563EB" }}>{t("common.goToProfile")}</button>
+          <button onClick={onBack} className="px-5 py-2.5 rounded-full text-sm font-medium border" style={{ borderColor: "#D9D0BA", color: "#1B2B24" }}>{t("common.cancel")}</button>
         </div>
       </div>
     );
   }
 
   if (!isEditing && vitrinLimit.blocked) {
+    const planNameDisplay = t(vitrinLimit.planName === "Pro Üyelik" ? "createListing.planNamePro" : "createListing.planNameStandard");
     return (
       <div className="max-w-md mx-auto px-5 py-20 text-center">
         <button onClick={onBack} className="flex items-center gap-1 text-sm mb-8" style={{ color: "#5C5744" }}>
-          <ChevronLeft size={16} /> Geri
+          <ChevronLeft size={16} /> {t("common.back")}
         </button>
         <div className="w-14 h-14 rounded-full mx-auto mb-5 flex items-center justify-center" style={{ background: "rgba(245,158,11,0.15)" }}>
           <Sparkles size={22} style={{ color: "#F59E0B" }} />
         </div>
-        <h2 className="font-serif text-xl mb-2" style={{ color: "#1B2B24" }}>{vitrinLimit.planName} vitrin hakkını doldurdun</h2>
+        <h2 className="font-serif text-xl mb-2" style={{ color: "#1B2B24" }}>{t("createListing.limitTitle", { planName: planNameDisplay })}</h2>
         <p className="text-sm mb-6" style={{ color: "#5C5744" }}>
           {vitrinLimit.planName === "Pro Üyelik"
-            ? `Şu an ${vitrinLimit.count} aktif vitrinin var, ${vitrinLimit.hasExtraVitrinAddon ? "Ek Vitrin Paketi'yle birlikte" : "Pro Üyelik"} en fazla ${vitrinLimit.cap} vitrin hakkı veriyor.`
-            : `Standart Üyelik'te ${vitrinLimit.cap} vitrin hakkın var, zaten kullandın. Pro Üyelik'e geçerek 3 vitrin açabilir, hizmetlerini (örn. mühendislik + nefes terapisi gibi ayrı alanları) ayrı ayrı vitrinlerde sergileyebilirsin.`}
+            ? t(vitrinLimit.hasExtraVitrinAddon ? "createListing.limitBodyProWithAddon" : "createListing.limitBodyProNoAddon", { count: vitrinLimit.count, cap: vitrinLimit.cap })
+            : t("createListing.limitBodyStandard", { cap: vitrinLimit.cap })}
         </p>
         {vitrinLimit.planName !== "Pro Üyelik" ? (
           <div className="rounded-2xl border-2 p-5 mb-6 text-left" style={{ borderColor: "#F59E0B", background: "#FFFBEB" }}>
-            <p className="text-sm font-bold mb-1" style={{ color: "#1B2B24" }}>Pro Üyelik — 649₺/ay</p>
+            <p className="text-sm font-bold mb-1" style={{ color: "#1B2B24" }}>{t("createListing.proCardTitle")}</p>
             <ul className="text-xs space-y-1 mb-4" style={{ color: "#5C5744" }}>
-              <li>• 3 vitrin hakkı, sınırsız teklif</li>
-              <li>• Pro'ya geçtiğin ilk 7 gün açtığın her vitrin, Öne Çıkarma Paketi hediyeli</li>
-              <li>• AI eşleştirmede öncelik</li>
+              <li>• {t("createListing.proCardBullet1")}</li>
+              <li>• {t("createListing.proCardBullet2")}</li>
+              <li>• {t("createListing.proCardBullet3")}</li>
             </ul>
             {error && <p className="text-xs mb-3" style={{ color: "#9C4A3C" }}>{error}</p>}
             <button
@@ -6517,15 +6523,15 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
               style={{ background: "#F59E0B", opacity: upgrading ? 0.7 : 1 }}
             >
               {upgrading && <Loader2 size={13} className="animate-spin" />}
-              Pro Üyelik'e Geç
+              {t("createListing.proCardButton")}
             </button>
           </div>
         ) : !vitrinLimit.hasExtraVitrinAddon ? (
           <div className="rounded-2xl border-2 p-5 mb-6 text-left" style={{ borderColor: "#8B5CF6", background: "#F8F4E9" }}>
-            <p className="text-sm font-bold mb-1" style={{ color: "#1B2B24" }}>Ek Vitrin Paketi — 249₺/ay</p>
+            <p className="text-sm font-bold mb-1" style={{ color: "#1B2B24" }}>{t("createListing.addonCardTitle")}</p>
             <ul className="text-xs space-y-1 mb-4" style={{ color: "#5C5744" }}>
-              <li>• 3 vitrin hakkına +3 daha ekler (toplam 6 vitrin)</li>
-              <li>• Pro Üyeliğe ek, isteğe bağlı</li>
+              <li>• {t("createListing.addonCardBullet1")}</li>
+              <li>• {t("createListing.addonCardBullet2")}</li>
             </ul>
             {error && <p className="text-xs mb-3" style={{ color: "#9C4A3C" }}>{error}</p>}
             <button
@@ -6535,11 +6541,11 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
               style={{ background: "#8B5CF6", opacity: upgrading ? 0.7 : 1 }}
             >
               {upgrading && <Loader2 size={13} className="animate-spin" />}
-              Ek Vitrin Paketi Al
+              {t("createListing.addonCardButton")}
             </button>
           </div>
         ) : null}
-        <button onClick={onBack} className="text-xs font-medium" style={{ color: "#8A8368" }}>Şimdilik vazgeç</button>
+        <button onClick={onBack} className="text-xs font-medium" style={{ color: "#8A8368" }}>{t("createListing.limitDismiss")}</button>
         {paytrToken && (
           <PaytrCheckoutModal
             token={paytrToken}
@@ -6563,15 +6569,15 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
         />
       )}
       <button onClick={onBack} className="flex items-center gap-1 text-sm mb-5" style={{ color: "#5C5744" }}>
-        <ChevronLeft size={16} /> Geri
+        <ChevronLeft size={16} /> {t("common.back")}
       </button>
-      <h1 className="font-serif text-2xl mb-1" style={{ color: "#1B2B24" }}>{isEditing ? "Vitrini Düzenle" : "Hizmet Vitrini Oluştur"}</h1>
+      <h1 className="font-serif text-2xl mb-1" style={{ color: "#1B2B24" }}>{isEditing ? t("createListing.editTitle") : t("createListing.createTitle")}</h1>
       <p className="text-sm mb-6" style={{ color: "#5C5744" }}>
-        {isEditing ? "Vitrininin bilgilerini güncelle, kaydettiğinde hemen yansısın." : "Sunduğun hizmeti anlat, vitrinin hemen yayına girsin."}
+        {isEditing ? t("createListing.editSubtitle") : t("createListing.createSubtitle")}
       </p>
 
       <div className="flex gap-2 mb-6">
-        {[["local", "Yerinde hizmet"], ["remote", "Uzaktan hizmet"]].map(([key, label]) => (
+        {[["local", t("createListing.modeLocal")], ["remote", t("createListing.modeRemote")]].map(([key, label]) => (
           <button
             key={key}
             onClick={() => { setMode(key); setCategoryId(""); }}
@@ -6585,25 +6591,25 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
 
       <div className="space-y-4">
         <div>
-          <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>Görünecek isim / işletme adı</label>
+          <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("createListing.displayNameLabel")}</label>
           <input
             value={providerName}
             onChange={(e) => setProviderName(e.target.value)}
-            placeholder="Örn. Ayşe T. veya Studio Reyhan"
+            placeholder={t("createListing.displayNamePlaceholder")}
             className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
             style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
           />
         </div>
 
         <div>
-          <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>Kategori</label>
+          <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("common.categoryLabel")}</label>
           <select
             value={categoryId}
             onChange={(e) => setCategoryId(e.target.value)}
             className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
             style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
           >
-            <option value="">Kategori seç...</option>
+            <option value="">{t("common.categorySelectPlaceholder")}</option>
             {PARENT_CATEGORIES.map((group) => {
               const opts = availableCategories.filter((c) => group.categoryIds.includes(c.id));
               if (opts.length === 0) return null;
@@ -6614,19 +6620,19 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
               );
             })}
             {/* Listede aradığını bulamayan için — bkz. CUSTOM_CATEGORY_ID notu. */}
-            <option value={CUSTOM_CATEGORY_ID}>Diğer (belirtiniz)</option>
+            <option value={CUSTOM_CATEGORY_ID}>{t("common.categoryOther")}</option>
           </select>
           {categoryId === CUSTOM_CATEGORY_ID && (
             <div className="mt-2.5">
               <input
                 value={customCategoryLabel}
                 onChange={(e) => setCustomCategoryLabel(e.target.value)}
-                placeholder="Ne sunuyorsun? Örn. Halı saha kurulumu"
+                placeholder={t("createListing.customCategoryPlaceholder")}
                 className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
                 style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
               />
               <p className="text-xs mt-1.5" style={{ color: "#8A8368" }}>
-                Bu kategori henüz listede yok — vitrinin "Diğer" altında yayınlanır ve ekibimize bir kategori talebi olarak iletilir.
+                {t("createListing.customCategoryNote")}
               </p>
             </div>
           )}
@@ -6634,7 +6640,7 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
 
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <label className="text-xs font-medium" style={{ color: "#5C5744" }}>Vitrin Başlığı</label>
+            <label className="text-xs font-medium" style={{ color: "#5C5744" }}>{t("createListing.titleLabel")}</label>
             <button
               onClick={writeWithAI}
               disabled={aiWriting}
@@ -6642,25 +6648,25 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
               style={{ background: "#EFF6FF", color: "#2563EB" }}
             >
               {aiWriting ? <Loader2 size={11} className="animate-spin" /> : <Sparkles size={11} />}
-              {aiWriting ? "Yazıyor..." : "AI ile Yaz"}
+              {aiWriting ? t("common.aiWriting") : t("common.aiWrite")}
             </button>
           </div>
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Örn. Deneyimli Bebek ve Çocuk Bakıcısı"
+            placeholder={t("createListing.titlePlaceholder")}
             className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
             style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
           />
         </div>
 
         <div>
-          <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>Açıklama</label>
+          <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("createListing.descLabel")}</label>
           <textarea
             value={desc}
             onChange={(e) => setDesc(e.target.value)}
             rows={4}
-            placeholder="Deneyimini, sunduğun hizmetleri ve neden seni seçmeliler anlat... (ya da kategori seçip 'AI ile Yaz'a bas)"
+            placeholder={t("createListing.descPlaceholder")}
             className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none resize-none"
             style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
           />
@@ -6669,13 +6675,13 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
               değil, sadece nazik bir yönlendirme. */}
           {desc.trim().split(/\s+/).filter(Boolean).length > 0 && desc.trim().split(/\s+/).filter(Boolean).length < 40 && (
             <p className="text-xs mt-1.5" style={{ color: "#B08A3E" }}>
-              Biraz daha uzun ve detaylı bir açıklama hem müşterilerin güvenini kazanır hem de vitrinin Google'da daha kolay bulunmasını sağlar.
+              {t("createListing.descLengthHint")}
             </p>
           )}
         </div>
 
         <div>
-          <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>Kapak fotoğrafı</label>
+          <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("createListing.coverPhotoLabel")}</label>
           <div className="flex items-center gap-3">
             {photo && (
               <label className="relative w-16 h-16 rounded-lg overflow-hidden cursor-pointer shrink-0 group">
@@ -6691,7 +6697,7 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
               style={{ borderColor: "#D9D0BA", color: "#5C5744", opacity: photoUploading ? 0.6 : 1 }}
             >
               {photoUploading ? <Loader2 size={14} className="animate-spin" /> : <UploadCloud size={14} />}
-              {photoUploading ? "Yükleniyor..." : photo ? "Fotoğrafı Değiştir" : "Fotoğraf Yükle"}
+              {photoUploading ? t("createListing.photoUploading") : photo ? t("createListing.photoChange") : t("createListing.photoUpload")}
               <input type="file" accept="image/*" className="hidden" onChange={handlePhoto} disabled={photoUploading} />
             </label>
           </div>
@@ -6703,9 +6709,9 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
               className="text-[11px] mt-1.5 flex items-center gap-1"
               style={{ color: moderation.status === "checking" ? "#8A8368" : moderation.status === "approved" ? "#3F7D5C" : "#9C4A3C" }}
             >
-              {moderation.status === "checking" && <><Loader2 size={11} className="animate-spin" /> AI ile içerik kontrol ediliyor...</>}
-              {moderation.status === "approved" && <><ShieldCheck size={11} /> İçerik AI tarafından onaylandı</>}
-              {moderation.status === "flagged" && <><AlertCircle size={11} /> {moderation.reason || "İçerik incelemeye alındı"}</>}
+              {moderation.status === "checking" && <><Loader2 size={11} className="animate-spin" /> {t("createListing.moderationChecking")}</>}
+              {moderation.status === "approved" && <><ShieldCheck size={11} /> {t("createListing.moderationApproved")}</>}
+              {moderation.status === "flagged" && <><AlertCircle size={11} /> {moderation.reason || t("createListing.moderationFlaggedDefault")}</>}
             </p>
           )}
           {/* Çoklu fotoğraf/video, tanıtım videosu, sertifika ve CV burada değil —
@@ -6718,9 +6724,7 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
               form içinde, aşağıda, doğrudan yükleniyor — hiç sayfa
               değiştirmeden. */}
           <p className="text-[11px] mt-1.5" style={{ color: "#8A8368" }}>
-            {isEditing
-              ? "Bu, kapak fotoğrafı — çoklu fotoğraf, video, sertifika ve CV'yi aşağıda, aynı formda ekleyip yönetebilirsin."
-              : "Bu, kapak fotoğrafı — vitrini yayınladıktan hemen sonra, aynı ekranda çoklu fotoğraf, video, sertifika ve CV de ekleyebileceksin."}
+            {isEditing ? t("createListing.coverHintEdit") : t("createListing.coverHintCreate")}
           </p>
         </div>
 
@@ -6730,15 +6734,15 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
           <>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>Şehir</label>
+                <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("common.cityLabel")}</label>
                 <select
                   value={cityId}
                   onChange={(e) => setCityId(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
                   style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
                 >
-                  {["Türkiye", "Hindistan", "Avrupa", "Kuzey Amerika", "Orta Doğu", "Asya-Pasifik"].map((region) => (
-                    <optgroup key={region} label={region}>
+                  {[["Türkiye", "turkey"], ["Hindistan", "india"], ["Avrupa", "europe"], ["Kuzey Amerika", "northAmerica"], ["Orta Doğu", "middleEast"], ["Asya-Pasifik", "asiaPacific"]].map(([region, regionKey]) => (
+                    <optgroup key={region} label={t(`common.regions.${regionKey}`)}>
                       {CITIES.filter((c) => c.region === region).map((c) => (
                         <option key={c.id} value={c.id}>{c.name}</option>
                       ))}
@@ -6747,11 +6751,11 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
                 </select>
               </div>
               <div>
-                <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>Semt / Bölge</label>
+                <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("common.districtLabel")}</label>
                 <input
                   value={district}
                   onChange={(e) => setDistrict(e.target.value)}
-                  placeholder="Örn. Kadıköy"
+                  placeholder={t("common.districtPlaceholder")}
                   className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
                   style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
                 />
@@ -6759,9 +6763,9 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
             </div>
 
             <div>
-              <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>Nerede hizmet veriyorsun?</label>
+              <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("createListing.whereLabel")}</label>
               <div className="flex gap-2">
-                {[["evde", "Müşteri Konumu"], ["mekanda", "Kendi Konumum"], ["esnek", "İkisi de Olsun"]].map(([key, label]) => (
+                {[["evde", t("createListing.whereCustomer")], ["mekanda", t("createListing.whereOwn")], ["esnek", t("createListing.whereBoth")]].map(([key, label]) => (
                   <button
                     key={key}
                     onClick={() => setHomeServiceVal(key)}
@@ -6779,11 +6783,11 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
         )}
 
         <div>
-          <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>Fiyat</label>
+          <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("createListing.priceLabel")}</label>
           <input
             value={price}
             onChange={(e) => setPrice(e.target.value)}
-            placeholder="Örn. 500₺'den, 300₺/saat, 450₺/gün"
+            placeholder={t("createListing.pricePlaceholder")}
             className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
             style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
           />
@@ -6800,11 +6804,11 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
           style={{ background: "#2FBF71", color: "#1B2B24", opacity: submitting || photoUploading ? 0.7 : 1 }}
         >
           {submitting && <Loader2 size={14} className="animate-spin" />}
-          {submitting ? (isEditing ? "Kaydediliyor..." : "Yayınlanıyor...") : isEditing ? "Değişiklikleri Kaydet" : "Vitrini Yayınla"}
+          {submitting ? (isEditing ? t("common.savingEllipsis") : t("common.publishingEllipsis")) : isEditing ? t("common.saveChanges") : t("createListing.submitPublish")}
         </button>
         {!isEditing && (
           <p className="text-[11px] text-center" style={{ color: "#8A8368" }}>
-            Sertifika, CV ve video tanıtım eklemek için profilini de tamamlamayı unutma.
+            {t("createListing.completeProfileHint")}
           </p>
         )}
       </div>
@@ -8284,6 +8288,7 @@ function PricingView({ onBack, onJoined, userId }) {
 }
 
 function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOpenModeration, onOpenUserReports, onOpenListingReports, onOpenContentFlags, isAdmin, pendingMediaApprovals, onApproveMedia, onRejectMedia, onListingsChanged, onJobsChanged, onEditListing, onOpenVitrinMedia, onEditJob, onCreateListing, onViewListing, realListings }) {
+  const { t } = useLanguage();
   // Video tanıtım/portföy/sertifika/CV artık vitrine özel — bkz. VitrinMediaView
   // (supabase/vitrin_media.sql). Burada sadece paylaşılan profil fotoğrafı kalıyor
   // ("aynı kişinin gerçek yüzü her vitrinde aynı görünsün" — kullanıcının kararı).
@@ -9023,8 +9028,8 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/rozet.svg" alt="İşinn'de Doğrulanmış Sağlayıcı" width={140} height={40} className="shrink-0" />
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-bold mb-1" style={{ color: "#1B2B24" }}>Rozetin hazır</p>
-            <p className="text-[11px] mb-2" style={{ color: "#8A8368" }}>Kendi sitene ya da Instagram'ına ekleyebilirsin.</p>
+            <p className="text-xs font-bold mb-1" style={{ color: "#1B2B24" }}>{t("profile.badgeReadyTitle")}</p>
+            <p className="text-[11px] mb-2" style={{ color: "#8A8368" }}>{t("profile.badgeReadyDesc")}</p>
             <a href="/rozet" target="_blank" rel="noopener noreferrer" className="text-[11px] font-bold underline" style={{ color: "#3A5BA0" }}>
               Rozeti Al →
             </a>
@@ -9256,6 +9261,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
 // portföyü, sertifika/belgeleri ve CV'si var (bkz. supabase/vitrin_media.sql).
 // Paylaşılan kalan tek şey profil fotoğrafı (avatar) — ProfileView'da yönetiliyor.
 function VitrinMediaView({ userId, service, onBack, onListingsChanged }) {
+  const { t } = useLanguage();
   const [certificates, setCertificates] = useState([]);
   const [cv, setCv] = useState(null);
   const [portfolio, setPortfolio] = useState([]);
@@ -9320,7 +9326,7 @@ function VitrinMediaView({ userId, service, onBack, onListingsChanged }) {
         supabase.from("portfolio_items").select("*").eq("service_id", serviceId).order("created_at", { ascending: true }),
       ]);
       if (cancelled) return;
-      if (serviceRow?.video_intro_url) setVideoIntro({ url: serviceRow.video_intro_url, name: serviceRow.video_intro_name || "Tanıtım Videosu" });
+      if (serviceRow?.video_intro_url) setVideoIntro({ url: serviceRow.video_intro_url, name: serviceRow.video_intro_name || t("vitrinMedia.videoHeading") });
       setShareReviews(serviceRow?.share_profile_reviews ?? true);
       setCoverUrl((Array.isArray(serviceRow?.images) && serviceRow.images[0]) || null);
       setProfessionalCredential(serviceRow?.professional_credential || "");
@@ -9330,7 +9336,7 @@ function VitrinMediaView({ userId, service, onBack, onListingsChanged }) {
       const cvDoc = docRows.find((d) => d.doc_type === "cv");
       const certsWithUrls = await Promise.all(certs.map(async (d) => {
         const { data: signed } = await supabase.storage.from("provider-documents").createSignedUrl(d.file_url, 3600);
-        return { id: d.id, name: d.file_name || d.label || "Belge", url: signed?.signedUrl || "", isPdf: (d.file_name || "").toLowerCase().endsWith(".pdf") };
+        return { id: d.id, name: d.file_name || d.label || t("createListing.docFallbackName"), url: signed?.signedUrl || "", isPdf: (d.file_name || "").toLowerCase().endsWith(".pdf") };
       }));
       if (cancelled) return;
       setCertificates(certsWithUrls);
@@ -9390,7 +9396,7 @@ function VitrinMediaView({ userId, service, onBack, onListingsChanged }) {
       }
       setReviewsList(ownRatings.map((r) => {
         const p = profilesById[r.rater_id];
-        const name = (p?.business_name && p.business_name.trim()) || p?.full_name || "Kullanıcı";
+        const name = (p?.business_name && p.business_name.trim()) || p?.full_name || t("vitrinMedia.anonymousUser");
         return { id: r.id, name, value: r.value, comment: r.comment || "", time: formatRelativeTr(r.created_at), providerReply: r.provider_reply || "" };
       }));
       setStatsLoading(false);
@@ -9426,7 +9432,7 @@ function VitrinMediaView({ userId, service, onBack, onListingsChanged }) {
       if (error) throw error;
       setVideoIntro({ url: publicUrl, name: file.name });
     } catch (err) {
-      setVideoError(`Yüklenemedi: ${err.message}`);
+      setVideoError(t("vitrinMedia.uploadFailed", { message: err.message }));
     } finally {
       setVideoUploading(false);
     }
@@ -9456,7 +9462,7 @@ function VitrinMediaView({ userId, service, onBack, onListingsChanged }) {
         setPortfolio((prev) => [...prev, { id: row.id, type, url: publicUrl, name: file.name }].slice(0, 9));
       }
     } catch (err) {
-      setPortfolioError(`Yüklenemedi: ${err.message}`);
+      setPortfolioError(t("vitrinMedia.uploadFailed", { message: err.message }));
     } finally {
       setPortfolioUploading(false);
     }
@@ -9490,7 +9496,7 @@ function VitrinMediaView({ userId, service, onBack, onListingsChanged }) {
       }
       onListingsChanged?.(); // has_certificates güncellendi, listeleri tazele
     } catch (err) {
-      setCertError(`Yüklenemedi: ${err.message}`);
+      setCertError(t("vitrinMedia.uploadFailed", { message: err.message }));
     } finally {
       setCertUploading(false);
     }
@@ -9528,7 +9534,7 @@ function VitrinMediaView({ userId, service, onBack, onListingsChanged }) {
         setCv({ id: docRow.id, path, name: file.name, url: signed?.signedUrl || "" });
       }
     } catch (err) {
-      setCvError(`Yüklenemedi: ${err.message}`);
+      setCvError(t("vitrinMedia.uploadFailed", { message: err.message }));
     } finally {
       setCvUploading(false);
     }
@@ -9544,40 +9550,40 @@ function VitrinMediaView({ userId, service, onBack, onListingsChanged }) {
   return (
     <div className="max-w-2xl mx-auto px-5 py-10">
       <button onClick={onBack} className="flex items-center gap-1 text-sm mb-5" style={{ color: "#5C5744" }}>
-        <ChevronLeft size={16} /> Vitrinlerime dön
+        <ChevronLeft size={16} /> {t("vitrinMedia.backToListings")}
       </button>
       <div className="flex items-center gap-2 mb-1">
         <Grid3x3 size={18} style={{ color: "#3F7D5C" }} />
         <h1 className="font-serif text-xl" style={{ color: "#1B2B24" }}>{service.title}</h1>
       </div>
       <p className="text-xs mb-6" style={{ color: "#8A8368" }}>
-        Bu vitrine özel video, portföy ve belgeler — diğer vitrinlerinle paylaşılmaz, her biri kendi kimliğini taşır.
+        {t("vitrinMedia.intro")}
       </p>
 
       <div className="rounded-xl border p-5 mb-8" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
         <div className="flex items-center gap-2 mb-3">
           <Activity size={16} style={{ color: "#3F7D5C" }} />
-          <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>Vitrin Performansı</h2>
+          <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("vitrinMedia.statsHeading")}</h2>
         </div>
         {statsLoading ? (
-          <p className="text-xs" style={{ color: "#8A8368" }}>Yükleniyor...</p>
+          <p className="text-xs" style={{ color: "#8A8368" }}>{t("common.loading")}</p>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div>
               <p className="font-serif text-2xl" style={{ color: "#1B2B24" }}>{stats?.conversations ?? 0}</p>
-              <p className="text-[11px]" style={{ color: "#8A8368" }}>Görüşme başladı</p>
+              <p className="text-[11px]" style={{ color: "#8A8368" }}>{t("vitrinMedia.statConversations")}</p>
             </div>
             <div>
               <p className="font-serif text-2xl" style={{ color: "#1B2B24" }}>{stats?.completed ?? 0}</p>
-              <p className="text-[11px]" style={{ color: "#8A8368" }}>İş tamamlandı</p>
+              <p className="text-[11px]" style={{ color: "#8A8368" }}>{t("vitrinMedia.statCompleted")}</p>
             </div>
             <div>
               <p className="font-serif text-2xl" style={{ color: "#1B2B24" }}>{stats?.avgRating ?? "—"}{stats?.reviewCount ? ` (${stats.reviewCount})` : ""}</p>
-              <p className="text-[11px]" style={{ color: "#8A8368" }}>Ortalama puan</p>
+              <p className="text-[11px]" style={{ color: "#8A8368" }}>{t("vitrinMedia.statAvgRating")}</p>
             </div>
             <div>
               <p className="font-serif text-2xl" style={{ color: "#1B2B24" }}>{stats?.favorites ?? 0}</p>
-              <p className="text-[11px]" style={{ color: "#8A8368" }}>Favoriye eklendi</p>
+              <p className="text-[11px]" style={{ color: "#8A8368" }}>{t("vitrinMedia.statFavorites")}</p>
             </div>
           </div>
         )}
@@ -9586,17 +9592,15 @@ function VitrinMediaView({ userId, service, onBack, onListingsChanged }) {
       <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>Değerlendirmeler</p>
+            <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("vitrinMedia.reviewsHeading")}</p>
             <p className="text-xs mt-0.5" style={{ color: "#8A8368" }}>
-              {shareReviews
-                ? "Diğer vitrinlerinle birleşik — genel güvenilirliğin burada da görünür."
-                : "Bu vitrine özel — sadece bu vitrin için gelen değerlendirmeler sayılır."}
+              {shareReviews ? t("vitrinMedia.reviewsSharedNote") : t("vitrinMedia.reviewsOwnNote")}
             </p>
           </div>
           <label className="flex items-center gap-2 text-xs shrink-0 cursor-pointer" style={{ color: "#5C5744" }}>
             {shareReviewsSaving && <Loader2 size={12} className="animate-spin" />}
             <input type="checkbox" checked={shareReviews} onChange={(e) => toggleShareReviews(e.target.checked)} />
-            Birleştir
+            {t("vitrinMedia.mergeToggle")}
           </label>
         </div>
 
@@ -9617,7 +9621,7 @@ function VitrinMediaView({ userId, service, onBack, onListingsChanged }) {
                 {r.comment && <p style={{ color: "#3D3B30" }}>{r.comment}</p>}
                 {r.providerReply && (
                   <p className="mt-1 pl-2 border-l-2" style={{ color: "#5C5744", borderColor: "#D9D0BA" }}>
-                    <b>Senin yanıtın:</b> {r.providerReply}
+                    <b>{t("vitrinMedia.yourReply")}</b> {r.providerReply}
                   </p>
                 )}
               </div>
@@ -9627,16 +9631,16 @@ function VitrinMediaView({ userId, service, onBack, onListingsChanged }) {
       </div>
 
       {loading ? (
-        <p className="text-xs" style={{ color: "#8A8368" }}>Yükleniyor...</p>
+        <p className="text-xs" style={{ color: "#8A8368" }}>{t("common.loading")}</p>
       ) : (
         <>
           <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
             <div className="flex items-center gap-2 mb-1">
               <PlayCircle size={16} style={{ color: "#2FBF71" }} />
-              <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>Tanıtım Videosu</h2>
+              <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("vitrinMedia.videoHeading")}</h2>
             </div>
             <p className="text-xs mb-4" style={{ color: "#8A8368" }}>
-              Bu vitrini kısa bir videoyla tanıt. Vitrin sayfasında en üstte, tek ve öne çıkan video olarak görünür.
+              {t("vitrinMedia.videoIntro")}
             </p>
             {videoError && (
               <p className="text-xs mb-3 px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{videoError}</p>
@@ -9649,7 +9653,7 @@ function VitrinMediaView({ userId, service, onBack, onListingsChanged }) {
                 <div className="flex items-center justify-between">
                   <span className="text-xs truncate" style={{ color: "#5C5744" }}>{videoIntro.name}</span>
                   <button onClick={removeVideoIntro} className="text-xs font-medium flex items-center gap-1" style={{ color: "#9C4A3C" }}>
-                    <Trash2 size={12} /> Kaldır
+                    <Trash2 size={12} /> {t("common.remove")}
                   </button>
                 </div>
               </div>
@@ -9659,7 +9663,7 @@ function VitrinMediaView({ userId, service, onBack, onListingsChanged }) {
                 style={{ borderColor: "#D9D0BA", color: "#5C5744", opacity: videoUploading ? 0.6 : 1 }}
               >
                 {videoUploading ? <Loader2 size={16} className="animate-spin" /> : <UploadCloud size={16} />}
-                {videoUploading ? "Yükleniyor..." : "Tanıtım Videosu Yükle (en fazla 60 saniye önerilir)"}
+                {videoUploading ? t("common.loading") : t("vitrinMedia.videoUpload")}
                 <input type="file" accept="video/*" className="hidden" onChange={handleVideoAdd} disabled={videoUploading} />
               </label>
             )}
@@ -9668,10 +9672,10 @@ function VitrinMediaView({ userId, service, onBack, onListingsChanged }) {
           <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
             <div className="flex items-center gap-2 mb-1">
               <Grid3x3 size={16} style={{ color: "#2FBF71" }} />
-              <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>Portföy — İş Başında</h2>
+              <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("vitrinMedia.portfolioHeading")}</h2>
             </div>
             <p className="text-xs mb-4" style={{ color: "#8A8368" }}>
-              Bu vitrindeki hizmeti verirken çekilmiş fotoğraf/videolar. Instagram tarzı bir ızgarada görünür.
+              {t("vitrinMedia.portfolioIntro")}
             </p>
             {portfolioError && (
               <p className="text-xs mb-3 px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{portfolioError}</p>
@@ -9682,7 +9686,7 @@ function VitrinMediaView({ userId, service, onBack, onListingsChanged }) {
                   <button onClick={() => setLightbox({ media: [{ type: "image", url: coverUrl }, ...portfolio], index: 0 })} className="w-full h-full block">
                     <img src={coverUrl} alt="" className="w-full h-full object-cover" />
                   </button>
-                  <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded text-[9px] font-bold text-white" style={{ background: "rgba(0,0,0,0.55)" }}>Kapak</span>
+                  <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded text-[9px] font-bold text-white" style={{ background: "rgba(0,0,0,0.55)" }}>{t("vitrinMedia.coverBadge")}</span>
                 </div>
               )}
               {portfolio.map((item, i) => (
@@ -9712,7 +9716,7 @@ function VitrinMediaView({ userId, service, onBack, onListingsChanged }) {
               {portfolio.length < 9 && (
                 <label className="aspect-square rounded-lg border-2 border-dashed flex flex-col items-center justify-center cursor-pointer gap-1" style={{ borderColor: "#D9D0BA", color: "#8A8368", opacity: portfolioUploading ? 0.6 : 1 }}>
                   {portfolioUploading ? <Loader2 size={18} className="animate-spin" /> : <UploadCloud size={18} />}
-                  <span className="text-[10px] font-medium">{portfolioUploading ? "Yükleniyor..." : "Ekle"}</span>
+                  <span className="text-[10px] font-medium">{portfolioUploading ? t("common.loading") : t("vitrinMedia.portfolioAddShort")}</span>
                   <input type="file" accept="image/*,video/*" multiple className="hidden" onChange={handlePortfolioAdd} disabled={portfolioUploading} />
                 </label>
               )}
@@ -9752,7 +9756,7 @@ function VitrinMediaView({ userId, service, onBack, onListingsChanged }) {
                     <img src={docViewer.url} alt={docViewer.name} className="w-full h-full object-contain" />
                   ) : (
                     <div className="h-full flex items-center justify-center p-6 text-center">
-                      <p className="text-sm" style={{ color: "#5C5744" }}>Bu dosya türü tarayıcı içinde önizlenemiyor.</p>
+                      <p className="text-sm" style={{ color: "#5C5744" }}>{t("vitrinMedia.docPreviewUnsupported")}</p>
                     </div>
                   )}
                 </div>
@@ -9763,10 +9767,10 @@ function VitrinMediaView({ userId, service, onBack, onListingsChanged }) {
           <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
             <div className="flex items-center gap-2 mb-1">
               <Award size={16} style={{ color: "#C2872B" }} />
-              <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>Sertifika & Belgeler</h2>
+              <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("vitrinMedia.certHeading")}</h2>
             </div>
             <p className="text-xs mb-4" style={{ color: "#8A8368" }}>
-              Bu vitrinle ilgili diploma, ustalık belgesi, lisans veya sertifikaları ekle — bu vitrinde "Belge Paylaştı" rozeti olarak görünür (biz belgeyi incelemiyoruz, sadece paylaşıldığını dürüstçe gösteriyoruz).
+              {t("vitrinMedia.certIntro")}
             </p>
             {certError && (
               <p className="text-xs mb-3 px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{certError}</p>
@@ -9794,7 +9798,7 @@ function VitrinMediaView({ userId, service, onBack, onListingsChanged }) {
                 style={{ borderColor: "#D9D0BA", color: "#5C5744", opacity: certUploading ? 0.6 : 1 }}
               >
                 {certUploading ? <Loader2 size={14} className="animate-spin" /> : <UploadCloud size={14} />}
-                {certUploading ? "Yükleniyor..." : "Sertifika/Belge Ekle (PDF veya görsel)"}
+                {certUploading ? t("common.loading") : t("vitrinMedia.certUpload")}
                 <input type="file" accept="image/*,application/pdf" multiple className="hidden" onChange={handleCertAdd} disabled={certUploading} />
               </label>
             )}
@@ -9803,33 +9807,33 @@ function VitrinMediaView({ userId, service, onBack, onListingsChanged }) {
           <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
             <div className="flex items-center gap-2 mb-1">
               <BadgeCheck size={16} style={{ color: "#3A5BA0" }} />
-              <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>Meslek Odası / Sicil No</h2>
+              <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("vitrinMedia.credentialHeading")}</h2>
             </div>
             <p className="text-xs mb-3" style={{ color: "#8A8368" }}>
-              Ruhsatlı bir meslekse (mimar, mühendis, avukat, mali müşavir vb.) oda/sicil bilginin görünmesi güven verir. Bunu doğrulamıyoruz — vitrinde "sağlayıcı beyanı, doğrulanmadı" etiketiyle, olduğu gibi gösteriyoruz. İstersen ziyaretçi ilgili odanın kendi sitesinden bu numarayı kontrol edebilir.
+              {t("vitrinMedia.credentialIntro")}
             </p>
             <input
               type="text"
               value={professionalCredential}
               onChange={(e) => { setProfessionalCredential(e.target.value); setCredentialSaved(false); }}
               onBlur={saveCredential}
-              placeholder="ör. TMMOB Mimarlar Odası — Sicil No: 12345"
+              placeholder={t("vitrinMedia.credentialPlaceholder")}
               className="w-full px-3 py-2.5 rounded-lg border text-xs mb-1"
               style={{ borderColor: "#D9D0BA" }}
             />
             <p className="text-[11px] flex items-center gap-1" style={{ color: credentialSaved ? "#3F7D5C" : "#8A8368" }}>
               {credentialSaving && <Loader2 size={10} className="animate-spin" />}
-              {credentialSaving ? "Kaydediliyor..." : credentialSaved ? "Kaydedildi ✓" : "Alandan çıkınca otomatik kaydedilir"}
+              {credentialSaving ? t("common.savingEllipsis") : credentialSaved ? t("vitrinMedia.credentialSaved") : t("vitrinMedia.credentialAutoSaveHint")}
             </p>
           </div>
 
           <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
             <div className="flex items-center gap-2 mb-1">
               <FileText size={16} style={{ color: "#3A5BA0" }} />
-              <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>CV / Özgeçmiş</h2>
+              <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("vitrinMedia.cvHeading")}</h2>
             </div>
             <p className="text-xs mb-4" style={{ color: "#8A8368" }}>
-              Bu vitrinle ilgili özgeçmişini ekle (özellikle Mühendis, Öğretmen gibi kategorilerde önerilir).
+              {t("vitrinMedia.cvIntro")}
             </p>
             {cvError && (
               <p className="text-xs mb-3 px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{cvError}</p>
@@ -9853,7 +9857,7 @@ function VitrinMediaView({ userId, service, onBack, onListingsChanged }) {
                 style={{ borderColor: "#D9D0BA", color: "#5C5744", opacity: cvUploading ? 0.6 : 1 }}
               >
                 {cvUploading ? <Loader2 size={14} className="animate-spin" /> : <UploadCloud size={14} />}
-                {cvUploading ? "Yükleniyor..." : "CV Yükle (PDF, Word veya görsel — hangi formattaysa)"}
+                {cvUploading ? t("common.loading") : t("vitrinMedia.cvUpload")}
                 <input
                   type="file"
                   accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/jpeg,image/png"
