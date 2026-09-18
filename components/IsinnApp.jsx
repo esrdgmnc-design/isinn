@@ -2263,6 +2263,9 @@ function SiteFooter({ onNav }) {
               <button onClick={() => onNav("createListing")} className="text-xs text-left" style={{ color: "#9CA3AF" }}>Hizmet Ekle</button>
               <button onClick={() => onNav("post")} className="text-xs text-left" style={{ color: "#9CA3AF" }}>İlan Ver</button>
               <button onClick={() => onNav("pricing")} className="text-xs text-left" style={{ color: "#9CA3AF" }}>Planlar</button>
+              {/* SEO: gerçek bir sayfaya (app/rehber) giden gerçek <a> —
+                  diğerleri gibi SPA view'ı değil, iç link değeri için. */}
+              <a href="/rehber" className="text-xs text-left" style={{ color: "#9CA3AF" }}>Rehberler</a>
             </div>
           </div>
           <div>

@@ -91,12 +91,34 @@ const faqJsonLd = {
   ],
 };
 
+// Marka/kuruluş yapılandırılmış verisi — Google'ın "İşinn" marka aramalarında
+// bir Knowledge Panel oluşturma ihtimalini artırır, sosyal hesaplar
+// (sameAs) eklendiğinde bunları da aynı varlığa bağlar. TikTok/Instagram
+// hesapları açıldığında buradaki sameAs dizisine eklenmeli.
+const organizationJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "İşinn",
+  url: "https://www.isinn.com.tr",
+  logo: "https://www.isinn.com.tr/icons/icon-512.webp",
+  description: "Türkiye'de yerel ve uzaktan hizmet sağlayıcılarla müşterileri buluşturan, sıfır komisyonlu hizmet pazaryeri.",
+  parentOrganization: {
+    "@type": "Organization",
+    name: "CODE G LTD (Code G Teknoloji ve Ticaret Limited Şirketi)",
+  },
+  sameAs: [
+    "https://www.tiktok.com/@isinn.com.tr",
+  ],
+};
+
 export default function RootLayout({ children }) {
   return (
     <html lang="tr">
       <body>
         {/* eslint-disable-next-line react/no-danger */}
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
+        {/* eslint-disable-next-line react/no-danger */}
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }} />
         {children}
         {/* Ziyaretçi/sayfa görüntüleme sayısı hiç tutulmuyordu ("kaç kişi
             tıklamış siteyi" — cevap yoktu). Vercel Web Analytics çerezsiz

@@ -8,12 +8,14 @@
 // hepsini de sitemap'e ekliyor.
 import { supabase } from "../lib/supabaseClient";
 import { SEO_CATEGORIES, SEO_CITIES, matchesCitySlug } from "../lib/seoTaxonomy";
+import { REHBER_POSTS } from "../lib/rehberContent";
 
 const BASE_URL = "https://www.isinn.com.tr";
 
 export default async function sitemap() {
   const staticPaths = [
     "",
+    "/rehber",
     "/kvkk-aydinlatma-metni",
     "/gizlilik-politikasi",
     "/kullanim-sartlari",
@@ -25,6 +27,13 @@ export default async function sitemap() {
     lastModified: new Date(),
     changeFrequency: path === "" ? "daily" : "monthly",
     priority: path === "" ? 1 : 0.3,
+  }));
+
+  const rehberEntries = REHBER_POSTS.map((post) => ({
+    url: `${BASE_URL}/rehber/${post.slug}`,
+    lastModified: new Date(),
+    changeFrequency: "monthly",
+    priority: 0.5,
   }));
 
   const { data: services } = await supabase
@@ -91,5 +100,5 @@ export default async function sitemap() {
     };
   });
 
-  return [...staticEntries, ...vitrinEntries, ...categoryEntries, ...cityEntries, ...comboEntries];
+  return [...staticEntries, ...rehberEntries, ...vitrinEntries, ...categoryEntries, ...cityEntries, ...comboEntries];
 }

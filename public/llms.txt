@@ -1,0 +1,17 @@
+# İşinn
+
+> İşinn, Türkiye'de yerel ve uzaktan hizmet sağlayıcılarıyla (temizlikçi, usta, özel ders öğretmeni, bakıcı, tasarımcı, yazılımcı ve 40+ kategori) müşterileri buluşturan, sıfır komisyonlu bir hizmet pazaryeridir. Sağlayıcılar sabit abonelik öder, kazandıkları işten platforma ayrıca komisyon vermez.
+
+İşinn CODE G LTD (Code G Teknoloji ve Ticaret Limited Şirketi) markasıdır, İstanbul/Türkiye merkezlidir.
+
+## Ana Sayfalar
+
+- [Ana Sayfa](https://www.isinn.com.tr/): Aktif vitrinler, kategoriler, şehirler ve "Aranıyor" ilan panosu.
+- [Kategoriler](https://www.isinn.com.tr/kategori/temizlik): Her kategori için (temizlik, özel ders, tadilat, yazılım vb.) o kategorideki aktif vitrinleri listeleyen sayfalar, `/kategori/<slug>` altında.
+- [Şehirler](https://www.isinn.com.tr/sehir/istanbul): Her şehir için o ildeki aktif vitrinleri listeleyen sayfalar, `/sehir/<slug>` altında.
+- Vitrin detay sayfaları `/vitrin/<id>` altında, her biri gerçek bir sağlayıcının hizmetini, fiyatını ve konumunu gösterir.
+
+## Notlar
+
+- Fiyatlar ve aktif vitrinler sürekli güncellenir; en güncel liste için [sitemap.xml](https://www.isinn.com.tr/sitemap.xml)'e bakın.
+- İşinn bir aracı pazaryeridir; hizmetin tarafı değildir.
