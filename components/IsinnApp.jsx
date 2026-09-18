@@ -5729,6 +5729,10 @@ function CreateListingView({ onBack, onCreated, userId, editingListing, onGoToPr
   const [photo, setPhoto] = useState(editingListing?.img && editingListing.img !== FALLBACK_LISTING_IMG ? { url: editingListing.img, name: "mevcut fotoğraf" } : null);
   const [photoUploading, setPhotoUploading] = useState(false);
   const [photoError, setPhotoError] = useState("");
+  // Kullanıcı geri bildirimi (2026-09-18): burada fotoğraflara tıklayınca hiçbir
+  // şey olmuyordu — VitrinMediaView'daki Instagram tarzı tam ekran görüntüleme
+  // (lightbox) burada yoktu, sadece küçük, tıklanamaz bir ızgaraydı.
+  const [lightbox, setLightbox] = useState(null);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [categoryIdBySlug, setCategoryIdBySlug] = useState({});
@@ -6273,14 +6277,25 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
             <p className="text-xs font-bold mb-2" style={{ color: "#5C5744" }}>İş Başında Fotoğraf/Video ({portfolio.length}/9)</p>
             {portfolio.length > 0 && (
               <div className="grid grid-cols-3 gap-2 mb-2">
-                {portfolio.map((p) => (
-                  <div key={p.id} className="aspect-square rounded-lg overflow-hidden" style={{ background: "#EAE3CE" }}>
+                {portfolio.map((p, i) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => setLightbox({ media: portfolio, index: i })}
+                    className="aspect-square rounded-lg overflow-hidden relative"
+                    style={{ background: "#EAE3CE" }}
+                  >
                     {p.type === "video" ? (
-                      <video src={p.url} className="w-full h-full object-cover" />
+                      <>
+                        <video src={p.url} className="w-full h-full object-cover" muted playsInline />
+                        <div className="absolute inset-0 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.15)" }}>
+                          <PlayCircle size={20} className="text-white" />
+                        </div>
+                      </>
                     ) : (
                       <img src={p.url} alt="" className="w-full h-full object-cover" />
                     )}
-                  </div>
+                  </button>
                 ))}
               </div>
             )}
@@ -6756,6 +6771,14 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
           </p>
         )}
       </div>
+      {lightbox && (
+        <MediaLightbox
+          media={lightbox.media}
+          index={lightbox.index}
+          onClose={() => setLightbox(null)}
+          onNav={(i) => setLightbox({ ...lightbox, index: i })}
+        />
+      )}
     </div>
   );
 }
