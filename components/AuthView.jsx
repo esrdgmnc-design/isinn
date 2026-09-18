@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { supabase } from "../lib/supabaseClient";
+import { useLanguage } from "../lib/i18n/LanguageContext";
 
 // Kayıt sırasında hangi yasal metin sürümüne onay verildiğini işaretlemek
 // için — metinler (bkz. legal/ klasörü, /kvkk-aydinlatma-metni vb.) ileride
@@ -9,6 +10,7 @@ import { supabase } from "../lib/supabaseClient";
 const TERMS_VERSION = "2026-09-07-taslak";
 
 export default function AuthView({ onAuthenticated, onCancel }) {
+  const { t } = useLanguage();
   const [mode, setMode] = useState("login"); // login | signup | forgot
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -26,7 +28,7 @@ export default function AuthView({ onAuthenticated, onCancel }) {
 
   const handleForgotPassword = async (e) => {
     e.preventDefault();
-    if (!email.trim()) { setError("Önce e-posta adresini yaz."); return; }
+    if (!email.trim()) { setError(t("auth.errorEmailFirst")); return; }
     setError("");
     setLoading(true);
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
@@ -48,7 +50,7 @@ export default function AuthView({ onAuthenticated, onCancel }) {
   // dönen oturumu yakalıyor, burada ayrıca bir şey yapmaya gerek yok.
   const handleGoogleAuth = async () => {
     if (mode === "signup" && !agreedToTerms) {
-      setError("Devam edebilmek için KVKK Aydınlatma Metni, Gizlilik Politikası ve Kullanım Şartları'nı kabul etmelisin.");
+      setError(t("auth.errorTerms"));
       return;
     }
     setError("");
@@ -72,12 +74,12 @@ export default function AuthView({ onAuthenticated, onCancel }) {
 
     if (mode === "signup") {
       if (!fullName.trim()) {
-        setError("Adını yazmalısın.");
+        setError(t("auth.errorFullName"));
         setLoading(false);
         return;
       }
       if (!agreedToTerms) {
-        setError("Devam edebilmek için KVKK Aydınlatma Metni, Gizlilik Politikası ve Kullanım Şartları'nı kabul etmelisin.");
+        setError(t("auth.errorTerms"));
         setLoading(false);
         return;
       }
@@ -136,13 +138,13 @@ export default function AuthView({ onAuthenticated, onCancel }) {
       <div className="min-h-screen flex items-center justify-center px-5 relative" style={{ background: "#FFFFFF" }}>
         {onCancel && (
           <button type="button" onClick={onCancel} className="absolute top-5 left-5 text-sm font-medium" style={{ color: "#6B7280" }}>
-            ← Gezinmeye devam et
+            {t("auth.backToNav")}
           </button>
         )}
         <div className="max-w-sm w-full text-center">
-          <h1 className="font-sans text-2xl font-black mb-3" style={{ color: "#0F1115" }}>E-postanı kontrol et</h1>
+          <h1 className="font-sans text-2xl font-black mb-3" style={{ color: "#0F1115" }}>{t("auth.checkEmailTitle")}</h1>
           <p className="text-sm mb-5" style={{ color: "#6B7280" }}>
-            {email} kayıtlıysa, şifreni sıfırlaman için bir bağlantı gönderdik. Gelmezse spam/gereksiz klasörüne bakmayı unutma.
+            {t("auth.resetSentBody", { email })}
           </p>
           <button
             type="button"
@@ -150,7 +152,7 @@ export default function AuthView({ onAuthenticated, onCancel }) {
             className="text-xs font-medium"
             style={{ color: "#2563EB" }}
           >
-            ← Girişe dön
+            {t("auth.backToLogin")}
           </button>
         </div>
       </div>
@@ -162,19 +164,19 @@ export default function AuthView({ onAuthenticated, onCancel }) {
       <div className="min-h-screen flex items-center justify-center px-5 relative" style={{ background: "#FFFFFF" }}>
         {onCancel && (
           <button type="button" onClick={onCancel} className="absolute top-5 left-5 text-sm font-medium" style={{ color: "#6B7280" }}>
-            ← Gezinmeye devam et
+            {t("auth.backToNav")}
           </button>
         )}
         <form onSubmit={handleForgotPassword} className="max-w-sm w-full">
           <h1 className="font-sans text-3xl font-black mb-1" style={{ color: "#0F1115" }}>
             İşinn<span style={{ color: "#2563EB" }}>.</span>
           </h1>
-          <p className="text-sm mb-6" style={{ color: "#6B7280" }}>Şifreni sıfırla</p>
+          <p className="text-sm mb-6" style={{ color: "#6B7280" }}>{t("auth.resetHeading")}</p>
           <input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="Kayıtlı e-posta adresin"
+            placeholder={t("auth.resetEmailPlaceholder")}
             required
             className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none mb-4"
             style={{ borderColor: "#E5E7EB", background: "#F9FAFB", color: "#0F1115" }}
@@ -188,7 +190,7 @@ export default function AuthView({ onAuthenticated, onCancel }) {
             className="w-full py-3 rounded-full text-sm font-bold text-white mb-4"
             style={{ background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)", opacity: loading ? 0.6 : 1 }}
           >
-            {loading ? "Gönderiliyor..." : "Sıfırlama Bağlantısı Gönder"}
+            {loading ? t("auth.resetSubmitLoading") : t("auth.resetSubmit")}
           </button>
           <button
             type="button"
@@ -196,7 +198,7 @@ export default function AuthView({ onAuthenticated, onCancel }) {
             className="w-full text-xs font-medium text-center"
             style={{ color: "#2563EB" }}
           >
-            ← Girişe dön
+            {t("auth.backToLogin")}
           </button>
         </form>
       </div>
@@ -213,13 +215,13 @@ export default function AuthView({ onAuthenticated, onCancel }) {
             className="absolute top-5 left-5 text-sm font-medium"
             style={{ color: "#6B7280" }}
           >
-            ← Gezinmeye devam et
+            {t("auth.backToNav")}
           </button>
         )}
         <div className="max-w-sm w-full text-center">
-          <h1 className="font-sans text-2xl font-black mb-3" style={{ color: "#0F1115" }}>E-postanı kontrol et</h1>
+          <h1 className="font-sans text-2xl font-black mb-3" style={{ color: "#0F1115" }}>{t("auth.checkEmailTitle")}</h1>
           <p className="text-sm" style={{ color: "#6B7280" }}>
-            {email} adresine bir onay linki gönderdik. Hesabını etkinleştirmek için linke tıkla, sonra buraya geri dönüp giriş yap.
+            {t("auth.signupDoneBody", { email })}
           </p>
         </div>
       </div>
@@ -235,7 +237,7 @@ export default function AuthView({ onAuthenticated, onCancel }) {
           className="absolute top-5 left-5 text-sm font-medium"
           style={{ color: "#6B7280" }}
         >
-          ← Gezinmeye devam et
+          {t("auth.backToNav")}
         </button>
       )}
       <form onSubmit={handleSubmit} className="max-w-sm w-full">
@@ -243,14 +245,14 @@ export default function AuthView({ onAuthenticated, onCancel }) {
           İşinn<span style={{ color: "#2563EB" }}>.</span>
         </h1>
         <p className="text-sm mb-6" style={{ color: "#6B7280" }}>
-          {mode === "login" ? "Hesabına giriş yap" : "Yeni bir hesap oluştur"}
+          {mode === "login" ? t("auth.subtitleLogin") : t("auth.subtitleSignup")}
         </p>
 
         {mode === "signup" && (
           <input
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
-            placeholder="Adın Soyadın"
+            placeholder={t("auth.fullNamePlaceholder")}
             className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none mb-3"
             style={{ borderColor: "#E5E7EB", background: "#F9FAFB", color: "#0F1115" }}
           />
@@ -259,7 +261,7 @@ export default function AuthView({ onAuthenticated, onCancel }) {
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="E-posta"
+          placeholder={t("auth.emailPlaceholder")}
           required
           className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none mb-3"
           style={{ borderColor: "#E5E7EB", background: "#F9FAFB", color: "#0F1115" }}
@@ -268,7 +270,7 @@ export default function AuthView({ onAuthenticated, onCancel }) {
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="Şifre (en az 6 karakter)"
+          placeholder={t("auth.passwordPlaceholder")}
           required
           minLength={6}
           className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none mb-2"
@@ -282,7 +284,7 @@ export default function AuthView({ onAuthenticated, onCancel }) {
               className="text-xs font-medium"
               style={{ color: "#2563EB" }}
             >
-              Şifremi unuttum
+              {t("auth.forgotPassword")}
             </button>
           </div>
         )}
@@ -297,9 +299,10 @@ export default function AuthView({ onAuthenticated, onCancel }) {
               className="mt-0.5 shrink-0"
             />
             <span className="text-xs leading-relaxed" style={{ color: "#6B7280" }}>
-              <a href="/kvkk-aydinlatma-metni" target="_blank" rel="noopener noreferrer" className="underline" style={{ color: "#2563EB" }}>KVKK Aydınlatma Metni</a>,{" "}
-              <a href="/gizlilik-politikasi" target="_blank" rel="noopener noreferrer" className="underline" style={{ color: "#2563EB" }}>Gizlilik Politikası</a> ve{" "}
-              <a href="/kullanim-sartlari" target="_blank" rel="noopener noreferrer" className="underline" style={{ color: "#2563EB" }}>Kullanım Şartları</a>'nı okudum, kabul ediyorum.
+              {t("auth.termsAgreeLead")}
+              <a href="/kvkk-aydinlatma-metni" target="_blank" rel="noopener noreferrer" className="underline" style={{ color: "#2563EB" }}>{t("auth.kvkkLabel")}</a>{t("auth.termsAgreeJoin1")}
+              <a href="/gizlilik-politikasi" target="_blank" rel="noopener noreferrer" className="underline" style={{ color: "#2563EB" }}>{t("auth.privacyLabel")}</a>{t("auth.termsAgreeJoin2")}
+              <a href="/kullanim-sartlari" target="_blank" rel="noopener noreferrer" className="underline" style={{ color: "#2563EB" }}>{t("auth.termsLabel")}</a>{t("auth.termsAgreeTail")}
             </span>
           </label>
         )}
@@ -316,7 +319,7 @@ export default function AuthView({ onAuthenticated, onCancel }) {
           className="w-full py-3 rounded-full text-sm font-bold text-white mb-4"
           style={{ background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)", opacity: loading || (mode === "signup" && !agreedToTerms) ? 0.6 : 1 }}
         >
-          {loading ? "Bekleyin..." : mode === "login" ? "Giriş Yap" : "Kayıt Ol"}
+          {loading ? t("auth.submitLoading") : mode === "login" ? t("auth.submitLogin") : t("auth.submitSignup")}
         </button>
 
         <button
@@ -325,12 +328,12 @@ export default function AuthView({ onAuthenticated, onCancel }) {
           className="w-full text-xs font-medium text-center mb-5"
           style={{ color: "#2563EB" }}
         >
-          {mode === "login" ? "Hesabın yok mu? Kayıt ol" : "Zaten hesabın var mı? Giriş yap"}
+          {mode === "login" ? t("auth.switchToSignup") : t("auth.switchToLogin")}
         </button>
 
         <div className="flex items-center gap-3 mb-5">
           <div className="flex-1 h-px" style={{ background: "#E5E7EB" }} />
-          <span className="text-[11px] font-medium" style={{ color: "#9CA3AF" }}>veya</span>
+          <span className="text-[11px] font-medium" style={{ color: "#9CA3AF" }}>{t("auth.or")}</span>
           <div className="flex-1 h-px" style={{ background: "#E5E7EB" }} />
         </div>
 
@@ -347,7 +350,7 @@ export default function AuthView({ onAuthenticated, onCancel }) {
             <path fill="#FBBC05" d="M3.95 10.7A5.4 5.4 0 0 1 3.67 9c0-.59.1-1.17.28-1.7V4.97H.96A9 9 0 0 0 0 9c0 1.45.35 2.83.96 4.03l2.99-2.33z" />
             <path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A9 9 0 0 0 .96 4.97l2.99 2.33C4.66 5.17 6.65 3.58 9 3.58z" />
           </svg>
-          Google ile devam et
+          {t("auth.googleContinue")}
         </button>
       </form>
     </div>

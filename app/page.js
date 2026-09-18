@@ -4,6 +4,7 @@ import { supabase } from "../lib/supabaseClient";
 import AuthView from "../components/AuthView";
 import IsinnApp from "../components/IsinnApp";
 import ErrorBoundary from "../components/ErrorBoundary";
+import { LanguageProvider } from "../lib/i18n/LanguageContext";
 
 export default function Page() {
   const [session, setSession] = useState(undefined); // undefined = still checking, null = signed out
@@ -36,17 +37,21 @@ export default function Page() {
   // session gelince kendiliğinden güncellenir.
   if (!session && showAuth) {
     return (
-      <ErrorBoundary>
-        <AuthView onAuthenticated={(s) => { setSession(s); setShowAuth(false); }} onCancel={() => setShowAuth(false)} />
-      </ErrorBoundary>
+      <LanguageProvider>
+        <ErrorBoundary>
+          <AuthView onAuthenticated={(s) => { setSession(s); setShowAuth(false); }} onCancel={() => setShowAuth(false)} />
+        </ErrorBoundary>
+      </LanguageProvider>
     );
   }
 
   return (
-    <ErrorBoundary>
-      <div className="relative">
-        <IsinnApp session={session} onRequireAuth={() => setShowAuth(true)} />
-      </div>
-    </ErrorBoundary>
+    <LanguageProvider>
+      <ErrorBoundary>
+        <div className="relative">
+          <IsinnApp session={session} onRequireAuth={() => setShowAuth(true)} />
+        </div>
+      </ErrorBoundary>
+    </LanguageProvider>
   );
 }

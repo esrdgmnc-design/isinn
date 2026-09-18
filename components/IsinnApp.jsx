@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Cropper from "react-easy-crop";
 import { supabase } from "../lib/supabaseClient";
 import { COMPANY } from "../lib/companyInfo";
+import { useLanguage } from "../lib/i18n/LanguageContext";
 import {
   Search, MapPin, Star, Heart, PlayCircle, ChevronLeft, ChevronRight,
   Wrench, Truck, Monitor, Paintbrush, Code2, Sparkles, ThumbsUp,
@@ -1143,7 +1144,31 @@ function NotificationBell({ userId, onNavigate }) {
   );
 }
 
+// TR/EN dil değiştirme düğmesi — küçük bir hap (pill), aktif dil vurgulu.
+// Header'da hem masaüstü hem mobil menüde kullanılıyor. Tıklayınca sayfa
+// yenilenmeden anında tüm uygulama dilini değiştiriyor (bkz. LanguageContext).
+function LanguageToggle({ className = "" }) {
+  const { language, setLanguage } = useLanguage();
+  return (
+    <div className={`flex items-center p-0.5 rounded-full shrink-0 ${className}`} style={{ background: "#F7F7F8" }}>
+      {["tr", "en"].map((lang) => (
+        <button
+          key={lang}
+          type="button"
+          onClick={() => setLanguage(lang)}
+          aria-pressed={language === lang}
+          className="text-xs font-bold px-2.5 py-1.5 rounded-full transition-colors"
+          style={language === lang ? { background: "#0F1115", color: "#FFFFFF" } : { color: "#6B7280" }}
+        >
+          {lang.toUpperCase()}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function Header({ onNav, onSearch, pendingCount, session, onNotificationClick }) {
+  const { t } = useLanguage();
   const [q, setQ] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   // KRİTİK MOBİL HATA (kullanıcı fark etti, canlıda doğrulandı): Planlar/
@@ -1201,12 +1226,13 @@ function Header({ onNav, onSearch, pendingCount, session, onNotificationClick })
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter" && q.trim()) onSearch(q); }}
-            placeholder="Hizmet veya iş ara... örn. çilingir"
+            placeholder={t("header.searchPlaceholder")}
             className="w-full pl-9 pr-3 py-2.5 rounded-full text-sm outline-none border-2 transition-colors focus:border-current"
             style={{ borderColor: "#F0F0F0", background: "#F7F7F8", color: "#0F1115" }}
           />
         </div>
         <div className="flex items-center gap-2 ml-auto">
+          <LanguageToggle className="hidden sm:flex" />
           {session?.user?.id && (
             <NotificationBell userId={session.user.id} onNavigate={onNotificationClick} />
           )}
@@ -1222,14 +1248,14 @@ function Header({ onNav, onSearch, pendingCount, session, onNotificationClick })
             className="text-sm font-semibold px-3.5 py-2 rounded-full hidden sm:flex items-center gap-1.5 transition-colors"
             style={{ background: "#F7F7F8", color: "#0F1115" }}
           >
-            <Award size={15} /> Planlar
+            <Award size={15} /> {t("header.plans")}
           </button>
           <button
             onClick={() => onNav("map")}
             className="text-sm font-semibold px-3.5 py-2 rounded-full flex items-center gap-1.5 hidden sm:flex"
             style={{ background: "#F7F7F8", color: "#0F1115" }}
           >
-            <MapIcon size={15} /> Haritada Gör
+            <MapIcon size={15} /> {t("header.map")}
           </button>
           <div className="hidden sm:flex items-center gap-1.5 p-1 rounded-full" style={{ background: "#F7F7F8" }}>
             <button
@@ -1237,14 +1263,14 @@ function Header({ onNav, onSearch, pendingCount, session, onNotificationClick })
               className="text-sm font-bold px-3.5 py-2 rounded-full flex items-center gap-1.5 text-white shadow-sm"
               style={{ background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)" }}
             >
-              <Sparkles size={15} /> Hizmet Ekle
+              <Sparkles size={15} /> {t("header.addService")}
             </button>
             <button
               onClick={() => onNav("post")}
               className="text-sm font-bold px-3.5 py-2 rounded-full text-white"
               style={{ background: "#0F1115" }}
             >
-              İlan Ver
+              {t("header.postJob")}
             </button>
           </div>
           {session ? (
@@ -1276,21 +1302,21 @@ function Header({ onNav, onSearch, pendingCount, session, onNotificationClick })
                       className="w-full text-left px-4 py-2.5 text-sm font-medium hover:bg-black/5"
                       style={{ color: "#0F1115" }}
                     >
-                      Profilim
+                      {t("header.profile")}
                     </button>
                     <button
                       onClick={() => { setMenuOpen(false); onNav("favorites"); }}
                       className="w-full text-left px-4 py-2.5 text-sm font-medium hover:bg-black/5"
                       style={{ color: "#0F1115" }}
                     >
-                      Favorilerim
+                      {t("header.favorites")}
                     </button>
                     <button
                       onClick={() => { setMenuOpen(false); supabase.auth.signOut(); }}
                       className="w-full text-left px-4 py-2.5 text-sm font-medium hover:bg-black/5"
                       style={{ color: "#9C4A3C" }}
                     >
-                      Çıkış Yap
+                      {t("header.logout")}
                     </button>
                   </div>
                 </>
@@ -1305,14 +1331,14 @@ function Header({ onNav, onSearch, pendingCount, session, onNotificationClick })
               className="text-sm font-bold px-4 py-2 rounded-full text-white shrink-0"
               style={{ background: "#0F1115" }}
             >
-              Giriş Yap
+              {t("header.login")}
             </button>
           )}
           <button
             onClick={() => setMobileMenuOpen((v) => !v)}
             className="sm:hidden w-9 h-9 rounded-full flex items-center justify-center shrink-0"
             style={{ background: "#F7F7F8", color: "#1B2B24" }}
-            aria-label="Menü"
+            aria-label={t("header.menuAria")}
           >
             {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
@@ -1348,38 +1374,41 @@ function Header({ onNav, onSearch, pendingCount, session, onNotificationClick })
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter" && q.trim()) { onSearch(q); setMobileMenuOpen(false); } }}
-                placeholder="Hizmet veya iş ara... örn. çilingir"
+                placeholder={t("header.searchPlaceholder")}
                 className="w-full pl-9 pr-3 py-2.5 rounded-full text-sm outline-none border-2"
                 style={{ borderColor: "#F0F0F0", background: "#F7F7F8", color: "#0F1115" }}
               />
+            </div>
+            <div className="flex justify-end mb-1">
+              <LanguageToggle />
             </div>
             <button
               onClick={() => { setMobileMenuOpen(false); onNav("pricing"); }}
               className="flex items-center gap-2 text-sm font-semibold px-2 py-2.5 rounded-lg text-left"
               style={{ color: "#0F1115" }}
             >
-              <Award size={16} /> Planlar
+              <Award size={16} /> {t("header.plans")}
             </button>
             <button
               onClick={() => { setMobileMenuOpen(false); onNav("map"); }}
               className="flex items-center gap-2 text-sm font-semibold px-2 py-2.5 rounded-lg text-left"
               style={{ color: "#0F1115" }}
             >
-              <MapIcon size={16} /> Haritada Gör
+              <MapIcon size={16} /> {t("header.map")}
             </button>
             <button
               onClick={() => { setMobileMenuOpen(false); onNav("createListing"); }}
               className="flex items-center gap-2 text-sm font-bold px-2 py-2.5 rounded-lg text-left"
               style={{ color: "#2563EB" }}
             >
-              <Sparkles size={16} /> Hizmet Ekle
+              <Sparkles size={16} /> {t("header.addService")}
             </button>
             <button
               onClick={() => { setMobileMenuOpen(false); onNav("post"); }}
               className="flex items-center gap-2 text-sm font-bold px-2 py-2.5 rounded-lg text-left"
               style={{ color: "#0F1115" }}
             >
-              İlan Ver
+              {t("header.postJob")}
             </button>
             {/* Kullanıcı geri bildirimi: mesajlaşma (veya başka herhangi bir)
                 ekranındayken profile geçmenin tek yolu bu menüde değil, ayrı
@@ -1393,14 +1422,14 @@ function Header({ onNav, onSearch, pendingCount, session, onNotificationClick })
                   className="flex items-center gap-2 text-sm font-semibold px-2 py-2.5 rounded-lg text-left"
                   style={{ color: "#0F1115" }}
                 >
-                  <User size={16} /> Profilim
+                  <User size={16} /> {t("header.profile")}
                 </button>
                 <button
                   onClick={() => { setMobileMenuOpen(false); onNav("favorites"); }}
                   className="flex items-center gap-2 text-sm font-semibold px-2 py-2.5 rounded-lg text-left"
                   style={{ color: "#0F1115" }}
                 >
-                  <Heart size={16} /> Favorilerim
+                  <Heart size={16} /> {t("header.favorites")}
                 </button>
               </>
             )}
@@ -1415,7 +1444,9 @@ function Header({ onNav, onSearch, pendingCount, session, onNotificationClick })
 // kaldırıldı — sadece gerçek "İlan Ver" kayıtları (realJobs) gösteriliyor.
 const JOB_POSTINGS = [];
 
-const ROTATING_WORDS = ["çilingire", "temizlikçiye", "hemşireye", "bakıcıya", "nailartiste", "fizyoterapiste"];
+// Hero'daki dönen kelimeler artık dile göre lib/i18n/tr.js ve en.js
+// içindeki rotatingWords dizisinden geliyor (bkz. HomeView) — bu sabit
+// buradan kaldırıldı.
 
 const CATEGORY_TILE_COLORS = ["#2563EB", "#14B8A6", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899", "#3B82F6", "#F97316"];
 // Her rengin canlı-koyu çift ucu — rozet gradyanı için (bkz. CategoryTile).
@@ -1564,6 +1595,8 @@ function InstallAppBanner() {
 }
 
 function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApplyJob, onOpenJob, realListings, listingsLoading, realJobs, favoriteIds, onToggleFavorite, onToggleJobFavorite, platformStats }) {
+  const { t } = useLanguage();
+  const rotatingWords = t("rotatingWords");
   const [heroQ, setHeroQ] = useState("");
   const [heroCity, setHeroCity] = useState("");
   // Rakip site kıyaslamasında fark edildi: tek kutuya "istanbul temizlik"
@@ -1599,14 +1632,14 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
   ).slice().sort((a, b) => computeVisibilityScore(b) - computeVisibilityScore(a));
 
   useEffect(() => {
-    const t = setInterval(() => setWordIndex((i) => (i + 1) % ROTATING_WORDS.length), 1800);
-    return () => clearInterval(t);
-  }, []);
+    const interval = setInterval(() => setWordIndex((i) => (i + 1) % rotatingWords.length), 1800);
+    return () => clearInterval(interval);
+  }, [rotatingWords.length]);
 
   useEffect(() => {
     if (featured.length === 0) return;
-    const t = setInterval(() => setFeaturedIndex((i) => (i + 1) % featured.length), 4500);
-    return () => clearInterval(t);
+    const featuredInterval = setInterval(() => setFeaturedIndex((i) => (i + 1) % featured.length), 4500);
+    return () => clearInterval(featuredInterval);
   }, [featured.length]);
 
   return (
@@ -1635,7 +1668,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
               kırpılan tam da o gradyanlı span olduğu için ona ayrıca
               pb-1.5 (alt boşluk) verdik. */}
           <h1 className="font-sans text-5xl md:text-7xl font-black leading-[1.15] max-w-3xl tracking-tight" style={{ color: "#FFFFFF" }}>
-            İhtiyacın olan şeyi<br />
+            {t("home.heroLine1")}<br />
             {/* Dönen kelimeler çok farklı uzunlukta ("çilingire" vs
                 "fizyoterapiste") — özellikle mobilde kısa kelimeyle tek
                 satıra sığan ikinci satır, uzun kelimede ikinci satıra taşıp
@@ -1662,15 +1695,15 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
                     willChange: "transform, opacity",
                   }}
                 >
-                  {ROTATING_WORDS[wordIndex]}
+                  {rotatingWords[wordIndex]}
                 </span>
-              </span>{" "}
-              anlat!
+              </span>
+              {t("home.heroSuffix")}
             </span>
           </h1>
           <style>{`@keyframes fadeSlide { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }`}</style>
           <p className="mt-8 max-w-md text-base" style={{ color: "#B8BCC4" }}>
-            En yakınındaki ustadan güvenilir bakıcıya, uzaktaki yazılımcıdan, salondaki tırnakçıya — ihtiyacın olan herkes burada.
+            {t("home.heroSubheading")}
           </p>
           <div className="mt-9 flex items-center gap-1 max-w-lg bg-white rounded-full p-1.5 pl-4 shadow-2xl">
             <Search size={16} style={{ color: "#9CA3AF" }} />
@@ -1678,7 +1711,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
               value={heroQ}
               onChange={(e) => setHeroQ(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter" && (heroQ.trim() || heroCity)) onSearch(heroQ, heroCity); }}
-              placeholder="Örn. çilingir, mutfak tadilatı..."
+              placeholder={t("home.searchPlaceholder")}
               className="flex-1 min-w-0 text-sm outline-none py-1.5"
               style={{ color: "#0F1115" }}
             />
@@ -1690,7 +1723,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
               className="text-sm outline-none py-1.5 max-w-[92px] shrink-0 bg-transparent"
               style={{ color: heroCity ? "#0F1115" : "#9CA3AF" }}
             >
-              <option value="">Nerede?</option>
+              <option value="">{t("home.wherePlaceholder")}</option>
               {CITIES.filter((c) => c.country === "Türkiye").map((c) => (
                 <option key={c.id} value={c.name}>{c.name}</option>
               ))}
@@ -1700,7 +1733,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
               className="text-sm font-bold px-6 py-3 rounded-full text-white hover:scale-105 transition-transform shrink-0"
               style={{ background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)" }}
             >
-              Ara
+              {t("home.searchButton")}
             </button>
           </div>
           <div className="mt-3 flex items-center gap-2 flex-wrap">
@@ -1721,8 +1754,8 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
               bir slogan koyduk. */}
           <p className="mt-8 flex items-center gap-2 text-sm font-bold tracking-wide">
             <Sparkles size={14} style={{ color: "#F59E0B" }} />
-            <span style={{ color: "#FFFFFF" }}>İşin gücün</span>
-            <span style={{ color: "#9CA3AF" }}>burada!</span>
+            <span style={{ color: "#FFFFFF" }}>{t("home.taglinePrefix")}</span>
+            <span style={{ color: "#9CA3AF" }}>{t("home.taglineSuffix")}</span>
           </p>
         </div>
 
@@ -1826,7 +1859,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
 
       <section className="max-w-6xl mx-auto px-5 -mt-8 relative">
         <div className="rounded-2xl p-1.5 flex gap-1 w-fit shadow-lg" style={{ background: "#FFFFFF", border: "1px solid #F0F0F0" }}>
-          {[["all", "Tümü"], ["home", "🏠 Evimde"], ["local", "Yerinde"], ["remote", "Uzaktan"]].map(([key, label]) => (
+          {[["all", t("home.filterAll")], ["home", t("home.filterHome")], ["local", t("home.filterLocal")], ["remote", t("home.filterRemote")]].map(([key, label]) => (
             <button
               key={key}
               onClick={() => setFilter(key)}
@@ -1911,8 +1944,8 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
       <section className="max-w-6xl mx-auto px-5 mt-12">
         <div className="flex items-end justify-between mb-5 flex-wrap gap-2">
           <div>
-            <h2 className="font-sans text-3xl font-black" style={{ color: "#0F1115" }}>Vitrinler</h2>
-            <p className="text-sm mt-0.5" style={{ color: "#6B7280" }}>Şu an aktif, gerçek zamanlı vitrinler — filtrele, keşfet, doğrudan ulaş</p>
+            <h2 className="font-sans text-3xl font-black" style={{ color: "#0F1115" }}>{t("home.showcasesHeading")}</h2>
+            <p className="text-sm mt-0.5" style={{ color: "#6B7280" }}>{t("home.showcasesSubtext")}</p>
           </div>
           {!listingsLoading && filtered.length > 0 && (
             <span className="text-xs font-bold px-3 py-1.5 rounded-full" style={{ background: "#EFF6FF", color: "#2563EB" }}>
@@ -2238,6 +2271,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
 // ulaşmanın tek yolu yoktu. Hero'daki koyu tonla bookend oluşturması için
 // aynı palet (bkz. HomeView'ın en üstündeki radial-gradient).
 function SiteFooter({ onNav }) {
+  const { t } = useLanguage();
   return (
     <footer className="px-5 pt-14 pb-8" style={{ background: "#0F1115" }}>
       <div className="max-w-6xl mx-auto">
@@ -2247,51 +2281,54 @@ function SiteFooter({ onNav }) {
               İşinn<span style={{ color: "#2563EB" }}>.</span>
             </p>
             <p className="text-xs mt-3 leading-relaxed max-w-[220px]" style={{ color: "#7A7F8A" }}>
-              İhtiyacın olan hizmeti bulduğun ya da kendi hizmetini sunduğun güvenilir yerel pazar yeri.
+              {t("footer.tagline")}
             </p>
             {/* IYS/Netgsm başvurusunda marka doğrulaması için — sitede İşinn'in
                 hangi tüzel kişiliğe (CODE G LTD) ait olduğu hiçbir yerde açıkça
                 yazmıyordu (kullanıcının isteği, 2026-09-12). */}
             <p className="text-xs mt-3 leading-relaxed max-w-[220px]" style={{ color: "#7A7F8A" }}>
-              İşinn, <b style={{ color: "#D1D5DB" }}>{COMPANY.brand}</b> ({COMPANY.legalName}) markasıdır.
+              {t("footer.brandLine", { brand: COMPANY.brand, legalName: COMPANY.legalName })}
             </p>
           </div>
           <div>
-            <p className="text-xs font-bold tracking-wide mb-3" style={{ color: "#FFFFFF" }}>Keşfet</p>
+            <p className="text-xs font-bold tracking-wide mb-3" style={{ color: "#FFFFFF" }}>{t("footer.exploreHeading")}</p>
             <div className="flex flex-col gap-2.5">
-              <button onClick={() => onNav("map")} className="text-xs text-left" style={{ color: "#9CA3AF" }}>Haritada Gör</button>
-              <button onClick={() => onNav("createListing")} className="text-xs text-left" style={{ color: "#9CA3AF" }}>Hizmet Ekle</button>
-              <button onClick={() => onNav("post")} className="text-xs text-left" style={{ color: "#9CA3AF" }}>İlan Ver</button>
-              <button onClick={() => onNav("pricing")} className="text-xs text-left" style={{ color: "#9CA3AF" }}>Planlar</button>
+              <button onClick={() => onNav("map")} className="text-xs text-left" style={{ color: "#9CA3AF" }}>{t("footer.map")}</button>
+              <button onClick={() => onNav("createListing")} className="text-xs text-left" style={{ color: "#9CA3AF" }}>{t("footer.addService")}</button>
+              <button onClick={() => onNav("post")} className="text-xs text-left" style={{ color: "#9CA3AF" }}>{t("footer.postJob")}</button>
+              <button onClick={() => onNav("pricing")} className="text-xs text-left" style={{ color: "#9CA3AF" }}>{t("footer.plans")}</button>
               {/* SEO: gerçek bir sayfaya (app/rehber) giden gerçek <a> —
-                  diğerleri gibi SPA view'ı değil, iç link değeri için. */}
-              <a href="/rehber" className="text-xs text-left" style={{ color: "#9CA3AF" }}>Rehberler</a>
+                  diğerleri gibi SPA view'ı değil, iç link değeri için. Sayfanın
+                  kendisi hâlâ Türkçe (bkz. app/rehber) — sadece link etiketi çevrildi. */}
+              <a href="/rehber" className="text-xs text-left" style={{ color: "#9CA3AF" }}>{t("footer.guides")}</a>
             </div>
           </div>
           <div>
-            <p className="text-xs font-bold tracking-wide mb-3" style={{ color: "#FFFFFF" }}>Sözleşmeler</p>
+            <p className="text-xs font-bold tracking-wide mb-3" style={{ color: "#FFFFFF" }}>{t("footer.contractsHeading")}</p>
             <div className="flex flex-col gap-2.5">
-              <a href="/kvkk-aydinlatma-metni" target="_blank" rel="noopener noreferrer" className="text-xs" style={{ color: "#9CA3AF" }}>KVKK Aydınlatma Metni</a>
-              <a href="/gizlilik-politikasi" target="_blank" rel="noopener noreferrer" className="text-xs" style={{ color: "#9CA3AF" }}>Gizlilik Politikası</a>
-              <a href="/kullanim-sartlari" target="_blank" rel="noopener noreferrer" className="text-xs" style={{ color: "#9CA3AF" }}>Kullanım Şartları</a>
-              <a href="/mesafeli-satis-sozlesmesi" target="_blank" rel="noopener noreferrer" className="text-xs" style={{ color: "#9CA3AF" }}>Mesafeli Satış Sözleşmesi</a>
-              <a href="/iptal-iade-kosullari" target="_blank" rel="noopener noreferrer" className="text-xs" style={{ color: "#9CA3AF" }}>İptal, İade ve Geri Ödeme</a>
+              {/* Bu sayfaların kendisi (app/kvkk-aydinlatma-metni vb.) hâlâ
+                  sadece Türkçe — burada sadece link etiketi çevriliyor. */}
+              <a href="/kvkk-aydinlatma-metni" target="_blank" rel="noopener noreferrer" className="text-xs" style={{ color: "#9CA3AF" }}>{t("footer.kvkk")}</a>
+              <a href="/gizlilik-politikasi" target="_blank" rel="noopener noreferrer" className="text-xs" style={{ color: "#9CA3AF" }}>{t("footer.privacy")}</a>
+              <a href="/kullanim-sartlari" target="_blank" rel="noopener noreferrer" className="text-xs" style={{ color: "#9CA3AF" }}>{t("footer.terms")}</a>
+              <a href="/mesafeli-satis-sozlesmesi" target="_blank" rel="noopener noreferrer" className="text-xs" style={{ color: "#9CA3AF" }}>{t("footer.distanceSales")}</a>
+              <a href="/iptal-iade-kosullari" target="_blank" rel="noopener noreferrer" className="text-xs" style={{ color: "#9CA3AF" }}>{t("footer.cancellation")}</a>
             </div>
           </div>
           <div>
-            <p className="text-xs font-bold tracking-wide mb-3" style={{ color: "#FFFFFF" }}>İletişim</p>
+            <p className="text-xs font-bold tracking-wide mb-3" style={{ color: "#FFFFFF" }}>{t("footer.contactHeading")}</p>
             <div className="flex flex-col gap-2.5">
               <a href={`mailto:${COMPANY.email}`} className="text-xs" style={{ color: "#9CA3AF" }}>{COMPANY.email}</a>
               <a href={`tel:${COMPANY.phoneHref}`} className="text-xs" style={{ color: "#9CA3AF" }}>{COMPANY.phone}</a>
-              <button onClick={() => onNav("support")} className="text-xs text-left" style={{ color: "#9CA3AF" }}>Destek Talebi Oluştur</button>
+              <button onClick={() => onNav("support")} className="text-xs text-left" style={{ color: "#9CA3AF" }}>{t("footer.supportRequest")}</button>
             </div>
           </div>
         </div>
         <div className="pt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2" style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}>
           <p className="text-[11px]" style={{ color: "#5C6070" }}>
-            © {new Date().getFullYear()} {COMPANY.brand} — {COMPANY.legalName}, {COMPANY.address}. Tüm hakları saklıdır.
+            {t("footer.copyright", { year: new Date().getFullYear(), brand: COMPANY.brand, legalName: COMPANY.legalName, address: COMPANY.address })}
           </p>
-          <p className="text-[11px]" style={{ color: "#5C6070" }}>İşinn bir aracı pazaryeridir; hizmetin tarafı değildir.</p>
+          <p className="text-[11px]" style={{ color: "#5C6070" }}>{t("footer.disclaimer")}</p>
         </div>
       </div>
     </footer>
