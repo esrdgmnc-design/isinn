@@ -10319,6 +10319,14 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
       setView("profile");
       return;
     }
+    // Dunning bildirimleri (bkz. supabase/dunning_vitrin_lapse.sql) — ikisi
+    // de aynı yere, ödeme/üyelik ekranına götürüyor: "yakında bitiyor"
+    // uyarısında hâlâ önlenebilir, "kapatıldı" bildiriminde tek çözüm zaten
+    // yeniden ödeme yapmak.
+    if (n.type === "subscription_ending_soon" || n.type === "vitrin_deactivated") {
+      setView("pricing");
+      return;
+    }
     if ((n.type === "media_approved" || n.type === "media_rejected" || n.type === "saved_search_match") && n.related_service_id) {
       const { data } = await supabase.from("services").select("*, profiles(*), categories(*)").eq("id", n.related_service_id).maybeSingle();
       if (data) { setSelected(mapServiceRowToListing(data)); setView("detail"); return; }

@@ -265,6 +265,33 @@ export async function POST(request) {
           });
           if (error) grantError = `provider_subscriptions insert: ${error.message}`;
         }
+        // Dunning geri açma (2026-09-19, bkz. supabase/dunning_vitrin_lapse.sql)
+        // — bu abonelik daha önce ödeme alınamadığı için lapse olup cron
+        // tarafından kapatılmış vitrinler bırakmış olabilir
+        // (services.deactivated_for_billing_at dolu). Gerçek bir ödeme
+        // şimdi geldiğine göre (buradayız, status==="success") bunları
+        // otomatik geri açıyoruz. SADECE bu işaretli satırlara dokunuyoruz
+        // — kullanıcının kendi iradesiyle pasife aldığı vitrinler (bu sütun
+        // hiç dolmamış) asla etkilenmiyor. NOT: enforce_vitrin_cap trigger'ı
+        // active=false→true geçişinde kapasiteyi tekrar kontrol ediyor;
+        // yukarıdaki provider_subscriptions güncellemesi zaten bu satırdan
+        // ÖNCE yapıldığı için (doğru current_period_end/plan ile) kapasite
+        // kontrolü güncel veriyle çalışıyor. Tek bilinen kenar durum: kullanıcı
+        // lapse SIRASINDA daha düşük bir plana geçtiyse (ör. Pro→Standart) ve
+        // kapasitenin üstünde kapatılmış vitrini varsa bu tek UPDATE
+        // istisna fırlatıp hiç geri açmayabilir — bu nadir senaryoda elle
+        // müdahale (Vitrinlerim'den birini pasife alıp diğerini elle
+        // aktifleştirme) gerekir.
+        if (!grantError) {
+          const { error: reactivateError } = await admin
+            .from("services")
+            .update({ active: true, deactivated_for_billing_at: null })
+            .eq("provider_id", order.profile_id)
+            .not("deactivated_for_billing_at", "is", null);
+          if (reactivateError) {
+            grantError = `services reactivation: ${reactivateError.message}`;
+          }
+        }
       } else {
         grantError = `subscription_plans bulunamadı: slug=${order.plan_slug}`;
       }
