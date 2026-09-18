@@ -16,6 +16,7 @@ export default async function sitemap() {
   const staticPaths = [
     "",
     "/rehber",
+    "/rozet",
     "/kvkk-aydinlatma-metni",
     "/gizlilik-politikasi",
     "/kullanim-sartlari",

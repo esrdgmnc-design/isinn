@@ -1,0 +1,7 @@
+<svg width="220" height="64" viewBox="0 0 220 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="220" height="64" rx="12" fill="#1B2B24"/>
+  <circle cx="32" cy="32" r="16" fill="#3F7D5C"/>
+  <path d="M25 32.5L29.5 37L39.5 26" stroke="#EFE8D8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="56" y="26" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#EFE8D8">İşinn'de</text>
+  <text x="56" y="44" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#C2872B">Doğrulanmış Sağlayıcı</text>
+</svg>
