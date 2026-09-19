@@ -8384,6 +8384,11 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
   const [phoneInput, setPhoneInput] = useState("");
   const [otpInput, setOtpInput] = useState("");
   const [phoneStage, setPhoneStage] = useState("idle"); // idle | sending | code_sent | verifying
+  // Doğrulanmış numarayı değiştirme akışı — store_phone_otp yeni kod
+  // gönderildiği anda profile_phone.verified'ı false yapıyor (bkz.
+  // supabase/fix_otp_leak.sql), yani kullanıcı yeni numarayı doğrulamadan
+  // vazgeçerse doğrulaması düşmüş kalır; arayüzde bunu açıkça uyarıyoruz.
+  const [changingPhone, setChangingPhone] = useState(false);
   const [phoneError, setPhoneError] = useState("");
   const [phoneNotConfigured, setPhoneNotConfigured] = useState(false);
   const [deactivatingJobId, setDeactivatingJobId] = useState(null);
@@ -8617,6 +8622,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
       setProfile((p) => (p ? { ...p, phone_verified: true } : p));
       setPhoneStage("idle");
       setOtpInput("");
+      setChangingPhone(false);
     } catch (err) {
       setPhoneError(err.message || t("profile.errGeneric"));
       setPhoneStage("code_sent");
@@ -8902,10 +8908,10 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
           </p>
         )}
 
-        {myPhone?.verified ? (
+        {myPhone?.verified && !changingPhone ? (
           <div>
             <p className="text-sm mb-3" style={{ color: "#1B2B24" }}>{myPhone.phone}</p>
-            <label className="flex items-center gap-2 text-xs" style={{ color: "#5C5744" }}>
+            <label className="flex items-center gap-2 text-xs mb-3" style={{ color: "#5C5744" }}>
               <input
                 type="checkbox"
                 checked={!!myPhone.show_publicly}
@@ -8913,6 +8919,13 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
               />
               {t("profile.phoneShowPublicly")}
             </label>
+            <button
+              onClick={() => { setChangingPhone(true); setPhoneInput(""); setPhoneError(""); }}
+              className="text-xs font-bold underline"
+              style={{ color: "#3A5BA0" }}
+            >
+              {t("profile.phoneChange")}
+            </button>
           </div>
         ) : phoneStage === "code_sent" ? (
           <div className="flex items-center gap-2">
@@ -8951,6 +8964,18 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
             >
               {phoneStage === "sending" && <Loader2 size={13} className="animate-spin" />}
               {t("profile.sendCodeButton")}
+            </button>
+          </div>
+        )}
+        {changingPhone && (
+          <div className="mt-3">
+            <p className="text-[11px] mb-2" style={{ color: "#92640B" }}>{t("profile.phoneChangeWarning")}</p>
+            <button
+              onClick={async () => { setChangingPhone(false); setPhoneStage("idle"); setOtpInput(""); setPhoneError(""); await loadMyPhone(); }}
+              className="text-xs font-bold underline"
+              style={{ color: "#5C5744" }}
+            >
+              {t("common.cancel")}
             </button>
           </div>
         )}
@@ -10369,6 +10394,42 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
   // içinde çalışıyor.
   const historyInitedRef = useRef(false);
   const fromPopStateRef = useRef(false);
+
+  // Uygulama içi "Geri" (2026-09-19, kullanıcı isteği: "her sayfada geri
+  // tıklayınca ana sayfaya değil bir önceki sayfaya dönsün") — eskiden her
+  // ekranın onBack'i sabit olarak setView("home") çağırıyordu. Şimdi bir
+  // ekran yığını tutuluyor; her view değişiminde ayrıldığımız ekranın
+  // görüntüsü (view + seçili vitrin/ilan/düzenlenen kayıt) yığına
+  // eklenir, goBack() onu geri yükler. Yığın boşsa (ör. sayfa doğrudan bu
+  // ekranda açıldıysa) verilen yedek ekrana (varsayılan ana sayfa) döner.
+  const viewStackRef = useRef([]);
+  const lastSnapRef = useRef(null);
+  const skipStackPushRef = useRef(false);
+  useEffect(() => {
+    if (skipStackPushRef.current) { skipStackPushRef.current = false; return; }
+    const prev = lastSnapRef.current;
+    if (prev && prev.view !== view) {
+      const stack = viewStackRef.current;
+      stack.push(prev);
+      if (stack.length > 30) stack.shift();
+    }
+  }, [view]);
+  useEffect(() => {
+    lastSnapRef.current = { view, selected, selectedJob, editingListing, editingJob, managingVitrin, lastJob };
+  });
+  const goBack = (fallback = "home") => {
+    const snap = viewStackRef.current.pop();
+    if (!snap) { setView(fallback); return; }
+    skipStackPushRef.current = true;
+    setSelected(snap.selected);
+    setSelectedJob(snap.selectedJob);
+    setEditingListing(snap.editingListing);
+    setEditingJob(snap.editingJob);
+    setManagingVitrin(snap.managingVitrin);
+    setLastJob(snap.lastJob);
+    setView(snap.view);
+  };
+
   useEffect(() => {
     if (fromPopStateRef.current) { fromPopStateRef.current = false; return; }
     const url = new URL(window.location.href);
@@ -10380,8 +10441,23 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
 
   useEffect(() => {
     const onPopState = () => {
+      // Fiziksel geri tuşu da uygulama içi "Geri" ile aynı davranıyor —
+      // detay/ilan gibi ekranlar URL'den geri kurulamadığı (RESTORABLE_VIEWS
+      // dışında) için yığından geri yüklüyoruz, yığın boşsa URL'e bakıyoruz.
       fromPopStateRef.current = true;
-      setView(getInitialView());
+      const snap = viewStackRef.current.pop();
+      if (snap) {
+        skipStackPushRef.current = true;
+        setSelected(snap.selected);
+        setSelectedJob(snap.selectedJob);
+        setEditingListing(snap.editingListing);
+        setEditingJob(snap.editingJob);
+        setManagingVitrin(snap.managingVitrin);
+        setLastJob(snap.lastJob);
+        setView(snap.view);
+      } else {
+        setView(getInitialView());
+      }
     };
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
@@ -10536,7 +10612,7 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
         <SearchResultsView
           query={query}
           cityFilter={cityFilter}
-          onBack={() => setView("home")}
+          onBack={() => goBack()}
           onSelectListing={(l) => { setSelected(l); setView("detail"); }}
           realListings={realListings}
           currentUserId={userId}
@@ -10544,7 +10620,7 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
       )}
       {view === "createListing" && (
         <CreateListingView
-          onBack={() => { setEditingListing(null); setView("home"); }}
+          onBack={() => goBack()}
           onGoToProfile={() => { setEditingListing(null); setView("profile"); }}
           onCreated={() => fetchListings()}
           onManageMedia={(l) => { setEditingListing(null); setManagingVitrin(l); setView("vitrinMedia"); }}
@@ -10555,7 +10631,7 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
       {view === "detail" && selected && (
         <ListingDetail
           listing={selected}
-          onBack={() => setView("home")}
+          onBack={() => goBack()}
           onContact={() => {
             if (!userId) { onRequireAuth?.(); return; }
             setMessageContact({
@@ -10578,7 +10654,7 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
       )}
       {view === "post" && (
         <PostJobView
-          onBack={() => { setEditingJob(null); setView("home"); }}
+          onBack={() => goBack()}
           onGoToProfile={() => { setEditingJob(null); setView("profile"); }}
           onSubmitted={() => setView("home")}
           onViewOffers={(job) => { setLastJob(job); setView("offers"); }}
@@ -10591,7 +10667,7 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
       )}
       {view === "map" && (
         <MapView
-          onBack={() => setView("home")}
+          onBack={() => goBack()}
           realListings={realListings}
           realJobs={realJobs}
           onSelectProvider={(p) => {
@@ -10605,32 +10681,32 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
       {view === "jobDetail" && selectedJob && (
         <JobDetailView
           job={selectedJob}
-          onBack={() => setView("home")}
+          onBack={() => goBack()}
           onContact={() => openJobContact(selectedJob)}
           currentUserId={userId}
         />
       )}
-      {view === "offers" && <OffersView onBack={() => setView("home")} job={lastJob} />}
+      {view === "offers" && <OffersView onBack={() => goBack()} job={lastJob} />}
       {view === "aimatch" && (
         <AIMatchView
           job={lastJob}
-          onBack={() => setView("home")}
+          onBack={() => goBack()}
           onSelectListing={(l) => { setSelected(l); setView("detail"); }}
           realListings={realListings}
         />
       )}
       {view === "messages" && (
         <MessagesView
-          onBack={() => setView("home")}
+          onBack={() => goBack()}
           initialContact={messageContact}
           currentUserId={userId}
           onOpenListing={(l) => { setSelected(l); setView("detail"); }}
         />
       )}
-      {view === "pricing" && <PricingView onBack={() => setView("home")} onJoined={() => setView("profile")} userId={userId} />}
+      {view === "pricing" && <PricingView onBack={() => goBack()} onJoined={() => setView("profile")} userId={userId} />}
       {view === "favorites" && (
         <FavoritesView
-          onBack={() => setView("home")}
+          onBack={() => goBack()}
           onSelectListing={(l) => { setSelected(l); setView("detail"); }}
           onOpenJob={(job) => { setSelectedJob(job); setView("jobDetail"); }}
           realListings={realListings}
@@ -10650,7 +10726,7 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
           onViewListing={(l) => { setSelected(l); setView("detail"); }}
           realListings={realListings}
           onEditJob={(j) => { setEditingJob(j); setView("post"); }}
-          onBack={() => setView("home")}
+          onBack={() => goBack()}
           onOpenAdminReports={() => setView("adminReports")}
           onOpenDashboard={() => setView("adminDashboard")}
           onOpenModeration={() => setView("adminModeration")}
@@ -10674,24 +10750,24 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
         <VitrinMediaView
           userId={userId}
           service={managingVitrin}
-          onBack={() => setView("profile")}
+          onBack={() => goBack("profile")}
           onListingsChanged={fetchListings}
         />
       )}
       {view === "support" && (
         <SupportChatView
-          onBack={() => setView("home")}
+          onBack={() => goBack()}
           onReport={(report) => setAdminReports((prev) => [report, ...prev])}
           currentUserId={userId}
         />
       )}
-      {view === "adminReports" && <AdminReportsView onBack={() => setView("home")} reports={adminReports} userId={userId} isAdmin={isAdmin} />}
-      {view === "adminUserReports" && isAdmin && <AdminUserReportsView onBack={() => setView("home")} />}
-      {view === "adminListingReports" && isAdmin && <AdminListingReportsView onBack={() => setView("home")} />}
-      {view === "adminContentFlags" && isAdmin && <AdminContentFlagsView onBack={() => setView("home")} />}
+      {view === "adminReports" && <AdminReportsView onBack={() => goBack()} reports={adminReports} userId={userId} isAdmin={isAdmin} />}
+      {view === "adminUserReports" && isAdmin && <AdminUserReportsView onBack={() => goBack()} />}
+      {view === "adminListingReports" && isAdmin && <AdminListingReportsView onBack={() => goBack()} />}
+      {view === "adminContentFlags" && isAdmin && <AdminContentFlagsView onBack={() => goBack()} />}
       {view === "adminModeration" && (
         <AdminModerationQueueView
-          onBack={() => setView("home")}
+          onBack={() => goBack()}
           queue={staffModerationQueue}
           onApprove={(item) => {
             setStaffModerationQueue((prev) => prev.filter((q) => q.id !== item.id));
@@ -10703,7 +10779,7 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
           onReject={(id) => setStaffModerationQueue((prev) => prev.filter((q) => q.id !== id))}
         />
       )}
-      {view === "adminDashboard" && isAdmin && <AdminDashboardView onBack={() => setView("home")} />}
+      {view === "adminDashboard" && isAdmin && <AdminDashboardView onBack={() => goBack()} />}
 
       {view !== "support" && <DraggableSupportButton onClick={() => setView("support")} />}
     </div>
