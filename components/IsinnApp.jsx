@@ -1081,8 +1081,10 @@ function HomeServiceBadge({ value, size = "sm" }) {
 // Bildirim merkezi — schema (3).sql'de tam bir `notifications` tablosu ve
 // trigger'lar hazır duruyordu ama hiç okunmuyordu (bkz. notifications_center.sql).
 // E-posta bilerek yok — kullanıcının "sadece uygulama içi" kararı burada da geçerli.
-function NotificationBell({ userId, onNavigate }) {
-  const { t } = useLanguage();
+// Bildirimler artık üst çubukta ayrı bir zil ikonu değil — profil (avatar)
+// menüsünde bir satır; açılan panel avatarın altına iniyor (kullanıcı: ana
+// sayfa kalabalık duruyor). Durum/okundu mantığı aynı, sadece Header'a taşındı.
+function useNotifications(userId) {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -1108,7 +1110,7 @@ function NotificationBell({ userId, onNavigate }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
-  const togglePanel = async () => {
+  const toggle = async () => {
     const next = !open;
     setOpen(next);
     if (!next || !userId) return;
@@ -1128,57 +1130,42 @@ function NotificationBell({ userId, onNavigate }) {
     }
   };
 
-  if (!userId) return null;
+  return { open, setOpen, items, unreadCount, loading, toggle };
+}
 
+function NotificationPopover({ notif, onNavigate }) {
+  const { t } = useLanguage();
+  if (!notif.open) return null;
   return (
-    <div className="relative">
-      <button
-        onClick={togglePanel}
-        className="relative w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-colors"
-        style={{ background: "#F7F7F8", color: "#0F1115" }}
+    <>
+      <div className="fixed inset-0 z-10" onClick={() => notif.setOpen(false)} />
+      <div
+        className="absolute right-0 top-11 z-20 w-80 max-w-[calc(100vw-2rem)] max-h-96 overflow-y-auto rounded-xl shadow-lg border"
+        style={{ borderColor: "#F0F0F0", background: "#FFFFFF" }}
       >
-        <Bell size={16} />
-        {unreadCount > 0 && (
-          <span
-            className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
-            style={{ background: "#EF4444" }}
-          >
-            {unreadCount > 9 ? "9+" : unreadCount}
-          </span>
+        <div className="px-4 py-3 border-b sticky top-0" style={{ borderColor: "#F0F0F0", background: "#FFFFFF" }}>
+          <p className="text-sm font-bold" style={{ color: "#0F1115" }}>{t("notifications.heading")}</p>
+        </div>
+        {notif.loading ? (
+          <div className="px-4 py-8 text-center"><Loader2 size={16} className="animate-spin mx-auto" style={{ color: "#9CA3AF" }} /></div>
+        ) : notif.items.length === 0 ? (
+          <p className="px-4 py-8 text-center text-xs" style={{ color: "#9CA3AF" }}>{t("notifications.empty")}</p>
+        ) : (
+          notif.items.map((n) => (
+            <button
+              key={n.id}
+              onClick={() => { notif.setOpen(false); onNavigate?.(n); }}
+              className="w-full text-left px-4 py-3 border-b hover:bg-black/[0.03] transition-colors"
+              style={{ borderColor: "#F7F7F8", background: n.read_at ? "transparent" : "rgba(37,99,235,0.04)" }}
+            >
+              <p className="text-xs font-bold mb-0.5" style={{ color: "#0F1115" }}>{n.title}</p>
+              <p className="text-xs leading-snug" style={{ color: "#6B7280" }}>{n.body}</p>
+              <p className="text-[10px] mt-1" style={{ color: "#9CA3AF" }}>{formatRelativeTr(n.created_at)}</p>
+            </button>
+          ))
         )}
-      </button>
-      {open && (
-        <>
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div
-            className="absolute right-0 top-11 z-20 w-80 max-h-96 overflow-y-auto rounded-xl shadow-lg border"
-            style={{ borderColor: "#F0F0F0", background: "#FFFFFF" }}
-          >
-            <div className="px-4 py-3 border-b sticky top-0" style={{ borderColor: "#F0F0F0", background: "#FFFFFF" }}>
-              <p className="text-sm font-bold" style={{ color: "#0F1115" }}>{t("notifications.heading")}</p>
-            </div>
-            {loading ? (
-              <div className="px-4 py-8 text-center"><Loader2 size={16} className="animate-spin mx-auto" style={{ color: "#9CA3AF" }} /></div>
-            ) : items.length === 0 ? (
-              <p className="px-4 py-8 text-center text-xs" style={{ color: "#9CA3AF" }}>{t("notifications.empty")}</p>
-            ) : (
-              items.map((n) => (
-                <button
-                  key={n.id}
-                  onClick={() => { setOpen(false); onNavigate?.(n); }}
-                  className="w-full text-left px-4 py-3 border-b hover:bg-black/[0.03] transition-colors"
-                  style={{ borderColor: "#F7F7F8", background: n.read_at ? "transparent" : "rgba(37,99,235,0.04)" }}
-                >
-                  <p className="text-xs font-bold mb-0.5" style={{ color: "#0F1115" }}>{n.title}</p>
-                  <p className="text-xs leading-snug" style={{ color: "#6B7280" }}>{n.body}</p>
-                  <p className="text-[10px] mt-1" style={{ color: "#9CA3AF" }}>{formatRelativeTr(n.created_at)}</p>
-                </button>
-              ))
-            )}
-          </div>
-        </>
-      )}
-    </div>
+      </div>
+    </>
   );
 }
 
@@ -1206,6 +1193,7 @@ function LanguageToggle({ className = "" }) {
 }
 
 function Header({ onNav, onSearch, pendingCount, session, onNotificationClick }) {
+  const notif = useNotifications(session?.user?.id);
   const { t } = useLanguage();
   const [q, setQ] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -1271,16 +1259,6 @@ function Header({ onNav, onSearch, pendingCount, session, onNotificationClick })
         </div>
         <div className="flex items-center gap-2 ml-auto">
           <LanguageToggle className="hidden sm:flex" />
-          {session?.user?.id && (
-            <NotificationBell userId={session.user.id} onNavigate={onNotificationClick} />
-          )}
-          <button
-            onClick={() => onNav("messages")}
-            className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-colors"
-            style={{ background: "#F7F7F8", color: "#0F1115" }}
-          >
-            <MessageCircle size={16} />
-          </button>
           <button
             onClick={() => onNav("pricing")}
             className="text-sm font-semibold px-3.5 py-2 rounded-full hidden sm:flex items-center gap-1.5 transition-colors"
@@ -1319,22 +1297,42 @@ function Header({ onNav, onSearch, pendingCount, session, onNotificationClick })
                 style={{ background: "linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%)" }}
               >
                 {initials}
-                {pendingCount > 0 && (
+                {((pendingCount || 0) + notif.unreadCount) > 0 && (
                   <span
                     className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
                     style={{ background: "#EF4444" }}
                   >
-                    {pendingCount > 9 ? "9+" : pendingCount}
+                    {((pendingCount || 0) + notif.unreadCount) > 9 ? "9+" : ((pendingCount || 0) + notif.unreadCount)}
                   </span>
                 )}
               </button>
+              <NotificationPopover notif={notif} onNavigate={onNotificationClick} />
               {menuOpen && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
                   <div
-                    className="absolute right-0 top-11 z-20 w-44 rounded-xl overflow-hidden shadow-lg border py-1"
+                    className="absolute right-0 top-11 z-20 w-52 rounded-xl overflow-hidden shadow-lg border py-1"
                     style={{ borderColor: "#F0F0F0", background: "#FFFFFF" }}
                   >
+                    <button
+                      onClick={() => { setMenuOpen(false); onNav("messages"); }}
+                      className="w-full text-left px-4 py-2.5 text-sm font-medium hover:bg-black/5 flex items-center gap-2"
+                      style={{ color: "#0F1115" }}
+                    >
+                      <MessageCircle size={15} /> {t("messages.title")}
+                    </button>
+                    <button
+                      onClick={() => { setMenuOpen(false); notif.toggle(); }}
+                      className="w-full text-left px-4 py-2.5 text-sm font-medium hover:bg-black/5 flex items-center gap-2"
+                      style={{ color: "#0F1115" }}
+                    >
+                      <Bell size={15} /> {t("notifications.heading")}
+                      {notif.unreadCount > 0 && (
+                        <span className="ml-auto min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center text-[10px] font-bold text-white" style={{ background: "#EF4444" }}>
+                          {notif.unreadCount > 9 ? "9+" : notif.unreadCount}
+                        </span>
+                      )}
+                    </button>
                     <button
                       onClick={() => { setMenuOpen(false); onNav("profile"); }}
                       className="w-full text-left px-4 py-2.5 text-sm font-medium hover:bg-black/5"
