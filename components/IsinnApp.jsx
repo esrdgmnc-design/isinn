@@ -3085,7 +3085,7 @@ function OwnerVitrinPanelBody({ userId, serviceId, onListingsChanged, onReviewSe
   );
 }
 
-function ListingDetail({ listing, onBack, onContact, userReviews, onAddReview, onSubmitPendingMedia, onSubmitStaffReview, currentUserId, favoriteIds, onToggleFavorite, onEditListing, onListingsChanged }) {
+function ListingDetail({ listing, onBack, onContact, userReviews, onAddReview, onSubmitPendingMedia, onSubmitStaffReview, currentUserId, favoriteIds, onToggleFavorite, onListingsChanged, onListingPatched, onGoToPlans }) {
   const { t } = useLanguage();
   const isRealListing = !!(listing.isReal && listing.providerId);
   // Vitrinin sahibi kendi sayfasına bakıyorsa "sahip modu" — "Müşteri gözüyle
@@ -3094,6 +3094,50 @@ function ListingDetail({ listing, onBack, onContact, userReviews, onAddReview, o
   const [asCustomer, setAsCustomer] = useState(false);
   const ownerMode = isOwner && !asCustomer;
   const [editingMedia, setEditingMedia] = useState(true); // sahip vitrine tıklayınca doğrudan düzenleme modunda açılıyor
+  // Sahibin metin/fiyat/konum düzenlemesi de aynı sayfada (yerinde) — ham
+  // services satırı (aktif/ödeme-kapatma durumu + form başlangıç değerleri).
+  const [ownerRow, setOwnerRow] = useState(null);
+  const [editingInfo, setEditingInfo] = useState(false);
+  const [visBusy, setVisBusy] = useState(false);
+  const [visError, setVisError] = useState("");
+  const loadOwnerRow = async () => {
+    if (!isOwner || !listing.dbId) return null;
+    const { data } = await supabase.from("services").select("*, profiles(*), categories(*)").eq("id", listing.dbId).maybeSingle();
+    if (data) setOwnerRow(data);
+    return data || null;
+  };
+  useEffect(() => {
+    setOwnerRow(null);
+    setEditingInfo(false);
+    setVisError("");
+    loadOwnerRow();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOwner, listing.dbId]);
+  const handleInfoSaved = (row) => {
+    setOwnerRow(row);
+    setEditingInfo(false);
+    onListingPatched?.(mapServiceRowToListing(row)); // sayfa yeni veriyi hemen göstersin
+    onListingsChanged?.(); // ana sayfa/arama listeleri de tazelensin
+  };
+  // "Vitrin yayında / Yayından kaldır". Yeniden yayına alırken enforce_vitrin_cap
+  // trigger'ı "Vitrin hakkını doldurdun..." hatası verebilir — mesaj aynen gösteriliyor.
+  const toggleVisibility = async () => {
+    if (!ownerRow || visBusy) return;
+    const next = ownerRow.active === false;
+    setVisBusy(true);
+    setVisError("");
+    let { error } = await supabase.from("services").update({ active: next }).eq("id", listing.dbId);
+    // Sütun yetkisi (lock_row_ownership_columns.sql) doğrudan active güncellemeyi
+    // kapatıyorsa güvenli RPC'ye düş (bkz. supabase/vitrin_owner_active_toggle.sql).
+    if (error && (error.code === "42501" || /permission denied/i.test(error.message || ""))) {
+      ({ error } = await supabase.rpc("set_vitrin_active", { p_service_id: listing.dbId, p_active: next }));
+    }
+    const fresh = await loadOwnerRow();
+    setVisBusy(false);
+    if (error) { setVisError(error.message || t("listingDetail.visErrToggleFailed")); return; }
+    if (fresh && (fresh.active !== false) !== next) { setVisError(t("listingDetail.visErrToggleFailed")); return; }
+    onListingsChanged?.();
+  };
   const [confirmRemoveMediaId, setConfirmRemoveMediaId] = useState(null);
   // Müşterinin görebildiği (sağlayıcının rıza verdiği) belgeler — RLS
   // migration'ı (document_customer_visibility.sql) henüz çalışmadıysa sorgu
@@ -3743,15 +3787,13 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
             <Pencil size={13} style={{ color: "#3F7D5C" }} /> {t("listingDetail.ownerBarTitle")}
           </span>
           <div className="flex items-center gap-2 flex-wrap ml-auto">
-            {!asCustomer && (
-              <>
-                <button onClick={() => onEditListing?.(listing)} className="text-xs font-bold px-3 py-1.5 rounded-full text-white" style={{ background: "#3F7D5C" }}>
-                  {t("listingDetail.ownerEdit")}
-                </button>
-              </>
+            {!asCustomer && !editingInfo && (
+              <button onClick={() => setEditingInfo(true)} className="text-xs font-bold px-3 py-1.5 rounded-full text-white" style={{ background: "#3F7D5C" }}>
+                {t("listingDetail.ownerEdit")}
+              </button>
             )}
             <button
-              onClick={() => { setAsCustomer((v) => !v); setEditingMedia(false); setConfirmRemoveMediaId(null); }}
+              onClick={() => { setAsCustomer((v) => !v); setEditingMedia(false); setEditingInfo(false); setConfirmRemoveMediaId(null); }}
               className="text-xs font-medium px-3 py-1.5 rounded-full border flex items-center gap-1.5"
               style={{ borderColor: "#D9D0BA", color: "#1B2B24", background: "#FFFFFF" }}
             >
@@ -3760,15 +3802,27 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
           </div>
         </div>
       )}
+      {ownerMode && ownerRow && (
+        <OwnerVisibilityCard row={ownerRow} busy={visBusy} error={visError} onToggle={toggleVisibility} onGoToPlans={onGoToPlans} />
+      )}
       <button onClick={onBack} className="flex items-center gap-1 text-sm mb-5" style={{ color: "#5C5744" }}>
         <ChevronLeft size={16} /> {t("common.back")}
       </button>
 
-      <div className="rounded-xl overflow-hidden mb-6">
-        <img src={listing.img} alt={listing.title} className="w-full h-72 object-cover" />
-      </div>
+      {!(ownerMode && editingInfo) && (
+        <div className="rounded-xl overflow-hidden mb-6">
+          <img src={listing.img} alt={listing.title} className="w-full h-72 object-cover" />
+        </div>
+      )}
 
       <div className="flex items-start justify-between gap-6 flex-wrap">
+        {ownerMode && editingInfo ? (
+          ownerRow ? (
+            <ListingInfoEditor row={ownerRow} userId={currentUserId} onSaved={handleInfoSaved} onCancel={() => setEditingInfo(false)} />
+          ) : (
+            <div className="w-full max-w-xl py-10 flex justify-center"><Loader2 size={18} className="animate-spin" style={{ color: "#8A8368" }} /></div>
+          )
+        ) : (
         <div className="max-w-xl">
           <div className="flex items-center gap-2 flex-wrap">
             <ModeTag mode={listing.mode} />
@@ -3781,6 +3835,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
           </div>
           <p className="text-sm leading-relaxed" style={{ color: "#3D3B30" }}>{listing.desc}</p>
         </div>
+        )}
 
         <div className="rounded-xl border p-5 w-full sm:w-64 shrink-0" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
           <div className="flex items-center gap-2.5 mb-3">
@@ -5167,7 +5222,6 @@ function PostJobView({ onBack, onSubmitted, onViewOffers, onMatchAI, userId, onJ
   // İlan verildikten sonra düzenleme yolu hiç yoktu (kullanıcının fark
   // ettiği gerçek bir eksiklik — "balkon temizliğinden bahsetmeyi unutmuş,
   // düzenleyemiyor" gibi bir durumda tek çare ilanı silip yeniden girmekti).
-  // CreateListingView'daki editingListing deseniyle birebir aynı.
   const isEditing = !!editingJob;
   const [mode, setMode] = useState(editingJob?.mode || "local");
   const [step, setStep] = useState("form"); // form | success
@@ -6583,36 +6637,609 @@ function getPlanFeatures(pkg, t) {
   return translated !== dictKey && Array.isArray(translated) ? translated : (pkg.features || []);
 }
 
-function CreateListingView({ onBack, onCreated, userId, editingListing, onGoToProfile, onOpenListing }) {
+// ---------------------------------------------------------------
+// Vitrin formunun ortak parçaları — hem yeni vitrin açan CreateListingView
+// hem de vitrin sayfasındaki sahip düzenleyicisi (ListingInfoEditor) aynı
+// kod yolunu kullansın diye buraya çıkarıldı (kapak fotoğrafı yükleme +
+// AI içerik kontrolü, "AI ile Yaz", kategori/şehir alanları).
+// ---------------------------------------------------------------
+
+// categories tablosundaki uuid'leri, arayüzün kullandığı slug'larla (temizlik,
+// nakliye...) eşleştirir — services.category_id gerçek bir uuid bekliyor.
+function useCategoryIdBySlug() {
+  const [categoryIdBySlug, setCategoryIdBySlug] = useState({});
+  useEffect(() => {
+    let cancelled = false;
+    supabase
+      .from("categories")
+      .select("id, slug")
+      .then(({ data }) => {
+        if (cancelled || !data) return;
+        const map = {};
+        data.forEach((c) => { map[c.slug] = c.id; });
+        setCategoryIdBySlug(map);
+      });
+    return () => { cancelled = true; };
+  }, []);
+  return categoryIdBySlug;
+}
+
+// Kapak fotoğrafı: dosya seçilince önce kırpma modalı (PhotoCropModal), sonra
+// yükleme, sonra sunucu tarafı AI içerik kontrolü. Asıl zorlama services
+// tablosundaki trigger'da (bkz. supabase/listing_photo_moderation.sql) — buradaki
+// moderation state'i sadece kullanıcıya geri bildirim veriyor ve kaydı engelliyor.
+function useListingCoverPhoto({ userId, initialUrl }) {
   const { t } = useLanguage();
-  const isEditing = !!editingListing;
-  const [mode, setMode] = useState(editingListing?.mode || "local");
-  const [providerName, setProviderName] = useState(editingListing?.provider || "");
-  // "diger" (gerçek DB slug'ı) düzenlemede CUSTOM_CATEGORY_ID'ye ("diger-ozel",
-  // sadece bu formun <select>'inde var olan sahte id) çeviriyoruz — yoksa
-  // düzenlerken kategori seçili görünmez, serbest metin kutusu da açılmaz.
-  const [categoryId, setCategoryId] = useState(editingListing?.category === "diger" ? CUSTOM_CATEGORY_ID : editingListing?.category || "");
-  const [customCategoryLabel, setCustomCategoryLabel] = useState(editingListing?.customCategoryLabel || "");
-  const [title, setTitle] = useState(editingListing?.title || "");
-  const [desc, setDesc] = useState(editingListing?.desc || "");
-  const [cityId, setCityId] = useState(() => deriveCityIdFromLabel(editingListing?.city) || "istanbul");
-  const [district, setDistrict] = useState(() => (editingListing?.city || "").split(",")[0]?.trim() || "");
-  const [price, setPrice] = useState(editingListing ? "" : "");
-  const [homeServiceVal, setHomeServiceVal] = useState(editingListing?.homeService || "evde");
-  const [photo, setPhoto] = useState(editingListing?.img && editingListing.img !== FALLBACK_LISTING_IMG ? { url: editingListing.img, name: "mevcut fotoğraf" } : null);
+  const [photo, setPhoto] = useState(initialUrl && initialUrl !== FALLBACK_LISTING_IMG ? { url: initialUrl, name: "mevcut fotoğraf" } : null);
   const [photoUploading, setPhotoUploading] = useState(false);
   const [photoError, setPhotoError] = useState("");
+  const [moderation, setModeration] = useState(null); // { status: 'checking'|'approved'|'flagged', reason }
+  const [cropSrc, setCropSrc] = useState(null); // seçilen dosyanın obje URL'i
+
+  const checkPhotoContent = async (url, mimeType) => {
+    setModeration({ status: "checking" });
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const response = await fetch("/api/listing-photo-check", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({ url, mimeType }),
+      });
+      const data = await response.json();
+      if (data.error) throw new Error(data.error);
+      setModeration({ status: data.approved ? "approved" : "flagged", reason: data.reason });
+    } catch (err) {
+      // Fail-safe: eğer otomatik kontrol başarısız olursa, ONAYLAMA — incelemeye al.
+      setModeration({ status: "flagged", reason: t("createListing.moderationFailSafe") });
+    }
+  };
+
+  const handlePhoto = (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setCropSrc(URL.createObjectURL(file));
+  };
+
+  const uploadPhoto = async (file) => {
+    setCropSrc(null);
+    if (!file || !userId) return;
+    setPhotoError("");
+    setPhotoUploading(true);
+    try {
+      // profile-media zaten public bir bucket — ilan kapak fotoğrafları için de
+      // aynısını kullanıyoruz, ayrı bir bucket/migration gerekmiyor.
+      const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+      const path = `${userId}/listing-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error: uploadError } = await supabase.storage.from("profile-media").upload(path, file);
+      if (uploadError) throw uploadError;
+      const { data } = supabase.storage.from("profile-media").getPublicUrl(path);
+      setPhoto({ url: data.publicUrl, name: file.name });
+      checkPhotoContent(data.publicUrl, file.type);
+    } catch (err) {
+      setPhotoError(t("createListing.errPhotoUploadFailed", { message: err.message }));
+    } finally {
+      setPhotoUploading(false);
+    }
+  };
+
+  return { photo, photoUploading, photoError, moderation, cropSrc, setCropSrc, handlePhoto, uploadPhoto };
+}
+
+function ListingCoverPhotoField({ cover, hint }) {
+  const { t } = useLanguage();
+  const { photo, photoUploading, photoError, moderation, cropSrc, setCropSrc, handlePhoto, uploadPhoto } = cover;
+  return (
+    <div>
+      {cropSrc && (
+        <PhotoCropModal
+          imageSrc={cropSrc}
+          aspect={1}
+          fileName="kapak-fotografi.jpg"
+          onCancel={() => setCropSrc(null)}
+          onCropped={uploadPhoto}
+        />
+      )}
+      <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("createListing.coverPhotoLabel")}</label>
+      <div className="flex items-center gap-3">
+        {photo && (
+          <label className="relative w-16 h-16 rounded-lg overflow-hidden cursor-pointer shrink-0 group">
+            <img src={photo.url} alt="" className="w-16 h-16 rounded-lg object-cover" />
+            <div className="absolute inset-0 rounded-lg flex items-center justify-center bg-black/0 group-hover:bg-black/40 transition-colors">
+              <Camera size={16} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
+            <input type="file" accept="image/*" className="hidden" onChange={handlePhoto} disabled={photoUploading} />
+          </label>
+        )}
+        <label
+          className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg border-2 border-dashed text-xs font-medium cursor-pointer"
+          style={{ borderColor: "#D9D0BA", color: "#5C5744", opacity: photoUploading ? 0.6 : 1 }}
+        >
+          {photoUploading ? <Loader2 size={14} className="animate-spin" /> : <UploadCloud size={14} />}
+          {photoUploading ? t("createListing.photoUploading") : photo ? t("createListing.photoChange") : t("createListing.photoUpload")}
+          <input type="file" accept="image/*" className="hidden" onChange={handlePhoto} disabled={photoUploading} />
+        </label>
+      </div>
+      {photoError && (
+        <p className="text-[11px] mt-1.5" style={{ color: "#9C4A3C" }}>{photoError}</p>
+      )}
+      {moderation && (
+        <p
+          className="text-[11px] mt-1.5 flex items-center gap-1"
+          style={{ color: moderation.status === "checking" ? "#8A8368" : moderation.status === "approved" ? "#3F7D5C" : "#9C4A3C" }}
+        >
+          {moderation.status === "checking" && <><Loader2 size={11} className="animate-spin" /> {t("createListing.moderationChecking")}</>}
+          {moderation.status === "approved" && <><ShieldCheck size={11} /> {t("createListing.moderationApproved")}</>}
+          {moderation.status === "flagged" && <><AlertCircle size={11} /> {moderation.reason || t("createListing.moderationFlaggedDefault")}</>}
+        </p>
+      )}
+      {hint && <p className="text-[11px] mt-1.5" style={{ color: "#8A8368" }}>{hint}</p>}
+    </div>
+  );
+}
+
+// "AI ile Yaz": kategoriye uygun başlık + açıklama üretir. api.anthropic.com'a
+// doğrudan tarayıcıdan istek atılamaz (CORS + API anahtarı gizliliği) —
+// /api/claude sunucu route'u üzerinden gidiyoruz. Hata olursa fırlatır.
+async function requestAiListingCopy({ categoryName, title, desc }) {
+  const prompt = `Bir hizmet pazaryeri uygulaması için ilan metni yaz. Kategori: "${categoryName}". ${title.trim() ? `Kullanıcının notu: "${title.trim()} ${desc.trim()}"` : "Kullanıcı henüz bir şey yazmadı, kategoriye uygun genel ve inandırıcı bir metin üret."}
+SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
+{"title": "çekici, kısa bir ilan başlığı (en fazla 8 kelime)", "desc": "2-3 cümlelik, samimi ve profesyonel bir hizmet açıklaması"}`;
+  const response = await fetch("/api/claude", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 400, messages: [{ role: "user", content: prompt }] }),
+  });
+  const data = await response.json();
+  const text = (data.content || []).map((b) => b.text || "").join("\n");
+  const clean = text.replace(/```json|```/g, "").trim();
+  return JSON.parse(clean);
+}
+
+function AiWriteButton({ onClick, busy }) {
+  const { t } = useLanguage();
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={busy}
+      className="text-[11px] font-bold flex items-center gap-1 px-2.5 py-1 rounded-full"
+      style={{ background: "#EFF6FF", color: "#2563EB" }}
+    >
+      {busy ? <Loader2 size={11} className="animate-spin" /> : <Sparkles size={11} />}
+      {busy ? t("common.aiWriting") : t("common.aiWrite")}
+    </button>
+  );
+}
+
+function ListingDescLengthHint({ desc }) {
+  const { t } = useLanguage();
+  const words = desc.trim().split(/\s+/).filter(Boolean).length;
+  // Google ve müşteriler kısa/boş açıklamalı vitrinleri daha az ciddiye alıyor
+  // — engel değil, sadece nazik bir yönlendirme.
+  if (words === 0 || words >= 40) return null;
+  return <p className="text-xs mt-1.5" style={{ color: "#B08A3E" }}>{t("createListing.descLengthHint")}</p>;
+}
+
+function ListingCategoryField({ mode, categoryId, setCategoryId, customCategoryLabel, setCustomCategoryLabel }) {
+  const { t } = useLanguage();
+  const availableCategories = CATEGORIES.filter((c) => c.mode === mode || c.mode === "both");
+  return (
+    <div>
+      <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("common.categoryLabel")}</label>
+      <select
+        value={categoryId}
+        onChange={(e) => setCategoryId(e.target.value)}
+        className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
+        style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
+      >
+        <option value="">{t("common.categorySelectPlaceholder")}</option>
+        {PARENT_CATEGORIES.map((group) => {
+          const opts = availableCategories.filter((c) => group.categoryIds.includes(c.id));
+          if (opts.length === 0) return null;
+          return (
+            <optgroup key={group.id} label={group.name}>
+              {opts.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </optgroup>
+          );
+        })}
+        {/* Listede aradığını bulamayan için — bkz. CUSTOM_CATEGORY_ID notu. */}
+        <option value={CUSTOM_CATEGORY_ID}>{t("common.categoryOther")}</option>
+      </select>
+      {categoryId === CUSTOM_CATEGORY_ID && (
+        <div className="mt-2.5">
+          <input
+            value={customCategoryLabel}
+            onChange={(e) => setCustomCategoryLabel(e.target.value)}
+            placeholder={t("createListing.customCategoryPlaceholder")}
+            className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
+            style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
+          />
+          <p className="text-xs mt-1.5" style={{ color: "#8A8368" }}>
+            {t("createListing.customCategoryNote")}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Şehir + ilçe + "nerede hizmet veriyorsun" — sadece yerinde (local) vitrinlerde.
+function ListingLocationFields({ cityId, setCityId, district, setDistrict, homeServiceVal, setHomeServiceVal }) {
+  const { t } = useLanguage();
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("common.cityLabel")}</label>
+          <select
+            value={cityId}
+            onChange={(e) => setCityId(e.target.value)}
+            className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
+            style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
+          >
+            {[["Türkiye", "turkey"], ["Hindistan", "india"], ["Avrupa", "europe"], ["Kuzey Amerika", "northAmerica"], ["Orta Doğu", "middleEast"], ["Asya-Pasifik", "asiaPacific"]].map(([region, regionKey]) => (
+              <optgroup key={region} label={t(`common.regions.${regionKey}`)}>
+                {CITIES.filter((c) => c.region === region).map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("common.districtLabel")}</label>
+          <input
+            value={district}
+            onChange={(e) => setDistrict(e.target.value)}
+            placeholder={t("common.districtPlaceholder")}
+            className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
+            style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
+          />
+        </div>
+      </div>
+
+      <div>
+        <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("createListing.whereLabel")}</label>
+        <div className="flex gap-2">
+          {[["evde", t("createListing.whereCustomer")], ["mekanda", t("createListing.whereOwn")], ["esnek", t("createListing.whereBoth")]].map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setHomeServiceVal(key)}
+              className="flex-1 py-2 rounded-lg text-xs font-medium border"
+              style={homeServiceVal === key
+                ? { background: "#3F7D5C", color: "#EFE8D8", borderColor: "transparent" }
+                : { borderColor: "#D9D0BA", color: "#5C5744" }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </>
+  );
+}
+
+// Vitrin sayfasında (sahip modu) bilgi bölümünün YERİNDE düzenlenmesi — eski
+// "ayrı düzenleme formu" (CreateListingView'ın edit modu) kalktı. `row`, sahibin
+// ListingDetail'de çektiği ham services satırı (profiles + categories ile).
+// Kaydetme kuralları eski edit-modu handleSubmit'iyle aynı: profil/telefon/
+// vitrin-sınırı kapıları sadece YENİ vitrinde çalışıyordu (burada yok), AI
+// fotoğraf kontrolü + moderation engeli, şüpheli içerik taraması ve DB
+// trigger'ları (kapak fotoğrafı moderasyonu) aynen geçerli.
+function ListingInfoEditor({ row, userId, onSaved, onCancel }) {
+  const { t } = useLanguage();
+  const categoryIdBySlug = useCategoryIdBySlug();
+  const cityParts = (row.city || "").split(",").map((s) => s.trim()).filter(Boolean);
+  const initialSlug = row.categories?.slug || "";
+  const [mode, setMode] = useState(row.is_remote ? "remote" : "local");
+  const [providerName, setProviderName] = useState((row.display_name && row.display_name.trim()) || row.profiles?.business_name || row.profiles?.full_name || "");
+  // "diger" (gerçek DB slug'ı) burada CUSTOM_CATEGORY_ID'ye ("diger-ozel", sadece
+  // <select>'te var olan sahte id) çevriliyor — yoksa serbest metin kutusu açılmaz.
+  const [categoryId, setCategoryId] = useState(initialSlug === "diger" ? CUSTOM_CATEGORY_ID : initialSlug);
+  const [customCategoryLabel, setCustomCategoryLabel] = useState(row.custom_category_label || "");
+  const [title, setTitle] = useState(row.title || "");
+  const [desc, setDesc] = useState(row.description || "");
+  const [cityId, setCityId] = useState(deriveCityIdFromLabel(row.city) || "istanbul");
+  const [district, setDistrict] = useState(cityParts.length > 1 ? cityParts.slice(0, -1).join(", ") : "");
+  const [homeServiceVal, setHomeServiceVal] = useState(row.home_service_type || "evde");
+  const [priceType, setPriceType] = useState(["fixed", "hourly", "quote"].includes(row.price_type) ? row.price_type : "fixed");
+  const [priceText, setPriceText] = useState(row.price != null ? String(row.price).replace(".", ",") : "");
+  const cover = useListingCoverPhoto({ userId, initialUrl: Array.isArray(row.images) ? row.images[0] : null });
+  const [aiWriting, setAiWriting] = useState(false);
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const cityName = CITIES.find((c) => c.id === cityId)?.name;
+
+  const writeWithAI = async () => {
+    if (!categoryId) { setError(t("common.errAiCategoryFirst")); return; }
+    setAiWriting(true);
+    setError("");
+    try {
+      const catName = categoryId === CUSTOM_CATEGORY_ID ? customCategoryLabel.trim() : CATEGORIES.find((c) => c.id === categoryId)?.name || "";
+      const parsed = await requestAiListingCopy({ categoryName: catName, title, desc });
+      setTitle(parsed.title || title);
+      setDesc(parsed.desc || desc);
+    } catch (err) {
+      setError(t("common.errAiFailed"));
+    } finally {
+      setAiWriting(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!providerName.trim()) { setError(t("createListing.errDisplayName")); return; }
+    if (!categoryId) { setError(t("common.errCategoryRequired")); return; }
+    if (categoryId === CUSTOM_CATEGORY_ID && !customCategoryLabel.trim()) { setError(t("common.errCustomCategoryRequired")); return; }
+    if (!title.trim()) { setError(t("createListing.errTitle")); return; }
+    if (!desc.trim()) { setError(t("createListing.errDesc")); return; }
+    const parsedPrice = parsePriceInput(priceText.trim()).numeric;
+    if (priceType !== "quote" && parsedPrice == null) { setError(t("listingDetail.editErrPrice")); return; }
+    if (!cover.photo?.url) { setError(t("createListing.errPhoto")); return; }
+    if (cover.moderation?.status === "checking") { setError(t("createListing.errModerationChecking")); return; }
+    if (cover.moderation?.status === "flagged") { setError(t("createListing.errModerationFlagged")); return; }
+    if (!userId) { setError(t("createListing.errAuthRequired")); return; }
+    // "Diğer" seçilince gerçek FK hedefi hep "diger" kategorisi — kullanıcının
+    // yazdığı serbest metin ayrı bir kolonda duruyor (bkz. custom_category_label).
+    const categoryDbId = categoryId === CUSTOM_CATEGORY_ID ? categoryIdBySlug["diger"] : categoryIdBySlug[categoryId];
+    if (!categoryDbId) { setError(t("createListing.errCategoryNotSeeded")); return; }
+    setError("");
+    setSaving(true);
+
+    const cityLabel = `${district.trim() ? district.trim() + ", " : ""}${cityName}`;
+    const payload = {
+      category_id: categoryDbId,
+      title: title.trim(),
+      description: desc.trim(),
+      display_name: providerName.trim(),
+      price: priceType === "quote" ? null : parsedPrice,
+      price_type: priceType,
+      is_remote: mode === "remote",
+      city: mode === "local" ? cityLabel : null,
+      location: mode === "local" ? cityToLocationEwkt(cityId) : null,
+      home_service_type: mode === "local" ? homeServiceVal : null,
+      images: cover.photo?.url ? [cover.photo.url] : null,
+      custom_category_label: categoryId === CUSTOM_CATEGORY_ID ? customCategoryLabel.trim() : null,
+    };
+    const { data, error: dbError } = await supabase
+      .from("services")
+      .update(payload)
+      .eq("id", row.id)
+      .select("*, profiles(*), categories(*)")
+      .single();
+    if (dbError || !data) {
+      setSaving(false);
+      setError(t("createListing.errSaveFailed", { message: dbError?.message || t("common.errUnknown") }));
+      return;
+    }
+    // Şüpheli içerik taraması — sessiz, engellemeyen; sadece metin değiştiyse.
+    if (title.trim() !== (row.title || "") || desc.trim() !== (row.description || "")) {
+      checkAndFlagContent("service", data.id, `${title} ${desc}`.trim(), userId);
+    }
+    setSaving(false);
+    onSaved(data);
+  };
+
+  const inputStyle = { borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" };
+  return (
+    <div className="w-full max-w-xl rounded-xl border p-5" style={{ borderColor: "#D9D0BA", background: "#FFFFFF" }}>
+      <h2 className="font-serif text-lg mb-4" style={{ color: "#1B2B24" }}>{t("listingDetail.editInfoHeading")}</h2>
+
+      <div className="flex gap-2 mb-4">
+        {[["local", t("createListing.modeLocal")], ["remote", t("createListing.modeRemote")]].map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => { if (key !== mode) { setMode(key); setCategoryId(""); } }}
+            className="flex-1 py-2 rounded-xl text-sm font-medium border"
+            style={mode === key ? { background: "#1B2B24", color: "#EFE8D8", borderColor: "#1B2B24" } : { borderColor: "#D9D0BA", color: "#5C5744" }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <div className="space-y-4">
+        <ListingCoverPhotoField cover={cover} />
+
+        <div>
+          <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("createListing.displayNameLabel")}</label>
+          <input
+            value={providerName}
+            onChange={(e) => setProviderName(e.target.value)}
+            placeholder={t("createListing.displayNamePlaceholder")}
+            className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
+            style={inputStyle}
+          />
+        </div>
+
+        <ListingCategoryField
+          mode={mode}
+          categoryId={categoryId}
+          setCategoryId={setCategoryId}
+          customCategoryLabel={customCategoryLabel}
+          setCustomCategoryLabel={setCustomCategoryLabel}
+        />
+
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="text-xs font-medium" style={{ color: "#5C5744" }}>{t("createListing.titleLabel")}</label>
+            <AiWriteButton onClick={writeWithAI} busy={aiWriting} />
+          </div>
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder={t("createListing.titlePlaceholder")}
+            className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
+            style={inputStyle}
+          />
+        </div>
+
+        <div>
+          <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("createListing.descLabel")}</label>
+          <textarea
+            value={desc}
+            onChange={(e) => setDesc(e.target.value)}
+            rows={5}
+            placeholder={t("createListing.descPlaceholder")}
+            className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none resize-none"
+            style={inputStyle}
+          />
+          <ListingDescLengthHint desc={desc} />
+        </div>
+
+        {mode === "local" && (
+          <ListingLocationFields
+            cityId={cityId}
+            setCityId={setCityId}
+            district={district}
+            setDistrict={setDistrict}
+            homeServiceVal={homeServiceVal}
+            setHomeServiceVal={setHomeServiceVal}
+          />
+        )}
+
+        <div>
+          <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("listingDetail.editPriceTypeLabel")}</label>
+          <div className="flex gap-2 mb-2.5">
+            {[["fixed", t("listingDetail.editPriceFixed")], ["hourly", t("listingDetail.editPriceHourly")], ["quote", t("listingDetail.editPriceQuote")]].map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setPriceType(key)}
+                className="flex-1 py-2 rounded-lg text-xs font-medium border"
+                style={priceType === key
+                  ? { background: "#3F7D5C", color: "#EFE8D8", borderColor: "transparent" }
+                  : { borderColor: "#D9D0BA", color: "#5C5744" }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {priceType !== "quote" && (
+            <input
+              value={priceText}
+              onChange={(e) => setPriceText(e.target.value)}
+              inputMode="decimal"
+              placeholder={t("listingDetail.editPricePlaceholder")}
+              aria-label={t("createListing.priceLabel")}
+              className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
+              style={inputStyle}
+            />
+          )}
+        </div>
+
+        {error && (
+          <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{error}</p>
+        )}
+
+        <div className="flex gap-2 pt-1">
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving || cover.photoUploading}
+            className="flex-1 py-2.5 rounded-full text-sm font-medium flex items-center justify-center gap-2"
+            style={{ background: "#2FBF71", color: "#1B2B24", opacity: saving || cover.photoUploading ? 0.7 : 1 }}
+          >
+            {saving && <Loader2 size={14} className="animate-spin" />}
+            {saving ? t("common.savingEllipsis") : t("common.saveChanges")}
+          </button>
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={saving}
+            className="px-5 py-2.5 rounded-full text-sm font-medium border"
+            style={{ borderColor: "#D9D0BA", color: "#1B2B24" }}
+          >
+            {t("common.cancel")}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Sahibin "Vitrin yayında / Yayından kaldır" anahtarı — services.active'i çevirir.
+// Ödeme alınamadığı için otomatik kapatılmış vitrinde (deactivated_for_billing_at
+// dolu) düz bir "yayınla" düğmesi YOK: o yeniden açılış DB'de zaten reddedilir /
+// yanıltıcı olur — bunun yerine gerçek çözüme (Planlar) yönlendiriyoruz.
+function OwnerVisibilityCard({ row, busy, error, onToggle, onGoToPlans }) {
+  const { t } = useLanguage();
+  const active = row.active !== false;
+  const billingClosed = !active && !!row.deactivated_for_billing_at;
+  return (
+    <div className="mb-4 rounded-xl border px-4 py-3" style={{ borderColor: billingClosed ? "#C2872B" : "#D9D0BA", background: billingClosed ? "rgba(194,135,43,0.08)" : "#FFFFFF" }}>
+      <div className="flex items-center gap-3 flex-wrap">
+        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: active ? "#2FBF71" : "#A8A08A" }} aria-hidden="true" />
+        <div className="flex-1 min-w-[12rem]">
+          <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>{billingClosed ? t("listingDetail.visBillingClosedTitle") : active ? t("listingDetail.visPublished") : t("listingDetail.visUnpublished")}</p>
+          <p className="text-xs" style={{ color: "#5C5744" }}>
+            {billingClosed ? t("listingDetail.visBillingClosedBody") : active ? t("listingDetail.visPublishedHint") : t("listingDetail.visUnpublishedHint")}
+          </p>
+        </div>
+        {billingClosed ? (
+          <button
+            type="button"
+            onClick={onGoToPlans}
+            className="text-xs font-bold px-4 py-2 rounded-full text-white"
+            style={{ background: "#C2872B" }}
+          >
+            {t("listingDetail.visBillingPlans")}
+          </button>
+        ) : (
+          <button
+            type="button"
+            role="switch"
+            aria-checked={active}
+            onClick={onToggle}
+            disabled={busy}
+            className="flex items-center gap-2 text-xs font-bold"
+            style={{ color: "#1B2B24", opacity: busy ? 0.6 : 1 }}
+          >
+            <span className="relative inline-block w-11 h-6 rounded-full transition-colors" style={{ background: active ? "#3F7D5C" : "#C9C1A8" }}>
+              <span className="absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all" style={{ left: active ? 22 : 2 }} />
+            </span>
+            {busy ? <Loader2 size={13} className="animate-spin" /> : active ? t("listingDetail.visActionUnpublish") : t("listingDetail.visActionPublish")}
+          </button>
+        )}
+      </div>
+      {error && (
+        <p className="text-xs mt-2 px-3 py-2 rounded-lg" role="alert" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{error}</p>
+      )}
+    </div>
+  );
+}
+
+function CreateListingView({ onBack, onCreated, userId, onGoToProfile }) {
+  const { t } = useLanguage();
+  const [mode, setMode] = useState("local");
+  const [providerName, setProviderName] = useState("");
+  const [categoryId, setCategoryId] = useState("");
+  const [customCategoryLabel, setCustomCategoryLabel] = useState("");
+  const [title, setTitle] = useState("");
+  const [desc, setDesc] = useState("");
+  const [cityId, setCityId] = useState("istanbul");
+  const [district, setDistrict] = useState("");
+  const [price, setPrice] = useState("");
+  const [homeServiceVal, setHomeServiceVal] = useState("evde");
+  // Kapak fotoğrafı (kırp + yükle + AI içerik kontrolü) vitrin sayfasındaki sahip
+  // düzenleyicisiyle ortak — bkz. useListingCoverPhoto.
+  const cover = useListingCoverPhoto({ userId });
+  const { photo, photoUploading, moderation } = cover;
   // Kullanıcı geri bildirimi (2026-09-18): burada fotoğraflara tıklayınca hiçbir
   // şey olmuyordu — eski medya ekranındaki Instagram tarzı tam ekran görüntüleme
   // (lightbox) burada yoktu, sadece küçük, tıklanamaz bir ızgaraydı.
   const [lightbox, setLightbox] = useState(null);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [categoryIdBySlug, setCategoryIdBySlug] = useState({});
+  const categoryIdBySlug = useCategoryIdBySlug();
   const [step, setStep] = useState("form"); // form | success
   const [created, setCreated] = useState(null);
   const [aiWriting, setAiWriting] = useState(false);
-  const [moderation, setModeration] = useState(null); // { status: 'checking'|'approved'|'flagged', reason }
   const [recommendation, setRecommendation] = useState(null); // { product, pitch }
   const [recLoading, setRecLoading] = useState(false);
 
@@ -6640,47 +7267,9 @@ function CreateListingView({ onBack, onCreated, userId, editingListing, onGoToPr
   const [videoIntro, setVideoIntro] = useState(null);
   const [videoUploading, setVideoUploading] = useState(false);
   const [videoError, setVideoError] = useState("");
-  const [existingMediaLoading, setExistingMediaLoading] = useState(isEditing);
 
-  // Düzenlerken (isEditing) servis zaten var — yeni açılışta ise "success"
-  // adımına geçince (created) var olacak. İkisi de aynı upload
-  // fonksiyonlarını kullanabilsin diye tek bir id burada birleştiriliyor.
-  const activeServiceId = created?.dbId || (isEditing ? editingListing?.dbId : null);
-
-  // Düzenleme modunda, o vitrine daha önce eklenmiş sertifika/CV/portföy/
-  // video varsa yükleyip formda gösteriyoruz — yoksa kullanıcı "zaten
-  // eklemiştim, gitti mi?" diye düşünür (bkz. ListingDetail'deki aynı sorgu).
-  useEffect(() => {
-    if (!isEditing || !activeServiceId) { setExistingMediaLoading(false); return; }
-    let cancelled = false;
-    (async () => {
-      setExistingMediaLoading(true);
-      const [{ data: serviceRow }, { data: docs }, { data: items }] = await Promise.all([
-        supabase.from("services").select("video_intro_url, video_intro_name").eq("id", activeServiceId).maybeSingle(),
-        supabase.from("provider_documents").select("*").eq("service_id", activeServiceId).order("created_at", { ascending: false }),
-        supabase.from("portfolio_items").select("*").eq("service_id", activeServiceId).order("created_at", { ascending: true }),
-      ]);
-      if (cancelled) return;
-      if (serviceRow?.video_intro_url) setVideoIntro({ url: serviceRow.video_intro_url, name: serviceRow.video_intro_name || t("createListing.videoLabel") });
-      const docRows = docs || [];
-      const certs = docRows.filter((d) => d.doc_type === "certificate");
-      const cvDoc = docRows.find((d) => d.doc_type === "cv");
-      const certsWithUrls = await Promise.all(certs.map(async (d) => {
-        const { data: signed } = await supabase.storage.from("provider-documents").createSignedUrl(d.file_url, 3600);
-        return { id: d.id, name: d.file_name || d.label || t("createListing.docFallbackName"), url: signed?.signedUrl || "", isPdf: (d.file_name || "").toLowerCase().endsWith(".pdf") };
-      }));
-      if (cancelled) return;
-      if (certsWithUrls.length > 0) { setCertificates(certsWithUrls); setCertConfirmed(true); }
-      if (cvDoc) {
-        const { data: signed } = await supabase.storage.from("provider-documents").createSignedUrl(cvDoc.file_url, 3600);
-        setCv({ id: cvDoc.id, path: cvDoc.file_url, name: cvDoc.file_name || "CV", url: signed?.signedUrl || "" });
-      }
-      const portfolioItems = (items || []).map((p) => ({ id: p.id, type: p.media_type, url: p.url, name: p.file_name }));
-      if (portfolioItems.length > 0) { setPortfolio(portfolioItems); setPortfolioConfirmed(true); }
-      setExistingMediaLoading(false);
-    })();
-    return () => { cancelled = true; };
-  }, [isEditing, activeServiceId]);
+  // Yayınlandıktan sonraki medya adımında (created) vitrinin id'si.
+  const activeServiceId = created?.dbId || null;
 
   const uploadToProfileMedia = async (file, prefix) => {
     const ext = (file.name.split(".").pop() || "bin").toLowerCase();
@@ -6797,9 +7386,8 @@ function CreateListingView({ onBack, onCreated, userId, editingListing, onGoToPr
   // gönderdiğinde reddediliyor, formdan çıkıp profilini tamamlamaya
   // gidince (component unmount olduğu için) yazdığı her şey kayboluyordu.
   // Artık form hiç açılmadan, en baştan kontrol ediliyor.
-  const [gateCheck, setGateCheck] = useState(isEditing ? { checking: false, ok: true } : { checking: true, ok: null });
+  const [gateCheck, setGateCheck] = useState({ checking: true, ok: null });
   useEffect(() => {
-    if (isEditing) { setGateCheck({ checking: false, ok: true }); return; }
     if (!userId) { setGateCheck({ checking: false, ok: true }); return; } // GATED_VIEWS zaten auth'suz buraya hiç gelmeye izin vermiyor
     let cancelled = false;
     (async () => {
@@ -6811,18 +7399,17 @@ function CreateListingView({ onBack, onCreated, userId, editingListing, onGoToPr
       setGateCheck({ checking: false, ok: phoneGate.ok, reason: phoneGate.ok ? "" : phoneGate.reason });
     })();
     return () => { cancelled = true; };
-  }, [userId, isEditing]);
+  }, [userId]);
 
   // Ücretsiz vitrin sınırı: Standart Üyelik'te 1 vitrin, Pro Üyelik'te 3 vitrin
   // hakkı var (bkz. supabase/pro_plan.sql — subscription_plans.max_active_listings).
-  // Sadece YENİ vitrin açarken kontrol ediyoruz — düzenlemede sınır uygulanmaz.
-  const [vitrinLimit, setVitrinLimit] = useState({ checking: !isEditing, blocked: false, count: 0, cap: 1, planName: "Standart Üyelik" });
+  const [vitrinLimit, setVitrinLimit] = useState({ checking: true, blocked: false, count: 0, cap: 1, planName: "Standart Üyelik" });
   const [upgrading, setUpgrading] = useState(false);
 
   // Güncel sonucu hem state'e yazıyor hem de doğrudan döndürüyor — handleSubmit
   // state'in henüz render'a yansımamış olma ihtimaline karşı dönen değeri kullanıyor.
   const checkVitrinLimit = async () => {
-    if (isEditing || !userId) return { checking: false, blocked: false, count: 0, cap: 1, planName: "Standart Üyelik" };
+    if (!userId) return { checking: false, blocked: false, count: 0, cap: 1, planName: "Standart Üyelik" };
     setVitrinLimit((v) => ({ ...v, checking: true }));
     const [{ count }, { cap, planName, hasExtraVitrinAddon }] = await Promise.all([
       supabase.from("services").select("id", { count: "exact", head: true }).eq("provider_id", userId).eq("active", true),
@@ -6834,7 +7421,7 @@ function CreateListingView({ onBack, onCreated, userId, editingListing, onGoToPr
     return result;
   };
 
-  useEffect(() => { checkVitrinLimit(); }, [userId, isEditing]);
+  useEffect(() => { checkVitrinLimit(); }, [userId]);
 
   // GERÇEK ÖDEME (2026-09-13): bu iki buton da PricingView'daki "Pro
   // Üyelik'e Geç" ile AYNI boşluğu taşıyordu — doğrudan RPC çağırıp hiç
@@ -6871,31 +7458,7 @@ function CreateListingView({ onBack, onCreated, userId, editingListing, onGoToPr
   const upgradeToPro = () => startPaytrCheckout({ planSlug: "pro", billingCycle: "monthly" });
   const buyExtraVitrinAddon = () => startPaytrCheckout({ addonSlug: "ek-vitrin", billingCycle: "monthly" });
 
-  const availableCategories = CATEGORIES.filter((c) => c.mode === mode || c.mode === "both");
   const cityName = CITIES.find((c) => c.id === cityId)?.name;
-
-  // categories tablosundaki uuid'leri, arayüzün kullandığı slug'larla (temizlik, nakliye...)
-  // eşleştiriyoruz — services.category_id gerçek bir uuid bekliyor.
-  useEffect(() => {
-    let cancelled = false;
-    supabase
-      .from("categories")
-      .select("id, slug")
-      .then(({ data }) => {
-        if (cancelled || !data) return;
-        const map = {};
-        data.forEach((c) => { map[c.slug] = c.id; });
-        setCategoryIdBySlug(map);
-      });
-    return () => { cancelled = true; };
-  }, []);
-
-  // Düzenleme modunda mevcut fiyatı, price/price_type'tan okunabilir bir
-  // metne çeviriyoruz — kullanıcı formda düzenlerken tekrar aynı formatı görsün.
-  useEffect(() => {
-    if (!editingListing) return;
-    setPrice(editingListing.price || "");
-  }, [editingListing]);
 
   const writeWithAI = async () => {
     if (!categoryId) { setError(t("common.errAiCategoryFirst")); return; }
@@ -6903,54 +7466,13 @@ function CreateListingView({ onBack, onCreated, userId, editingListing, onGoToPr
     setError("");
     try {
       const catName = categoryId === CUSTOM_CATEGORY_ID ? customCategoryLabel.trim() : CATEGORIES.find((c) => c.id === categoryId)?.name || "";
-      const prompt = `Bir hizmet pazaryeri uygulaması için ilan metni yaz. Kategori: "${catName}". ${title.trim() ? `Kullanıcının notu: "${title.trim()} ${desc.trim()}"` : "Kullanıcı henüz bir şey yazmadı, kategoriye uygun genel ve inandırıcı bir metin üret."}
-SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
-{"title": "çekici, kısa bir ilan başlığı (en fazla 8 kelime)", "desc": "2-3 cümlelik, samimi ve profesyonel bir hizmet açıklaması"}`;
-      // Not: api.anthropic.com'a doğrudan tarayıcıdan istek atılamaz (CORS + API
-      // anahtarı gizliliği) — ListingDetail'deki checkReviewMedia'nın da yaptığı
-      // gibi /api/claude sunucu route'u üzerinden gidiyoruz.
-      const response = await fetch("/api/claude", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 400, messages: [{ role: "user", content: prompt }] }),
-      });
-      const data = await response.json();
-      const text = (data.content || []).map((b) => b.text || "").join("\n");
-      const clean = text.replace(/```json|```/g, "").trim();
-      const parsed = JSON.parse(clean);
+      const parsed = await requestAiListingCopy({ categoryName: catName, title, desc });
       setTitle(parsed.title || title);
       setDesc(parsed.desc || desc);
     } catch (err) {
       setError(t("common.errAiFailed"));
     } finally {
       setAiWriting(false);
-    }
-  };
-
-  // GÜVENLİK: AI kontrolü artık burada karar vermiyor, sadece sunucudaki
-  // gerçek kararı gösteriyor (bkz. app/api/listing-photo-check/route.js +
-  // supabase/listing_photo_moderation.sql). Asıl zorlama artık services
-  // tablosundaki trigger'da — bu fonksiyon sadece kullanıcıya "onaylandı/
-  // reddedildi" geri bildirimi vermek için var, submit'i engelleme yetkisi
-  // moderation state'inde değil, veritabanında.
-  const checkPhotoContent = async (url, mimeType) => {
-    setModeration({ status: "checking" });
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const response = await fetch("/api/listing-photo-check", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
-        },
-        body: JSON.stringify({ url, mimeType }),
-      });
-      const data = await response.json();
-      if (data.error) throw new Error(data.error);
-      setModeration({ status: data.approved ? "approved" : "flagged", reason: data.reason });
-    } catch (err) {
-      // Fail-safe: eğer otomatik kontrol başarısız olursa, ONAYLAMA — incelemeye al.
-      setModeration({ status: "flagged", reason: t("createListing.moderationFailSafe") });
     }
   };
 
@@ -6974,44 +7496,6 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
     }
   };
 
-  // Dosya seçilince artık doğrudan yüklemiyoruz — önce kırpma modalı açılıyor
-  // (bkz. PhotoCropModal), gerçek yükleme kullanıcı "Kırp ve Kaydet"e basınca
-  // uploadPhoto ile tetikleniyor.
-  const [cropSrc, setCropSrc] = useState(null); // seçilen dosyanın obje URL'i
-  const handlePhoto = (e) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-    setCropSrc(URL.createObjectURL(file));
-  };
-
-  const uploadPhoto = async (file) => {
-    setCropSrc(null);
-    if (!file || !userId) return;
-    setPhotoError("");
-    setPhotoUploading(true);
-    try {
-      // profile-media zaten public bir bucket (profil fotoğrafı/portföy için
-      // kurulmuştu) — ilan kapak fotoğrafları için de aynısını kullanıyoruz,
-      // ayrı bir bucket/migration gerekmiyor.
-      const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
-      const path = `${userId}/listing-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-      const { error: uploadError } = await supabase.storage.from("profile-media").upload(path, file);
-      if (uploadError) throw uploadError;
-      const { data } = supabase.storage.from("profile-media").getPublicUrl(path);
-      setPhoto({ url: data.publicUrl, name: file.name });
-      // AI fotoğraf kontrolü — daha önce "lüks özellikler" kapsamında
-      // ertelenmişti, checkPhotoContent fonksiyonu hazır duruyordu ama hiç
-      // çağrılmıyordu. Yükleme bitince, storage'daki genel-erişim url'i ile
-      // sunucu tarafı kontrolü tetikliyoruz (bkz. checkPhotoContent notu).
-      checkPhotoContent(data.publicUrl, file.type);
-    } catch (err) {
-      setPhotoError(t("createListing.errPhotoUploadFailed", { message: err.message }));
-    } finally {
-      setPhotoUploading(false);
-    }
-  };
-
   const handleSubmit = async () => {
     if (!providerName.trim()) { setError(t("createListing.errDisplayName")); return; }
     if (!categoryId) { setError(t("common.errCategoryRequired")); return; }
@@ -7032,16 +7516,14 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
     }
     setError("");
     setSubmitting(true);
-    if (!isEditing) {
-      const profileGate = await checkProfileGate(userId);
-      if (!profileGate.ok) { setSubmitting(false); setError(profileGate.reason); return; }
-      const gate = await checkPhoneGate(userId);
-      if (!gate.ok) { setSubmitting(false); setError(gate.reason); return; }
-      // Vitrin sınırının istemci tarafındaki kontrolü sadece UX içindir — burada
-      // da tekrar kontrol ediyoruz (sekme arkada açıkken sınır dolmuş olabilir).
-      const freshLimit = await checkVitrinLimit();
-      if (freshLimit.blocked) { setSubmitting(false); return; }
-    }
+    const profileGate = await checkProfileGate(userId);
+    if (!profileGate.ok) { setSubmitting(false); setError(profileGate.reason); return; }
+    const gate = await checkPhoneGate(userId);
+    if (!gate.ok) { setSubmitting(false); setError(gate.reason); return; }
+    // Vitrin sınırının istemci tarafındaki kontrolü sadece UX içindir — burada
+    // da tekrar kontrol ediyoruz (sekme arkada açıkken sınır dolmuş olabilir).
+    const freshLimit = await checkVitrinLimit();
+    if (freshLimit.blocked) { setSubmitting(false); return; }
 
     const { numeric: priceNumeric, priceType } = parsePriceInput(price.trim());
     const cityLabel = `${district.trim() ? district.trim() + ", " : ""}${cityName}`;
@@ -7066,18 +7548,11 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
       custom_category_label: categoryId === CUSTOM_CATEGORY_ID ? customCategoryLabel.trim() : null,
     };
 
-    const { data, error: dbError } = isEditing
-      ? await supabase
-          .from("services")
-          .update(payload)
-          .eq("id", editingListing.dbId)
-          .select("*, profiles(*), categories(*)")
-          .single()
-      : await supabase
-          .from("services")
-          .insert({ ...payload, provider_id: userId, active: true })
-          .select("*, profiles(*), categories(*)")
-          .single();
+    const { data, error: dbError } = await supabase
+      .from("services")
+      .insert({ ...payload, provider_id: userId, active: true })
+      .select("*, profiles(*), categories(*)")
+      .single();
 
     if (dbError || !data) {
       setSubmitting(false);
@@ -7089,15 +7564,14 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
     // (yeniden) açar/yeniler — sağlayıcı bazlı olduğu için TÜM vitrinleri kapsar,
     // sadece yeni açılanı değil (bkz. supabase/pro_boost_recurring.sql). Sessizce
     // deniyoruz — uygun değilse RPC hiçbir şey yapmadan döner, akışı bozmaz.
-    if (!isEditing) supabase.rpc("sync_pro_boost").then(() => {});
+    supabase.rpc("sync_pro_boost").then(() => {});
 
     // Şüpheli içerik taraması — sessiz, engellemeyen.
     checkAndFlagContent("service", data.id, `${title} ${desc}`.trim(), userId);
 
     // Listede olmayan bir kategori istendiyse, gerçekten görülmesi için
-    // destek talebi kuyruğuna düşürüyoruz — sessiz, engellemeyen. Sadece yeni
-    // vitrin açılışında (düzenlemede tekrar tekrar bilet açmayalım).
-    if (!isEditing && categoryId === CUSTOM_CATEGORY_ID) {
+    // destek talebi kuyruğuna düşürüyoruz — sessiz, engellemeyen.
+    if (categoryId === CUSTOM_CATEGORY_ID) {
       supabase.from("support_tickets").insert({
         reporter_id: userId,
         title: `Yeni kategori talebi: ${customCategoryLabel.trim()}`,
@@ -7111,43 +7585,15 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
     setCreated(listing);
     onCreated();
     setStep("success");
-    if (!isEditing) getRecommendation(listing);
+    getRecommendation(listing);
   };
 
-  // Düzenleme modunda medya/belge yönetimi artık vitrin sayfasının kendisinde
-  // (sahip modu) — burada sadece oraya yönlendiren kısa not.
-  const editModeMediaNote = (
-    <div className="text-left rounded-2xl border p-4 mb-6 flex items-center gap-3 flex-wrap" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
-      <p className="text-xs flex-1 min-w-[12rem]" style={{ color: "#5C5744" }}>{t("createListing.editMediaNote")}</p>
-      <button
-        type="button"
-        onClick={() => {
-          const target = created || editingListing;
-          if (target && onOpenListing) onOpenListing(target); else onBack();
-        }}
-        className="text-xs font-bold px-3.5 py-2 rounded-full text-white shrink-0"
-        style={{ background: "#3F7D5C" }}
-      >
-        {t("createListing.backToVitrin")}
-      </button>
-    </div>
-  );
-
-  // Yeni vitrin "yayınlandı" ekranında (mediaUploadSection) yükleme bloğu;
-  // düzenlemede yukarıdaki not kullanılıyor. Eski not: hem "yayınlandı" ekranında (yeni vitrin) hem de düzenleme formunda
-  // (mevcut vitrin) aynı yükleme bloğu kullanılıyor — activeServiceId hangi
-  // durumda olduğumuzu zaten ayırt ediyor, JSX'i tekrar yazmaya gerek yok.
+  // Yayınlandı ekranında (yeni vitrin) tek seferde yüklenen medya bloğu.
   const mediaUploadSection = (
     <div className="text-left rounded-2xl border p-5 mb-6" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
       <p className="text-sm font-bold mb-4 text-center" style={{ color: "#1B2B24" }}>{t("createListing.mediaHeading")}</p>
 
-      {existingMediaLoading ? (
-        <div className="flex items-center justify-center gap-2 py-6">
-          <Loader2 size={14} className="animate-spin" style={{ color: "#8A8368" }} />
-          <span className="text-xs" style={{ color: "#8A8368" }}>{t("common.loading")}</span>
-        </div>
-      ) : (
-        <>
+      <>
           {/* Tanıtım videosu */}
           <div className="mb-4 pb-4 border-b" style={{ borderColor: "#EAE3CE" }}>
             <p className="text-xs font-bold mb-2" style={{ color: "#5C5744" }}>{t("createListing.videoLabel")}</p>
@@ -7272,8 +7718,7 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
             )}
             {cvError && <p className="text-[11px] mt-1.5" style={{ color: "#D14D4D" }}>{cvError}</p>}
           </div>
-        </>
-      )}
+      </>
     </div>
   );
 
@@ -7283,12 +7728,12 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
         <div className="w-14 h-14 rounded-full mx-auto mb-5 flex items-center justify-center" style={{ background: "rgba(47,191,113,0.15)" }}>
           <Check size={22} style={{ color: "#2FBF71" }} />
         </div>
-        <h2 className="font-serif text-xl mb-2" style={{ color: "#1B2B24" }}>{isEditing ? t("createListing.successTitleEdit") : t("createListing.successTitleCreate")}</h2>
+        <h2 className="font-serif text-xl mb-2" style={{ color: "#1B2B24" }}>{t("createListing.successTitleCreate")}</h2>
         <p className="text-sm mb-6" style={{ color: "#5C5744" }}>
-          {isEditing ? t("createListing.successBodyEdit", { title: created?.title }) : t("createListing.successBodyCreate", { title: created?.title })}
+          {t("createListing.successBodyCreate", { title: created?.title })}
         </p>
 
-        {!isEditing && recLoading && (
+        {recLoading && (
           <div className="rounded-2xl border p-4 mb-6 text-xs flex items-center justify-center gap-2" style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#8A8368" }}>
             <Loader2 size={13} className="animate-spin" /> {t("createListing.recLoading")}
           </div>
@@ -7309,7 +7754,7 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
             için ayrı bir ekrana gitmek gerekiyordu, "iki basamaklı bir işlem"
             gibi hissettiriyordu — kapak fotoğrafı zaten formdaydı ama gerisi
             değildi. Artık hepsi burada, aynı yerde, sayfa değiştirmeden. */}
-        {isEditing ? editModeMediaNote : mediaUploadSection}
+        {mediaUploadSection}
 
         <div className="flex gap-2 justify-center">
           <button onClick={onBack} className="px-5 py-2.5 rounded-full text-sm font-medium text-white" style={{ background: "#C2872B" }}>{t("common.backToHome")}</button>
@@ -7342,7 +7787,7 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
     );
   }
 
-  if (!isEditing && vitrinLimit.blocked) {
+  if (vitrinLimit.blocked) {
     const planNameDisplay = t(vitrinLimit.planName === "Pro Üyelik" ? "createListing.planNamePro" : "createListing.planNameStandard");
     return (
       <div className="max-w-md mx-auto px-5 py-20 text-center">
@@ -7410,21 +7855,12 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
 
   return (
     <div className="max-w-xl mx-auto px-5 py-10">
-      {cropSrc && (
-        <PhotoCropModal
-          imageSrc={cropSrc}
-          aspect={1}
-          fileName="kapak-fotografi.jpg"
-          onCancel={() => setCropSrc(null)}
-          onCropped={uploadPhoto}
-        />
-      )}
       <button onClick={onBack} className="flex items-center gap-1 text-sm mb-5" style={{ color: "#5C5744" }}>
         <ChevronLeft size={16} /> {t("common.back")}
       </button>
-      <h1 className="font-serif text-2xl mb-1" style={{ color: "#1B2B24" }}>{isEditing ? t("createListing.editTitle") : t("createListing.createTitle")}</h1>
+      <h1 className="font-serif text-2xl mb-1" style={{ color: "#1B2B24" }}>{t("createListing.createTitle")}</h1>
       <p className="text-sm mb-6" style={{ color: "#5C5744" }}>
-        {isEditing ? t("createListing.editSubtitle") : t("createListing.createSubtitle")}
+        {t("createListing.createSubtitle")}
       </p>
 
       <div className="flex gap-2 mb-6">
@@ -7452,55 +7888,18 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
           />
         </div>
 
-        <div>
-          <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("common.categoryLabel")}</label>
-          <select
-            value={categoryId}
-            onChange={(e) => setCategoryId(e.target.value)}
-            className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
-            style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
-          >
-            <option value="">{t("common.categorySelectPlaceholder")}</option>
-            {PARENT_CATEGORIES.map((group) => {
-              const opts = availableCategories.filter((c) => group.categoryIds.includes(c.id));
-              if (opts.length === 0) return null;
-              return (
-                <optgroup key={group.id} label={group.name}>
-                  {opts.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </optgroup>
-              );
-            })}
-            {/* Listede aradığını bulamayan için — bkz. CUSTOM_CATEGORY_ID notu. */}
-            <option value={CUSTOM_CATEGORY_ID}>{t("common.categoryOther")}</option>
-          </select>
-          {categoryId === CUSTOM_CATEGORY_ID && (
-            <div className="mt-2.5">
-              <input
-                value={customCategoryLabel}
-                onChange={(e) => setCustomCategoryLabel(e.target.value)}
-                placeholder={t("createListing.customCategoryPlaceholder")}
-                className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
-                style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
-              />
-              <p className="text-xs mt-1.5" style={{ color: "#8A8368" }}>
-                {t("createListing.customCategoryNote")}
-              </p>
-            </div>
-          )}
-        </div>
+        <ListingCategoryField
+          mode={mode}
+          categoryId={categoryId}
+          setCategoryId={setCategoryId}
+          customCategoryLabel={customCategoryLabel}
+          setCustomCategoryLabel={setCustomCategoryLabel}
+        />
 
         <div>
           <div className="flex items-center justify-between mb-1.5">
             <label className="text-xs font-medium" style={{ color: "#5C5744" }}>{t("createListing.titleLabel")}</label>
-            <button
-              onClick={writeWithAI}
-              disabled={aiWriting}
-              className="text-[11px] font-bold flex items-center gap-1 px-2.5 py-1 rounded-full"
-              style={{ background: "#EFF6FF", color: "#2563EB" }}
-            >
-              {aiWriting ? <Loader2 size={11} className="animate-spin" /> : <Sparkles size={11} />}
-              {aiWriting ? t("common.aiWriting") : t("common.aiWrite")}
-            </button>
+            <AiWriteButton onClick={writeWithAI} busy={aiWriting} />
           </div>
           <input
             value={title}
@@ -7521,116 +7920,20 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
             className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none resize-none"
             style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
           />
-          {/* Google ve müşteriler kısa/boş açıklamalı vitrinleri daha az
-              ciddiye alıyor (bkz. SEO stratejisi dokümanı, madde 2) — engel
-              değil, sadece nazik bir yönlendirme. */}
-          {desc.trim().split(/\s+/).filter(Boolean).length > 0 && desc.trim().split(/\s+/).filter(Boolean).length < 40 && (
-            <p className="text-xs mt-1.5" style={{ color: "#B08A3E" }}>
-              {t("createListing.descLengthHint")}
-            </p>
-          )}
+          <ListingDescLengthHint desc={desc} />
         </div>
 
-        <div>
-          <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("createListing.coverPhotoLabel")}</label>
-          <div className="flex items-center gap-3">
-            {photo && (
-              <label className="relative w-16 h-16 rounded-lg overflow-hidden cursor-pointer shrink-0 group">
-                <img src={photo.url} alt="" className="w-16 h-16 rounded-lg object-cover" />
-                <div className="absolute inset-0 rounded-lg flex items-center justify-center bg-black/0 group-hover:bg-black/40 transition-colors">
-                  <Camera size={16} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                </div>
-                <input type="file" accept="image/*" className="hidden" onChange={handlePhoto} disabled={photoUploading} />
-              </label>
-            )}
-            <label
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg border-2 border-dashed text-xs font-medium cursor-pointer"
-              style={{ borderColor: "#D9D0BA", color: "#5C5744", opacity: photoUploading ? 0.6 : 1 }}
-            >
-              {photoUploading ? <Loader2 size={14} className="animate-spin" /> : <UploadCloud size={14} />}
-              {photoUploading ? t("createListing.photoUploading") : photo ? t("createListing.photoChange") : t("createListing.photoUpload")}
-              <input type="file" accept="image/*" className="hidden" onChange={handlePhoto} disabled={photoUploading} />
-            </label>
-          </div>
-          {photoError && (
-            <p className="text-[11px] mt-1.5" style={{ color: "#9C4A3C" }}>{photoError}</p>
-          )}
-          {moderation && (
-            <p
-              className="text-[11px] mt-1.5 flex items-center gap-1"
-              style={{ color: moderation.status === "checking" ? "#8A8368" : moderation.status === "approved" ? "#3F7D5C" : "#9C4A3C" }}
-            >
-              {moderation.status === "checking" && <><Loader2 size={11} className="animate-spin" /> {t("createListing.moderationChecking")}</>}
-              {moderation.status === "approved" && <><ShieldCheck size={11} /> {t("createListing.moderationApproved")}</>}
-              {moderation.status === "flagged" && <><AlertCircle size={11} /> {moderation.reason || t("createListing.moderationFlaggedDefault")}</>}
-            </p>
-          )}
-          {/* Çoklu fotoğraf/video, tanıtım videosu, sertifika ve CV burada değil —
-              vitrin sayfasında (sahip modu) ekleniyor.
-              Kullanıcı geri bildirimi: bu adım hiç belli olmuyordu, biri tek
-              kapak fotoğrafıyla kalıp "vitrin gibi çoklu fotoğraf/video
-              koyamıyoruz" sanıyordu. Ayrı bir ekrana yönlendiren buton da
-              (2026-09-14 düzeltmesi) yetmedi — hâlâ "iki basamaklı bir işlem"
-              gibi hissettiriyordu (2026-09-16). Artık düzenlerken de aynı
-              form içinde, aşağıda, doğrudan yükleniyor — hiç sayfa
-              değiştirmeden. */}
-          <p className="text-[11px] mt-1.5" style={{ color: "#8A8368" }}>
-            {isEditing ? t("createListing.coverHintEdit") : t("createListing.coverHintCreate")}
-          </p>
-        </div>
-
-        {isEditing && editModeMediaNote}
+        <ListingCoverPhotoField cover={cover} hint={t("createListing.coverHintCreate")} />
 
         {mode === "local" && (
-          <>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("common.cityLabel")}</label>
-                <select
-                  value={cityId}
-                  onChange={(e) => setCityId(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
-                  style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
-                >
-                  {[["Türkiye", "turkey"], ["Hindistan", "india"], ["Avrupa", "europe"], ["Kuzey Amerika", "northAmerica"], ["Orta Doğu", "middleEast"], ["Asya-Pasifik", "asiaPacific"]].map(([region, regionKey]) => (
-                    <optgroup key={region} label={t(`common.regions.${regionKey}`)}>
-                      {CITIES.filter((c) => c.region === region).map((c) => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                      ))}
-                    </optgroup>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("common.districtLabel")}</label>
-                <input
-                  value={district}
-                  onChange={(e) => setDistrict(e.target.value)}
-                  placeholder={t("common.districtPlaceholder")}
-                  className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
-                  style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("createListing.whereLabel")}</label>
-              <div className="flex gap-2">
-                {[["evde", t("createListing.whereCustomer")], ["mekanda", t("createListing.whereOwn")], ["esnek", t("createListing.whereBoth")]].map(([key, label]) => (
-                  <button
-                    key={key}
-                    onClick={() => setHomeServiceVal(key)}
-                    className="flex-1 py-2 rounded-lg text-xs font-medium border"
-                    style={homeServiceVal === key
-                      ? { background: "#3F7D5C", color: "#EFE8D8", borderColor: "transparent" }
-                      : { borderColor: "#D9D0BA", color: "#5C5744" }}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </>
+          <ListingLocationFields
+            cityId={cityId}
+            setCityId={setCityId}
+            district={district}
+            setDistrict={setDistrict}
+            homeServiceVal={homeServiceVal}
+            setHomeServiceVal={setHomeServiceVal}
+          />
         )}
 
         <div>
@@ -7655,13 +7958,11 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
           style={{ background: "#2FBF71", color: "#1B2B24", opacity: submitting || photoUploading ? 0.7 : 1 }}
         >
           {submitting && <Loader2 size={14} className="animate-spin" />}
-          {submitting ? (isEditing ? t("common.savingEllipsis") : t("common.publishingEllipsis")) : isEditing ? t("common.saveChanges") : t("createListing.submitPublish")}
+          {submitting ? t("common.publishingEllipsis") : t("createListing.submitPublish")}
         </button>
-        {!isEditing && (
-          <p className="text-[11px] text-center" style={{ color: "#8A8368" }}>
-            {t("createListing.completeProfileHint")}
-          </p>
-        )}
+        <p className="text-[11px] text-center" style={{ color: "#8A8368" }}>
+          {t("createListing.completeProfileHint")}
+        </p>
       </div>
       {lightbox && (
         <MediaLightbox
@@ -9140,7 +9441,7 @@ function PricingView({ onBack, onJoined, userId }) {
   );
 }
 
-function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOpenModeration, onOpenUserReports, onOpenListingReports, onOpenContentFlags, isAdmin, pendingMediaApprovals, onApproveMedia, onRejectMedia, onListingsChanged, onJobsChanged, onEditListing, onEditJob, onCreateListing, onViewListing, realListings }) {
+function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOpenModeration, onOpenUserReports, onOpenListingReports, onOpenContentFlags, isAdmin, pendingMediaApprovals, onApproveMedia, onRejectMedia, onListingsChanged, onJobsChanged, onEditJob, onCreateListing, onViewListing, realListings }) {
   const { t } = useLanguage();
   // Video tanıtım/portföy/sertifika/CV artık vitrine özel — bkz. ListingDetail sahip modu
   // (supabase/vitrin_media.sql). Burada sadece paylaşılan profil fotoğrafı kalıyor
@@ -9272,8 +9573,6 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
 
   const loadMyListings = async () => {
     if (!userId) return;
-    // description/category_id/images de çekiyoruz — sadece listelemek için değil,
-    // "Düzenle" ile CreateListingView'ı dolu açabilmek için de gerekiyor.
     const { data } = await supabase
       .from("services")
       .select("id, title, description, city, price, price_type, is_remote, home_service_type, category_id, images, active, created_at, display_name, categories(slug)")
@@ -9281,22 +9580,6 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
       .order("created_at", { ascending: false });
     setMyListings(data || []);
   };
-
-  // myListings satırını CreateListingView'ın "editingListing" prop'unun
-  // beklediği şekle çevirir (mapServiceRowToListing ile aynı alan adları).
-  const toEditableListing = (l) => ({
-    dbId: l.id,
-    category: l.categories?.slug || "",
-    categoryDbId: l.category_id,
-    mode: l.is_remote ? "remote" : "local",
-    title: l.title,
-    desc: l.description || "",
-    city: l.is_remote ? "Uzaktan" : (l.city || ""),
-    price: formatPriceLabel(l.price, l.price_type),
-    img: (Array.isArray(l.images) && l.images[0]) || FALLBACK_LISTING_IMG,
-    provider: (l.display_name && l.display_name.trim()) || (profile?.business_name && profile.business_name.trim()) || profile?.full_name || "",
-    homeService: l.is_remote ? undefined : (l.home_service_type || "evde"),
-  });
 
   const loadMyJobs = async () => {
     if (!userId) return;
@@ -9315,7 +9598,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
   };
 
   // myJobs satırını PostJobView'ın "editingJob" prop'unun beklediği şekle
-  // çevirir — CreateListingView'ın toEditableListing'iyle aynı desen.
+  // çevirir.
   const toEditableJob = (j) => ({
     dbId: j.id,
     category: j.categories?.slug || "",
@@ -9830,14 +10113,19 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
                 onClick={() => {
                   if (confirmDeleteId === l.id) return;
                   // Satır vitrin sayfasını (sahip modu) açıyor — her şey orada düzenleniyor.
-                  const full = realListings?.find((x) => x.dbId === l.id);
-                  if (full && onViewListing) onViewListing(full);
+                  // Yayından kaldırılmış vitrin realListings'te (sadece aktifler) yok — o
+                  // durumda satırdan kur, yoksa sahip yeniden yayına alamazdı.
+                  const full = realListings?.find((x) => x.dbId === l.id) || mapServiceRowToListing({ ...l, provider_id: userId, profiles: profile });
+                  if (onViewListing) onViewListing(full);
                 }}
                 className="flex items-center gap-3 p-2.5 rounded-lg cursor-pointer"
                 style={{ background: "#EFE8D8" }}
               >
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium truncate" style={{ color: "#1B2B24" }}>{l.title}</p>
+                  <p className="text-xs font-medium truncate" style={{ color: "#1B2B24" }}>
+                    {l.title}
+                    {l.active === false && <span className="ml-2 text-[10px] font-bold px-1.5 py-0.5 rounded-full align-middle" style={{ background: "#E4DEC9", color: "#5C5744" }}>{t("profile.unpublishedBadge")}</span>}
+                  </p>
                   <p className="text-[11px] truncate" style={{ color: "#8A8368" }}>
                     {l.is_remote ? t("profile.remoteLabel") : l.city || "—"} · {formatPriceLabel(l.price, l.price_type)}
                   </p>
@@ -10216,7 +10504,6 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
   const [view, setView] = useState(getInitialView);
   const [selected, setSelected] = useState(null);
   const [selectedJob, setSelectedJob] = useState(null);
-  const [editingListing, setEditingListing] = useState(null); // Düzenle ile açılan ilan (CreateListingView)
   const [editingJob, setEditingJob] = useState(null); // Düzenle ile açılan iş ilanı (PostJobView)
   const [favoriteIds, setFavoriteIds] = useState(new Set()); // gerçek, kalıcı favoriler (favorites tablosu)
   const [trialBanner, setTrialBanner] = useState(null); // { status, planName, daysLeft } — provider_subscriptions'tan
@@ -10538,7 +10825,7 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
   // tıklayınca ana sayfaya değil bir önceki sayfaya dönsün") — eskiden her
   // ekranın onBack'i sabit olarak setView("home") çağırıyordu. Şimdi bir
   // ekran yığını tutuluyor; her view değişiminde ayrıldığımız ekranın
-  // görüntüsü (view + seçili vitrin/ilan/düzenlenen kayıt) yığına
+  // görüntüsü (view + seçili vitrin/ilan/düzenlenen iş) yığına
   // eklenir, goBack() onu geri yükler. Yığın boşsa (ör. sayfa doğrudan bu
   // ekranda açıldıysa) verilen yedek ekrana (varsayılan ana sayfa) döner.
   const viewStackRef = useRef([]);
@@ -10554,7 +10841,7 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
     }
   }, [view]);
   useEffect(() => {
-    lastSnapRef.current = { view, selected, selectedJob, editingListing, editingJob, lastJob };
+    lastSnapRef.current = { view, selected, selectedJob, editingJob, lastJob };
   });
   const goBack = (fallback = "home") => {
     const snap = viewStackRef.current.pop();
@@ -10562,26 +10849,10 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
     skipStackPushRef.current = true;
     setSelected(snap.selected);
     setSelectedJob(snap.selectedJob);
-    setEditingListing(snap.editingListing);
     setEditingJob(snap.editingJob);
     setLastJob(snap.lastJob);
     setView(snap.view);
   };
-  // Düzenleme formundan (veya yeni vitrin yayınlandıktan sonra) vitrinin kendi
-  // sayfasına — sahip modunda — dön. Formun kendisi yığında bırakılmaz; geldiğimiz
-  // eski (bayat) vitrin sayfası yığının tepesindeyse o da atılır, böylece Geri
-  // tuşu vitrinden önceki ekrana götürür.
-  const openListingDetail = (l) => {
-    const existing = realListings.find((x) => x.dbId === l?.dbId);
-    const fresh = existing ? { ...existing, ...l, rating: existing.rating, reviewCount: existing.reviewCount, level: existing.level, isBoosted: existing.isBoosted } : l;
-    const stack = viewStackRef.current;
-    if (stack.length > 0 && stack[stack.length - 1].view === "detail") stack.pop();
-    skipStackPushRef.current = true;
-    setSelected(fresh);
-    setEditingListing(null);
-    setView("detail");
-  };
-
   useEffect(() => {
     if (fromPopStateRef.current) { fromPopStateRef.current = false; return; }
     const url = new URL(window.location.href);
@@ -10602,8 +10873,7 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
         skipStackPushRef.current = true;
         setSelected(snap.selected);
         setSelectedJob(snap.selectedJob);
-        setEditingListing(snap.editingListing);
-        setEditingJob(snap.editingJob);
+            setEditingJob(snap.editingJob);
             setLastJob(snap.lastJob);
         setView(snap.view);
       } else {
@@ -10706,7 +10976,6 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
     if (!userId && GATED_VIEWS.has(v)) { onRequireAuth?.(); return; }
     setView(v);
     setSelected(null);
-    setEditingListing(null);
     if (v !== "messages") setMessageContact(null);
   };
 
@@ -10772,11 +11041,9 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
       {view === "createListing" && (
         <CreateListingView
           onBack={() => goBack()}
-          onGoToProfile={() => { setEditingListing(null); setView("profile"); }}
+          onGoToProfile={() => setView("profile")}
           onCreated={() => fetchListings()}
-          onOpenListing={openListingDetail}
           userId={userId}
-          editingListing={editingListing}
         />
       )}
       {view === "detail" && selected && (
@@ -10801,8 +11068,11 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
           currentUserId={userId}
           favoriteIds={favoriteIds}
           onToggleFavorite={toggleFavorite}
-          onEditListing={(l) => { setEditingListing(l); setView("createListing"); }}
           onListingsChanged={fetchListings}
+          onListingPatched={(fresh) => setSelected((prev) => (prev && prev.dbId === fresh.dbId
+            ? { ...prev, ...fresh, rating: prev.rating, reviewCount: prev.reviewCount, level: prev.level, isBoosted: prev.isBoosted }
+            : prev))}
+          onGoToPlans={() => setView("pricing")}
         />
       )}
       {view === "post" && (
@@ -10874,8 +11144,7 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
           userId={userId}
           onListingsChanged={fetchListings}
           onJobsChanged={fetchJobs}
-          onEditListing={(l) => { setEditingListing(l); setView("createListing"); }}
-          onCreateListing={() => { setEditingListing(null); setView("createListing"); }}
+          onCreateListing={() => setView("createListing")}
           onViewListing={(l) => { setSelected(l); setView("detail"); }}
           realListings={realListings}
           onEditJob={(j) => { setEditingJob(j); setView("post"); }}
