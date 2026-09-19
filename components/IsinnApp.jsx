@@ -2683,7 +2683,7 @@ function ListingDetail({ listing, onBack, onContact, userReviews, onAddReview, o
   const isOwner = !!(isRealListing && currentUserId && currentUserId === listing.providerId);
   const [asCustomer, setAsCustomer] = useState(false);
   const ownerMode = isOwner && !asCustomer;
-  const [editingMedia, setEditingMedia] = useState(false);
+  const [editingMedia, setEditingMedia] = useState(true); // sahip vitrine tıklayınca doğrudan düzenleme modunda açılıyor
   const [confirmRemoveMediaId, setConfirmRemoveMediaId] = useState(null);
   // Müşterinin görebildiği (sağlayıcının rıza verdiği) belgeler — RLS
   // migration'ı (document_customer_visibility.sql) henüz çalışmadıysa sorgu
@@ -3308,9 +3308,6 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
               <>
                 <button onClick={() => onEditListing?.(listing)} className="text-xs font-bold px-3 py-1.5 rounded-full text-white" style={{ background: "#3F7D5C" }}>
                   {t("listingDetail.ownerEdit")}
-                </button>
-                <button onClick={() => onOpenVitrinMedia?.(listing)} className="text-xs font-medium underline" style={{ color: "#5C5744" }}>
-                  {t("listingDetail.ownerManage")}
                 </button>
               </>
             )}
@@ -6113,6 +6110,29 @@ function getPlanFeatures(pkg, t) {
   return translated !== dictKey && Array.isArray(translated) ? translated : (pkg.features || []);
 }
 
+// Vitrin düzenleme iki ekrandan oluşuyor (bilgiler formu + medya/belge/ayarlar).
+// Kullanıcı bunları "kafa karıştırıcı" buldu — artık tek bir ekranın iki
+// sekmesi gibi görünüyor, iki ekranın başında da aynı sekme çubuğu var.
+function VitrinEditTabs({ active, onInfo, onMedia }) {
+  const { t } = useLanguage();
+  const tab = (id, label, onClick) => (
+    <button
+      key={id}
+      onClick={active === id ? undefined : onClick}
+      className="flex-1 text-xs font-bold px-3 py-2 rounded-full"
+      style={{ background: active === id ? "#1B2B24" : "transparent", color: active === id ? "#FFFFFF" : "#5C5744" }}
+    >
+      {label}
+    </button>
+  );
+  return (
+    <div className="flex gap-1 p-1 rounded-full mb-5" style={{ background: "#EFE8D8" }}>
+      {tab("info", t("vitrinTabs.info"), onInfo)}
+      {tab("media", t("vitrinTabs.media"), onMedia)}
+    </div>
+  );
+}
+
 function CreateListingView({ onBack, onCreated, userId, editingListing, onGoToProfile, onManageMedia }) {
   const { t } = useLanguage();
   const isEditing = !!editingListing;
@@ -6936,6 +6956,7 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
       <p className="text-sm mb-6" style={{ color: "#5C5744" }}>
         {isEditing ? t("createListing.editSubtitle") : t("createListing.createSubtitle")}
       </p>
+      {isEditing && <VitrinEditTabs active="info" onMedia={() => onManageMedia?.(editingListing)} />}
 
       <div className="flex gap-2 mb-6">
         {[["local", t("createListing.modeLocal")], ["remote", t("createListing.modeRemote")]].map(([key, label]) => (
@@ -9657,7 +9678,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
 // Instagram hesabında gezinmek gibi": her vitrinin kendi video tanıtımı,
 // portföyü, sertifika/belgeleri ve CV'si var (bkz. supabase/vitrin_media.sql).
 // Paylaşılan kalan tek şey profil fotoğrafı (avatar) — ProfileView'da yönetiliyor.
-function VitrinMediaView({ userId, service, onBack, onListingsChanged }) {
+function VitrinMediaView({ userId, service, onBack, onListingsChanged, onEdit }) {
   const { t } = useLanguage();
   const [certificates, setCertificates] = useState([]);
   const [cv, setCv] = useState(null);
@@ -9937,10 +9958,11 @@ function VitrinMediaView({ userId, service, onBack, onListingsChanged }) {
       <button onClick={onBack} className="flex items-center gap-1 text-sm mb-5" style={{ color: "#5C5744" }}>
         <ChevronLeft size={16} /> {t("vitrinMedia.backToListings")}
       </button>
-      <div className="flex items-center gap-2 mb-1">
+      <div className="flex items-center gap-2 mb-3">
         <Grid3x3 size={18} style={{ color: "#3F7D5C" }} />
         <h1 className="font-serif text-xl" style={{ color: "#1B2B24" }}>{service.title}</h1>
       </div>
+      {onEdit && <VitrinEditTabs active="media" onInfo={() => onEdit(service)} />}
       <p className="text-xs mb-6" style={{ color: "#8A8368" }}>
         {t("vitrinMedia.intro")}
       </p>
@@ -10879,7 +10901,7 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
           onBack={() => goBack()}
           onGoToProfile={() => { setEditingListing(null); setView("profile"); }}
           onCreated={() => fetchListings()}
-          onManageMedia={(l) => { setEditingListing(null); setManagingVitrin(l); setView("vitrinMedia"); }}
+          onManageMedia={(l) => { skipStackPushRef.current = true; setEditingListing(null); setManagingVitrin(l); setView("vitrinMedia"); }}
           userId={userId}
           editingListing={editingListing}
         />
@@ -11011,6 +11033,13 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
           service={managingVitrin}
           onBack={() => goBack("profile")}
           onListingsChanged={fetchListings}
+          onEdit={(sv) => {
+            const full = realListings.find((x) => x.dbId === (sv?.dbId || sv?.id));
+            if (!full) return;
+            skipStackPushRef.current = true;
+            setEditingListing(full);
+            setView("createListing");
+          }}
         />
       )}
       {view === "support" && (
