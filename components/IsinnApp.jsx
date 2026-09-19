@@ -9839,7 +9839,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-medium truncate" style={{ color: "#1B2B24" }}>{l.title}</p>
                   <p className="text-[11px] truncate" style={{ color: "#8A8368" }}>
-                    {l.is_remote ? t("profile.remoteLabel") : l.city || "—"} · {formatPriceLabel(l.price, l.price_type)} · <span className="underline">{t("profile.manageMediaLinkText")}</span>
+                    {l.is_remote ? t("profile.remoteLabel") : l.city || "—"} · {formatPriceLabel(l.price, l.price_type)}
                   </p>
                 </div>
                 {confirmDeleteId === l.id ? (
@@ -9864,32 +9864,10 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
                   </div>
                 ) : (
                   <div className="flex items-center gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
-                    {/* GERÇEK EKSİK (2026-09-15, kullanıcının "vitrinlerimi Instagram
-                        profili gibi gezemiyorum, ya düzenle var ya sil" şikayetiyle
-                        bulundu): burada sadece "Düzenle" (form) ve "Sil" vardı —
-                        müşterinin gerçekten göreceği hâliyle (fotoğraf/video/
-                        yorumlar, tam ListingDetail) görüntülemenin hiçbir yolu yoktu.
-                        realListings'ten (zaten tam işlenmiş, mapServiceRowToListing'
-                        den geçmiş) kendi vitrinini bulup gerçek görünümü açıyoruz. */}
-                    {onViewListing && (
-                      <button
-                        onClick={() => {
-                          const full = realListings?.find((x) => x.dbId === l.id);
-                          if (full) onViewListing(full);
-                        }}
-                        className="w-8 h-8 rounded-full flex items-center justify-center"
-                        title={t("profile.viewListingTitle")}
-                      >
-                        <Eye size={14} style={{ color: "#3F7D5C" }} />
-                      </button>
-                    )}
-                    <button
-                      onClick={() => onEditListing?.(toEditableListing(l))}
-                      className="w-8 h-8 rounded-full flex items-center justify-center"
-                      title={t("profile.editListingTitle")}
-                    >
-                      <Pencil size={13} style={{ color: "#3A5BA0" }} />
-                    </button>
+                    {/* Tek giriş: satıra tıklayınca vitrin sayfası sahip modunda açılıyor
+                        (düzenle, fotoğraf/video/belge, ayarlar hepsi orada — kullanıcı
+                        "ayrı düzenle ayrı yönet" ayrımını kafa karıştırıcı buldu).
+                        Burada sadece silme kaldı. */}
                     <button
                       onClick={() => setConfirmDeleteId(l.id)}
                       className="w-8 h-8 rounded-full flex items-center justify-center"
