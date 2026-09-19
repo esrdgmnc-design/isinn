@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { supabase } from "../../../../lib/supabaseClient";
 import { SEO_CATEGORIES, SEO_CITIES, matchesCitySlug } from "../../../../lib/seoTaxonomy";
+import { formatPrice, getProviderName } from "../../../../lib/seoFormat";
 
 // SEO'nun en değerli sayfası: "istanbul temizlikçi", "ankara özel ders" gibi
 // uzun kuyruk aramaların doğrudan hedefi — bkz. SEO stratejisi dokümanı,
@@ -15,18 +16,6 @@ function findCategory(slug) {
 }
 function findCity(slug) {
   return SEO_CITIES.find((c) => c.slug === slug) || null;
-}
-
-function formatPrice(price, priceType) {
-  if (price == null) return priceType === "hourly" ? "Fiyat belirtilmemiş/saat" : "Fiyat belirtilmemiş";
-  const formatted = Number(price).toLocaleString("tr-TR");
-  if (priceType === "hourly") return `${formatted}₺/saat`;
-  if (priceType === "quote") return "Teklif alın";
-  return `${formatted}₺'den`;
-}
-
-function getProviderName(row) {
-  return (row.display_name && row.display_name.trim()) || (row.profiles?.business_name && row.profiles.business_name.trim()) || row.profiles?.full_name || "Sağlayıcı";
 }
 
 async function getServices(categorySlug, citySlug) {

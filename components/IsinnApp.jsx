@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import Cropper from "react-easy-crop";
+import { useState, useEffect, useRef, useMemo, memo } from "react";
+import dynamic from "next/dynamic";
 import { supabase } from "../lib/supabaseClient";
+// Kırpma kütüphanesi sadece fotoğraf kırpma modalı açılınca yüklensin (ilk paket küçük kalsın).
+const Cropper = dynamic(() => import("react-easy-crop"), { ssr: false, loading: () => null });
 import { COMPANY } from "../lib/companyInfo";
 import { useLanguage } from "../lib/i18n/LanguageContext";
 import {
@@ -10,7 +12,7 @@ import {
   Wrench, Truck, Monitor, Paintbrush, Code2, Sparkles, ThumbsUp,
   X, Send, Menu, Map as MapIcon, Check, MessageCircle, Clock, Key,
   GraduationCap, Baby, Megaphone, HardHat, Palette, Users, User, Grid3x3,
-  ShieldCheck, BadgeCheck, Award, ArrowLeft, HeartPulse, Syringe, Activity, Wand2, Droplet, Home, Briefcase,
+  ShieldCheck, BadgeCheck, Award, ArrowLeft, HeartPulse, Syringe, Activity, Wand2, Home, Briefcase,
   Scissors, Shirt, Salad, Brain, HeartHandshake, Milk, Zap, Droplets, SprayCan, PartyPopper, Eye, Flower2,
   ChefHat, Flower, Sprout, Camera, MoreHorizontal, Dumbbell, Unlock,
   LifeBuoy, Bot, Loader2, AlertCircle, Inbox,
@@ -164,13 +166,6 @@ function computeProviderLevel(completedJobs, rating, reviewCount) {
   return "new";
 }
 
-// Yayın öncesi kullanıcı kararı (2026-09-13): JOB_POSTINGS zaten daha önce
-// boşaltılmıştı (bkz. aşağıdaki not), o zaman vitrinler bilerek bırakılmıştı
-// ("önce testte adam toplayalım sonra boşaltırız"). PayTR canlıya geçtiği
-// için o erteleme artık bitti — demo vitrinler de kaldırıldı, sadece gerçek
-// "services" kayıtları (realListings) gösteriliyor.
-const LISTINGS = [];
-
 const CITIES = [
   // Türkiye — tüm iller
   { id: "adana", name: "Adana", country: "Türkiye", region: "Türkiye", lat: 37.0000, lng: 35.3213 },
@@ -278,11 +273,6 @@ const CITIES = [
 
 // Real approximate lat/lng per provider (used for genuine distance calculation)
 // x/y are separate — stylized screen-position percentages for the visual map card of each city.
-// Yayın öncesi kullanıcı kararı (2026-09-13): LISTINGS ile aynı gerekçeyle
-// boşaltıldı — haritada artık sadece gerçek "services" pinleri (realPins)
-// ve gerçek iş ilanı pinleri (jobPins) gösteriliyor.
-const LOCAL_PROVIDERS = [];
-
 function distanceKm(lat1, lng1, lat2, lng2) {
   const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -773,7 +763,6 @@ async function checkProfileGate(userId) {
   return { ok: true };
 }
 
-const LOCAL_ONLY_CATEGORIES = CATEGORIES.filter((c) => c.mode === "local" || c.mode === "both");
 
 const OFFER_POOLS = {
   bakici: [
@@ -959,35 +948,6 @@ function getOffersForCategory(categoryId) {
   return pool.map((o, i) => ({ id: i + 1, status: "pending", ...o }));
 }
 
-const REVIEWS = [
-  {
-    id: 1, name: "Elif K.", initials: "EK", value: 5, verified: true, time: "2 gün önce",
-    comment: "Mutfak tadilatı gerçekten harika oldu, zamanında teslim etti. Kesinlikle tavsiye ederim.",
-    helpful: 12,
-    media: [
-      { type: "image", url: "https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=300" },
-      { type: "image", url: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=300" },
-      { type: "video", url: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=300" },
-      { type: "image", url: "https://images.unsplash.com/photo-1583847268964-b28dc8f51f92?w=300" },
-      { type: "image", url: "https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?w=300" },
-    ],
-  },
-  {
-    id: 2, name: "Serkan T.", initials: "ST", value: 4, verified: true, time: "1 hafta önce",
-    comment: "İşçilik güzeldi ama biraz gecikme oldu. Yine de sonuçtan memnun kaldım.",
-    helpful: 4,
-    media: [],
-  },
-  {
-    id: 3, name: "Ayşe M.", initials: "AM", value: 5, verified: true, time: "2 hafta önce",
-    comment: "İkinci kez çalıştım, yine çok profesyoneldi. Fiyat/performans olarak da gayet iyi.",
-    helpful: 8,
-    media: [
-      { type: "image", url: "https://images.unsplash.com/photo-1556909212-d5b604d0c90d?w=300" },
-    ],
-  },
-];
-
 function Stars({ value, size = 14 }) {
   return (
     <div className="flex gap-0.5">
@@ -1105,8 +1065,14 @@ function useNotifications(userId) {
     if (!userId) return;
     // Gerçek zamanlı abonelik yok (projenin geri kalanı da yok — mesajlaşma
     // ekranı da yenilemede tazeleniyor) — hafif bir polling yeterli.
-    const interval = setInterval(loadUnreadCount, 60000);
-    return () => clearInterval(interval);
+    // Sekme arka plandayken (document.hidden) sorgu atma; öne dönünce hemen tazele.
+    const interval = setInterval(() => {
+      if (typeof document !== "undefined" && document.hidden) return;
+      loadUnreadCount();
+    }, 60000);
+    const onVisible = () => { if (!document.hidden) loadUnreadCount(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => { clearInterval(interval); document.removeEventListener("visibilitychange", onVisible); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
@@ -1476,10 +1442,6 @@ function Header({ onNav, onSearch, pendingCount, session, onNotificationClick })
   );
 }
 
-// Yayın öncesi kullanıcı kararı: vitrinler hariç tüm demo/örnek içerik
-// kaldırıldı — sadece gerçek "İlan Ver" kayıtları (realJobs) gösteriliyor.
-const JOB_POSTINGS = [];
-
 // Hero'daki dönen kelimeler artık dile göre lib/i18n/tr.js ve en.js
 // içindeki rotatingWords dizisinden geliyor (bkz. HomeView) — bu sabit
 // buradan kaldırıldı.
@@ -1544,19 +1506,13 @@ function CategoryTile({ c, i, onClick }) {
   );
 }
 
-const FEATURED_PROFILE_CARDS = [
-  { listingId: 11, bg: "#1F3A2E", specialties: ["0-6 Yaş Bakım", "İlk Yardım Sertifikalı", "Ev İçi Destek"] },
-  { listingId: 19, bg: "#3D2B1F", specialties: ["Saç Kesimi & Boya", "Kaş Tasarımı", "Çocuklu Aileler İçin Uygun"] },
-  { listingId: 25, bg: "#C9A9A0", specialties: ["Sigorta Arızası", "Priz & Anahtar", "Güvenlik Kontrolü"] },
-  { listingId: 21, bg: "#1B3B3A", specialties: ["Doğum Sonrası Beslenme", "Emzirme Dönemi Diyeti", "Çocuk Beslenmesi"] },
-];
-
 // "Uygulamayı Telefonuna Kur" bandı (2026-09-15) — bkz. HomeView'daki not.
 // Chrome/Android'de gerçek, tek tıkla native "Yükle" istemi (beforeinstallprompt)
 // yakalayıp gösteriyoruz; iOS Safari'de bu API hiç yok (Apple desteklemiyor),
 // orada statik "Paylaş → Ana Ekrana Ekle" adımları gösteriliyor. Zaten kurulu
 // (standalone modda açılmış) ya da daha önce kapatılmışsa hiç görünmüyor.
 function InstallAppBanner() {
+  const { t } = useLanguage();
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [dismissed, setDismissed] = useState(true); // ilk render'da localStorage okununcaya kadar gizli kal
   const [platform, setPlatform] = useState(null); // "ios" | "android" | null
@@ -1623,13 +1579,62 @@ function InstallAppBanner() {
             Yükle
           </button>
         )}
-        <button onClick={dismiss} className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center" title="Kapat">
+        <button onClick={dismiss} className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center" title={t("common.closeAria")} aria-label={t("common.closeAria")}>
           <X size={14} style={{ color: "#8A9187" }} />
         </button>
       </div>
     </section>
   );
 }
+
+// Ana sayfa vitrin kartı — memo: üstteki zamanlayıcılar HomeView'ı yeniden render etse de
+// prop'ları değişmeyen kartlar tekrar çizilmiyor.
+const HomeListingCard = memo(function HomeListingCard({ l, isFavorite, onSelectListing, onToggleFavorite }) {
+  const { t } = useLanguage();
+  return (
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => onSelectListing(l)}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onSelectListing(l); }}
+        className="text-left rounded-2xl overflow-hidden hover:-translate-y-1.5 transition-all group shadow-sm hover:shadow-xl cursor-pointer"
+        style={{ border: "1px solid #F0F0F0", background: "#FFFFFF", transform: "translateZ(0)", WebkitTransform: "translateZ(0)", willChange: "transform" }}
+      >
+        <div className="relative h-44 overflow-hidden">
+          <img loading="lazy" decoding="async" src={l.img} alt={l.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
+          <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
+            <ModeTag mode={l.mode} />
+            {l.isBoosted && (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white flex items-center gap-0.5" style={{ background: "#F59E0B" }}><Sparkles size={9} />{t("searchResults.featuredBadge")}</span>
+            )}
+            {l.isReal && (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: "#2FBF71" }}>{t("searchResults.newBadge")}</span>
+            )}
+          </div>
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggleFavorite?.(l); }}
+            className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full bg-white/90 flex items-center justify-center hover:scale-110 transition-transform"
+          >
+            <Heart size={13} style={{ color: "#EF4444" }} fill={isFavorite ? "#EF4444" : "none"} />
+          </button>
+          <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between">
+            <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white border-2 border-white shrink-0" style={{ background: "linear-gradient(135deg, #8B5CF6, #6D28D9)" }}>
+              {l.provider.split(" ").map((w) => w[0]).join("").slice(0, 2)}
+            </div>
+            <span className="text-xs font-black px-2 py-0.5 rounded-full" style={{ background: "rgba(15,17,21,0.75)", color: "#FFFFFF" }}>{l.price}</span>
+          </div>
+        </div>
+        <div className="p-3.5">
+          <p className="text-sm font-bold leading-snug line-clamp-2 min-h-[2.5em]" style={{ color: "#0F1115" }}>{l.title}</p>
+          <p className="text-xs mt-1 truncate" style={{ color: "#9CA3AF" }}>{l.provider} · {l.city}</p>
+          <div className="flex items-center gap-1 mt-2">
+            <Stars value={l.rating} size={12} />
+            <span className="text-xs" style={{ color: "#6B7280" }}>{l.reviewCount > 0 ? `(${l.reviewCount})` : t("searchResults.newListingLabel")}</span>
+          </div>
+        </div>
+      </div>
+  );
+});
 
 function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApplyJob, onOpenJob, realListings, listingsLoading, realJobs, favoriteIds, onToggleFavorite, onToggleJobFavorite, platformStats }) {
   const { t } = useLanguage();
@@ -1647,10 +1652,6 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
   // gizlenebiliyor, aşağıdaki toggle hâlâ duruyor).
   const [showRemote, setShowRemote] = useState(true);
   const [featuredIndex, setFeaturedIndex] = useState(0);
-  // Yayın öncesi kullanıcı kararı: demo vitrin sayısı azaltıldı (sitenin
-  // gerçek trafiğine daha yakın, abartısız görünsün diye) — kaynak veri
-  // (LISTINGS) hâlâ tam, sadece gösterilen miktar sınırlı.
-  const allListings = [...(realListings || []), ...LISTINGS.slice(0, 8)];
   // Gerçek ilanlar da en az bir değerlendirmeyle 4.5+ puana ulaşınca "Öne Çıkan"a
   // girebiliyor — sabit demo listesine hapsolmuyor, gerçekten hak ederek çıkıyor.
   // "Öne Çıkan" şeridi sınırlı kapasiteli (FEATURED_SLOT_CAP) — uygun havuz
@@ -1659,14 +1660,20 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
   // üstte kalır ve geri kalanların Öne Çıkarma parası boşa gider (bkz.
   // computeVisibilityScore/seededDailyShuffle üstündeki not).
   const FEATURED_SLOT_CAP = 8;
-  const featuredEligible = (realListings || []).filter((l) => l.isBoosted || (l.reviewCount > 0 && l.rating >= 4.5));
-  const realFeatured = seededDailyShuffle(featuredEligible).slice(0, FEATURED_SLOT_CAP);
-  const featured = [...realFeatured, ...LISTINGS.filter((l) => l.level === "top-rated").slice(0, 8)];
-  const filtered = (
-    filter === "all" ? allListings :
-    filter === "home" ? allListings.filter((l) => l.mode === "local" && (l.homeService === "evde" || l.homeService === "esnek")) :
-    allListings.filter((l) => l.mode === filter)
-  ).slice().sort((a, b) => computeVisibilityScore(b) - computeVisibilityScore(a));
+  // useMemo: hero kelime (1.8sn) ve öne çıkan (4.5sn) zamanlayıcıları HomeView'ı
+  // sürekli yeniden render ediyor — filtre/sıralama/karıştırma her tikte tekrar koşmasın.
+  const featured = useMemo(() => {
+    const eligible = (realListings || []).filter((l) => l.isBoosted || (l.reviewCount > 0 && l.rating >= 4.5));
+    return seededDailyShuffle(eligible).slice(0, FEATURED_SLOT_CAP);
+  }, [realListings]);
+  const filtered = useMemo(() => {
+    const all = realListings || [];
+    const base =
+      filter === "all" ? all :
+      filter === "home" ? all.filter((l) => l.mode === "local" && (l.homeService === "evde" || l.homeService === "esnek")) :
+      all.filter((l) => l.mode === filter);
+    return base.slice().sort((a, b) => computeVisibilityScore(b) - computeVisibilityScore(a));
+  }, [realListings, filter]);
 
   useEffect(() => {
     const interval = setInterval(() => setWordIndex((i) => (i + 1) % rotatingWords.length), 1800);
@@ -1929,7 +1936,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
                 style={{ border: "1px solid #F0F0F0", background: "#FFFFFF" }}
               >
                 <div className="sm:w-64 h-44 sm:h-auto shrink-0 relative overflow-hidden">
-                  <img src={p.img} alt={p.title} className="w-full h-full object-cover" />
+                  <img loading="lazy" decoding="async" src={p.img} alt={p.title} className="w-full h-full object-cover" />
                   <span
                     className="absolute top-2 left-2 text-[11px] font-bold px-2 py-0.5 rounded-full text-white flex items-center gap-1"
                     style={{ background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)" }}
@@ -2002,48 +2009,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
         ) : (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
             {filtered.map((l) => (
-              <div
-                key={l.id}
-                role="button"
-                tabIndex={0}
-                onClick={() => onSelectListing(l)}
-                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onSelectListing(l); }}
-                className="text-left rounded-2xl overflow-hidden hover:-translate-y-1.5 transition-all group shadow-sm hover:shadow-xl cursor-pointer"
-                style={{ border: "1px solid #F0F0F0", background: "#FFFFFF", transform: "translateZ(0)", WebkitTransform: "translateZ(0)", willChange: "transform" }}
-              >
-                <div className="relative h-44 overflow-hidden">
-                  <img src={l.img} alt={l.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
-                  <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
-                    <ModeTag mode={l.mode} />
-                    {l.isBoosted && (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white flex items-center gap-0.5" style={{ background: "#F59E0B" }}><Sparkles size={9} />{t("searchResults.featuredBadge")}</span>
-                    )}
-                    {l.isReal && (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: "#2FBF71" }}>{t("searchResults.newBadge")}</span>
-                    )}
-                  </div>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onToggleFavorite?.(l); }}
-                    className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full bg-white/90 flex items-center justify-center hover:scale-110 transition-transform"
-                  >
-                    <Heart size={13} style={{ color: "#EF4444" }} fill={favoriteIds?.has(l.dbId) ? "#EF4444" : "none"} />
-                  </button>
-                  <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between">
-                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white border-2 border-white shrink-0" style={{ background: "linear-gradient(135deg, #8B5CF6, #6D28D9)" }}>
-                      {l.provider.split(" ").map((w) => w[0]).join("").slice(0, 2)}
-                    </div>
-                    <span className="text-xs font-black px-2 py-0.5 rounded-full" style={{ background: "rgba(15,17,21,0.75)", color: "#FFFFFF" }}>{l.price}</span>
-                  </div>
-                </div>
-                <div className="p-3.5">
-                  <p className="text-sm font-bold leading-snug line-clamp-2 min-h-[2.5em]" style={{ color: "#0F1115" }}>{l.title}</p>
-                  <p className="text-xs mt-1 truncate" style={{ color: "#9CA3AF" }}>{l.provider} · {l.city}</p>
-                  <div className="flex items-center gap-1 mt-2">
-                    <Stars value={l.rating} size={12} />
-                    <span className="text-xs" style={{ color: "#6B7280" }}>{l.reviewCount > 0 ? `(${l.reviewCount})` : t("searchResults.newListingLabel")}</span>
-                  </div>
-                </div>
-              </div>
+              <HomeListingCard key={l.id} l={l} isFavorite={!!favoriteIds?.has(l.dbId)} onSelectListing={onSelectListing} onToggleFavorite={onToggleFavorite} />
             ))}
           </div>
         )}
@@ -2107,7 +2073,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
             style={{ background: "linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.95) 100%)" }}
           />
           <div className="flex gap-4 overflow-x-auto pb-2 px-5" style={{ scrollbarWidth: "thin" }}>
-          {[...(realJobs || []), ...JOB_POSTINGS].map((job, jobIdx) => {
+          {(realJobs || []).map((job, jobIdx) => {
             const cat = CATEGORIES.find((c) => c.id === job.category);
             const Icon = cat?.icon;
             const catIndex = CATEGORIES.findIndex((c) => c.id === job.category);
@@ -2182,10 +2148,6 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
               .sort((a, b) => b.rating - a.rating)
               .slice(0, 4)
               .map((l) => ({ listing: l, specialties: [l.desc ? (l.desc.length > 42 ? `${l.desc.slice(0, 42)}…` : l.desc) : ""], bg: "#1F2937" })),
-            ...FEATURED_PROFILE_CARDS.map((card) => {
-              const l = LISTINGS.find((x) => x.id === card.listingId);
-              return l ? { listing: l, specialties: card.specialties, bg: card.bg } : null;
-            }).filter(Boolean),
           ].slice(0, 4).map((item) => {
             const l = item.listing;
             return (
@@ -2198,7 +2160,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
                 className="text-left rounded-2xl overflow-hidden hover:-translate-y-1.5 transition-all group shadow-sm hover:shadow-xl cursor-pointer"
               >
                 <div className="relative h-44 overflow-hidden" style={{ background: item.bg }}>
-                  <img src={l.img} alt={l.title} className="w-full h-full object-cover opacity-90 group-hover:scale-110 transition-transform duration-300" />
+                  <img loading="lazy" decoding="async" src={l.img} alt={l.title} className="w-full h-full object-cover opacity-90 group-hover:scale-110 transition-transform duration-300" />
                   <button
                     onClick={(e) => { e.stopPropagation(); onToggleFavorite?.(l); }}
                     className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full bg-white/90 flex items-center justify-center hover:scale-110 transition-transform"
@@ -2373,10 +2335,11 @@ function SiteFooter({ onNav }) {
 }
 
 function MediaLightbox({ media, index, onClose, onNav }) {
+  const { t } = useLanguage();
   const item = media[index];
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-6" style={{ background: "rgba(27,43,36,0.92)" }}>
-      <button onClick={onClose} className="absolute top-5 right-5 text-white"><X size={24} /></button>
+      <button onClick={onClose} className="absolute top-5 right-5 text-white" aria-label={t("common.closeAria")}><X size={24} /></button>
       {index > 0 && (
         <button onClick={() => onNav(index - 1)} className="absolute left-5 text-white"><ChevronLeft size={28} /></button>
       )}
@@ -2397,6 +2360,7 @@ function MediaLightbox({ media, index, onClose, onNav }) {
 }
 
 function ReviewCard({ review, onOpenMedia, isReal, currentUserId, providerId }) {
+  const { t } = useLanguage();
   const [helpful, setHelpful] = useState(review.helpful);
   const [voted, setVoted] = useState(false);
   const [votePending, setVotePending] = useState(false);
@@ -2407,15 +2371,21 @@ function ReviewCard({ review, onOpenMedia, isReal, currentUserId, providerId }) 
   const [replyText, setReplyText] = useState("");
   const [replySubmitting, setReplySubmitting] = useState(false);
   const [providerReply, setProviderReply] = useState(review.providerReply || "");
+  const [replyError, setReplyError] = useState("");
   const submitReply = async () => {
     if (!replyText.trim()) return;
     setReplySubmitting(true);
-    const { error } = await supabase
+    setReplyError("");
+    // .select("id"): RLS engeli olduğunda Supabase hata dönmeden 0 satır günceller.
+    const { data: updated, error } = await supabase
       .from("ratings")
       .update({ provider_reply: replyText.trim(), provider_reply_at: new Date().toISOString() })
-      .eq("id", review.id);
+      .eq("id", review.id)
+      .select("id");
     setReplySubmitting(false);
-    if (!error) { setProviderReply(replyText.trim()); setShowReplyForm(false); }
+    if (error || !updated?.length) { setReplyError(t("common.errActionFailed", { message: error?.message || t("common.errNoPermission") })); return; }
+    setProviderReply(replyText.trim());
+    setShowReplyForm(false);
   };
 
   // Gerçek yorumlarda "Faydalı buldum" eskiden tamamen sahteydi — tıklayınca
@@ -2475,7 +2445,7 @@ function ReviewCard({ review, onOpenMedia, isReal, currentUserId, providerId }) 
               onClick={() => onOpenMedia(review.media, i)}
               className="relative w-16 h-16 rounded-lg overflow-hidden shrink-0"
             >
-              <img src={m.url} alt="" className="w-full h-full object-cover" style={m.type === "video" ? { filter: "brightness(0.6)" } : {}} />
+              <img loading="lazy" decoding="async" src={m.url} alt="" className="w-full h-full object-cover" style={m.type === "video" ? { filter: "brightness(0.6)" } : {}} />
               {m.type === "video" && (
                 <div className="absolute inset-0 flex items-center justify-center">
                   <PlayCircle size={18} className="text-white" />
@@ -2517,6 +2487,7 @@ function ReviewCard({ review, onOpenMedia, isReal, currentUserId, providerId }) 
             className="w-full px-3 py-2 rounded-lg border text-xs outline-none resize-none mb-1.5"
             style={{ borderColor: "#D9D0BA", background: "#FFFFFF", color: "#1B2B24" }}
           />
+          {replyError && <p className="text-[11px] mb-1.5" role="alert" style={{ color: "#9C4A3C" }}>{replyError}</p>}
           <div className="flex items-center gap-2">
             <button
               onClick={submitReply}
@@ -2624,7 +2595,7 @@ function DocViewerModal({ doc, onClose }) {
       >
         <div className="flex items-center justify-between px-4 py-3 border-b shrink-0" style={{ borderColor: "#F0F0F0" }}>
           <p className="text-sm font-medium truncate" style={{ color: "#1B2B24" }}>{doc.name}</p>
-          <button onClick={onClose} className="shrink-0 ml-3">
+          <button onClick={onClose} className="shrink-0 ml-3" aria-label={t("common.closeAria")}>
             <X size={18} style={{ color: "#5C5744" }} />
           </button>
         </div>
@@ -2725,10 +2696,25 @@ function OwnerVitrinPanelBody({ userId, serviceId, onListingsChanged, onReviewSe
   const [professionalCredential, setProfessionalCredential] = useState("");
   const [credentialSaving, setCredentialSaving] = useState(false);
   const [credentialSaved, setCredentialSaved] = useState(false);
+  const [credentialError, setCredentialError] = useState("");
   const saveCredential = async () => {
     setCredentialSaving(true);
     setCredentialSaved(false);
-    await supabase.from("services").update({ professional_credential: professionalCredential.trim() || null }).eq("id", serviceId);
+    setCredentialError("");
+    // professional_credential sütunu, audit_fixes SQL'i çalıştırılana kadar canlı DB'de
+    // olmayabilir — o durumda hata mesajı gösterilir, sayfa çökmez.
+    try {
+      const { data: updated, error } = await supabase.from("services").update({ professional_credential: professionalCredential.trim() || null }).eq("id", serviceId).select("id");
+      if (error || !updated?.length) {
+        setCredentialSaving(false);
+        setCredentialError(t("common.errActionFailed", { message: error?.message || t("common.errNoPermission") }));
+        return;
+      }
+    } catch (err) {
+      setCredentialSaving(false);
+      setCredentialError(t("common.errActionFailed", { message: err?.message || t("common.errNoPermission") }));
+      return;
+    }
     setCredentialSaving(false);
     setCredentialSaved(true);
     onListingsChanged?.();
@@ -2806,11 +2792,18 @@ function OwnerVitrinPanelBody({ userId, serviceId, onListingsChanged, onReviewSe
     return () => { cancelled = true; };
   }, [serviceId, shareReviews, userId]);
 
+  const [shareReviewsError, setShareReviewsError] = useState("");
   const toggleShareReviews = async (val) => {
     setShareReviewsSaving(true);
+    setShareReviewsError("");
     setShareReviews(val);
-    await supabase.from("services").update({ share_profile_reviews: val }).eq("id", serviceId);
+    const { data: updated, error } = await supabase.from("services").update({ share_profile_reviews: val }).eq("id", serviceId).select("id");
     setShareReviewsSaving(false);
+    if (error || !updated?.length) {
+      setShareReviews(!val);
+      setShareReviewsError(t("common.errActionFailed", { message: error?.message || t("common.errNoPermission") }));
+      return;
+    }
     onReviewSettingChanged?.(); // sayfadaki değerlendirme listesi/ortalama yeni ayara göre tazelensin
   };
 
@@ -2961,6 +2954,7 @@ function OwnerVitrinPanelBody({ userId, serviceId, onListingsChanged, onReviewSe
             {t("vitrinMedia.mergeToggle")}
           </label>
         </div>
+        {shareReviewsError && <p className="text-[11px] mt-2" role="alert" style={{ color: "#9C4A3C" }}>{shareReviewsError}</p>}
       </div>
 
       <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
@@ -2984,6 +2978,7 @@ function OwnerVitrinPanelBody({ userId, serviceId, onListingsChanged, onReviewSe
           {credentialSaving && <Loader2 size={10} className="animate-spin" />}
           {credentialSaving ? t("common.savingEllipsis") : credentialSaved ? t("vitrinMedia.credentialSaved") : t("vitrinMedia.credentialAutoSaveHint")}
         </p>
+        {credentialError && <p className="text-[11px] mt-1" role="alert" style={{ color: "#9C4A3C" }}>{credentialError}</p>}
       </div>
 
       {loading ? (
@@ -3012,11 +3007,11 @@ function OwnerVitrinPanelBody({ userId, serviceId, onListingsChanged, onReviewSe
                       {c.isPdf ? (
                         <FileText size={16} style={{ color: "#3A5BA0" }} className="shrink-0" />
                       ) : (
-                        <img src={c.url} alt="" className="w-9 h-9 rounded object-cover shrink-0" />
+                        <img loading="lazy" decoding="async" src={c.url} alt="" className="w-9 h-9 rounded object-cover shrink-0" />
                       )}
                       <span className="text-xs flex-1 truncate underline decoration-dotted" style={{ color: "#1B2B24" }}>{c.name}</span>
                     </button>
-                    <button onClick={() => removeCertificate(c, i)} className="shrink-0">
+                    <button onClick={() => removeCertificate(c, i)} className="shrink-0" aria-label={t("common.remove")}>
                       <Trash2 size={14} style={{ color: "#9C4A3C" }} />
                     </button>
                   </div>
@@ -3058,7 +3053,7 @@ function OwnerVitrinPanelBody({ userId, serviceId, onListingsChanged, onReviewSe
                     <FileText size={16} style={{ color: "#3A5BA0" }} className="shrink-0" />
                     <span className="text-xs flex-1 truncate underline decoration-dotted" style={{ color: "#1B2B24" }}>{cv.name}</span>
                   </button>
-                  <button onClick={removeCv} className="shrink-0">
+                  <button onClick={removeCv} className="shrink-0" aria-label={t("common.remove")}>
                     <Trash2 size={14} style={{ color: "#9C4A3C" }} />
                   </button>
                 </div>
@@ -3296,8 +3291,9 @@ function ListingDetail({ listing, onBack, onContact, userReviews, onAddReview, o
     setVideoUploading(true);
     try {
       const { publicUrl } = await uploadProfileMediaFile(currentUserId, file, "video-intro");
-      const { error } = await supabase.from("services").update({ video_intro_url: publicUrl, video_intro_name: file.name }).eq("id", listing.dbId);
+      const { data: updated, error } = await supabase.from("services").update({ video_intro_url: publicUrl, video_intro_name: file.name }).eq("id", listing.dbId).select("id");
       if (error) throw error;
+      if (!updated?.length) throw new Error(t("common.errNoPermission"));
       setProviderShowcase((prev) => ({ ...(prev || {}), video_intro_url: publicUrl, video_intro_name: file.name }));
       onListingsChanged?.();
     } catch (err) {
@@ -3307,7 +3303,9 @@ function ListingDetail({ listing, onBack, onContact, userReviews, onAddReview, o
     }
   };
   const removeVideoIntro = async () => {
-    await supabase.from("services").update({ video_intro_url: null, video_intro_name: null }).eq("id", listing.dbId);
+    setVideoError("");
+    const { data: updated, error } = await supabase.from("services").update({ video_intro_url: null, video_intro_name: null }).eq("id", listing.dbId).select("id");
+    if (error || !updated?.length) { setVideoError(t("common.errActionFailed", { message: error?.message || t("common.errNoPermission") })); return; }
     setProviderShowcase((prev) => (prev ? { ...prev, video_intro_url: null, video_intro_name: null } : prev));
     onListingsChanged?.();
   };
@@ -3424,11 +3422,10 @@ function ListingDetail({ listing, onBack, onContact, userReviews, onAddReview, o
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isRealListing, listing.providerId]);
 
-  const myReviews = isRealListing ? [] : (userReviews || []).filter((r) => r.listingId === listing.id);
   // allReviews: sadece ortalama/sayı (avg, allReviews.length) için — "Birleştir"
   // açıkken kişiye bağlı TÜM puanları kapsar. displayReviews: gerçekten
   // LİSTELENEN yorumlar — her zaman sadece bu vitrine ait (bkz. loadRealReviews).
-  const allReviews = isRealListing ? realReviews : [...myReviews, ...REVIEWS];
+  const allReviews = isRealListing ? realReviews : [];
   const displayReviews = isRealListing ? ownReviews : allReviews;
   const avg = allReviews.length ? (allReviews.reduce((s, r) => s + r.value, 0) / allReviews.length).toFixed(1) : null;
 
@@ -4082,7 +4079,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
                         <source src={item.url} />
                       </video>
                     ) : (
-                      <img src={item.url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                      <img loading="lazy" decoding="async" src={item.url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                     )}
                     {item.media_type === "video" && (
                       <div className="absolute inset-0 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.15)" }}>
@@ -4335,7 +4332,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
                         reviewMediaFile.type === "video" ? (
                           <video src={reviewMediaFile.url} muted className="w-14 h-14 rounded-lg object-cover" />
                         ) : (
-                          <img src={reviewMediaFile.url} alt="" className="w-14 h-14 rounded-lg object-cover" />
+                          <img loading="lazy" decoding="async" src={reviewMediaFile.url} alt="" className="w-14 h-14 rounded-lg object-cover" />
                         )
                       )}
                       <label className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg border-2 border-dashed cursor-pointer" style={{ borderColor: "#D9D0BA", color: "#5C5744" }}>
@@ -4414,7 +4411,7 @@ function MapView({ onBack, onSelectProvider, onSelectJob, realListings, realJobs
   // Gerçek iş ilanları (client'ların "İlan Ver" ile girdiği ihtiyaçlar) da
   // haritada ayrı bir pin türü olarak gösteriliyor — bkz. mapJobRowToPin.
   const jobPins = (realJobs || []).map((j) => mapJobRowToPin(j)).filter(Boolean);
-  const allProviders = [...LOCAL_PROVIDERS.slice(0, 8), ...realPins, ...jobPins];
+  const allProviders = [...realPins, ...jobPins];
 
   const city = CITIES.find((c) => c.id === cityId);
   const catColor = {
@@ -4539,7 +4536,7 @@ function MapView({ onBack, onSelectProvider, onSelectJob, realListings, realJobs
             style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
           />
           {mapQuery && (
-            <button onClick={() => setMapQuery("")} className="absolute right-3.5 top-1/2 -translate-y-1/2">
+            <button onClick={() => setMapQuery("")} className="absolute right-3.5 top-1/2 -translate-y-1/2" aria-label={t("common.clearSearchAria")}>
               <X size={14} style={{ color: "#8A8368" }} />
             </button>
           )}
@@ -4611,7 +4608,7 @@ function MapView({ onBack, onSelectProvider, onSelectJob, realListings, realJobs
                   <Megaphone size={10} /> {t("mapView.jobBadge")}
                 </span>
               )}
-              <img src={active.img} alt="" className="w-full h-28 object-cover rounded-lg mb-3" />
+              <img loading="lazy" decoding="async" src={active.img} alt="" className="w-full h-28 object-cover rounded-lg mb-3" />
               <p className="text-sm font-medium" style={{ color: "#1B2B24" }}>{active.name}</p>
               <p className="text-xs mb-2" style={{ color: "#8A8368" }}>{active.district}, {city?.name}</p>
               {active.kind !== "job" && (
@@ -4711,9 +4708,9 @@ function JobDetailView({ job, onBack, onContact, currentUserId }) {
   const bumpJob = async () => {
     if (!job?.dbId) return;
     setBumping(true);
-    const { error } = await supabase.from("jobs").update({ bumped_at: new Date().toISOString() }).eq("id", job.dbId).eq("client_id", currentUserId);
+    const { data: updated, error } = await supabase.from("jobs").update({ bumped_at: new Date().toISOString() }).eq("id", job.dbId).eq("client_id", currentUserId).select("id");
     setBumping(false);
-    if (!error) setBumped(true);
+    if (!error && updated?.length) setBumped(true);
   };
 
   return (
@@ -4819,6 +4816,7 @@ function JobDetailView({ job, onBack, onContact, currentUserId }) {
 }
 
 function OffersView({ onBack, job }) {
+  const { t } = useLanguage();
   const [offers, setOffers] = useState(() => getOffersForCategory(job?.categoryId));
   const [sortBy, setSortBy] = useState("price"); // price | rating | recent
   const respond = (id, status) => setOffers(offers.map((o) => (o.id === id ? { ...o, status } : o)));
@@ -4913,7 +4911,7 @@ function OffersView({ onBack, job }) {
                   <button onClick={() => respond(o.id, "accepted")} className="flex-1 py-1.5 rounded-full text-[11px] font-medium text-white flex items-center justify-center gap-1" style={{ background: "#3F7D5C" }}>
                     <Check size={11} /> Kabul
                   </button>
-                  <button className="p-1.5 rounded-full border flex items-center justify-center" style={{ borderColor: "#D9D0BA", color: "#1B2B24" }}>
+                  <button className="p-1.5 rounded-full border flex items-center justify-center" style={{ borderColor: "#D9D0BA", color: "#1B2B24" }} aria-label={t("common.messageAria")}>
                     <MessageCircle size={12} />
                   </button>
                   <button onClick={() => respond(o.id, "declined")} className="p-1.5 rounded-full border" style={{ borderColor: "#D9D0BA", color: "#8A8368" }}>
@@ -4963,7 +4961,7 @@ function SearchResultsView({ query, cityFilter, onBack, onSelectListing, realLis
   // birleşik sorguları hiç yakalamıyordu. Şimdi şehir kendi başına, AND
   // mantığıyla ayrı bir filtre.
   const cityQ = (cityFilter || "").trim().toLocaleLowerCase("tr-TR");
-  const pool = [...(realListings || []), ...LISTINGS.slice(0, 8)];
+  const pool = realListings || [];
   const literalResults = pool
     .filter((l) => {
       const haystack = [l.title, l.provider, l.city, l.desc || "", CATEGORIES.find((c) => c.id === l.category)?.name || ""]
@@ -5106,7 +5104,7 @@ function SearchResultsView({ query, cityFilter, onBack, onSelectListing, realLis
               style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}
             >
               <div className="relative h-40 overflow-hidden">
-                <img src={l.img} alt={l.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                <img loading="lazy" decoding="async" src={l.img} alt={l.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                 <div className="absolute top-2 left-2 flex items-center gap-1.5">
                   <ModeTag mode={l.mode} />
                   {l.isBoosted && (
@@ -5171,7 +5169,7 @@ function FavoritesView({ onBack, onSelectListing, onOpenJob, realListings, realJ
                   <div key={l.id} className="rounded-xl overflow-hidden border" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
                     <button onClick={() => onSelectListing(l)} className="w-full text-left">
                       <div className="relative h-40 overflow-hidden">
-                        <img src={l.img} alt={l.title} className="w-full h-full object-cover" />
+                        <img loading="lazy" decoding="async" src={l.img} alt={l.title} className="w-full h-full object-cover" />
                       </div>
                       <div className="p-3.5">
                         <p className="text-sm font-medium leading-snug line-clamp-2" style={{ color: "#1B2B24" }}>{l.title}</p>
@@ -5302,9 +5300,7 @@ function PostJobView({ onBack, onSubmitted, onViewOffers, onMatchAI, userId, onJ
   const cityName = CITIES.find((c) => c.id === cityId)?.name;
 
   // Live-feeling estimate: how many providers in this category/city could respond
-  const nearbyCount = categoryId
-    ? LOCAL_PROVIDERS.filter((p) => p.category === categoryId && (mode === "remote" || p.city === cityId)).length
-    : 0;
+  const nearbyCount = 0; // sabit demo sağlayıcı yok; gerçek eşleşme sayısı sunucu tarafında hesaplanmıyor
 
   const handlePhotoAdd = (e) => {
     const files = Array.from(e.target.files || []).slice(0, 3 - photos.length);
@@ -5620,9 +5616,10 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
           <div className="flex gap-2 flex-wrap">
             {photos.map((p, i) => (
               <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden">
-                <img src={p.url} alt="" className="w-full h-full object-cover" />
+                <img loading="lazy" decoding="async" src={p.url} alt="" className="w-full h-full object-cover" />
                 <button
                   onClick={() => setPhotos(photos.filter((_, idx) => idx !== i))}
+                  aria-label={t("common.remove")}
                   className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-black/60 flex items-center justify-center"
                 >
                   <X size={10} className="text-white" />
@@ -5731,7 +5728,7 @@ function AIMatchView({ job, onBack, onSelectListing, realListings }) {
   // gerçek bir sağlayıcıyı asla önermiyordu. category alanı (slug) her
   // ikisinde de aynı uzayı paylaşıyor (categories_seed.sql), o yüzden aynı
   // filtre ikisine de doğrudan uygulanabiliyor.
-  const candidates = [...LISTINGS.slice(0, 8), ...(realListings || [])].filter((l) => {
+  const candidates = (realListings || []).filter((l) => {
     const matchesCategory = l.categoryId === job?.categoryId || l.category === job?.categoryId;
     if (!matchesCategory) return false;
     if (!job?.homeServicePref || job.homeServicePref === "esnek") return true;
@@ -5875,8 +5872,6 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
 // kaldırıldı (gerçek kullanıcılar demo mesajları görüp kafası karışıyordu —
 // bkz. bugünkü "deneme mesajları onda da açık" geri bildirimi). Boş bırakmak,
 // sabit sahte konuşmalar göstermekten daha dürüst.
-const INITIAL_CONVERSATIONS = [];
-const INITIAL_THREADS = {};
 
 const AUTO_REPLIES = [
   "Merhaba, ilanınızı inceledim, birazdan dönüş yapacağım.",
@@ -5887,8 +5882,8 @@ const AUTO_REPLIES = [
 
 function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) {
   const { t } = useLanguage();
-  const [conversations, setConversations] = useState(INITIAL_CONVERSATIONS.map((c) => ({ ...c, demo: true })));
-  const [threads, setThreads] = useState(INITIAL_THREADS);
+  const [conversations, setConversations] = useState([]);
+  const [threads, setThreads] = useState({});
   const [activeId, setActiveId] = useState(null);
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
@@ -6121,9 +6116,9 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
     if (!window.confirm(t("messages.confirmMarkDelivered"))) return;
     setDeliveredError("");
     setMarkingDelivered(true);
-    const { error } = await supabase.from("jobs").update({ state: "delivered" }).eq("id", activeId).eq("client_id", currentUserId);
+    const { data: updated, error } = await supabase.from("jobs").update({ state: "delivered" }).eq("id", activeId).eq("client_id", currentUserId).select("id");
     setMarkingDelivered(false);
-    if (error) { setDeliveredError(t("messages.errMarkFailed", { message: error.message })); return; }
+    if (error || !updated?.length) { setDeliveredError(t("messages.errMarkFailed", { message: error?.message || t("common.errNoPermission") })); return; }
     setActiveJob((j) => (j ? { ...j, state: "delivered" } : j));
   };
 
@@ -6138,9 +6133,9 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
     if (!window.confirm(t("messages.confirmMarkProviderDelivered"))) return;
     setDeliveredError("");
     setMarkingDelivered(true);
-    const { error } = await supabase.from("jobs").update({ state: "delivered", provider_delivered_at: new Date().toISOString() }).eq("id", activeId);
+    const { data: updated, error } = await supabase.from("jobs").update({ state: "delivered", provider_delivered_at: new Date().toISOString() }).eq("id", activeId).select("id");
     setMarkingDelivered(false);
-    if (error) { setDeliveredError(t("messages.errMarkFailed", { message: error.message })); return; }
+    if (error || !updated?.length) { setDeliveredError(t("messages.errMarkFailed", { message: error?.message || t("common.errNoPermission") })); return; }
     setActiveJob((j) => (j ? { ...j, state: "delivered" } : j));
   };
 
@@ -6494,7 +6489,7 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
               className="flex-1 px-3.5 py-2.5 rounded-full border text-sm outline-none"
               style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
             />
-            <button onClick={sendMessage} disabled={sending} className="w-10 h-10 rounded-full flex items-center justify-center text-white shrink-0" style={{ background: "#2FBF71", opacity: sending ? 0.6 : 1 }}>
+            <button onClick={sendMessage} disabled={sending} aria-label={t("common.sendAria")} className="w-10 h-10 rounded-full flex items-center justify-center text-white shrink-0" style={{ background: "#2FBF71", opacity: sending ? 0.6 : 1 }}>
               {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
             </button>
           </div>
@@ -6749,7 +6744,7 @@ function ListingCoverPhotoField({ cover, hint }) {
       <div className="flex items-center gap-3">
         {photo && (
           <label className="relative w-16 h-16 rounded-lg overflow-hidden cursor-pointer shrink-0 group">
-            <img src={photo.url} alt="" className="w-16 h-16 rounded-lg object-cover" />
+            <img loading="lazy" decoding="async" src={photo.url} alt="" className="w-16 h-16 rounded-lg object-cover" />
             <div className="absolute inset-0 rounded-lg flex items-center justify-center bg-black/0 group-hover:bg-black/40 transition-colors">
               <Camera size={16} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
@@ -7634,7 +7629,7 @@ function CreateListingView({ onBack, onCreated, userId, onGoToProfile }) {
                         </div>
                       </>
                     ) : (
-                      <img src={p.url} alt="" className="w-full h-full object-cover" />
+                      <img loading="lazy" decoding="async" src={p.url} alt="" className="w-full h-full object-cover" />
                     )}
                   </button>
                 ))}
@@ -8114,7 +8109,7 @@ ${convoText}`;
               className="flex-1 px-3.5 py-2.5 rounded-full border text-sm outline-none"
               style={{ borderColor: "#F0F0F0", background: "#F7F7F8", color: "#0F1115" }}
             />
-            <button onClick={sendMessage} disabled={sending} className="w-10 h-10 rounded-full flex items-center justify-center text-white shrink-0" style={{ background: "#2563EB" }}>
+            <button onClick={sendMessage} disabled={sending} aria-label={t("common.sendAria")} className="w-10 h-10 rounded-full flex items-center justify-center text-white shrink-0" style={{ background: "#2563EB" }}>
               <Send size={16} />
             </button>
           </div>
@@ -9495,6 +9490,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
     return () => { cancelled = true; };
   }, [userId]);
   const [mediaActionId, setMediaActionId] = useState(null);
+  const [actionError, setActionError] = useState("");
 
   // Kayıtlı aramalar — bkz. SearchResultsView.saveThisSearch/sahibinden_features.sql.
   const [savedSearches, setSavedSearches] = useState([]);
@@ -9508,8 +9504,14 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
   const deleteSavedSearch = async (id) => {
-    setSavedSearches((prev) => prev.filter((s) => s.id !== id)); // iyimser — geri almaya gerek yok, silme nadiren başarısız olur
-    await supabase.from("saved_searches").delete().eq("id", id);
+    setActionError("");
+    const snapshot = savedSearches;
+    setSavedSearches((prev) => prev.filter((s) => s.id !== id)); // iyimser; başarısızsa geri alınır
+    const { data: deleted, error } = await supabase.from("saved_searches").delete().eq("id", id).select("id");
+    if (error || !deleted?.length) {
+      setSavedSearches(snapshot);
+      setActionError(t("common.errActionFailed", { message: error?.message || t("common.errNoPermission") }));
+    }
   };
 
   const loadRealPendingMedia = async () => {
@@ -9565,12 +9567,15 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
 
   const decideRealMedia = async (dbId, approve) => {
     setMediaActionId(dbId);
-    const { error } = await supabase
+    setActionError("");
+    const { data: updated, error } = await supabase
       .from("review_media")
       .update({ approval_status: approve ? "approved" : "rejected", approved_at: approve ? new Date().toISOString() : null })
-      .eq("id", dbId);
+      .eq("id", dbId)
+      .select("id");
     setMediaActionId(null);
-    if (!error) setRealPendingMedia((prev) => prev.filter((m) => m.dbId !== dbId));
+    if (error || !updated?.length) { setActionError(t("common.errActionFailed", { message: error?.message || t("common.errNoPermission") })); return; }
+    setRealPendingMedia((prev) => prev.filter((m) => m.dbId !== dbId));
   };
 
   const loadMyListings = async () => {
@@ -9700,10 +9705,10 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
   const deactivateJob = async (jobId) => {
     setJobsError("");
     setDeactivatingJobId(jobId);
-    const { error } = await supabase.from("jobs").update({ active: false }).eq("id", jobId);
+    const { data: updated, error } = await supabase.from("jobs").update({ active: false }).eq("id", jobId).select("id");
     setDeactivatingJobId(null);
     setConfirmDeactivateJobId(null);
-    if (error) { setJobsError(t("profile.errJobRemoveFailed", { message: error.message })); return; }
+    if (error || !updated?.length) { setJobsError(t("profile.errJobRemoveFailed", { message: error?.message || t("common.errNoPermission") })); return; }
     setMyJobs((prev) => prev.filter((j) => j.id !== jobId));
     onJobsChanged?.();
   };
@@ -9750,10 +9755,10 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
   const deleteListing = async (listingId) => {
     setDeleteError("");
     setDeletingId(listingId);
-    const { error } = await supabase.from("services").delete().eq("id", listingId);
+    const { data: deleted, error } = await supabase.from("services").delete().eq("id", listingId).select("id");
     setDeletingId(null);
     setConfirmDeleteId(null);
-    if (error) { setDeleteError(t("profile.errDeleteFailed", { message: error.message })); return; }
+    if (error || !deleted?.length) { setDeleteError(t("profile.errDeleteFailed", { message: error?.message || t("common.errNoPermission") })); return; }
     setMyListings((prev) => prev.filter((l) => l.id !== listingId));
     onListingsChanged?.();
   };
@@ -10052,7 +10057,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
             {savedSearches.map((s) => (
               <div key={s.id} className="flex items-center justify-between gap-2 p-2.5 rounded-lg" style={{ background: "#EFE8D8" }}>
                 <span className="text-xs font-medium" style={{ color: "#1B2B24" }}>"{s.query}"</span>
-                <button onClick={() => deleteSavedSearch(s.id)} className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" title={t("common.remove")}>
+                <button onClick={() => deleteSavedSearch(s.id)} className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" title={t("common.remove")} aria-label={t("common.remove")}>
                   <X size={13} style={{ color: "#8A8368" }} />
                 </button>
               </div>
@@ -10089,6 +10094,9 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
             </button>
           )}
         </div>
+        {actionError && (
+          <p className="text-xs mb-2 px-3 py-2 rounded-lg" role="alert" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{actionError}</p>
+        )}
         {deleteError && (
           <p className="text-xs mb-2 px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{deleteError}</p>
         )}
@@ -10162,6 +10170,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
                       onClick={() => setConfirmDeleteId(l.id)}
                       className="w-8 h-8 rounded-full flex items-center justify-center"
                       title={t("profile.deleteListingTitle")}
+                      aria-label={t("profile.deleteListingTitle")}
                     >
                       <Trash2 size={14} style={{ color: "#9C4A3C" }} />
                     </button>
@@ -10251,6 +10260,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
                       onClick={() => setConfirmDeactivateJobId(j.id)}
                       className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
                       title={t("profile.removeJobTitle")}
+                      aria-label={t("profile.removeJobTitle")}
                     >
                       <Trash2 size={14} style={{ color: "#9C4A3C" }} />
                     </button>
@@ -10278,7 +10288,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
                 {item.mediaType === "video" ? (
                   <video src={item.mediaUrl} muted className="w-14 h-14 rounded-lg object-cover shrink-0" />
                 ) : (
-                  <img src={item.mediaUrl} alt="" className="w-14 h-14 rounded-lg object-cover shrink-0" />
+                  <img loading="lazy" decoding="async" src={item.mediaUrl} alt="" className="w-14 h-14 rounded-lg object-cover shrink-0" />
                 )}
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-bold truncate" style={{ color: "#1B2B24" }}>{item.reviewerName}</p>
@@ -10299,6 +10309,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
                   <button
                     onClick={() => (item.real ? decideRealMedia(item.dbId, false) : onRejectMedia(item.id))}
                     disabled={item.real && mediaActionId === item.dbId}
+                    aria-label={t("common.remove")}
                     className="w-8 h-8 rounded-full flex items-center justify-center border"
                     style={{ borderColor: "#D9D0BA", opacity: item.real && mediaActionId === item.dbId ? 0.6 : 1 }}
                   >
@@ -10432,6 +10443,7 @@ function getInitialView() {
 // Pointer Events (mouse+dokunma tek API) kullanılıyor, touchAction:"none" ile
 // mobilde sürüklerken sayfanın kaymasını engelliyoruz.
 function DraggableSupportButton({ onClick }) {
+  const { t } = useLanguage();
   const [pos, setPos] = useState(null); // { x, y } — null = varsayılan sağ-alt köşe
   const draggingRef = useRef(false);
   const movedRef = useRef(false);
@@ -10493,6 +10505,7 @@ function DraggableSupportButton({ onClick }) {
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
       onClick={handleClick}
+      aria-label={t("common.supportAria")}
       className="z-40 w-14 h-14 rounded-full flex items-center justify-center text-white shadow-2xl hover:scale-105 transition-transform"
       style={{ ...style, background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)" }}
     >
@@ -10507,6 +10520,7 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
   const [selected, setSelected] = useState(null);
   const [selectedJob, setSelectedJob] = useState(null);
   const [editingJob, setEditingJob] = useState(null); // Düzenle ile açılan iş ilanı (PostJobView)
+  const [favError, setFavError] = useState("");
   const [favoriteIds, setFavoriteIds] = useState(new Set()); // gerçek, kalıcı favoriler (favorites tablosu)
   const [trialBanner, setTrialBanner] = useState(null); // { status, planName, daysLeft } — provider_subscriptions'tan
   const [trialBannerDismissed, setTrialBannerDismissed] = useState(false);
@@ -10648,8 +10662,24 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
       return next;
     });
     const column = kind === "job" ? "job_id" : "service_id";
-    if (has) await supabase.from("favorites").delete().eq("profile_id", userId).eq(column, item.dbId);
-    else await supabase.from("favorites").insert({ profile_id: userId, [column]: item.dbId });
+    let failed = false;
+    if (has) {
+      const { data: deleted, error } = await supabase.from("favorites").delete().eq("profile_id", userId).eq(column, item.dbId).select("id");
+      failed = !!error || !deleted?.length;
+    } else {
+      const { error } = await supabase.from("favorites").insert({ profile_id: userId, [column]: item.dbId });
+      failed = !!error;
+    }
+    if (failed) {
+      // Sessiz başarısızlık: iyimser güncellemeyi geri al ve kullanıcıya bildir.
+      setFavoriteIds((prev) => {
+        const next = new Set(prev);
+        has ? next.add(item.dbId) : next.delete(item.dbId);
+        return next;
+      });
+      setFavError(t("common.errActionFailed", { message: t("common.errNoPermission") }));
+      setTimeout(() => setFavError(""), 4000);
+    }
   };
 
   // Gerçek ilanları services tablosundan çeker. Hem ilk yüklemede hem de yeni
@@ -10658,9 +10688,10 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
   const fetchListings = async () => {
     const { data, error } = await supabase
       .from("services")
-      .select("*, profiles(*), categories(*)")
+      .select("*, profiles(business_name, full_name), categories(slug)")
       .eq("active", true)
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(300);
     if (!error && data) {
       const mapped = data.map(mapServiceRowToListing);
       // Gerçek ortalama puan/yorum sayısını da kartlara yansıtıyoruz — ratings
@@ -10668,7 +10699,20 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
       // ilanların sağlayıcıları için toplu çekip client tarafında topluyoruz.
       const providerIds = [...new Set(mapped.map((l) => l.providerId).filter(Boolean))];
       if (providerIds.length > 0) {
-        const { data: ratingsData } = await supabase.from("ratings").select("rated_profile_id, service_id, value").in("rated_profile_id", providerIds);
+        const serviceIds = mapped.map((l) => l.dbId).filter(Boolean);
+        // Birbirinden bağımsız üç sorgu — art arda beklemek yerine paralel.
+        const [{ data: ratingsData }, { data: addonRows }, { data: deliveredJobs }] = await Promise.all([
+          supabase.from("ratings").select("rated_profile_id, service_id, value").in("rated_profile_id", providerIds),
+          supabase
+            .from("provider_addons")
+            .select("profile_id, service_id, current_period_end, addon_products!inner(slug)")
+            .in("profile_id", providerIds)
+            .eq("status", "active")
+            .in("addon_products.slug", ["one-cikarma", "one-cikarma-haftalik"]),
+          serviceIds.length > 0
+            ? supabase.from("jobs").select("service_id").eq("state", "delivered").in("service_id", serviceIds)
+            : Promise.resolve({ data: [] }),
+        ]);
         const byProvider = {};
         const byService = {};
         (ratingsData || []).forEach((r) => {
@@ -10709,12 +10753,6 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
         // kapsar" olarak geriye dönük destekleniyor — yeni satın alımlar
         // paytr-init/paytr-charge-saved'de serviceId zorunlu olduğu için hiç
         // NULL üretmiyor, bu sadece migration öncesi satırlar için.
-        const { data: addonRows } = await supabase
-          .from("provider_addons")
-          .select("profile_id, service_id, current_period_end, addon_products!inner(slug)")
-          .in("profile_id", providerIds)
-          .eq("status", "active")
-          .in("addon_products.slug", ["one-cikarma", "one-cikarma-haftalik"]);
         const boostedServiceIds = new Set();
         const boostedAllVitrinsProviderIds = new Set(); // eski model (service_id NULL)
         (addonRows || []).forEach((r) => {
@@ -10734,13 +10772,7 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
         // "sağlıklı kur" dedi). Tamamlanan iş sayısı (jobs.state='delivered')
         // + puan + yorum sayısına göre otomatik hesaplanıyor, kimse manuel
         // atamıyor — bkz. computeProviderLevel.
-        const serviceIds = mapped.map((l) => l.dbId).filter(Boolean);
         if (serviceIds.length > 0) {
-          const { data: deliveredJobs } = await supabase
-            .from("jobs")
-            .select("service_id")
-            .eq("state", "delivered")
-            .in("service_id", serviceIds);
           const completedByService = {};
           (deliveredJobs || []).forEach((j) => {
             if (j.service_id) completedByService[j.service_id] = (completedByService[j.service_id] || 0) + 1;
@@ -10994,6 +11026,9 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
 
   return (
     <div className="min-h-screen" style={{ background: "#FFFFFF", fontFamily: "ui-sans-serif, system-ui" }}>
+      {favError && (
+        <div role="alert" className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-full text-xs font-medium text-white shadow-lg" style={{ background: "#9C4A3C" }}>{favError}</div>
+      )}
       <Header onNav={handleNav} onSearch={runSearch} pendingCount={pendingMediaApprovals.length + staffModerationQueue.length} session={session} onNotificationClick={handleNotificationClick} />
       {!trialBannerDismissed && trialBanner?.status === "trialing" && trialBanner.daysLeft <= 7 && (
         <div className="flex items-center gap-3 px-5 py-2.5" style={{ background: "#FFFBEB", borderBottom: "1px solid #F0E4C4" }}>
@@ -11007,7 +11042,7 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
             {t("trialBanner.continuesAs", { planName: trialBanner.planName, priceLabel: trialBanner.priceLabel })}
           </p>
           <button onClick={() => handleNav("pricing")} className="text-xs font-bold shrink-0" style={{ color: "#C2872B" }}>{t("header.plans")}</button>
-          <button onClick={() => setTrialBannerDismissed(true)} className="shrink-0">
+          <button onClick={() => setTrialBannerDismissed(true)} className="shrink-0" aria-label={t("common.closeAria")}>
             <X size={14} style={{ color: "#8A8368" }} />
           </button>
         </div>
@@ -11096,7 +11131,8 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
           realListings={realListings}
           realJobs={realJobs}
           onSelectProvider={(p) => {
-            const matched = p.listing || LISTINGS.find((l) => l.provider === p.name) || LISTINGS[0];
+            const matched = p.listing;
+            if (!matched) return;
             setSelected(matched);
             setView("detail");
           }}

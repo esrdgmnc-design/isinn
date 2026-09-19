@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { supabase } from "../../../lib/supabaseClient";
 import ShareButton from "../../../components/ShareButton";
+import { formatPrice, getProviderName } from "../../../lib/seoFormat";
 
 // SEO için eklendi (2026-09-16): İşinn'in tamamı eskiden tek bir "/" sayfası
 // üzerinde, istemci tarafı görünüm durumuyla çalışıyordu — her vitrin kendi
@@ -12,18 +13,6 @@ import ShareButton from "../../../components/ShareButton";
 // yeni bir useEffect o id'yi çekip doğrudan detay ekranını açıyor.
 const BASE_URL = "https://www.isinn.com.tr";
 const FALLBACK_IMG = "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=1200";
-
-function formatPrice(price, priceType) {
-  if (price == null) return priceType === "hourly" ? "Fiyat belirtilmemiş/saat" : "Fiyat belirtilmemiş";
-  const formatted = Number(price).toLocaleString("tr-TR");
-  if (priceType === "hourly") return `${formatted}₺/saat`;
-  if (priceType === "quote") return "Teklif alın";
-  return `${formatted}₺'den`;
-}
-
-function getProviderName(row) {
-  return (row.display_name && row.display_name.trim()) || (row.profiles?.business_name && row.profiles.business_name.trim()) || row.profiles?.full_name || "Sağlayıcı";
-}
 
 async function getListing(id) {
   const { data } = await supabase.from("services").select("*, profiles(*), categories(*)").eq("id", id).eq("active", true).maybeSingle();
