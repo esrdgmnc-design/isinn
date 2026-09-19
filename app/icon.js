@@ -5,6 +5,8 @@ export const contentType = "image/png";
 
 // Next.js'in App Router "özel dosya" kuralı — bunu yazmak otomatik olarak
 // favicon/site icon üretir, ayrı bir .ico dosyası eklemeye gerek yok.
+// Beyaz zemin üzerine siyah "İ" (nokta + gövde şekillerle çiziliyor, yazı
+// tipine bağımlı değil — küçük boyutta da net kalsın diye kalın).
 export default function Icon() {
   return new ImageResponse(
     (
@@ -13,15 +15,14 @@ export default function Icon() {
           width: "100%",
           height: "100%",
           display: "flex",
+          flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          background: "#16321F",
-          borderRadius: 14,
-          fontFamily: "sans-serif",
+          background: "#FFFFFF",
         }}
       >
-        <span style={{ color: "#FFFFFF", fontSize: 40, fontWeight: 800 }}>İ</span>
-        <span style={{ color: "#2563EB", fontSize: 40, fontWeight: 800 }}>.</span>
+        <div style={{ width: 12, height: 12, borderRadius: 6, background: "#2563EB", marginBottom: 5 }} />
+        <div style={{ width: 13, height: 30, borderRadius: 3, background: "#000000" }} />
       </div>
     ),
     { ...size }
