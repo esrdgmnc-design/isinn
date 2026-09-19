@@ -1242,7 +1242,7 @@ function Header({ onNav, onSearch, pendingCount, session, onNotificationClick })
   return (
     <>
     <header className="sticky top-0 z-30 backdrop-blur border-b" style={{ background: "rgba(255,255,255,0.85)", borderColor: "#EAEAEA" }}>
-      <div className="max-w-6xl mx-auto px-5 py-3 flex items-center gap-4">
+      <div className="w-full px-5 sm:px-8 py-3 flex items-center gap-4">
         <button onClick={() => onNav("home")} className="font-sans text-xl font-black tracking-tight shrink-0" style={{ color: "#0F1115" }}>
           İşinn<span style={{ color: "#2563EB" }}>.</span>
         </button>
