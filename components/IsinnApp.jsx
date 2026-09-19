@@ -9337,7 +9337,14 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
             {myListings.map((l) => (
               <div
                 key={l.id}
-                onClick={() => confirmDeleteId !== l.id && onOpenVitrinMedia?.(l)}
+                onClick={() => {
+                  if (confirmDeleteId === l.id) return;
+                  // Satır artık birleşik vitrin sayfasını (sahip modu) açıyor;
+                  // gelişmiş ayarlar oradaki "Yönet" bağlantısında.
+                  const full = realListings?.find((x) => x.dbId === l.id);
+                  if (full && onViewListing) onViewListing(full);
+                  else onOpenVitrinMedia?.(l);
+                }}
                 className="flex items-center gap-3 p-2.5 rounded-lg cursor-pointer"
                 style={{ background: "#EFE8D8" }}
               >
