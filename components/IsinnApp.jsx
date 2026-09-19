@@ -1613,7 +1613,7 @@ const HomeListingCard = memo(function HomeListingCard({ l, isFavorite, onSelectL
           </div>
           <button
             onClick={(e) => { e.stopPropagation(); onToggleFavorite?.(l); }}
-            className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full bg-white/90 flex items-center justify-center hover:scale-110 transition-transform"
+            aria-label={t("favorites.toggle")} className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full bg-white/90 flex items-center justify-center hover:scale-110 transition-transform"
           >
             <Heart size={13} style={{ color: "#EF4444" }} fill={isFavorite ? "#EF4444" : "none"} />
           </button>
@@ -2104,7 +2104,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
                     {job.isReal && (
                       <button
                         onClick={(e) => { e.stopPropagation(); onToggleJobFavorite?.(job); }}
-                        className="w-6 h-6 rounded-full bg-white/90 flex items-center justify-center hover:scale-110 transition-transform"
+                        aria-label={t("favorites.toggle")} className="w-6 h-6 rounded-full bg-white/90 flex items-center justify-center hover:scale-110 transition-transform"
                       >
                         <Heart size={12} style={{ color: "#EF4444" }} fill={favoriteIds?.has(job.dbId) ? "#EF4444" : "none"} />
                       </button>
@@ -2163,7 +2163,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
                   <img loading="lazy" decoding="async" src={l.img} alt={l.title} className="w-full h-full object-cover opacity-90 group-hover:scale-110 transition-transform duration-300" />
                   <button
                     onClick={(e) => { e.stopPropagation(); onToggleFavorite?.(l); }}
-                    className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full bg-white/90 flex items-center justify-center hover:scale-110 transition-transform"
+                    aria-label={t("favorites.toggle")} className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full bg-white/90 flex items-center justify-center hover:scale-110 transition-transform"
                   >
                     <Heart size={13} style={{ color: "#EF4444" }} fill={favoriteIds?.has(l.dbId) ? "#EF4444" : "none"} />
                   </button>
