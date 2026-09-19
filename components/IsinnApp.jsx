@@ -2850,10 +2850,12 @@ function OwnerVitrinPanelBody({ userId, serviceId, onListingsChanged, onReviewSe
     const setErr = kind === "cv" ? setCvError : setCertError;
     setErr("");
     apply(val);
-    const { error } = await supabase.from("provider_documents").update({ visible_to_customers: val }).eq("id", doc.id);
-    if (error) {
+    // .select() şart: RLS/yetki engeli olduğunda Supabase hata dönmüyor, sadece 0
+    // satır güncelliyor — arayüz "açık" gösterip DB'ye hiç yazılmamış olabiliyordu.
+    const { data: updated, error } = await supabase.from("provider_documents").update({ visible_to_customers: val }).eq("id", doc.id).select("id");
+    if (error || !updated || updated.length === 0) {
       apply(!val);
-      setErr(t("vitrinMedia.docVisibilityFailed", { message: error.message }));
+      setErr(t("vitrinMedia.docVisibilityFailed", { message: error?.message || "0 rows updated (permission)" }));
       return;
     }
     onDocsChanged?.(); // sayfadaki müşteri "Belgeler" bölümü güncellensin
