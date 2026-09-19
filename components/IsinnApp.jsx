@@ -621,7 +621,7 @@ function mapServiceRowToListing(row) {
     isBoosted: false, // fetchListings, aktif Öne Çıkarma Paketi'ne göre bunu güncelliyor
     // Değerlendirmeler bu vitrinle diğer vitrinler arasında birleşik mi
     // gösterilsin (varsayılan) yoksa sadece bu vitrine mi özel — vitrin
-    // sahibinin kararı (bkz. VitrinMediaView, vitrin_media.sql).
+    // sahibinin kararı (bkz. OwnerVitrinPanel, vitrin_media.sql).
     shareProfileReviews: row.share_profile_reviews ?? true,
   };
 }
@@ -2565,8 +2565,8 @@ async function uploadProfileMediaFile(userId, file, prefix) {
   return { path, publicUrl: data.publicUrl };
 }
 
-// Portföy ekleme/silme — hem VitrinMediaView hem ListingDetail'in sahip modu
-// kullanıyor, kopya olmasın diye burada. onAdded(row)/onRemoved(id) çağıranın
+// Portföy ekleme/silme — ListingDetail'in sahip modu kullanıyor; state şekli
+// çağırana bağlı olduğu için ayrı bir hook. onAdded(row)/onRemoved(id) çağıranın
 // kendi state şekline göre güncelleme yapmasını sağlar (row = portfolio_items satırı).
 function useVitrinPortfolioActions({ userId, serviceId, count, onAdded, onRemoved, onChanged }) {
   const { t } = useLanguage();
@@ -2608,7 +2608,7 @@ function useVitrinPortfolioActions({ userId, serviceId, count, onAdded, onRemove
   return { uploading, error, add, remove };
 }
 
-// Belge önizleme penceresi (indirme yok, yeni sekme yok) — VitrinMediaView ve
+// Belge önizleme penceresi (indirme yok, yeni sekme yok) — sahip paneli ve
 // ListingDetail'in "Belgeler" bölümü aynı modalı kullanıyor.
 function DocViewerModal({ doc, onClose }) {
   const { t } = useLanguage();
@@ -2675,7 +2675,419 @@ function DocConsentToggle({ visible, onChange }) {
   );
 }
 
-function ListingDetail({ listing, onBack, onContact, userReviews, onAddReview, onSubmitPendingMedia, onSubmitStaffReview, currentUserId, favoriteIds, onToggleFavorite, onEditListing, onOpenVitrinMedia, onListingsChanged }) {
+// Sahip modunda vitrin sayfasının altındaki, varsayılan KAPALI "Sadece sen
+// görüyorsun" paneli (eski medya ekranının istatistik/ayar/belge kısımları
+// buraya taşındı). Sadece ownerMode'da render edilir; müşteriye ve "Müşteri
+// gözüyle gör" açıkken hiç mount olmaz. Açılınca içerik (ve sorguları) yüklenir.
+function OwnerVitrinPanel({ userId, serviceId, onListingsChanged, onReviewSettingChanged, onDocsChanged }) {
+  const { t } = useLanguage();
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="mt-10 pt-8 border-t" style={{ borderColor: "#D9D0BA" }}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="w-full flex items-center gap-2 text-left"
+      >
+        <Lock size={16} style={{ color: "#3F7D5C" }} />
+        <h2 className="font-serif text-xl flex-1" style={{ color: "#1B2B24" }}>{t("listingDetail.ownerPanelTitle")}</h2>
+        <ChevronRight size={18} style={{ color: "#5C5744", transform: open ? "rotate(90deg)" : "none", transition: "transform 0.15s" }} />
+      </button>
+      <p className="text-xs mt-1" style={{ color: "#8A8368" }}>{t("listingDetail.ownerPanelSubtext")}</p>
+      {open && (
+        <OwnerVitrinPanelBody
+          userId={userId}
+          serviceId={serviceId}
+          onListingsChanged={onListingsChanged}
+          onReviewSettingChanged={onReviewSettingChanged}
+          onDocsChanged={onDocsChanged}
+        />
+      )}
+    </div>
+  );
+}
+
+function OwnerVitrinPanelBody({ userId, serviceId, onListingsChanged, onReviewSettingChanged, onDocsChanged }) {
+  const { t } = useLanguage();
+  const [certificates, setCertificates] = useState([]);
+  const [cv, setCv] = useState(null);
+  const [docViewer, setDocViewer] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [certUploading, setCertUploading] = useState(false);
+  const [certError, setCertError] = useState("");
+  const [cvUploading, setCvUploading] = useState(false);
+  const [cvError, setCvError] = useState("");
+  // Bu vitrinin değerlendirmeleri diğer vitrinlerle birleşsin mi, yoksa ayrı mı
+  // kalsın — sahibi (müşterimiz) kendi kararını veriyor (bkz. ratings.service_id).
+  const [shareReviews, setShareReviews] = useState(true);
+  const [shareReviewsSaving, setShareReviewsSaving] = useState(false);
+  // Meslek odası/lisans/sicil no — Seçenek A (şeffaflık katmanı, 2026-09-14):
+  // biz doğrulamıyoruz, sadece sağlayıcının yazdığını görünür kılıyoruz.
+  const [professionalCredential, setProfessionalCredential] = useState("");
+  const [credentialSaving, setCredentialSaving] = useState(false);
+  const [credentialSaved, setCredentialSaved] = useState(false);
+  const saveCredential = async () => {
+    setCredentialSaving(true);
+    setCredentialSaved(false);
+    await supabase.from("services").update({ professional_credential: professionalCredential.trim() || null }).eq("id", serviceId);
+    setCredentialSaving(false);
+    setCredentialSaved(true);
+    onListingsChanged?.();
+  };
+
+  // Vitrin performansı — gerçek, ölçülebilen sinyallerle: kaç görüşme
+  // başladı, kaçı tamamlandı, ortalama puan, kaç kişi favoriledi. "Kaç kişi
+  // baktı" gibi bir görüntülenme sayısı YOK burada — hiçbir yerde
+  // izlenmiyor, var olmayan bir veriyi uydurmamak için o metrik hiç
+  // gösterilmiyor.
+  const [stats, setStats] = useState(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+
+  useEffect(() => {
+    if (!userId || !serviceId) { setLoading(false); return; }
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      // Belgeler (sertifika/CV) RLS ile sadece sahibine açık — sahibin kendi
+      // oturumuyla sorgulanıyor (eskiden eski medya ekranında da böyleydi).
+      const [{ data: serviceRow }, { data: docs }] = await Promise.all([
+        supabase.from("services").select("share_profile_reviews, professional_credential").eq("id", serviceId).maybeSingle(),
+        supabase.from("provider_documents").select("*").eq("service_id", serviceId).order("created_at", { ascending: false }),
+      ]);
+      if (cancelled) return;
+      setShareReviews(serviceRow?.share_profile_reviews ?? true);
+      setProfessionalCredential(serviceRow?.professional_credential || "");
+
+      const docRows = docs || [];
+      const certs = docRows.filter((d) => d.doc_type === "certificate");
+      const cvDoc = docRows.find((d) => d.doc_type === "cv");
+      const certsWithUrls = await Promise.all(certs.map(async (d) => {
+        const { data: signed } = await supabase.storage.from("provider-documents").createSignedUrl(d.file_url, 3600);
+        return { id: d.id, name: d.file_name || d.label || t("createListing.docFallbackName"), url: signed?.signedUrl || "", isPdf: (d.file_name || "").toLowerCase().endsWith(".pdf"), visible: d.visible_to_customers === true };
+      }));
+      if (cancelled) return;
+      setCertificates(certsWithUrls);
+      if (cvDoc) {
+        const { data: signed } = await supabase.storage.from("provider-documents").createSignedUrl(cvDoc.file_url, 3600);
+        setCv({ id: cvDoc.id, path: cvDoc.file_url, name: cvDoc.file_name || "CV", url: signed?.signedUrl || "", visible: cvDoc.visible_to_customers === true });
+      } else {
+        setCv(null);
+      }
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [userId, serviceId]);
+
+  useEffect(() => {
+    if (!serviceId) { setStatsLoading(false); return; }
+    let cancelled = false;
+    (async () => {
+      setStatsLoading(true);
+      // "Birleştir" (paylaşılan) modundaysa sağlayıcının TÜM vitrinlerine
+      // gelen değerlendirmeler sayılmalı (herkese açık sayfadaki ortalamayla tutarlı).
+      let ratingsQuery = supabase.from("ratings").select("id, value").order("created_at", { ascending: false });
+      ratingsQuery = shareReviews ? ratingsQuery.eq("rated_profile_id", userId) : ratingsQuery.eq("service_id", serviceId);
+      const [{ data: jobsData }, { data: ratingsData }, { count: favCount }] = await Promise.all([
+        supabase.from("jobs").select("id, state").eq("service_id", serviceId),
+        ratingsQuery,
+        supabase.from("favorites").select("id", { count: "exact", head: true }).eq("service_id", serviceId),
+      ]);
+      if (cancelled) return;
+      const jobs = jobsData || [];
+      const ratings = ratingsData || [];
+      setStats({
+        conversations: jobs.length,
+        completed: jobs.filter((j) => j.state === "delivered").length,
+        avgRating: ratings.length > 0 ? (ratings.reduce((s, r) => s + r.value, 0) / ratings.length).toFixed(1) : null,
+        reviewCount: ratings.length,
+        favorites: favCount || 0,
+      });
+      setStatsLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [serviceId, shareReviews, userId]);
+
+  const toggleShareReviews = async (val) => {
+    setShareReviewsSaving(true);
+    setShareReviews(val);
+    await supabase.from("services").update({ share_profile_reviews: val }).eq("id", serviceId);
+    setShareReviewsSaving(false);
+    onReviewSettingChanged?.(); // sayfadaki değerlendirme listesi/ortalama yeni ayara göre tazelensin
+  };
+
+  const handleCertAdd = async (e) => {
+    const files = Array.from(e.target.files || []).slice(0, 5 - certificates.length);
+    e.target.value = "";
+    if (!userId || files.length === 0) return;
+    setCertError("");
+    setCertUploading(true);
+    try {
+      for (const file of files) {
+        const ext = (file.name.split(".").pop() || "bin").toLowerCase();
+        const path = `${userId}/cert-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+        const { error: upErr } = await supabase.storage.from("provider-documents").upload(path, file);
+        if (upErr) throw upErr;
+        const { data: docRow, error: insErr } = await supabase
+          .from("provider_documents")
+          .insert({ profile_id: userId, service_id: serviceId, doc_type: "certificate", file_url: path, file_name: file.name })
+          .select()
+          .single();
+        if (insErr) throw insErr;
+        const { data: signed } = await supabase.storage.from("provider-documents").createSignedUrl(path, 3600);
+        setCertificates((prev) => [...prev, { id: docRow.id, name: file.name, url: signed?.signedUrl || "", isPdf: file.type === "application/pdf", visible: false }].slice(0, 5));
+      }
+      onListingsChanged?.(); // has_certificates güncellendi, listeleri tazele
+    } catch (err) {
+      setCertError(t("vitrinMedia.uploadFailed", { message: err.message }));
+    } finally {
+      setCertUploading(false);
+    }
+  };
+
+  // Belgeyi müşterilere açma/kapama — iyimser güncelleme, hata olursa (örn.
+  // SQL migration'ı henüz çalışmadıysa) geri alınır.
+  const setDocVisibility = async (kind, doc, val) => {
+    const apply = (v) => (kind === "cv" ? setCv((c) => (c ? { ...c, visible: v } : c)) : setCertificates((prev) => prev.map((x) => (x.id === doc.id ? { ...x, visible: v } : x))));
+    const setErr = kind === "cv" ? setCvError : setCertError;
+    setErr("");
+    apply(val);
+    const { error } = await supabase.from("provider_documents").update({ visible_to_customers: val }).eq("id", doc.id);
+    if (error) {
+      apply(!val);
+      setErr(t("vitrinMedia.docVisibilityFailed", { message: error.message }));
+      return;
+    }
+    onDocsChanged?.(); // sayfadaki müşteri "Belgeler" bölümü güncellensin
+  };
+
+  const removeCertificate = async (item, idx) => {
+    setCertificates((prev) => prev.filter((_, i) => i !== idx));
+    if (item.id) await supabase.from("provider_documents").delete().eq("id", item.id);
+    onListingsChanged?.();
+    onDocsChanged?.();
+  };
+
+  const handleCvAdd = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !userId) return;
+    setCvError("");
+    setCvUploading(true);
+    try {
+      const ext = (file.name.split(".").pop() || "pdf").toLowerCase();
+      const path = `${userId}/cv-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("provider-documents").upload(path, file);
+      if (upErr) throw upErr;
+      const { data: signed } = await supabase.storage.from("provider-documents").createSignedUrl(path, 3600);
+      if (cv?.id) {
+        const { error: updErr } = await supabase.from("provider_documents").update({ file_url: path, file_name: file.name }).eq("id", cv.id);
+        if (updErr) throw updErr;
+        setCv({ id: cv.id, path, name: file.name, url: signed?.signedUrl || "", visible: false });
+      } else {
+        const { data: docRow, error: insErr } = await supabase
+          .from("provider_documents")
+          .insert({ profile_id: userId, service_id: serviceId, doc_type: "cv", file_url: path, file_name: file.name })
+          .select()
+          .single();
+        if (insErr) throw insErr;
+        setCv({ id: docRow.id, path, name: file.name, url: signed?.signedUrl || "", visible: false });
+      }
+    } catch (err) {
+      setCvError(t("vitrinMedia.uploadFailed", { message: err.message }));
+    } finally {
+      setCvUploading(false);
+    }
+  };
+
+  const removeCv = async () => {
+    if (cv?.id) await supabase.from("provider_documents").delete().eq("id", cv.id);
+    setCv(null);
+    onDocsChanged?.();
+  };
+
+  // "Sadece sen görüyorsun" etiketi: blokta gizli (rızasız) belge/boşluk
+  // varsa gösterilir; hepsi müşteriye açıksa kalkar.
+  const certAllPublic = certificates.length > 0 && certificates.every((c) => c.visible);
+  const cvPublic = !!cv?.visible;
+  const ownerOnlyBadge = (
+    <span className="ml-auto text-[10px] flex items-center gap-1 shrink-0" style={{ color: "#8A8368" }}>
+      <Lock size={10} /> {t("listingDetail.ownerPanelTitle")}
+    </span>
+  );
+
+  return (
+    <div className="mt-5">
+      <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
+        <div className="flex items-center gap-2 mb-3">
+          <Activity size={16} style={{ color: "#3F7D5C" }} />
+          <h3 className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("vitrinMedia.statsHeading")}</h3>
+        </div>
+        {statsLoading ? (
+          <p className="text-xs" style={{ color: "#8A8368" }}>{t("common.loading")}</p>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div>
+              <p className="font-serif text-2xl" style={{ color: "#1B2B24" }}>{stats?.conversations ?? 0}</p>
+              <p className="text-[11px]" style={{ color: "#8A8368" }}>{t("vitrinMedia.statConversations")}</p>
+            </div>
+            <div>
+              <p className="font-serif text-2xl" style={{ color: "#1B2B24" }}>{stats?.completed ?? 0}</p>
+              <p className="text-[11px]" style={{ color: "#8A8368" }}>{t("vitrinMedia.statCompleted")}</p>
+            </div>
+            <div>
+              <p className="font-serif text-2xl" style={{ color: "#1B2B24" }}>{stats?.avgRating ?? "—"}{stats?.reviewCount ? ` (${stats.reviewCount})` : ""}</p>
+              <p className="text-[11px]" style={{ color: "#8A8368" }}>{t("vitrinMedia.statAvgRating")}</p>
+            </div>
+            <div>
+              <p className="font-serif text-2xl" style={{ color: "#1B2B24" }}>{stats?.favorites ?? 0}</p>
+              <p className="text-[11px]" style={{ color: "#8A8368" }}>{t("vitrinMedia.statFavorites")}</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("vitrinMedia.reviewsHeading")}</p>
+            <p className="text-xs mt-0.5" style={{ color: "#8A8368" }}>
+              {shareReviews ? t("vitrinMedia.reviewsSharedNote") : t("vitrinMedia.reviewsOwnNote")}
+            </p>
+          </div>
+          <label className="flex items-center gap-2 text-xs shrink-0 cursor-pointer" style={{ color: "#5C5744" }}>
+            {shareReviewsSaving && <Loader2 size={12} className="animate-spin" />}
+            <input type="checkbox" checked={shareReviews} onChange={(e) => toggleShareReviews(e.target.checked)} />
+            {t("vitrinMedia.mergeToggle")}
+          </label>
+        </div>
+      </div>
+
+      <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
+        <div className="flex items-center gap-2 mb-1">
+          <BadgeCheck size={16} style={{ color: "#3A5BA0" }} />
+          <h3 className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("vitrinMedia.credentialHeading")}</h3>
+        </div>
+        <p className="text-xs mb-3" style={{ color: "#8A8368" }}>
+          {t("vitrinMedia.credentialIntro")}
+        </p>
+        <input
+          type="text"
+          value={professionalCredential}
+          onChange={(e) => { setProfessionalCredential(e.target.value); setCredentialSaved(false); }}
+          onBlur={saveCredential}
+          placeholder={t("vitrinMedia.credentialPlaceholder")}
+          className="w-full px-3 py-2.5 rounded-lg border text-xs mb-1"
+          style={{ borderColor: "#D9D0BA" }}
+        />
+        <p className="text-[11px] flex items-center gap-1" style={{ color: credentialSaved ? "#3F7D5C" : "#8A8368" }}>
+          {credentialSaving && <Loader2 size={10} className="animate-spin" />}
+          {credentialSaving ? t("common.savingEllipsis") : credentialSaved ? t("vitrinMedia.credentialSaved") : t("vitrinMedia.credentialAutoSaveHint")}
+        </p>
+      </div>
+
+      {loading ? (
+        <p className="text-xs" style={{ color: "#8A8368" }}>{t("common.loading")}</p>
+      ) : (
+        <>
+          <DocViewerModal doc={docViewer} onClose={() => setDocViewer(null)} />
+
+          <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
+            <div className="flex items-center gap-2 mb-1">
+              <Award size={16} style={{ color: "#C2872B" }} />
+              <h3 className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("vitrinMedia.certHeading")}</h3>
+              {!certAllPublic && ownerOnlyBadge}
+            </div>
+            <p className="text-xs mb-4" style={{ color: "#8A8368" }}>
+              {t("vitrinMedia.certIntro")}
+            </p>
+            {certError && (
+              <p className="text-xs mb-3 px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{certError}</p>
+            )}
+            <div className="space-y-2 mb-3">
+              {certificates.map((c, i) => (
+                <div key={c.id || i}>
+                  <div className="flex items-center gap-2.5 p-2.5 rounded-lg" style={{ background: "#EFE8D8" }}>
+                    <button onClick={() => setDocViewer({ url: c.url, name: c.name, isPdf: c.isPdf })} className="flex items-center gap-2.5 flex-1 min-w-0 text-left">
+                      {c.isPdf ? (
+                        <FileText size={16} style={{ color: "#3A5BA0" }} className="shrink-0" />
+                      ) : (
+                        <img src={c.url} alt="" className="w-9 h-9 rounded object-cover shrink-0" />
+                      )}
+                      <span className="text-xs flex-1 truncate underline decoration-dotted" style={{ color: "#1B2B24" }}>{c.name}</span>
+                    </button>
+                    <button onClick={() => removeCertificate(c, i)} className="shrink-0">
+                      <Trash2 size={14} style={{ color: "#9C4A3C" }} />
+                    </button>
+                  </div>
+                  <DocConsentToggle visible={!!c.visible} onChange={(v) => setDocVisibility("cert", c, v)} />
+                </div>
+              ))}
+            </div>
+            {certificates.length < 5 && (
+              <label
+                className="flex items-center justify-center gap-2 py-2.5 rounded-lg border-2 border-dashed text-xs font-medium cursor-pointer"
+                style={{ borderColor: "#D9D0BA", color: "#5C5744", opacity: certUploading ? 0.6 : 1 }}
+              >
+                {certUploading ? <Loader2 size={14} className="animate-spin" /> : <UploadCloud size={14} />}
+                {certUploading ? t("common.loading") : t("vitrinMedia.certUpload")}
+                <input type="file" accept="image/*,application/pdf" multiple className="hidden" onChange={handleCertAdd} disabled={certUploading} />
+              </label>
+            )}
+          </div>
+
+          <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
+            <div className="flex items-center gap-2 mb-1">
+              <FileText size={16} style={{ color: "#3A5BA0" }} />
+              <h3 className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("vitrinMedia.cvHeading")}</h3>
+              {!cvPublic && ownerOnlyBadge}
+            </div>
+            <p className="text-xs mb-4" style={{ color: "#8A8368" }}>
+              {t("vitrinMedia.cvIntro")}
+            </p>
+            {cvError && (
+              <p className="text-xs mb-3 px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{cvError}</p>
+            )}
+            {cv ? (
+              <div>
+                <div className="flex items-center gap-2.5 p-2.5 rounded-lg" style={{ background: "#EFE8D8" }}>
+                  <button
+                    onClick={() => setDocViewer({ url: cv.url, name: cv.name, isPdf: (cv.name || "").toLowerCase().endsWith(".pdf") })}
+                    className="flex items-center gap-2.5 flex-1 min-w-0 text-left"
+                  >
+                    <FileText size={16} style={{ color: "#3A5BA0" }} className="shrink-0" />
+                    <span className="text-xs flex-1 truncate underline decoration-dotted" style={{ color: "#1B2B24" }}>{cv.name}</span>
+                  </button>
+                  <button onClick={removeCv} className="shrink-0">
+                    <Trash2 size={14} style={{ color: "#9C4A3C" }} />
+                  </button>
+                </div>
+                <DocConsentToggle visible={!!cv.visible} onChange={(v) => setDocVisibility("cv", cv, v)} />
+              </div>
+            ) : (
+              <label
+                className="flex items-center justify-center gap-2 py-2.5 rounded-lg border-2 border-dashed text-xs font-medium cursor-pointer"
+                style={{ borderColor: "#D9D0BA", color: "#5C5744", opacity: cvUploading ? 0.6 : 1 }}
+              >
+                {cvUploading ? <Loader2 size={14} className="animate-spin" /> : <UploadCloud size={14} />}
+                {cvUploading ? t("common.loading") : t("vitrinMedia.cvUpload")}
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/jpeg,image/png"
+                  className="hidden"
+                  onChange={handleCvAdd}
+                  disabled={cvUploading}
+                />
+              </label>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function ListingDetail({ listing, onBack, onContact, userReviews, onAddReview, onSubmitPendingMedia, onSubmitStaffReview, currentUserId, favoriteIds, onToggleFavorite, onEditListing, onListingsChanged }) {
   const { t } = useLanguage();
   const isRealListing = !!(listing.isReal && listing.providerId);
   // Vitrinin sahibi kendi sayfasına bakıyorsa "sahip modu" — "Müşteri gözüyle
@@ -2690,6 +3102,7 @@ function ListingDetail({ listing, onBack, onContact, userReviews, onAddReview, o
   // hata/boş döner, o durumda bölüm hiç gösterilmez.
   const [sharedDocs, setSharedDocs] = useState([]);
   const [docViewer, setDocViewer] = useState(null);
+  const [docsVersion, setDocsVersion] = useState(0); // sahip panelinde rıza değişince müşteri "Belgeler" bölümünü tazeler
   useEffect(() => {
     if (!isRealListing || !listing.dbId) { setSharedDocs([]); return; }
     let cancelled = false;
@@ -2704,7 +3117,7 @@ function ListingDetail({ listing, onBack, onContact, userReviews, onAddReview, o
         setSharedDocs(data || []);
       }, () => {});
     return () => { cancelled = true; };
-  }, [isRealListing, listing.dbId]);
+  }, [isRealListing, listing.dbId, docsVersion]);
   const openSharedDoc = async (d) => {
     const { data: signed } = await supabase.storage.from("provider-documents").createSignedUrl(d.file_url, 600);
     if (!signed?.signedUrl) return;
@@ -2827,6 +3240,34 @@ function ListingDetail({ listing, onBack, onContact, userReviews, onAddReview, o
     onChanged: onListingsChanged, // ana sayfa/arama listeleri eski medyayı göstermesin
   });
 
+  // Tanıtım videosu (sahip modunda satır içi yükleme/kaldırma) — eski
+  // eski medya ekranındaki davranışın aynısı.
+  const [videoUploading, setVideoUploading] = useState(false);
+  const [videoError, setVideoError] = useState("");
+  const handleVideoAdd = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !currentUserId) return;
+    setVideoError("");
+    setVideoUploading(true);
+    try {
+      const { publicUrl } = await uploadProfileMediaFile(currentUserId, file, "video-intro");
+      const { error } = await supabase.from("services").update({ video_intro_url: publicUrl, video_intro_name: file.name }).eq("id", listing.dbId);
+      if (error) throw error;
+      setProviderShowcase((prev) => ({ ...(prev || {}), video_intro_url: publicUrl, video_intro_name: file.name }));
+      onListingsChanged?.();
+    } catch (err) {
+      setVideoError(t("vitrinMedia.uploadFailed", { message: err.message }));
+    } finally {
+      setVideoUploading(false);
+    }
+  };
+  const removeVideoIntro = async () => {
+    await supabase.from("services").update({ video_intro_url: null, video_intro_name: null }).eq("id", listing.dbId);
+    setProviderShowcase((prev) => (prev ? { ...prev, video_intro_url: null, video_intro_name: null } : prev));
+    onListingsChanged?.();
+  };
+
   useEffect(() => {
     if (!listing.isReal || !listing.dbId) return;
     let cancelled = false;
@@ -2861,7 +3302,7 @@ function ListingDetail({ listing, onBack, onContact, userReviews, onAddReview, o
   // ilanda alakasız sahte yorumlar görmemeli). Vitrin sahibi "Birleştir" derse
   // (varsayılan) ratings.rated_profile_id üzerinden kişiye bağlı TÜM
   // değerlendirmeler gösterilir; "Ayrı tut" derse sadece bu vitrine
-  // (ratings.service_id) bırakılanlar sayılır (bkz. VitrinMediaView, vitrin_media.sql).
+  // (ratings.service_id) bırakılanlar sayılır (bkz. OwnerVitrinPanel, vitrin_media.sql).
   const [realReviews, setRealReviews] = useState([]);
   // Sadece bu vitrine (service_id) yazılmış yorumlar — "Birleştir" açıkken
   // bile, gösterilen METİN listesi hiçbir zaman başka bir vitrine yazılmış
@@ -3523,12 +3964,33 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
             </p>
           )}
 
-          {providerShowcase?.video_intro_url && (
+          {(providerShowcase?.video_intro_url || ownerMode) && (
             <div className="mb-6">
-              <p className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: "#5C5744" }}>{t("listingDetail.videoIntroLabel")}</p>
-              <video controls playsInline className="w-full rounded-xl bg-black" style={{ maxHeight: "320px" }}>
-                <source src={providerShowcase.video_intro_url} />
-              </video>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-bold uppercase tracking-wide" style={{ color: "#5C5744" }}>{t("listingDetail.videoIntroLabel")}</p>
+                {ownerMode && providerShowcase?.video_intro_url && (
+                  <button onClick={removeVideoIntro} className="text-[11px] font-medium flex items-center gap-1" style={{ color: "#9C4A3C" }}>
+                    <Trash2 size={11} /> {t("common.remove")}
+                  </button>
+                )}
+              </div>
+              {ownerMode && videoError && (
+                <p className="text-xs mb-2 px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{videoError}</p>
+              )}
+              {providerShowcase?.video_intro_url ? (
+                <video controls playsInline className="w-full rounded-xl bg-black" style={{ maxHeight: "320px" }}>
+                  <source src={providerShowcase.video_intro_url} />
+                </video>
+              ) : (
+                <label
+                  className="flex items-center justify-center gap-2 py-6 rounded-xl border-2 border-dashed text-xs font-medium cursor-pointer"
+                  style={{ borderColor: "#D9D0BA", color: "#5C5744", opacity: videoUploading ? 0.6 : 1 }}
+                >
+                  {videoUploading ? <Loader2 size={16} className="animate-spin" /> : <UploadCloud size={16} />}
+                  {videoUploading ? t("common.loading") : t("vitrinMedia.videoUpload")}
+                  <input type="file" accept="video/*" className="hidden" onChange={handleVideoAdd} disabled={videoUploading} />
+                </label>
+              )}
             </div>
           )}
 
@@ -3660,6 +4122,19 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
       )}
 
       <DocViewerModal doc={docViewer} onClose={() => setDocViewer(null)} />
+
+      {/* Sadece sahibine (ve "Müşteri gözüyle gör" kapalıyken): istatistik,
+          değerlendirme ayarı, meslek odası ve sertifika/CV — varsayılan kapalı. */}
+      {ownerMode && listing.dbId && (
+        <OwnerVitrinPanel
+          key={listing.dbId}
+          userId={currentUserId}
+          serviceId={listing.dbId}
+          onListingsChanged={onListingsChanged}
+          onReviewSettingChanged={loadRealReviews}
+          onDocsChanged={() => setDocsVersion((v) => v + 1)}
+        />
+      )}
 
       {showcaseLightbox && (
         <MediaLightbox
@@ -6110,30 +6585,7 @@ function getPlanFeatures(pkg, t) {
   return translated !== dictKey && Array.isArray(translated) ? translated : (pkg.features || []);
 }
 
-// Vitrin düzenleme iki ekrandan oluşuyor (bilgiler formu + medya/belge/ayarlar).
-// Kullanıcı bunları "kafa karıştırıcı" buldu — artık tek bir ekranın iki
-// sekmesi gibi görünüyor, iki ekranın başında da aynı sekme çubuğu var.
-function VitrinEditTabs({ active, onInfo, onMedia }) {
-  const { t } = useLanguage();
-  const tab = (id, label, onClick) => (
-    <button
-      key={id}
-      onClick={active === id ? undefined : onClick}
-      className="flex-1 text-xs font-bold px-3 py-2 rounded-full"
-      style={{ background: active === id ? "#1B2B24" : "transparent", color: active === id ? "#FFFFFF" : "#5C5744" }}
-    >
-      {label}
-    </button>
-  );
-  return (
-    <div className="flex gap-1 p-1 rounded-full mb-5" style={{ background: "#EFE8D8" }}>
-      {tab("info", t("vitrinTabs.info"), onInfo)}
-      {tab("media", t("vitrinTabs.media"), onMedia)}
-    </div>
-  );
-}
-
-function CreateListingView({ onBack, onCreated, userId, editingListing, onGoToProfile, onManageMedia }) {
+function CreateListingView({ onBack, onCreated, userId, editingListing, onGoToProfile, onOpenListing }) {
   const { t } = useLanguage();
   const isEditing = !!editingListing;
   const [mode, setMode] = useState(editingListing?.mode || "local");
@@ -6153,7 +6605,7 @@ function CreateListingView({ onBack, onCreated, userId, editingListing, onGoToPr
   const [photoUploading, setPhotoUploading] = useState(false);
   const [photoError, setPhotoError] = useState("");
   // Kullanıcı geri bildirimi (2026-09-18): burada fotoğraflara tıklayınca hiçbir
-  // şey olmuyordu — VitrinMediaView'daki Instagram tarzı tam ekran görüntüleme
+  // şey olmuyordu — eski medya ekranındaki Instagram tarzı tam ekran görüntüleme
   // (lightbox) burada yoktu, sadece küçük, tıklanamaz bir ızgaraydı.
   const [lightbox, setLightbox] = useState(null);
   const [error, setError] = useState("");
@@ -6168,7 +6620,7 @@ function CreateListingView({ onBack, onCreated, userId, editingListing, onGoToPr
 
   // Kullanıcı geri bildirimi (2026-09-16): kapak fotoğrafı dışındaki her şey
   // (sertifika, CV, iş başında portföy, tanıtım videosu) ayrı bir ekrana
-  // (VitrinMediaView) gitmeyi gerektiriyordu — "Fotoğraf, Video, Sertifika
+  // (eski medya yönetim ekranı) gitmeyi gerektiriyordu — "Fotoğraf, Video, Sertifika
   // Ekle" butonu bile bunu çözmüyordu, çünkü hâlâ iki ayrı adımdı. Artık
   // yayınlandıktan hemen sonra, AYNI ekranda (aşağıdaki "success" adımında)
   // hepsi tek seferde yüklenebiliyor — hiç sayfa değiştirmeden.
@@ -6199,7 +6651,7 @@ function CreateListingView({ onBack, onCreated, userId, editingListing, onGoToPr
 
   // Düzenleme modunda, o vitrine daha önce eklenmiş sertifika/CV/portföy/
   // video varsa yükleyip formda gösteriyoruz — yoksa kullanıcı "zaten
-  // eklemiştim, gitti mi?" diye düşünür (bkz. VitrinMediaView'daki aynı sorgu).
+  // eklemiştim, gitti mi?" diye düşünür (bkz. ListingDetail'deki aynı sorgu).
   useEffect(() => {
     if (!isEditing || !activeServiceId) { setExistingMediaLoading(false); return; }
     let cancelled = false;
@@ -6664,7 +7116,27 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
     if (!isEditing) getRecommendation(listing);
   };
 
-  // Hem "yayınlandı" ekranında (yeni vitrin) hem de düzenleme formunda
+  // Düzenleme modunda medya/belge yönetimi artık vitrin sayfasının kendisinde
+  // (sahip modu) — burada sadece oraya yönlendiren kısa not.
+  const editModeMediaNote = (
+    <div className="text-left rounded-2xl border p-4 mb-6 flex items-center gap-3 flex-wrap" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
+      <p className="text-xs flex-1 min-w-[12rem]" style={{ color: "#5C5744" }}>{t("createListing.editMediaNote")}</p>
+      <button
+        type="button"
+        onClick={() => {
+          const target = created || editingListing;
+          if (target && onOpenListing) onOpenListing(target); else onBack();
+        }}
+        className="text-xs font-bold px-3.5 py-2 rounded-full text-white shrink-0"
+        style={{ background: "#3F7D5C" }}
+      >
+        {t("createListing.backToVitrin")}
+      </button>
+    </div>
+  );
+
+  // Yeni vitrin "yayınlandı" ekranında (mediaUploadSection) yükleme bloğu;
+  // düzenlemede yukarıdaki not kullanılıyor. Eski not: hem "yayınlandı" ekranında (yeni vitrin) hem de düzenleme formunda
   // (mevcut vitrin) aynı yükleme bloğu kullanılıyor — activeServiceId hangi
   // durumda olduğumuzu zaten ayırt ediyor, JSX'i tekrar yazmaya gerek yok.
   const mediaUploadSection = (
@@ -6839,7 +7311,7 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
             için ayrı bir ekrana gitmek gerekiyordu, "iki basamaklı bir işlem"
             gibi hissettiriyordu — kapak fotoğrafı zaten formdaydı ama gerisi
             değildi. Artık hepsi burada, aynı yerde, sayfa değiştirmeden. */}
-        {mediaUploadSection}
+        {isEditing ? editModeMediaNote : mediaUploadSection}
 
         <div className="flex gap-2 justify-center">
           <button onClick={onBack} className="px-5 py-2.5 rounded-full text-sm font-medium text-white" style={{ background: "#C2872B" }}>{t("common.backToHome")}</button>
@@ -6956,7 +7428,6 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
       <p className="text-sm mb-6" style={{ color: "#5C5744" }}>
         {isEditing ? t("createListing.editSubtitle") : t("createListing.createSubtitle")}
       </p>
-      {isEditing && <VitrinEditTabs active="info" onMedia={() => onManageMedia?.(editingListing)} />}
 
       <div className="flex gap-2 mb-6">
         {[["local", t("createListing.modeLocal")], ["remote", t("createListing.modeRemote")]].map(([key, label]) => (
@@ -7097,7 +7568,7 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
             </p>
           )}
           {/* Çoklu fotoğraf/video, tanıtım videosu, sertifika ve CV burada değil —
-              "Vitrinlerim" > yönetim ekranından (VitrinMediaView) ekleniyor.
+              vitrin sayfasında (sahip modu) ekleniyor.
               Kullanıcı geri bildirimi: bu adım hiç belli olmuyordu, biri tek
               kapak fotoğrafıyla kalıp "vitrin gibi çoklu fotoğraf/video
               koyamıyoruz" sanıyordu. Ayrı bir ekrana yönlendiren buton da
@@ -7110,7 +7581,7 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
           </p>
         </div>
 
-        {isEditing && mediaUploadSection}
+        {isEditing && editModeMediaNote}
 
         {mode === "local" && (
           <>
@@ -8671,9 +9142,9 @@ function PricingView({ onBack, onJoined, userId }) {
   );
 }
 
-function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOpenModeration, onOpenUserReports, onOpenListingReports, onOpenContentFlags, isAdmin, pendingMediaApprovals, onApproveMedia, onRejectMedia, onListingsChanged, onJobsChanged, onEditListing, onOpenVitrinMedia, onEditJob, onCreateListing, onViewListing, realListings }) {
+function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOpenModeration, onOpenUserReports, onOpenListingReports, onOpenContentFlags, isAdmin, pendingMediaApprovals, onApproveMedia, onRejectMedia, onListingsChanged, onJobsChanged, onEditListing, onEditJob, onCreateListing, onViewListing, realListings }) {
   const { t } = useLanguage();
-  // Video tanıtım/portföy/sertifika/CV artık vitrine özel — bkz. VitrinMediaView
+  // Video tanıtım/portföy/sertifika/CV artık vitrine özel — bkz. ListingDetail sahip modu
   // (supabase/vitrin_media.sql). Burada sadece paylaşılan profil fotoğrafı kalıyor
   // ("aynı kişinin gerçek yüzü her vitrinde aynı görünsün" — kullanıcının kararı).
   const [profilePhoto, setProfilePhoto] = useState(null); // { url }
@@ -9360,11 +9831,9 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
                 key={l.id}
                 onClick={() => {
                   if (confirmDeleteId === l.id) return;
-                  // Satır artık birleşik vitrin sayfasını (sahip modu) açıyor;
-                  // gelişmiş ayarlar oradaki "Yönet" bağlantısında.
+                  // Satır vitrin sayfasını (sahip modu) açıyor — her şey orada düzenleniyor.
                   const full = realListings?.find((x) => x.dbId === l.id);
                   if (full && onViewListing) onViewListing(full);
-                  else onOpenVitrinMedia?.(l);
                 }}
                 className="flex items-center gap-3 p-2.5 rounded-lg cursor-pointer"
                 style={{ background: "#EFE8D8" }}
@@ -9674,589 +10143,6 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
   );
 }
 
-// Vitrine özel medya yönetimi — kullanıcının kendi tabiriyle "iki farklı
-// Instagram hesabında gezinmek gibi": her vitrinin kendi video tanıtımı,
-// portföyü, sertifika/belgeleri ve CV'si var (bkz. supabase/vitrin_media.sql).
-// Paylaşılan kalan tek şey profil fotoğrafı (avatar) — ProfileView'da yönetiliyor.
-function VitrinMediaView({ userId, service, onBack, onListingsChanged, onEdit }) {
-  const { t } = useLanguage();
-  const [certificates, setCertificates] = useState([]);
-  const [cv, setCv] = useState(null);
-  const [portfolio, setPortfolio] = useState([]);
-  const [videoIntro, setVideoIntro] = useState(null);
-  const [lightbox, setLightbox] = useState(null);
-  const [docViewer, setDocViewer] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [videoUploading, setVideoUploading] = useState(false);
-  const [videoError, setVideoError] = useState("");
-  const [certUploading, setCertUploading] = useState(false);
-  const [certError, setCertError] = useState("");
-  const [cvUploading, setCvUploading] = useState(false);
-  const [cvError, setCvError] = useState("");
-  // Bu vitrinin değerlendirmeleri diğer vitrinlerle birleşsin mi, yoksa ayrı mı
-  // kalsın — sahibi (müşterimiz) kendi kararını veriyor (bkz. ratings.service_id).
-  const [shareReviews, setShareReviews] = useState(true);
-  const [shareReviewsSaving, setShareReviewsSaving] = useState(false);
-  // Meslek odası/lisans/sicil no — Seçenek A (şeffaflık katmanı, 2026-09-14):
-  // biz doğrulamıyoruz, sadece sağlayıcının yazdığını görünür kılıyoruz.
-  const [professionalCredential, setProfessionalCredential] = useState("");
-  const [credentialSaving, setCredentialSaving] = useState(false);
-  const [credentialSaved, setCredentialSaved] = useState(false);
-  const saveCredential = async () => {
-    setCredentialSaving(true);
-    setCredentialSaved(false);
-    await supabase.from("services").update({ professional_credential: professionalCredential.trim() || null }).eq("id", serviceId);
-    setCredentialSaving(false);
-    setCredentialSaved(true);
-    onListingsChanged?.();
-  };
-
-  // Vitrin performansı — gerçek, ölçülebilen sinyallerle: kaç görüşme
-  // başladı, kaçı tamamlandı, ortalama puan, kaç kişi favoriledi. "Kaç kişi
-  // baktı" gibi bir görüntülenme sayısı YOK burada — hiçbir yerde
-  // izlenmiyor, var olmayan bir veriyi uydurmamak için o metrik hiç
-  // gösterilmiyor.
-  const [stats, setStats] = useState(null);
-  const [statsLoading, setStatsLoading] = useState(true);
-  // Sağlayıcı, kendi vitrinini yönetim ekranından ("Vitrinlerim") açtığında
-  // yorumların GERÇEK metnini hiç göremiyordu — sadece özet (ortalama puan +
-  // sayı) vardı, yorumu okumak için vitrini "ziyaretçi gibi" ayrı bir
-  // sekmede açması gerekiyordu (kullanıcının fark ettiği gerçek bir eksiklik).
-  const [reviewsList, setReviewsList] = useState([]);
-  // Kullanıcı geri bildirimi: kapak fotoğrafı, vitrine girince (bu yönetim
-  // ekranında) hiç görünmüyordu — sadece hero'da/kartlarda vardı, "Portföy"
-  // ızgarasında yoktu, sanki vitrinin tek fotoğrafı portföy fotoğrafları
-  // gibi görünüyordu. Artık kapak, portföyün İLK (silinemeyen) karesi.
-  const [coverUrl, setCoverUrl] = useState(null);
-
-  const serviceId = service?.dbId || service?.id;
-
-  useEffect(() => {
-    if (!userId || !serviceId) { setLoading(false); return; }
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      const [{ data: serviceRow }, { data: docs }, { data: items }] = await Promise.all([
-        supabase.from("services").select("video_intro_url, video_intro_name, share_profile_reviews, images, professional_credential").eq("id", serviceId).maybeSingle(),
-        supabase.from("provider_documents").select("*").eq("service_id", serviceId).order("created_at", { ascending: false }),
-        supabase.from("portfolio_items").select("*").eq("service_id", serviceId).order("created_at", { ascending: true }),
-      ]);
-      if (cancelled) return;
-      if (serviceRow?.video_intro_url) setVideoIntro({ url: serviceRow.video_intro_url, name: serviceRow.video_intro_name || t("vitrinMedia.videoHeading") });
-      setShareReviews(serviceRow?.share_profile_reviews ?? true);
-      setCoverUrl((Array.isArray(serviceRow?.images) && serviceRow.images[0]) || null);
-      setProfessionalCredential(serviceRow?.professional_credential || "");
-
-      const docRows = docs || [];
-      const certs = docRows.filter((d) => d.doc_type === "certificate");
-      const cvDoc = docRows.find((d) => d.doc_type === "cv");
-      const certsWithUrls = await Promise.all(certs.map(async (d) => {
-        const { data: signed } = await supabase.storage.from("provider-documents").createSignedUrl(d.file_url, 3600);
-        return { id: d.id, name: d.file_name || d.label || t("createListing.docFallbackName"), url: signed?.signedUrl || "", isPdf: (d.file_name || "").toLowerCase().endsWith(".pdf"), visible: d.visible_to_customers === true };
-      }));
-      if (cancelled) return;
-      setCertificates(certsWithUrls);
-      if (cvDoc) {
-        const { data: signed } = await supabase.storage.from("provider-documents").createSignedUrl(cvDoc.file_url, 3600);
-        setCv({ id: cvDoc.id, path: cvDoc.file_url, name: cvDoc.file_name || "CV", url: signed?.signedUrl || "", visible: cvDoc.visible_to_customers === true });
-      } else {
-        setCv(null);
-      }
-      setPortfolio((items || []).map((p) => ({ id: p.id, type: p.media_type, url: p.url, name: p.file_name })));
-      setLoading(false);
-    })();
-    return () => { cancelled = true; };
-  }, [userId, serviceId]);
-
-  useEffect(() => {
-    if (!serviceId) { setStatsLoading(false); return; }
-    let cancelled = false;
-    (async () => {
-      setStatsLoading(true);
-      // "Birleştir" (paylaşılan) modundaysa sağlayıcının TÜM vitrinlerine
-      // gelen değerlendirmeler sayılmalı — eskiden burada her zaman sadece
-      // service_id'ye göre sorgulanıyordu, bu da "Birleştir" açıkken (ki
-      // varsayılan bu) sayının/listenin herkese açık sayfadakiyle
-      // tutarsız, eksik görünmesine yol açıyordu (ListingDetail'in kendi
-      // loadRealReviews'i bu ayrımı zaten doğru yapıyordu, burası yapmıyordu).
-      let ratingsQuery = supabase.from("ratings").select("id, value, comment, created_at, rater_id, service_id, provider_reply, provider_reply_at").order("created_at", { ascending: false });
-      ratingsQuery = shareReviews ? ratingsQuery.eq("rated_profile_id", userId) : ratingsQuery.eq("service_id", serviceId);
-      const [{ data: jobsData }, { data: ratingsData }, { count: favCount }] = await Promise.all([
-        supabase.from("jobs").select("id, state").eq("service_id", serviceId),
-        ratingsQuery,
-        supabase.from("favorites").select("id", { count: "exact", head: true }).eq("service_id", serviceId),
-      ]);
-      if (cancelled) return;
-      const jobs = jobsData || [];
-      const ratings = ratingsData || [];
-      setStats({
-        conversations: jobs.length,
-        completed: jobs.filter((j) => j.state === "delivered").length,
-        avgRating: ratings.length > 0 ? (ratings.reduce((s, r) => s + r.value, 0) / ratings.length).toFixed(1) : null,
-        reviewCount: ratings.length,
-        favorites: favCount || 0,
-      });
-
-      // GİZLİLİK: yukarıdaki stats (ortalama/sayı) "Birleştir"de kişiye bağlı
-      // TÜM vitrinleri kapsar — ama aşağıda LİSTELENEN yorum metinleri hep
-      // sadece BU vitrine (serviceId) yazılmış olanlarla sınırlı, aksi halde
-      // başka bir vitrine yazılmış bir yorumun metni burada (sahibin kendi
-      // yönetim ekranında bile) görünüp iki vitrinin bağlantısını ele
-      // verebilirdi (bkz. ListingDetail'deki aynı düzeltme).
-      const ownRatings = shareReviews ? ratings.filter((r) => r.service_id === serviceId) : ratings;
-      const raterIds = [...new Set(ownRatings.map((r) => r.rater_id))];
-      let profilesById = {};
-      if (raterIds.length > 0) {
-        const { data: profilesData } = await supabase.from("profiles").select("id, full_name, business_name").in("id", raterIds);
-        (profilesData || []).forEach((p) => { profilesById[p.id] = p; });
-      }
-      setReviewsList(ownRatings.map((r) => {
-        const p = profilesById[r.rater_id];
-        const name = (p?.business_name && p.business_name.trim()) || p?.full_name || t("vitrinMedia.anonymousUser");
-        return { id: r.id, name, value: r.value, comment: r.comment || "", time: formatRelativeTr(r.created_at), providerReply: r.provider_reply || "" };
-      }));
-      setStatsLoading(false);
-    })();
-    return () => { cancelled = true; };
-  }, [serviceId, shareReviews, userId]);
-
-  const uploadToProfileMedia = (file, prefix) => uploadProfileMediaFile(userId, file, prefix);
-
-  const toggleShareReviews = async (val) => {
-    setShareReviewsSaving(true);
-    setShareReviews(val);
-    await supabase.from("services").update({ share_profile_reviews: val }).eq("id", serviceId);
-    setShareReviewsSaving(false);
-  };
-
-  const handleVideoAdd = async (e) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file || !userId) return;
-    setVideoError("");
-    setVideoUploading(true);
-    try {
-      const { publicUrl } = await uploadToProfileMedia(file, "video-intro");
-      const { error } = await supabase.from("services").update({ video_intro_url: publicUrl, video_intro_name: file.name }).eq("id", serviceId);
-      if (error) throw error;
-      setVideoIntro({ url: publicUrl, name: file.name });
-    } catch (err) {
-      setVideoError(t("vitrinMedia.uploadFailed", { message: err.message }));
-    } finally {
-      setVideoUploading(false);
-    }
-  };
-
-  const removeVideoIntro = async () => {
-    await supabase.from("services").update({ video_intro_url: null, video_intro_name: null }).eq("id", serviceId);
-    setVideoIntro(null);
-  };
-
-  const {
-    uploading: portfolioUploading,
-    error: portfolioError,
-    add: handlePortfolioAdd,
-    remove: removePortfolioItem,
-  } = useVitrinPortfolioActions({
-    userId,
-    serviceId,
-    count: portfolio.length,
-    onAdded: (row) => setPortfolio((prev) => [...prev, { id: row.id, type: row.media_type, url: row.url, name: row.file_name }].slice(0, 9)),
-    onRemoved: (id) => setPortfolio((prev) => prev.filter((p) => p.id !== id)),
-  });
-
-  const handleCertAdd = async (e) => {
-    const files = Array.from(e.target.files || []).slice(0, 5 - certificates.length);
-    e.target.value = "";
-    if (!userId || files.length === 0) return;
-    setCertError("");
-    setCertUploading(true);
-    try {
-      for (const file of files) {
-        const ext = (file.name.split(".").pop() || "bin").toLowerCase();
-        const path = `${userId}/cert-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-        const { error: upErr } = await supabase.storage.from("provider-documents").upload(path, file);
-        if (upErr) throw upErr;
-        const { data: docRow, error: insErr } = await supabase
-          .from("provider_documents")
-          .insert({ profile_id: userId, service_id: serviceId, doc_type: "certificate", file_url: path, file_name: file.name })
-          .select()
-          .single();
-        if (insErr) throw insErr;
-        const { data: signed } = await supabase.storage.from("provider-documents").createSignedUrl(path, 3600);
-        setCertificates((prev) => [...prev, { id: docRow.id, name: file.name, url: signed?.signedUrl || "", isPdf: file.type === "application/pdf", visible: false }].slice(0, 5));
-      }
-      onListingsChanged?.(); // has_certificates güncellendi, listeleri tazele
-    } catch (err) {
-      setCertError(t("vitrinMedia.uploadFailed", { message: err.message }));
-    } finally {
-      setCertUploading(false);
-    }
-  };
-
-  // Belgeyi müşterilere açma/kapama — iyimser güncelleme, hata olursa (örn.
-  // SQL migration'ı henüz çalışmadıysa) geri alınır.
-  const setDocVisibility = async (kind, doc, val) => {
-    const apply = (v) => (kind === "cv" ? setCv((c) => (c ? { ...c, visible: v } : c)) : setCertificates((prev) => prev.map((x) => (x.id === doc.id ? { ...x, visible: v } : x))));
-    const setErr = kind === "cv" ? setCvError : setCertError;
-    setErr("");
-    apply(val);
-    const { error } = await supabase.from("provider_documents").update({ visible_to_customers: val }).eq("id", doc.id);
-    if (error) {
-      apply(!val);
-      setErr(t("vitrinMedia.docVisibilityFailed", { message: error.message }));
-    }
-  };
-
-  const removeCertificate = async (item, idx) => {
-    setCertificates((prev) => prev.filter((_, i) => i !== idx));
-    if (item.id) await supabase.from("provider_documents").delete().eq("id", item.id);
-    onListingsChanged?.();
-  };
-
-  const handleCvAdd = async (e) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file || !userId) return;
-    setCvError("");
-    setCvUploading(true);
-    try {
-      const ext = (file.name.split(".").pop() || "pdf").toLowerCase();
-      const path = `${userId}/cv-${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("provider-documents").upload(path, file);
-      if (upErr) throw upErr;
-      const { data: signed } = await supabase.storage.from("provider-documents").createSignedUrl(path, 3600);
-      if (cv?.id) {
-        const { error: updErr } = await supabase.from("provider_documents").update({ file_url: path, file_name: file.name }).eq("id", cv.id);
-        if (updErr) throw updErr;
-        setCv({ id: cv.id, path, name: file.name, url: signed?.signedUrl || "", visible: false });
-      } else {
-        const { data: docRow, error: insErr } = await supabase
-          .from("provider_documents")
-          .insert({ profile_id: userId, service_id: serviceId, doc_type: "cv", file_url: path, file_name: file.name })
-          .select()
-          .single();
-        if (insErr) throw insErr;
-        setCv({ id: docRow.id, path, name: file.name, url: signed?.signedUrl || "", visible: false });
-      }
-    } catch (err) {
-      setCvError(t("vitrinMedia.uploadFailed", { message: err.message }));
-    } finally {
-      setCvUploading(false);
-    }
-  };
-
-  const removeCv = async () => {
-    if (cv?.id) await supabase.from("provider_documents").delete().eq("id", cv.id);
-    setCv(null);
-  };
-
-  if (!service) return null;
-
-  return (
-    <div className="max-w-2xl mx-auto px-5 py-10">
-      <button onClick={onBack} className="flex items-center gap-1 text-sm mb-5" style={{ color: "#5C5744" }}>
-        <ChevronLeft size={16} /> {t("vitrinMedia.backToListings")}
-      </button>
-      <div className="flex items-center gap-2 mb-3">
-        <Grid3x3 size={18} style={{ color: "#3F7D5C" }} />
-        <h1 className="font-serif text-xl" style={{ color: "#1B2B24" }}>{service.title}</h1>
-      </div>
-      {onEdit && <VitrinEditTabs active="media" onInfo={() => onEdit(service)} />}
-      <p className="text-xs mb-6" style={{ color: "#8A8368" }}>
-        {t("vitrinMedia.intro")}
-      </p>
-
-      <div className="rounded-xl border p-5 mb-8" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
-        <div className="flex items-center gap-2 mb-3">
-          <Activity size={16} style={{ color: "#3F7D5C" }} />
-          <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("vitrinMedia.statsHeading")}</h2>
-        </div>
-        {statsLoading ? (
-          <p className="text-xs" style={{ color: "#8A8368" }}>{t("common.loading")}</p>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div>
-              <p className="font-serif text-2xl" style={{ color: "#1B2B24" }}>{stats?.conversations ?? 0}</p>
-              <p className="text-[11px]" style={{ color: "#8A8368" }}>{t("vitrinMedia.statConversations")}</p>
-            </div>
-            <div>
-              <p className="font-serif text-2xl" style={{ color: "#1B2B24" }}>{stats?.completed ?? 0}</p>
-              <p className="text-[11px]" style={{ color: "#8A8368" }}>{t("vitrinMedia.statCompleted")}</p>
-            </div>
-            <div>
-              <p className="font-serif text-2xl" style={{ color: "#1B2B24" }}>{stats?.avgRating ?? "—"}{stats?.reviewCount ? ` (${stats.reviewCount})` : ""}</p>
-              <p className="text-[11px]" style={{ color: "#8A8368" }}>{t("vitrinMedia.statAvgRating")}</p>
-            </div>
-            <div>
-              <p className="font-serif text-2xl" style={{ color: "#1B2B24" }}>{stats?.favorites ?? 0}</p>
-              <p className="text-[11px]" style={{ color: "#8A8368" }}>{t("vitrinMedia.statFavorites")}</p>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("vitrinMedia.reviewsHeading")}</p>
-            <p className="text-xs mt-0.5" style={{ color: "#8A8368" }}>
-              {shareReviews ? t("vitrinMedia.reviewsSharedNote") : t("vitrinMedia.reviewsOwnNote")}
-            </p>
-          </div>
-          <label className="flex items-center gap-2 text-xs shrink-0 cursor-pointer" style={{ color: "#5C5744" }}>
-            {shareReviewsSaving && <Loader2 size={12} className="animate-spin" />}
-            <input type="checkbox" checked={shareReviews} onChange={(e) => toggleShareReviews(e.target.checked)} />
-            {t("vitrinMedia.mergeToggle")}
-          </label>
-        </div>
-
-        {/* Eskiden burada sadece ortalama/sayı vardı, yorumun kendi metnini
-            okumak için vitrini "ziyaretçi gibi" ayrı sekmede açman
-            gerekiyordu — artık burada da okunabiliyor. */}
-        {!statsLoading && reviewsList.length > 0 && (
-          <div className="mt-4 pt-4 space-y-3" style={{ borderTop: "1px solid #D9D0BA" }}>
-            {reviewsList.map((r) => (
-              <div key={r.id} className="text-xs">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold" style={{ color: "#1B2B24" }}>{r.name}</span>
-                  <span style={{ color: "#8A8368" }}>{r.time}</span>
-                </div>
-                <div className="flex items-center gap-0.5 my-0.5">
-                  <Stars value={r.value} size={11} />
-                </div>
-                {r.comment && <p style={{ color: "#3D3B30" }}>{r.comment}</p>}
-                {r.providerReply && (
-                  <p className="mt-1 pl-2 border-l-2" style={{ color: "#5C5744", borderColor: "#D9D0BA" }}>
-                    <b>{t("vitrinMedia.yourReply")}</b> {r.providerReply}
-                  </p>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {loading ? (
-        <p className="text-xs" style={{ color: "#8A8368" }}>{t("common.loading")}</p>
-      ) : (
-        <>
-          <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
-            <div className="flex items-center gap-2 mb-1">
-              <PlayCircle size={16} style={{ color: "#2FBF71" }} />
-              <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("vitrinMedia.videoHeading")}</h2>
-            </div>
-            <p className="text-xs mb-4" style={{ color: "#8A8368" }}>
-              {t("vitrinMedia.videoIntro")}
-            </p>
-            {videoError && (
-              <p className="text-xs mb-3 px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{videoError}</p>
-            )}
-            {videoIntro ? (
-              <div>
-                <video controls playsInline className="w-full rounded-lg bg-black mb-2" style={{ maxHeight: "240px" }}>
-                  <source src={videoIntro.url} />
-                </video>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs truncate" style={{ color: "#5C5744" }}>{videoIntro.name}</span>
-                  <button onClick={removeVideoIntro} className="text-xs font-medium flex items-center gap-1" style={{ color: "#9C4A3C" }}>
-                    <Trash2 size={12} /> {t("common.remove")}
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <label
-                className="flex items-center justify-center gap-2 py-6 rounded-lg border-2 border-dashed text-xs font-medium cursor-pointer"
-                style={{ borderColor: "#D9D0BA", color: "#5C5744", opacity: videoUploading ? 0.6 : 1 }}
-              >
-                {videoUploading ? <Loader2 size={16} className="animate-spin" /> : <UploadCloud size={16} />}
-                {videoUploading ? t("common.loading") : t("vitrinMedia.videoUpload")}
-                <input type="file" accept="video/*" className="hidden" onChange={handleVideoAdd} disabled={videoUploading} />
-              </label>
-            )}
-          </div>
-
-          <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
-            <div className="flex items-center gap-2 mb-1">
-              <Grid3x3 size={16} style={{ color: "#2FBF71" }} />
-              <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("vitrinMedia.portfolioHeading")}</h2>
-            </div>
-            <p className="text-xs mb-4" style={{ color: "#8A8368" }}>
-              {t("vitrinMedia.portfolioIntro")}
-            </p>
-            {portfolioError && (
-              <p className="text-xs mb-3 px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{portfolioError}</p>
-            )}
-            <div className="grid grid-cols-3 gap-1.5">
-              {coverUrl && (
-                <div className="relative aspect-square rounded-lg overflow-hidden group">
-                  <button onClick={() => setLightbox({ media: [{ type: "image", url: coverUrl }, ...portfolio], index: 0 })} className="w-full h-full block">
-                    <img src={coverUrl} alt="" className="w-full h-full object-cover" />
-                  </button>
-                  <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded text-[9px] font-bold text-white" style={{ background: "rgba(0,0,0,0.55)" }}>{t("vitrinMedia.coverBadge")}</span>
-                </div>
-              )}
-              {portfolio.map((item, i) => (
-                <div key={item.id || i} className="relative aspect-square rounded-lg overflow-hidden group">
-                  <button onClick={() => setLightbox({ media: coverUrl ? [{ type: "image", url: coverUrl }, ...portfolio] : portfolio, index: coverUrl ? i + 1 : i })} className="w-full h-full block">
-                    {item.type === "video" ? (
-                      <video muted playsInline className="w-full h-full object-cover">
-                        <source src={item.url} />
-                      </video>
-                    ) : (
-                      <img src={item.url} alt="" className="w-full h-full object-cover" />
-                    )}
-                    {item.type === "video" && (
-                      <div className="absolute inset-0 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.15)" }}>
-                        <PlayCircle size={22} className="text-white" />
-                      </div>
-                    )}
-                  </button>
-                  <button
-                    onClick={() => removePortfolioItem(item)}
-                    className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <X size={11} className="text-white" />
-                  </button>
-                </div>
-              ))}
-              {portfolio.length < 9 && (
-                <label className="aspect-square rounded-lg border-2 border-dashed flex flex-col items-center justify-center cursor-pointer gap-1" style={{ borderColor: "#D9D0BA", color: "#8A8368", opacity: portfolioUploading ? 0.6 : 1 }}>
-                  {portfolioUploading ? <Loader2 size={18} className="animate-spin" /> : <UploadCloud size={18} />}
-                  <span className="text-[10px] font-medium">{portfolioUploading ? t("common.loading") : t("vitrinMedia.portfolioAddShort")}</span>
-                  <input type="file" accept="image/*,video/*" multiple className="hidden" onChange={handlePortfolioAdd} disabled={portfolioUploading} />
-                </label>
-              )}
-            </div>
-          </div>
-
-          {lightbox && (
-            <MediaLightbox
-              media={lightbox.media}
-              index={lightbox.index}
-              onClose={() => setLightbox(null)}
-              onNav={(i) => setLightbox({ ...lightbox, index: i })}
-            />
-          )}
-
-          <DocViewerModal doc={docViewer} onClose={() => setDocViewer(null)} />
-
-          <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
-            <div className="flex items-center gap-2 mb-1">
-              <Award size={16} style={{ color: "#C2872B" }} />
-              <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("vitrinMedia.certHeading")}</h2>
-            </div>
-            <p className="text-xs mb-4" style={{ color: "#8A8368" }}>
-              {t("vitrinMedia.certIntro")}
-            </p>
-            {certError && (
-              <p className="text-xs mb-3 px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{certError}</p>
-            )}
-            <div className="space-y-2 mb-3">
-              {certificates.map((c, i) => (
-                <div key={c.id || i}>
-                  <div className="flex items-center gap-2.5 p-2.5 rounded-lg" style={{ background: "#EFE8D8" }}>
-                    <button onClick={() => setDocViewer({ url: c.url, name: c.name, isPdf: c.isPdf })} className="flex items-center gap-2.5 flex-1 min-w-0 text-left">
-                      {c.isPdf ? (
-                        <FileText size={16} style={{ color: "#3A5BA0" }} className="shrink-0" />
-                      ) : (
-                        <img src={c.url} alt="" className="w-9 h-9 rounded object-cover shrink-0" />
-                      )}
-                      <span className="text-xs flex-1 truncate underline decoration-dotted" style={{ color: "#1B2B24" }}>{c.name}</span>
-                    </button>
-                    <button onClick={() => removeCertificate(c, i)} className="shrink-0">
-                      <Trash2 size={14} style={{ color: "#9C4A3C" }} />
-                    </button>
-                  </div>
-                  <DocConsentToggle visible={!!c.visible} onChange={(v) => setDocVisibility("cert", c, v)} />
-                </div>
-              ))}
-            </div>
-            {certificates.length < 5 && (
-              <label
-                className="flex items-center justify-center gap-2 py-2.5 rounded-lg border-2 border-dashed text-xs font-medium cursor-pointer"
-                style={{ borderColor: "#D9D0BA", color: "#5C5744", opacity: certUploading ? 0.6 : 1 }}
-              >
-                {certUploading ? <Loader2 size={14} className="animate-spin" /> : <UploadCloud size={14} />}
-                {certUploading ? t("common.loading") : t("vitrinMedia.certUpload")}
-                <input type="file" accept="image/*,application/pdf" multiple className="hidden" onChange={handleCertAdd} disabled={certUploading} />
-              </label>
-            )}
-          </div>
-
-          <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
-            <div className="flex items-center gap-2 mb-1">
-              <BadgeCheck size={16} style={{ color: "#3A5BA0" }} />
-              <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("vitrinMedia.credentialHeading")}</h2>
-            </div>
-            <p className="text-xs mb-3" style={{ color: "#8A8368" }}>
-              {t("vitrinMedia.credentialIntro")}
-            </p>
-            <input
-              type="text"
-              value={professionalCredential}
-              onChange={(e) => { setProfessionalCredential(e.target.value); setCredentialSaved(false); }}
-              onBlur={saveCredential}
-              placeholder={t("vitrinMedia.credentialPlaceholder")}
-              className="w-full px-3 py-2.5 rounded-lg border text-xs mb-1"
-              style={{ borderColor: "#D9D0BA" }}
-            />
-            <p className="text-[11px] flex items-center gap-1" style={{ color: credentialSaved ? "#3F7D5C" : "#8A8368" }}>
-              {credentialSaving && <Loader2 size={10} className="animate-spin" />}
-              {credentialSaving ? t("common.savingEllipsis") : credentialSaved ? t("vitrinMedia.credentialSaved") : t("vitrinMedia.credentialAutoSaveHint")}
-            </p>
-          </div>
-
-          <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
-            <div className="flex items-center gap-2 mb-1">
-              <FileText size={16} style={{ color: "#3A5BA0" }} />
-              <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("vitrinMedia.cvHeading")}</h2>
-            </div>
-            <p className="text-xs mb-4" style={{ color: "#8A8368" }}>
-              {t("vitrinMedia.cvIntro")}
-            </p>
-            {cvError && (
-              <p className="text-xs mb-3 px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{cvError}</p>
-            )}
-            {cv ? (
-              <div>
-                <div className="flex items-center gap-2.5 p-2.5 rounded-lg" style={{ background: "#EFE8D8" }}>
-                  <button
-                    onClick={() => setDocViewer({ url: cv.url, name: cv.name, isPdf: (cv.name || "").toLowerCase().endsWith(".pdf") })}
-                    className="flex items-center gap-2.5 flex-1 min-w-0 text-left"
-                  >
-                    <FileText size={16} style={{ color: "#3A5BA0" }} className="shrink-0" />
-                    <span className="text-xs flex-1 truncate underline decoration-dotted" style={{ color: "#1B2B24" }}>{cv.name}</span>
-                  </button>
-                  <button onClick={removeCv} className="shrink-0">
-                    <Trash2 size={14} style={{ color: "#9C4A3C" }} />
-                  </button>
-                </div>
-                <DocConsentToggle visible={!!cv.visible} onChange={(v) => setDocVisibility("cv", cv, v)} />
-              </div>
-            ) : (
-              <label
-                className="flex items-center justify-center gap-2 py-2.5 rounded-lg border-2 border-dashed text-xs font-medium cursor-pointer"
-                style={{ borderColor: "#D9D0BA", color: "#5C5744", opacity: cvUploading ? 0.6 : 1 }}
-              >
-                {cvUploading ? <Loader2 size={14} className="animate-spin" /> : <UploadCloud size={14} />}
-                {cvUploading ? t("common.loading") : t("vitrinMedia.cvUpload")}
-                <input
-                  type="file"
-                  accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/jpeg,image/png"
-                  className="hidden"
-                  onChange={handleCvAdd}
-                  disabled={cvUploading}
-                />
-              </label>
-            )}
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
 // Sayfa yenilenince (F5) hangi görünümde kaldığımızı hatırlamak için URL'e
 // yazıyoruz. "detail"/"offers"/"aimatch" gibi görünümler, sadece bu oturumda
 // var olan bir nesneye (seçili ilan, son iş ilanı) ihtiyaç duyduğu için
@@ -10356,7 +10242,6 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
   const [selectedJob, setSelectedJob] = useState(null);
   const [editingListing, setEditingListing] = useState(null); // Düzenle ile açılan ilan (CreateListingView)
   const [editingJob, setEditingJob] = useState(null); // Düzenle ile açılan iş ilanı (PostJobView)
-  const [managingVitrin, setManagingVitrin] = useState(null); // Medya yönetimi açılan vitrin (VitrinMediaView)
   const [favoriteIds, setFavoriteIds] = useState(new Set()); // gerçek, kalıcı favoriler (favorites tablosu)
   const [trialBanner, setTrialBanner] = useState(null); // { status, planName, daysLeft } — provider_subscriptions'tan
   const [trialBannerDismissed, setTrialBannerDismissed] = useState(false);
@@ -10532,7 +10417,7 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
         mapped.forEach((l) => {
           // "Ayrı tut" diyen vitrinler sadece kendi service_id'sine bırakılan
           // değerlendirmeleri sayar; "Birleştir" (varsayılan) diyenler kişiye
-          // bağlı tüm değerlendirmeleri (bkz. VitrinMediaView).
+          // bağlı tüm değerlendirmeleri (bkz. OwnerVitrinPanel).
           const values = l.shareProfileReviews ? byProvider[l.providerId] : byService[l.dbId];
           if (values && values.length > 0) {
             l.rating = Number((values.reduce((s, v) => s + v, 0) / values.length).toFixed(1));
@@ -10693,7 +10578,7 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
     }
   }, [view]);
   useEffect(() => {
-    lastSnapRef.current = { view, selected, selectedJob, editingListing, editingJob, managingVitrin, lastJob };
+    lastSnapRef.current = { view, selected, selectedJob, editingListing, editingJob, lastJob };
   });
   const goBack = (fallback = "home") => {
     const snap = viewStackRef.current.pop();
@@ -10703,9 +10588,22 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
     setSelectedJob(snap.selectedJob);
     setEditingListing(snap.editingListing);
     setEditingJob(snap.editingJob);
-    setManagingVitrin(snap.managingVitrin);
     setLastJob(snap.lastJob);
     setView(snap.view);
+  };
+  // Düzenleme formundan (veya yeni vitrin yayınlandıktan sonra) vitrinin kendi
+  // sayfasına — sahip modunda — dön. Formun kendisi yığında bırakılmaz; geldiğimiz
+  // eski (bayat) vitrin sayfası yığının tepesindeyse o da atılır, böylece Geri
+  // tuşu vitrinden önceki ekrana götürür.
+  const openListingDetail = (l) => {
+    const existing = realListings.find((x) => x.dbId === l?.dbId);
+    const fresh = existing ? { ...existing, ...l, rating: existing.rating, reviewCount: existing.reviewCount, level: existing.level, isBoosted: existing.isBoosted } : l;
+    const stack = viewStackRef.current;
+    if (stack.length > 0 && stack[stack.length - 1].view === "detail") stack.pop();
+    skipStackPushRef.current = true;
+    setSelected(fresh);
+    setEditingListing(null);
+    setView("detail");
   };
 
   useEffect(() => {
@@ -10730,8 +10628,7 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
         setSelectedJob(snap.selectedJob);
         setEditingListing(snap.editingListing);
         setEditingJob(snap.editingJob);
-        setManagingVitrin(snap.managingVitrin);
-        setLastJob(snap.lastJob);
+            setLastJob(snap.lastJob);
         setView(snap.view);
       } else {
         setView(getInitialView());
@@ -10827,7 +10724,7 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
   // giriş yapmadan gidilemiyor; o durumda view değişmez, giriş ekranı açılır
   // (bkz. app/page.js'deki onRequireAuth). "auth" değeri Header'daki "Giriş
   // Yap" butonundan geliyor.
-  const GATED_VIEWS = new Set(["createListing", "post", "messages", "profile", "favorites", "vitrinMedia"]);
+  const GATED_VIEWS = new Set(["createListing", "post", "messages", "profile", "favorites"]);
   const handleNav = (v) => {
     if (v === "auth") { onRequireAuth?.(); return; }
     if (!userId && GATED_VIEWS.has(v)) { onRequireAuth?.(); return; }
@@ -10901,7 +10798,7 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
           onBack={() => goBack()}
           onGoToProfile={() => { setEditingListing(null); setView("profile"); }}
           onCreated={() => fetchListings()}
-          onManageMedia={(l) => { skipStackPushRef.current = true; setEditingListing(null); setManagingVitrin(l); setView("vitrinMedia"); }}
+          onOpenListing={openListingDetail}
           userId={userId}
           editingListing={editingListing}
         />
@@ -10929,7 +10826,6 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
           favoriteIds={favoriteIds}
           onToggleFavorite={toggleFavorite}
           onEditListing={(l) => { setEditingListing(l); setView("createListing"); }}
-          onOpenVitrinMedia={(l) => { setManagingVitrin(l); setView("vitrinMedia"); }}
           onListingsChanged={fetchListings}
         />
       )}
@@ -11024,22 +10920,6 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
             setPendingMediaApprovals((prev) => prev.filter((p) => p.id !== id));
           }}
           onRejectMedia={(id) => setPendingMediaApprovals((prev) => prev.filter((p) => p.id !== id))}
-          onOpenVitrinMedia={(l) => { setManagingVitrin(l); setView("vitrinMedia"); }}
-        />
-      )}
-      {view === "vitrinMedia" && (
-        <VitrinMediaView
-          userId={userId}
-          service={managingVitrin}
-          onBack={() => goBack("profile")}
-          onListingsChanged={fetchListings}
-          onEdit={(sv) => {
-            const full = realListings.find((x) => x.dbId === (sv?.dbId || sv?.id));
-            if (!full) return;
-            skipStackPushRef.current = true;
-            setEditingListing(full);
-            setView("createListing");
-          }}
         />
       )}
       {view === "support" && (
