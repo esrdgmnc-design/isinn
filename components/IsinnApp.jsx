@@ -608,6 +608,9 @@ function mapServiceRowToListing(row) {
     // gerçek services.home_service_type okunuyor, yoksa (eski satırlar için)
     // eski varsayılana düşülüyor.
     homeService: row.is_remote ? undefined : (row.home_service_type || "evde"),
+    // Örnek (demo) vitrin — açıklaması "DEMO VİTRİN" ile başlıyorsa. Ayrı bir kolon
+    // yok (migration gerektirmesin); kartlarda ve detayda görünür rozet gösteriliyor.
+    isDemo: /^s*DEMO V[İI]TR[İI]N/i.test(row.description || ""),
     isBoosted: false, // fetchListings, aktif Öne Çıkarma Paketi'ne göre bunu güncelliyor
     // Değerlendirmeler bu vitrinle diğer vitrinler arasında birleşik mi
     // gösterilsin (varsayılan) yoksa sadece bu vitrine mi özel — vitrin
@@ -1604,6 +1607,9 @@ const HomeListingCard = memo(function HomeListingCard({ l, isFavorite, onSelectL
           <img loading="lazy" decoding="async" src={l.img} alt={l.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
           <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
             <ModeTag mode={l.mode} />
+            {l.isDemo && (
+              <span className="text-[10px] font-black px-2 py-0.5 rounded-full text-white tracking-wide" style={{ background: "#DC2626" }}>{t("searchResults.demoBadge")}</span>
+            )}
             {l.isBoosted && (
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white flex items-center gap-0.5" style={{ background: "#F59E0B" }}><Sparkles size={9} />{t("searchResults.featuredBadge")}</span>
             )}
@@ -1873,6 +1879,9 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
                       <div className="absolute inset-x-0 bottom-0 p-2 pt-7" style={{ background: "linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.88) 100%)" }}>
                         <p className={`font-bold text-white truncate ${isCenter ? "text-xs" : "text-[10px]"}`}>{l.provider}</p>
                       </div>
+                      {l.isDemo && (
+                        <span className="absolute top-2 right-2 text-[10px] font-black px-2 py-0.5 rounded-full text-white tracking-wide" style={{ background: "#DC2626" }}>{t("searchResults.demoBadge")}</span>
+                      )}
                       {isCenter && (
                         <span
                           className="absolute top-2 left-2 text-[10px] font-bold px-2 py-0.5 rounded-full text-white flex items-center gap-1"
@@ -3827,6 +3836,12 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
             <ModeTag mode={listing.mode} />
             {listing.homeService && <HomeServiceBadge value={listing.homeService} size="md" />}
           </div>
+          {listing.isDemo && (
+            <div className="mt-3 rounded-lg px-3.5 py-2.5 text-xs flex items-start gap-2" style={{ background: "#FEE2E2", border: "1px solid #FCA5A5", color: "#991B1B" }}>
+              <span className="font-black shrink-0">{t("searchResults.demoBadge")}</span>
+              <span>{t("listingDetail.demoNotice")}</span>
+            </div>
+          )}
           <h1 className="font-serif text-2xl mt-2.5 mb-2" style={{ color: "#1B2B24" }}>{listing.title}</h1>
           <div className="flex items-center gap-3 text-sm mb-4" style={{ color: "#5C5744" }}>
             <span className="flex items-center gap-1"><MapPin size={14} />{listing.city}</span>
@@ -5107,6 +5122,9 @@ function SearchResultsView({ query, cityFilter, onBack, onSelectListing, realLis
                 <img loading="lazy" decoding="async" src={l.img} alt={l.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                 <div className="absolute top-2 left-2 flex items-center gap-1.5">
                   <ModeTag mode={l.mode} />
+                  {l.isDemo && (
+                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full text-white tracking-wide" style={{ background: "#DC2626" }}>{t("searchResults.demoBadge")}</span>
+                  )}
                   {l.isBoosted && (
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white flex items-center gap-0.5" style={{ background: "#F59E0B" }}><Sparkles size={9} />{t("searchResults.featuredBadge")}</span>
                   )}
