@@ -2292,7 +2292,7 @@ function ReviewCard({ review, onOpenMedia, isReal, currentUserId, providerId }) 
           </div>
           <div>
             <p className="text-sm font-medium" style={{ color: "#1B2B24" }}>{review.name}</p>
-            <p className="text-[11px]" style={{ color: "#6B6550" }}>{review.verified ? "Onaylı iş" : "Yorum"} · {review.time}</p>
+            <p className="text-[11px]" style={{ color: "#6B6550" }}>{review.verified ? "Hizmeti aldığını beyan etti" : "Yorum"} · {review.time}</p>
           </div>
         </div>
         <Stars value={review.value} />

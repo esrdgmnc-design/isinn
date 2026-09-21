@@ -91,7 +91,9 @@ export default function AuthView({ onAuthenticated, onCancel }) {
         // satırı hemen oluşturulamıyor — bu bilgiyi user_metadata'da
         // taşıyoruz, satır ne zaman oluşursa oluşsun (bkz. IsinnApp.jsx'teki
         // "eksikse tamamlıyoruz" fallback'i) oradan okunup kaydediliyor.
-        options: { data: { full_name: fullName.trim(), terms_accepted_at: termsAcceptedAt, terms_version: TERMS_VERSION } },
+        // emailRedirectTo: onay linkine basınca kullanıcı bıraktığı sayfaya (ör. bir vitrine)
+        // dönsün; adres izinli listede değilse Supabase Site URL'ye düşer, akış bozulmaz.
+        options: { emailRedirectTo: window.location.href.split("#")[0], data: { full_name: fullName.trim(), terms_accepted_at: termsAcceptedAt, terms_version: TERMS_VERSION } },
       });
       if (signUpError) {
         setError(signUpError.message);
