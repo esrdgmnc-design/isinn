@@ -1,6 +1,6 @@
 # İşinn — Kullanım Şartları
 
-> Son güncelleme: 11.09.2026 — avukat incelemesinden geçmiştir.
+> Son güncelleme: 22.09.2026
 
 ## 1. Taraflar ve Kabul
 

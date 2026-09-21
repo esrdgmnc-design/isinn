@@ -1,6 +1,6 @@
 # İşinn — Gizlilik Politikası
 
-> Son güncelleme: 11.09.2026 — avukat incelemesinden geçmiştir.
+> Son güncelleme: 22.09.2026
 
 Bu Gizlilik Politikası, İşinn platformunu ("Platform") kullanırken kişisel verilerinizin neler olduğunu, nasıl toplandığını, kimlerle paylaşıldığını ve haklarınızı ne şekilde kullanabileceğinizi sade bir dille anlatır. Verilerinizin işlenmesine ilişkin hukuki dayanaklar ve ayrıntılı kapsam için KVKK Aydınlatma Metni esas alınır — bu iki belge birlikte, birbirini tamamlayacak şekilde okunmalıdır.
 

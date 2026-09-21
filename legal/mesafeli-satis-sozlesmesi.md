@@ -1,7 +1,6 @@
 # İşinn — Mesafeli Satış Sözleşmesi
 
-> Son güncelleme: 09.09.2026 — placeholder'lar işletme kararıyla dolduruldu (bkz. 5. ve 6. madde);
-> nihai hukuki teyit için avukata gösterilmesi önerilir, ama PayTR canlı onayı için içerik tamdır.
+> Son güncelleme: 22.09.2026
 
 ## 1. Taraflar
 

@@ -1,7 +1,6 @@
 # İşinn — İptal, İade ve Geri Ödeme Koşulları
 
-> Son güncelleme: 09.09.2026 — geri ödeme koşulları işletme kararıyla netleştirildi (bkz. 3. madde);
-> nihai hukuki teyit için avukata gösterilmesi önerilir, ama PayTR canlı onayı için içerik tamdır.
+> Son güncelleme: 22.09.2026
 
 ## 1. Ücretsiz Deneme
 

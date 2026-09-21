@@ -1,6 +1,6 @@
 # İşinn — KVKK Aydınlatma Metni
 
-> Son güncelleme: 09.09.2026 — avukat incelemesinden geçmiştir.
+> Son güncelleme: 22.09.2026
 
 6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") kapsamında Veri Sorumlusu Code G Teknoloji ve Ticaret Limited Şirketi olarak bizlerle paylaştığınız kişisel verilerinizi aşağıda yer verdiğimiz şekil ve şartlarda işliyoruz.
 
