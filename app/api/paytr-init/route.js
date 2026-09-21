@@ -8,6 +8,7 @@ import { createClient } from "@supabase/supabase-js";
 import { getAuthedUser } from "../../../lib/serverAuth";
 import { checkRateLimit, getClientIp } from "../../../lib/rateLimit";
 import { computeGetTokenHash, generateMerchantOid } from "../../../lib/paytr";
+import { computeUpgradeCredit, applyCredit } from "../../../lib/upgradeCredit";
 
 export async function POST(request) {
   const merchantId = process.env.PAYTR_MERCHANT_ID;
@@ -47,6 +48,13 @@ export async function POST(request) {
     return Response.json({ ok: false, message: "Bu paket sadece aylık satın alınabilir." }, { status: 400 });
   }
 
+  // "Ek Vitrin Paketi" satışta DEĞİL: 2'den fazla vitrin hakkı sadece Pro Üyelikle
+  // gelir. (Eski satın alımlar süreleri bitene kadar geçerli kalır, ama yeni
+  // satış/yenileme yapılamaz.)
+  if (itemSlug === "ek-vitrin") {
+    return Response.json({ ok: false, message: "Bu paket artık satışta değil. Daha fazla vitrin için Pro Üyeliğe geç." }, { status: 400 });
+  }
+
   const admin = createClient(supabaseUrl, serviceRoleKey);
 
   // Öne Çıkarma Paketi artık "seçtiğin bir vitrini öne çıkarır" sözünü
@@ -55,20 +63,18 @@ export async function POST(request) {
   // başkasının vitrinini seçip onu öne çıkaramamalı.
   const boostSlugs = ["one-cikarma", "one-cikarma-haftalik"];
   let boostedServiceTitle = null;
+  // Öne Çıkarma artık kişinin TÜM (aktif) vitrinlerine birden uygulanır — vitrin
+  // seçimi yok, sipariş service_id taşımaz (tek satır, tek ücret). Öne çıkarılacak
+  // en az bir aktif vitrin olmalı.
   if (boostSlugs.includes(itemSlug)) {
-    if (!serviceId) {
-      return Response.json({ ok: false, message: "Öne çıkarmak istediğin vitrini seçmelisin." }, { status: 400 });
-    }
-    const { data: ownedService } = await admin
+    const { count: activeVitrinCount } = await admin
       .from("services")
-      .select("id, title")
-      .eq("id", serviceId)
+      .select("id", { count: "exact", head: true })
       .eq("provider_id", user.id)
-      .maybeSingle();
-    if (!ownedService) {
-      return Response.json({ ok: false, message: "Bu vitrin sana ait değil ya da bulunamadı." }, { status: 403 });
+      .eq("active", true);
+    if (!activeVitrinCount) {
+      return Response.json({ ok: false, message: "Öne çıkarmak için önce yayında bir vitrinin olmalı." }, { status: 400 });
     }
-    boostedServiceTitle = ownedService.title;
   }
 
   let itemName, price;
@@ -92,6 +98,12 @@ export async function POST(request) {
     if (!plan) return Response.json({ ok: false, message: "Plan bulunamadı." }, { status: 404 });
     itemName = plan.name;
     price = billingCycle === "yearly" ? plan.price_yearly : plan.price_monthly;
+    // Standart'tan Pro'ya geçişte kalan ücretli sürenin değeri düşülür.
+    const upgradeCredit = await computeUpgradeCredit(admin, user.id, itemSlug);
+    if (upgradeCredit > 0) {
+      price = applyCredit(price, upgradeCredit);
+      itemName = `${plan.name} (Standart kalan süre indirimi: -${upgradeCredit.toFixed(2)}₺)`;
+    }
   }
   if (!price || price <= 0) {
     return Response.json({ ok: false, message: "Bu ürün için fiyat tanımlı değil." }, { status: 400 });
@@ -134,7 +146,6 @@ export async function POST(request) {
     billing_cycle: billingCycle,
     amount: price,
     status: "pending",
-    ...(boostSlugs.includes(itemSlug) ? { service_id: serviceId } : {}),
   });
   if (insertErr) {
     return Response.json({ ok: false, message: "Sipariş oluşturulamadı: " + insertErr.message }, { status: 500 });

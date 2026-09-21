@@ -6,3 +6,21 @@ html, body {
   padding: 0;
   margin: 0;
 }
+
+/* Sayfa hiçbir zaman yatay kaymasın (uzun kelime/dekor taşması telefonda sayfayı
+   sağa-sola oynatıyordu). `clip` yapışkan (sticky) elemanları bozmaz. */
+html, body {
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+/* iOS Safari, 16px altındaki alanlara odaklanınca sayfayı yakınlaştırır ve geri
+   açmaz — telefonda "ekran kayması" olarak görünür. `text-sm` sınıfları
+   özgüllükte kazandığı için !important gerekiyor. */
+@media (max-width: 767px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}

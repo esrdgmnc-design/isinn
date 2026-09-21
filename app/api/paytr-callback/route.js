@@ -94,6 +94,30 @@ async function sendReceiptEmail(admin, order, totalAmountKurus) {
   }
 }
 
+// Ödeme alınamadığı için kapatılmış vitrinleri (deactivated_for_billing_at dolu)
+// TEK TEK, en eskiden başlayarak geri açar. Kapasite dolunca (enforce_vitrin_cap
+// trigger'ı istisna fırlatır) durur — eski toplu UPDATE tek bir vitrin bile
+// kapasiteyi aşınca hepsini birden düşürüyordu. Kullanıcının kendi kapattığı
+// vitrinlere (bu sütun boş) dokunulmaz.
+async function reactivateBilledVitrins(admin, profileId) {
+  const { data: rows } = await admin
+    .from("services")
+    .select("id")
+    .eq("provider_id", profileId)
+    .not("deactivated_for_billing_at", "is", null)
+    .order("created_at", { ascending: true });
+  for (const row of rows || []) {
+    const { error } = await admin
+      .from("services")
+      .update({ active: true, deactivated_for_billing_at: null })
+      .eq("id", row.id);
+    if (error) {
+      console.error("[paytr-callback] Vitrin geri açılamadı (kapasite dolmuş olabilir):", error.message);
+      break;
+    }
+  }
+}
+
 export async function POST(request) {
   const merchantKey = process.env.PAYTR_MERCHANT_KEY;
   const merchantSalt = process.env.PAYTR_MERCHANT_SALT;
@@ -132,9 +156,17 @@ export async function POST(request) {
 
   const admin = createClient(supabaseUrl, serviceRoleKey);
 
+  // Canlı modda (PAYTR_TEST_MODE=0) test ödemesi (test_mode=1) ürün vermemeli:
+  // test kartıyla gelen sahte "success" bildirimi bedava abonelik demek olurdu.
+  const isTestPayment = String(form.get("test_mode") || "") === "1";
+  if (isTestPayment && process.env.PAYTR_TEST_MODE === "0") {
+    await admin.from("payment_orders").update({ status: "failed", failed_reason: "test ödemesi (canlı modda geçersiz)" }).eq("merchant_oid", merchantOid).eq("status", "pending");
+    return new Response("OK");
+  }
+
   const { data: order } = await admin
     .from("payment_orders")
-    .select("id, profile_id, plan_slug, order_type, billing_cycle, status, service_id")
+    .select("id, profile_id, plan_slug, order_type, billing_cycle, status, service_id, amount")
     .eq("merchant_oid", merchantOid)
     .maybeSingle();
 
@@ -144,13 +176,34 @@ export async function POST(request) {
     return new Response("PAYTR notification failed: unknown order", { status: 404 });
   }
 
-  if (order.status !== "pending") {
+  // "failed" bir sipariş, sonradan gelen "success" bildirimiyle yine de işlenir:
+  // kayıtlı kart tahsilatında ağ zaman aşımı gibi belirsiz durumlar yüzünden bir
+  // sipariş yanlışlıkla failed görünmüş olabilir ama para gerçekten çekilmiştir —
+  // müşteri ödeyip ürünsüz kalmasın. "success" bir sipariş asla tekrar işlenmez.
+  const canProcess = order.status === "pending" || (order.status === "failed" && status === "success");
+  if (!canProcess) {
     // Zaten işlenmiş (PayTR'ın tekrar gönderdiği bir bildirim) — sorun yok,
     // sadece onayla.
     return new Response("OK");
   }
 
   if (status === "success") {
+    // Atomik sahiplenme: PayTR aynı bildirimi eşzamanlı iki kez gönderirse
+    // sadece biri bu güncellemeden satır alır (paid_at claim damgası); diğeri
+    // "OK" dönüp çıkar — çift makbuz/çift bildirim/çift aktivasyon olmaz.
+    // İşleyen istek çökerse 2 dk sonra yeniden sahiplenilebilir.
+    const claimCutoff = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+    const { data: claimed } = await admin
+      .from("payment_orders")
+      .update({ paid_at: new Date().toISOString() })
+      .eq("id", order.id)
+      .in("status", ["pending", "failed"])
+      .or(`paid_at.is.null,paid_at.lt.${claimCutoff}`)
+      .select("id");
+    if (!claimed || claimed.length === 0) {
+      return new Response("OK");
+    }
+
     // GERÇEK HATA (2026-09-14, canlıda ilk gerçek boost ödemesinden sonra
     // bulundu) — provider_addons/provider_subscriptions insert/update'lerinin
     // dönen hatası hiç kontrol edilmiyordu. Yudum Bulut gerçek parayla
@@ -175,9 +228,32 @@ export async function POST(request) {
       order.order_type === "addon"
         ? (order.plan_slug?.includes("haftalik") ? 7 : 30)
         : (order.billing_cycle === "yearly" ? 365 : 30);
-    const periodEnd = new Date(Date.now() + periodDays * 24 * 60 * 60 * 1000);
+    const DAY_MS = 24 * 60 * 60 * 1000;
+    const nowMs = Date.now();
+    // Dönem başlangıcı: aynı ürünün hâlâ geçerli (ya da en fazla 3 gün önce
+    // bitmiş, yani gecikmiş yenileme) bir dönemi varsa yeni süre onun BİTİŞİNE
+    // eklenir — yoksa "dönemin 20 günü kalmışken yenileyen" kullanıcı o günleri
+    // kaybediyordu. Farklı plana geçişte / deneme ya da süresi çoktan bitmiş
+    // dönemde sıfırdan (şimdiden) başlar.
+    const extendFrom = (existingEnd) => {
+      const endMs = existingEnd ? new Date(existingEnd).getTime() : 0;
+      return endMs > nowMs - 3 * DAY_MS ? Math.max(endMs, nowMs) : nowMs;
+    };
+    let periodEnd = new Date(nowMs + periodDays * DAY_MS);
 
-    if (order.order_type === "addon") {
+    // Gerçek tahsilat tutarı beklenenden düşükse (PayTR panelinde yanlış tutar,
+    // kampanya vb.) tam dönem/ürün vermiyoruz — para alındı, sipariş "success"
+    // kalıyor ama grant_error'a yazılıp admin panelinde uyarı olarak görünüyor.
+    const expectedKurus = Math.round(Number(order.amount) * 100);
+    const paidKurus = Number(totalAmount);
+    const shortfall = Number.isFinite(paidKurus) && paidKurus < expectedKurus;
+    if (shortfall) {
+      grantError = `tutar uyuşmazlığı: beklenen ${expectedKurus} kuruş, tahsil edilen ${paidKurus} kuruş`;
+    }
+
+    if (shortfall) {
+      // ürün verilmiyor, aşağıda grant_error ile kaydedilecek
+    } else if (order.order_type === "addon") {
       const { data: addon } = await admin
         .from("addon_products")
         .select("id")
@@ -193,7 +269,7 @@ export async function POST(request) {
         // davranış aynen korunuyor.
         let existingQuery = admin
           .from("provider_addons")
-          .select("id")
+          .select("id, current_period_end, status")
           .eq("profile_id", order.profile_id)
           .eq("addon_id", addon.id);
         existingQuery = order.service_id
@@ -202,6 +278,7 @@ export async function POST(request) {
         const { data: existingAddon } = await existingQuery.maybeSingle();
 
         if (existingAddon) {
+          if (existingAddon.status === "active") periodEnd = new Date(extendFrom(existingAddon.current_period_end) + periodDays * DAY_MS);
           const { error } = await admin.from("provider_addons").update({
             status: "active",
             current_period_start: new Date().toISOString(),
@@ -232,9 +309,15 @@ export async function POST(request) {
       if (plan) {
         const { data: existing } = await admin
           .from("provider_subscriptions")
-          .select("id")
+          .select("id, plan_id, status, current_period_end, boost_anchor_at")
           .eq("profile_id", order.profile_id)
           .maybeSingle();
+
+        // Süre uzatma sadece AYNI plan + ücretli (active) dönem için; farklı plana
+        // geçişte ya da denemeden ücretliye geçişte sıfırdan başlar.
+        if (existing && existing.plan_id === plan.id && existing.status === "active") {
+          periodEnd = new Date(extendFrom(existing.current_period_end) + periodDays * DAY_MS);
+        }
 
         // Pro'nun "ilk 7 gün açtığın her vitrin Öne Çıkarma hediyeli" hakkı
         // — eski upgrade_to_pro RPC'sinde vardı (pro_boost_until = +7 gün),
@@ -248,9 +331,14 @@ export async function POST(request) {
             plan_id: plan.id,
             status: "active",
             billing_cycle: order.billing_cycle,
+            cancel_at_period_end: false, // yeniden ödeme yaptıysa iptal talebi geçersiz
             current_period_start: new Date().toISOString(),
             current_period_end: periodEnd.toISOString(),
             ...(proBoostUntil ? { pro_boost_until: proBoostUntil } : {}),
+            // "Her ayın ilk haftası öne çıkarma" hediyesi boost_anchor_at'a bağlı
+            // (bkz. pro_boost_monthly_fix.sql). Ödemeyle Pro alan kullanıcıda bu
+            // hiç set edilmiyordu, hediye hiç verilmiyordu. Zaten varsa korunur.
+            ...(order.plan_slug === "pro" && !existing.boost_anchor_at ? { boost_anchor_at: new Date().toISOString() } : {}),
           }).eq("id", existing.id);
           if (error) grantError = `provider_subscriptions update: ${error.message}`;
         } else {
@@ -262,6 +350,7 @@ export async function POST(request) {
             current_period_start: new Date().toISOString(),
             current_period_end: periodEnd.toISOString(),
             ...(proBoostUntil ? { pro_boost_until: proBoostUntil } : {}),
+            ...(order.plan_slug === "pro" ? { boost_anchor_at: new Date().toISOString() } : {}),
           });
           if (error) grantError = `provider_subscriptions insert: ${error.message}`;
         }
@@ -282,16 +371,7 @@ export async function POST(request) {
         // istisna fırlatıp hiç geri açmayabilir — bu nadir senaryoda elle
         // müdahale (Vitrinlerim'den birini pasife alıp diğerini elle
         // aktifleştirme) gerekir.
-        if (!grantError) {
-          const { error: reactivateError } = await admin
-            .from("services")
-            .update({ active: true, deactivated_for_billing_at: null })
-            .eq("provider_id", order.profile_id)
-            .not("deactivated_for_billing_at", "is", null);
-          if (reactivateError) {
-            grantError = `services reactivation: ${reactivateError.message}`;
-          }
-        }
+        if (!grantError) await reactivateBilledVitrins(admin, order.profile_id);
       } else {
         grantError = `subscription_plans bulunamadı: slug=${order.plan_slug}`;
       }
@@ -302,11 +382,22 @@ export async function POST(request) {
       // kalıcı kayıt, bu sadece anlık/gerçek-zamanlı görünürlük içindir.
       console.error("[paytr-callback] Ürün/abonelik aktivasyonu başarısız:", grantError, "merchant_oid:", merchantOid);
     }
-    await admin.from("payment_orders").update({ status: "success", paid_at: new Date().toISOString(), grant_error: grantError }).eq("id", order.id);
+    // amount = GERÇEK tahsil edilen tutar (kuruş/100) — yönetim panelindeki gelir
+    // beklenen değil gerçek tahsilattan hesaplanır. Yazım hatası yutulmuyor:
+    // düşerse sipariş pending kalır ve PayTR'ın tekrar denemesi işlemi baştan alır.
+    const realAmount = Number.isFinite(paidKurus) ? paidKurus / 100 : Number(order.amount);
+    const { error: finalizeError } = await admin
+      .from("payment_orders")
+      .update({ status: "success", paid_at: new Date().toISOString(), grant_error: grantError, amount: realAmount })
+      .eq("id", order.id);
+    if (finalizeError) {
+      console.error("[paytr-callback] Sipariş kapatılamadı:", finalizeError.message, "merchant_oid:", merchantOid);
+      return new Response("PAYTR notification failed: finalize", { status: 500 });
+    }
     await saveCardIfPresent(admin, form, order.profile_id);
     await sendReceiptEmail(admin, order, totalAmount);
   } else {
-    await admin.from("payment_orders").update({ status: "failed", failed_reason: failedReasonMsg }).eq("id", order.id);
+    await admin.from("payment_orders").update({ status: "failed", failed_reason: failedReasonMsg }).eq("id", order.id).eq("status", "pending");
   }
 
   return new Response("OK");

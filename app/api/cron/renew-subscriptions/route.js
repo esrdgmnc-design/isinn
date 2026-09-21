@@ -20,6 +20,13 @@ import { createClient } from "@supabase/supabase-js";
 import { chargeSavedCard } from "../../../../lib/paytrRecurringCharge";
 
 const WARN_DAYS_BEFORE_END = 3;
+// Ödeme dönemi bittikten sonra bu kadar gün geçmesine rağmen hâlâ yenilenememişse
+// (geçici/belirsiz hatalar dahil) vitrinler kapatılır — aksi halde kalıcı bir
+// hata (yanlış anahtar, geçersiz kart) sonsuza dek ücretsiz abonelik demekti.
+const GRACE_DAYS_AFTER_END = 3;
+
+// Vercel varsayılan süre sınırı çok abonelikte yetmeyebilir.
+export const maxDuration = 60;
 
 // Bir sağlayıcının hâlâ AKTİF olan vitrinlerini, ödeme alınamadığı için
 // kapatır ve tek seferlik bir "kapatıldı" bildirimi bırakır. `.eq("active",
@@ -28,7 +35,7 @@ const WARN_DAYS_BEFORE_END = 3;
 // yani aynı vitrin için ikinci bir bildirim gitmez. deactivated_for_billing_at
 // damgası, kullanıcının kendi kapattığı vitrinlerden ayırt etmek için — bkz.
 // app/api/paytr-callback/route.js'deki geri açma bloğu.
-async function deactivateVitrinsForLapsedSubscription(admin, profileId) {
+async function deactivateVitrinsForLapsedSubscription(admin, profileId, reason = "unpaid") {
   const { data: updated, error } = await admin
     .from("services")
     .update({ active: false, deactivated_for_billing_at: new Date().toISOString() })
@@ -41,11 +48,99 @@ async function deactivateVitrinsForLapsedSubscription(admin, profileId) {
     await admin.from("notifications").insert({
       profile_id: profileId,
       type: "vitrin_deactivated",
-      title: "Vitrinin yayından kaldırıldı",
-      body: "Üyeliğinin/deneme sürenin ödemesi alınamadığı için vitrin(ler)in yayından kaldırıldı. Yeniden yayınlamak için hemen ödeme yapabilirsin.",
+      title: reason === "canceled" ? "Üyeliğin sona erdi" : "Vitrinin yayından kaldırıldı",
+      body: reason === "canceled"
+        ? "İptal ettiğin üyeliğin ödenmiş dönemi bitti, vitrin(ler)in yayından kaldırıldı. Dilediğin zaman Planlar'dan üyeliğini yeniden başlatabilirsin."
+        : "Üyeliğinin/deneme sürenin ödemesi alınamadığı için vitrin(ler)in yayından kaldırıldı. Yeniden yayınlamak için hemen ödeme yapabilirsin.",
     });
   }
   return { deactivated: (updated || []).length };
+}
+
+// PostgREST varsayılan olarak tek istekte en fazla 1000 satır döndürür — büyük
+// tablolarda sessizce kırpılmasın diye sayfa sayfa çeker.
+async function fetchAll(buildQuery) {
+  const rows = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await buildQuery().range(from, from + 999);
+    if (error) throw new Error(error.message);
+    rows.push(...(data || []));
+    if (!data || data.length < 1000) break;
+  }
+  return rows;
+}
+
+// AŞAMA 3 — kapasite taraması. Geçerli (süresi dolmamış) aboneliği olan bir
+// sağlayıcının aktif vitrin sayısı hakkını (plan + geçerli Ek Vitrin) aşıyorsa
+// fazlasını kapatır. enforce_vitrin_cap trigger'ı yalnızca AÇARKEN kontrol
+// ettiği için şu durumlar hiç yakalanmıyordu: Ek Vitrin süresi bitti, Pro'dan
+// Standart'a inildi. En yeni vitrinler kapatılır (en eskiler kalır);
+// deactivated_for_billing_at damgası sayesinde ödeme gelince geri açılır.
+// Geçerli aboneliği OLMAYAN sağlayıcıların tüm vitrinlerini de kapatır.
+async function enforceVitrinCapacity(admin, nowIso) {
+  const subs = await fetchAll(() =>
+    admin
+      .from("provider_subscriptions")
+      .select("profile_id, current_period_end, subscription_plans(max_active_listings)")
+      .in("status", ["active", "trialing"])
+      .gt("current_period_end", nowIso)
+      .order("profile_id")
+  );
+  const capByProfile = {};
+  for (const sub of subs) {
+    const cap = sub.subscription_plans?.max_active_listings ?? 1;
+    capByProfile[sub.profile_id] = Math.max(capByProfile[sub.profile_id] || 0, cap);
+  }
+
+  const { data: extraAddon } = await admin.from("addon_products").select("id").eq("slug", "ek-vitrin").eq("active", true).maybeSingle();
+  const addonProfiles = new Set();
+  if (extraAddon) {
+    const rows = await fetchAll(() =>
+      admin
+        .from("provider_addons")
+        .select("profile_id")
+        .eq("addon_id", extraAddon.id)
+        .eq("status", "active")
+        .gt("current_period_end", nowIso)
+        .order("profile_id")
+    );
+    rows.forEach((r) => addonProfiles.add(r.profile_id));
+  }
+
+  const activeServices = await fetchAll(() =>
+    admin.from("services").select("id, provider_id, created_at").eq("active", true).order("id")
+  );
+  const byProvider = {};
+  for (const svc of activeServices) (byProvider[svc.provider_id] = byProvider[svc.provider_id] || []).push(svc);
+
+  const out = [];
+  for (const [providerId, list] of Object.entries(byProvider)) {
+    // Geçerli (süresi dolmamış aktif/deneme) aboneliği olmayana vitrin hakkı yok:
+    // hiç aboneliği olmayanlar dahil tüm aktif vitrinleri kapatılır (ürün kararı).
+    const hasSub = capByProfile[providerId] !== undefined;
+    const cap = hasSub ? capByProfile[providerId] + (addonProfiles.has(providerId) ? 3 : 0) : 0;
+    if (list.length <= cap) continue;
+    const excess = [...list].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, list.length - cap);
+    const { data: closed, error } = await admin
+      .from("services")
+      .update({ active: false, deactivated_for_billing_at: new Date().toISOString() })
+      .in("id", excess.map((e) => e.id))
+      .eq("active", true)
+      .select("id");
+    if (error) { out.push({ profile_id: providerId, error: error.message }); continue; }
+    if ((closed || []).length > 0) {
+      await admin.from("notifications").insert({
+        profile_id: providerId,
+        type: "vitrin_deactivated",
+        title: hasSub ? "Fazla vitrinin yayından kaldırıldı" : "Vitrinin yayından kaldırıldı",
+        body: hasSub
+          ? `Mevcut planının vitrin hakkı ${cap}. Hakkını aşan ${closed.length} vitrin yayından kaldırıldı. Daha fazla vitrin için Pro Üyeliğe geçebilirsin.`
+          : "Aktif bir üyeliğin olmadığı için vitrin(ler)in yayından kaldırıldı. Planlar sayfasından üyeliğini başlattığında yeniden yayına alınır.",
+      });
+    }
+    out.push({ profile_id: providerId, cap, closed: (closed || []).length });
+  }
+  return out;
 }
 
 export async function GET(request) {
@@ -80,6 +175,7 @@ export async function GET(request) {
     .from("provider_subscriptions")
     .select("profile_id, status, current_period_start, current_period_end")
     .in("status", ["active", "trialing"])
+    .eq("cancel_at_period_end", false) // iptal edenlere "yenilenecek" uyarısı gitmez
     .gt("current_period_end", nowIso)
     .lte("current_period_end", warnThresholdIso);
 
@@ -137,7 +233,7 @@ export async function GET(request) {
   // erken/sahte bir kapatmadan daha güvenli bir taraf tutma.
   const { data: dueSubs, error } = await admin
     .from("provider_subscriptions")
-    .select("id, profile_id, plan_id, billing_cycle, current_period_end, subscription_plans(slug)")
+    .select("id, profile_id, plan_id, billing_cycle, current_period_end, cancel_at_period_end, subscription_plans(slug)")
     .eq("status", "active")
     .lte("current_period_end", nowIso);
 
@@ -149,6 +245,19 @@ export async function GET(request) {
   for (const sub of dueSubs || []) {
     const planSlug = sub.subscription_plans?.slug;
     if (!planSlug) { results.push({ profile_id: sub.profile_id, skipped: "no plan slug" }); continue; }
+
+    // Kullanıcı üyeliğini iptal etmişse (cancel_at_period_end) ödediği dönem BİTTİ:
+    // tahsilat yapılmaz, abonelik 'canceled' olur ve vitrinler kapanır.
+    if (sub.cancel_at_period_end) {
+      const { error: cancelErr } = await admin
+        .from("provider_subscriptions")
+        .update({ status: "canceled", updated_at: new Date().toISOString() })
+        .eq("id", sub.id);
+      if (cancelErr) { results.push({ profile_id: sub.profile_id, cancel_error: cancelErr.message }); continue; }
+      const deactivation = await deactivateVitrinsForLapsedSubscription(admin, sub.profile_id, "canceled");
+      results.push({ profile_id: sub.profile_id, planSlug, canceled: true, ...deactivation });
+      continue;
+    }
 
     const { data: method } = await admin.from("payment_methods").select("id").eq("profile_id", sub.profile_id).maybeSingle();
     if (!method) {
@@ -165,18 +274,79 @@ export async function GET(request) {
       itemSlug: planSlug,
       billingCycle: sub.billing_cycle || "monthly",
     });
-    if (!result.ok) {
-      // PayTR isteği açıkça reddetti (ya da istek hiç atılamadı) — gerçek
+    if (!result.ok && result.declined) {
+      // PayTR ödemeyi AÇIKÇA reddetti (kart geçersiz/yetersiz bakiye) — gerçek
       // bir lapse, vitrin(ler) kapanıyor.
       const deactivation = await deactivateVitrinsForLapsedSubscription(admin, sub.profile_id);
       results.push({ profile_id: sub.profile_id, planSlug, ...result, ...deactivation });
+    } else if (!result.ok) {
+      // Geçici/belirsiz sorun (PayTR/ağ/yapılandırma/DB hatası, ya da zaten
+      // işlenmekte olan bir tahsilat): müşterinin hatası DEĞİL — ilk günlerde
+      // vitrinlerini kapatmıyoruz, ertesi günkü çalışmada yeniden denenecek.
+      // AMA tolerans süresi (GRACE_DAYS_AFTER_END) dolduysa artık kapatılır.
+      const overdueMs = Date.now() - new Date(sub.current_period_end).getTime();
+      if (overdueMs > GRACE_DAYS_AFTER_END * 24 * 60 * 60 * 1000) {
+        const deactivation = await deactivateVitrinsForLapsedSubscription(admin, sub.profile_id);
+        results.push({ profile_id: sub.profile_id, planSlug, grace_expired: true, ...result, ...deactivation });
+      } else {
+        results.push({ profile_id: sub.profile_id, planSlug, retry_later: true, ...result });
+      }
     } else {
       results.push({ profile_id: sub.profile_id, planSlug, ...result });
     }
   }
 
+  // AŞAMA 2b — aylık Öne Çıkarma paketinin otomatik yenilemesi (Ek Vitrin artık satılmıyor).
+  // Eskiden hiç taranmıyorlardı: 459₺/249₺'lik ürünler dönem sonunda sessizce
+  // düşüyor, müşteri her ay elle yeniden almak zorunda kalıyordu (sözleşme
+  // "otomatik yenilenir" diyor). Sadece: Ek Vitrin (service_id yok) ve vitrine
+  // özel Öne Çıkarma (service_id dolu). service_id'si boş Öne Çıkarma satırı Pro'nun
+  // ÜCRETSİZ hediyesi olabilir — asla tahsil edilmez. Haftalık paket yenilenmez.
+  // Sadece son 3 gün içinde bitmiş olanlar: aylar önce bitmiş bir ürün için
+  // sürpriz tahsilat yapılmaz.
+  const addonResults = [];
+  try {
+    const graceStartIso = new Date(Date.now() - GRACE_DAYS_AFTER_END * 24 * 60 * 60 * 1000).toISOString();
+    const { data: dueAddons } = await admin
+      .from("provider_addons")
+      .select("id, profile_id, service_id, current_period_start, current_period_end, addon_products!inner(slug)")
+      .eq("status", "active")
+      .lte("current_period_end", nowIso)
+      .gt("current_period_end", graceStartIso)
+      .eq("addon_products.slug", "one-cikarma");
+    for (const row of dueAddons || []) {
+      const slug = row.addon_products?.slug;
+      // Pro'nun ücretsiz hediye boost'u da service_id'siz bir "one-cikarma" satırı
+      // ama en fazla 7 günlük; ücretli paket 30 gün. Süresi ~30 gün olmayan satır
+      // (hediye) asla tahsil edilmez.
+      const lengthDays = (new Date(row.current_period_end) - new Date(row.current_period_start)) / 86400000;
+      if (lengthDays < 25) { addonResults.push({ id: row.id, skipped: "gift or short boost (not billed)" }); continue; }
+      const { data: method } = await admin.from("payment_methods").select("id").eq("profile_id", row.profile_id).maybeSingle();
+      if (!method) { addonResults.push({ id: row.id, skipped: "no saved card" }); continue; }
+      const r = await chargeSavedCard({
+        profileId: row.profile_id,
+        orderType: "addon",
+        itemSlug: slug,
+        billingCycle: "monthly",
+        serviceId: row.service_id || null,
+      });
+      addonResults.push({ id: row.id, slug, ...r });
+    }
+  } catch (e) {
+    addonResults.push({ error: e.message });
+  }
+
+  let capacityResults = [];
+  try {
+    capacityResults = await enforceVitrinCapacity(admin, nowIso);
+  } catch (e) {
+    capacityResults = [{ error: e.message }];
+  }
+
   return Response.json({
     ok: true,
+    capacity: capacityResults,
+    addonRenewals: addonResults,
     checked: (dueSubs || []).length,
     warned: warnResults,
     trialLapses: trialResults,

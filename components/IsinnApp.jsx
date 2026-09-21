@@ -300,7 +300,12 @@ function parsePriceInput(raw) {
   const match = (raw || "").match(/[\d.,]+/);
   if (!match) return { numeric: null, priceType };
   let s = match[0];
-  s = s.includes(",") ? s.replace(/\./g, "").replace(",", ".") : s.replace(/\./g, "");
+  // Türkçe sayı biçimi: "1.500" = 1500 (nokta binlik), "1.500,50" = 1500.5.
+  // Virgül yoksa ve nokta 1-2 haneyle bitiyorsa ("150.50", "12.5") bu ondalıktır —
+  // eskiden tüm noktalar siliniyordu, "150.50" 15050₺ ve "12.5" 125₺ oluyordu.
+  if (s.includes(",")) s = s.replace(/\./g, "").replace(",", ".");
+  else if (/^\d+\.\d{1,2}$/.test(s)) { /* ondalık nokta: olduğu gibi */ }
+  else s = s.replace(/\./g, "");
   const numeric = parseFloat(s);
   return { numeric: Number.isNaN(numeric) ? null : numeric, priceType };
 }
@@ -340,7 +345,8 @@ async function getVitrinCapInfo(userId) {
       .maybeSingle(),
     supabase.from("addon_products").select("id").eq("slug", "ek-vitrin").maybeSingle(),
   ]);
-  let cap = subRow?.subscription_plans?.max_active_listings ?? 2;
+  // Aboneliği (aktif/deneme, süresi dolmamış) olmayana vitrin hakkı YOK (cap 0).
+  let cap = subRow ? (subRow.subscription_plans?.max_active_listings ?? 1) : 0;
   const planName = subRow?.subscription_plans?.name || "Standart Üyelik";
   let hasExtraVitrinAddon = false;
   if (addonProduct?.id) {
@@ -353,7 +359,9 @@ async function getVitrinCapInfo(userId) {
       .maybeSingle();
     hasExtraVitrinAddon = !!addonRow && new Date(addonRow.current_period_end) > new Date();
   }
-  if (hasExtraVitrinAddon) cap += 3;
+  // "Ek Vitrin Paketi" artık satılmıyor (2'den fazla vitrin sadece Pro'da); ama daha
+  // önce satın alınmış ve süresi dolmamış olanlar süreleri bitene kadar geçerli kalır.
+  if (hasExtraVitrinAddon && subRow) cap += 3;
   return { cap, planName, hasExtraVitrinAddon };
 }
 
@@ -1109,7 +1117,7 @@ function NotificationPopover({ notif, onNavigate }) {
     <>
       <div className="fixed inset-0 z-10" onClick={() => notif.setOpen(false)} />
       <div
-        className="absolute right-0 top-11 z-20 w-80 max-w-[calc(100vw-2rem)] max-h-96 overflow-y-auto rounded-xl shadow-lg border"
+        className="fixed sm:absolute inset-x-4 top-16 sm:inset-x-auto sm:right-0 sm:top-11 z-20 sm:w-80 max-h-96 overflow-y-auto rounded-xl shadow-lg border"
         style={{ borderColor: "#F0F0F0", background: "#FFFFFF" }}
       >
         <div className="px-4 py-3 border-b sticky top-0" style={{ borderColor: "#F0F0F0", background: "#FFFFFF" }}>
@@ -1370,7 +1378,7 @@ function Header({ onNav, onSearch, pendingCount, session, onNotificationClick })
           <div
             onTouchStart={onMenuTouchStart}
             onTouchMove={onMenuTouchMove}
-            className="sm:hidden fixed top-16 inset-x-0 z-[60] border-t px-5 py-3 flex flex-col gap-1 max-h-[calc(100vh-4rem)] overflow-y-auto"
+            className="sm:hidden fixed top-16 inset-x-0 z-[60] border-t px-5 py-3 flex flex-col gap-1 max-h-[calc(100dvh-4rem)] overflow-y-auto"
             style={{ borderColor: "#EAEAEA", background: "#FFFFFF" }}
           >
             <div className="flex items-center relative mb-2">
@@ -1717,7 +1725,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
               kısmını kesebiliyor. leading'i iyice gevşettik (1.15) VE
               kırpılan tam da o gradyanlı span olduğu için ona ayrıca
               pb-1.5 (alt boşluk) verdik. */}
-          <h1 className="font-sans text-5xl md:text-7xl font-black leading-[1.15] max-w-3xl tracking-tight" style={{ color: "#FFFFFF" }}>
+          <h1 className="font-sans text-[40px] sm:text-5xl md:text-7xl font-black leading-[1.15] max-w-3xl tracking-tight" style={{ color: "#FFFFFF" }}>
             {t("home.heroLine1")}<br />
             {/* Dönen kelimeler çok farklı uzunlukta ("çilingire" vs
                 "fizyoterapiste") — özellikle mobilde kısa kelimeyle tek
@@ -1728,7 +1736,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
                 kelimenin 2 satıra sardığı en kötü durumu karşılayacak sabit
                 bir min-height veriyoruz — hangi kelime gelirse gelsin yükseklik
                 sabit kalıyor. */}
-            <span className="block min-h-[112px] md:min-h-[168px]">
+            <span className="block min-h-[92px] sm:min-h-[112px] md:min-h-[168px]">
               <span className="inline-block relative">
                 <span
                   key={wordIndex}
@@ -1911,12 +1919,12 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
       <div className="h-12" style={{ background: "linear-gradient(180deg, #0F1115 0%, #FFFFFF 100%)" }} />
 
       <section className="max-w-6xl mx-auto px-5 -mt-8 relative">
-        <div className="rounded-2xl p-1.5 flex gap-1 w-fit shadow-lg" style={{ background: "#FFFFFF", border: "1px solid #F0F0F0" }}>
+        <div className="rounded-2xl p-1.5 flex gap-1 w-full sm:w-fit shadow-lg" style={{ background: "#FFFFFF", border: "1px solid #F0F0F0" }}>
           {[["all", t("home.filterAll")], ["home", t("home.filterHome")], ["local", t("home.filterLocal")], ["remote", t("home.filterRemote")]].map(([key, label]) => (
             <button
               key={key}
               onClick={() => setFilter(key)}
-              className="text-sm px-4 py-2 rounded-xl font-bold transition-all"
+              className="flex-1 sm:flex-none text-[13px] sm:text-sm px-2 sm:px-4 py-2 rounded-xl font-bold transition-all whitespace-nowrap"
               style={filter === key ? { background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)", color: "#FFFFFF" } : { color: "#6B7280" }}
             >
               {label}
@@ -2599,7 +2607,7 @@ function DocViewerModal({ doc, onClose }) {
     >
       <div
         className="rounded-xl overflow-hidden w-full max-w-2xl flex flex-col"
-        style={{ background: "#FFFFFF", height: "85vh" }}
+        style={{ background: "#FFFFFF", height: "85dvh" }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-4 py-3 border-b shrink-0" style={{ borderColor: "#F0F0F0" }}>
@@ -6305,7 +6313,7 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
 
   if (activeId && active) {
     return (
-      <div className="max-w-2xl mx-auto px-5 py-6 flex flex-col" style={{ height: "calc(100vh - 64px)" }}>
+      <div className="max-w-2xl mx-auto px-5 py-6 flex flex-col" style={{ height: "calc(100dvh - 61px)" }}>
         <button onClick={() => setActiveId(null)} className="flex items-center gap-1 text-sm mb-3 shrink-0" style={{ color: "#5C5744" }}>
           <ArrowLeft size={16} /> {t("messages.backToList")}
         </button>
@@ -6592,7 +6600,7 @@ const PLANS = [
 
 const BOOST_PACKAGE = {
   id: "one-cikarma", name: "Öne Çıkarma Paketi", priceMonthly: 459, currency: "₺",
-  tagline: "Seçtiğin bir vitrini öne çıkarır — Standart Üyeliğe ek, isteğe bağlı",
+  tagline: "Tüm vitrinlerini öne çıkarır — Standart Üyeliğe ek, isteğe bağlı",
   features: [
     "Öne çıkan sağlayıcı rozeti", "Haritada ve aramada üstte görünme",
     "AI eşleştirmede öncelik", "Destek asistanında öncelikli sıra",
@@ -7229,7 +7237,7 @@ function OwnerVisibilityCard({ row, busy, error, onToggle, onGoToPlans }) {
   );
 }
 
-function CreateListingView({ onBack, onCreated, userId, onGoToProfile }) {
+function CreateListingView({ onBack, onCreated, userId, onGoToProfile, onGoToPlans }) {
   const { t } = useLanguage();
   const [mode, setMode] = useState("local");
   const [providerName, setProviderName] = useState("");
@@ -7471,7 +7479,6 @@ function CreateListingView({ onBack, onCreated, userId, onGoToProfile }) {
   };
 
   const upgradeToPro = () => startPaytrCheckout({ planSlug: "pro", billingCycle: "monthly" });
-  const buyExtraVitrinAddon = () => startPaytrCheckout({ addonSlug: "ek-vitrin", billingCycle: "monthly" });
 
   const cityName = CITIES.find((c) => c.id === cityId)?.name;
 
@@ -7802,6 +7809,34 @@ function CreateListingView({ onBack, onCreated, userId, onGoToProfile }) {
     );
   }
 
+  // Aboneliği (aktif/deneme) olmayana vitrin hakkı yok — Planlar'a yönlendir.
+  if (vitrinLimit.blocked && vitrinLimit.cap === 0) {
+    return (
+      <div className="max-w-md mx-auto px-5 py-20 text-center">
+        <button onClick={onBack} className="flex items-center gap-1 text-sm mb-8" style={{ color: "#5C5744" }}>
+          <ChevronLeft size={16} /> {t("common.back")}
+        </button>
+        <div className="w-14 h-14 rounded-full mx-auto mb-5 flex items-center justify-center" style={{ background: "rgba(245,158,11,0.15)" }}>
+          <Sparkles size={22} style={{ color: "#F59E0B" }} />
+        </div>
+        <h2 className="font-serif text-xl mb-2" style={{ color: "#1B2B24" }}>{t("createListing.noSubscriptionTitle")}</h2>
+        <p className="text-sm mb-6" style={{ color: "#5C5744" }}>{t("createListing.noSubscriptionBody")}</p>
+        <button
+          onClick={() => (onGoToPlans ? onGoToPlans() : onBack())}
+          className="w-full py-2.5 rounded-full text-sm font-medium text-white"
+          style={{ background: "#F59E0B" }}
+        >
+          {t("createListing.noSubscriptionButton")}
+        </button>
+        {onGoToProfile && (
+          <button onClick={onGoToProfile} className="w-full mt-3 py-2.5 rounded-full text-sm font-medium border" style={{ borderColor: "#D9D0BA", color: "#1B2B24" }}>
+            {t("createListing.noSubscriptionPhoneButton")}
+          </button>
+        )}
+      </div>
+    );
+  }
+
   if (vitrinLimit.blocked) {
     const planNameDisplay = t(vitrinLimit.planName === "Pro Üyelik" ? "createListing.planNamePro" : "createListing.planNameStandard");
     return (
@@ -7815,7 +7850,7 @@ function CreateListingView({ onBack, onCreated, userId, onGoToProfile }) {
         <h2 className="font-serif text-xl mb-2" style={{ color: "#1B2B24" }}>{t("createListing.limitTitle", { planName: planNameDisplay })}</h2>
         <p className="text-sm mb-6" style={{ color: "#5C5744" }}>
           {vitrinLimit.planName === "Pro Üyelik"
-            ? t(vitrinLimit.hasExtraVitrinAddon ? "createListing.limitBodyProWithAddon" : "createListing.limitBodyProNoAddon", { count: vitrinLimit.count, cap: vitrinLimit.cap })
+            ? t("createListing.limitBodyProNoAddon", { count: vitrinLimit.count, cap: vitrinLimit.cap })
             : t("createListing.limitBodyStandard", { cap: vitrinLimit.cap })}
         </p>
         {vitrinLimit.planName !== "Pro Üyelik" ? (
@@ -7835,24 +7870,6 @@ function CreateListingView({ onBack, onCreated, userId, onGoToProfile }) {
             >
               {upgrading && <Loader2 size={13} className="animate-spin" />}
               {t("createListing.proCardButton")}
-            </button>
-          </div>
-        ) : !vitrinLimit.hasExtraVitrinAddon ? (
-          <div className="rounded-2xl border-2 p-5 mb-6 text-left" style={{ borderColor: "#8B5CF6", background: "#F8F4E9" }}>
-            <p className="text-sm font-bold mb-1" style={{ color: "#1B2B24" }}>{t("createListing.addonCardTitle")}</p>
-            <ul className="text-xs space-y-1 mb-4" style={{ color: "#5C5744" }}>
-              <li>• {t("createListing.addonCardBullet1")}</li>
-              <li>• {t("createListing.addonCardBullet2")}</li>
-            </ul>
-            {error && <p className="text-xs mb-3" style={{ color: "#9C4A3C" }}>{error}</p>}
-            <button
-              onClick={buyExtraVitrinAddon}
-              disabled={upgrading}
-              className="w-full py-2.5 rounded-full text-sm font-medium text-white flex items-center justify-center gap-1.5"
-              style={{ background: "#8B5CF6", opacity: upgrading ? 0.7 : 1 }}
-            >
-              {upgrading && <Loader2 size={13} className="animate-spin" />}
-              {t("createListing.addonCardButton")}
             </button>
           </div>
         ) : null}
@@ -8065,11 +8082,16 @@ ${convoText}`;
       // rapor sadece o anki tarayıcı oturumunun local state'inde duruyordu,
       // sayfa yenilenince kayboluyordu.
       if (currentUserId) {
-        await supabase.from("support_tickets").insert({
+        const { error: insertError } = await supabase.from("support_tickets").insert({
           reporter_id: currentUserId, title: parsed.title, category: parsed.category, summary: parsed.summary, transcript: convoText,
         });
+        // Kaydedilemediyse "bildirildi" DEME — yönetim talebi hiç görmezdi.
+        if (insertError) throw insertError;
+        // Kayıt DB'ye yazıldı; "Destek Taleplerim" ekranı onu DB'den okuyor —
+        // oturum listesine ayrıca eklemek aynı talebin iki kez görünmesine yol açıyordu.
+      } else {
+        onReport({ ...parsed, id: Date.now(), time: t("messages.justNow") });
       }
-      onReport({ ...parsed, id: Date.now(), time: t("messages.justNow") });
       setReported(true);
     } catch (err) {
       setReportError(t("supportChat.reportError"));
@@ -8079,7 +8101,7 @@ ${convoText}`;
   };
 
   return (
-    <div className="max-w-2xl mx-auto px-5 py-6 flex flex-col" style={{ height: "calc(100vh - 64px)" }}>
+    <div className="max-w-2xl mx-auto px-5 py-6 flex flex-col" style={{ height: "calc(100dvh - 61px)" }}>
       <button onClick={onBack} className="flex items-center gap-1 text-sm mb-3 shrink-0" style={{ color: "#6B7280" }}>
         <ChevronLeft size={16} /> {t("common.back")}
       </button>
@@ -8172,14 +8194,41 @@ function formatDaysUntilTr(iso) {
 // aboneliği ne zaman bitiyor. Gelir kartı da artık gerçek — PayTR
 // 2026-09-13'te canlıya geçti, payment_orders'taki başarılı ödemelerin
 // toplamını gösteriyor.
+// PostgREST tek istekte en fazla 1000 satır döndürür; toplamlar (kullanıcı, gelir,
+// abonelik) sessizce kırpılmasın diye tüm sayfaları çeker. Hata varsa fırlatır —
+// panel "0" göstermek yerine "yüklenemedi" desin.
+async function fetchAllPages(buildQuery) {
+  const rows = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await buildQuery().range(from, from + 999);
+    if (error) throw error;
+    rows.push(...(data || []));
+    if (!data || data.length < 1000) break;
+  }
+  return rows;
+}
+
+// Yerel saate (Türkiye) göre gün/hafta/ay anahtarı — grafik ile "bugün/bu ay"
+// kartları aynı saat dilimini kullansın (eskiden grafik UTC'ydi).
+function localBucketKey(d, mode) {
+  const pad = (n) => String(n).padStart(2, "0");
+  if (mode === "month") return `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
+  const base = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  if (mode === "week") base.setDate(base.getDate() - ((base.getDay() + 6) % 7)); // Pazartesi
+  return `${base.getFullYear()}-${pad(base.getMonth() + 1)}-${pad(base.getDate())}`;
+}
+
 function AdminDashboardView({ onBack }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [profiles, setProfiles] = useState([]);
   const [services, setServices] = useState([]);
   const [subs, setSubs] = useState([]);
-  const [pageViews, setPageViews] = useState([]);
+  // Ziyaretler satır çekilerek değil, veritabanında sayılarak alınır —
+  // PostgREST'in 1000 satır sınırı sayıyı sessizce kırpmasın diye.
+  const [viewCounts, setViewCounts] = useState({ today: 0, week: 0, month: 0 });
   const [orders, setOrders] = useState([]);
+  const [grantErrors, setGrantErrors] = useState([]); // ödeme alındı ama ürün verilemedi
   const [rangeMode, setRangeMode] = useState("day"); // day | week | month
   const [selectedDetail, setSelectedDetail] = useState(null); // "users" | "providers" | "newThisWeek" | "subs" | null
   const detailPanelRef = useRef(null);
@@ -8199,29 +8248,40 @@ function AdminDashboardView({ onBack }) {
       setLoading(true);
       setError(false);
       try {
-        const [profilesRes, servicesRes, subsRes, plansRes, viewsRes, ordersRes] = await Promise.all([
-          supabase.from("profiles").select("id, user_type, created_at, full_name, business_name"),
-          supabase.from("services").select("provider_id, title, created_at"),
-          supabase.from("provider_subscriptions").select("id, profile_id, plan_id, status, billing_cycle, current_period_end"),
+        const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
+        const startOfMonth = new Date(); startOfMonth.setDate(1); startOfMonth.setHours(0, 0, 0, 0);
+        const startOfWeek = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+        const countSince = (d) => supabase.from("page_views").select("*", { count: "exact", head: true }).gte("created_at", d.toISOString());
+        const [profilesData, servicesData, subsData, ordersData, plansRes, todayRes, weekRes, monthRes, grantRes] = await Promise.all([
+          fetchAllPages(() => supabase.from("profiles").select("id, user_type, created_at, full_name, business_name").order("created_at", { ascending: false }).order("id")),
+          fetchAllPages(() => supabase.from("services").select("id, provider_id, title, display_name, description, active, created_at").order("created_at", { ascending: false }).order("id")),
+          fetchAllPages(() => supabase.from("provider_subscriptions").select("id, profile_id, plan_id, status, billing_cycle, current_period_end, cancel_at_period_end").order("id")),
+          fetchAllPages(() => supabase.from("payment_orders").select("id, amount, status, paid_at").eq("status", "success").order("id")),
           supabase.from("subscription_plans").select("id, slug, name"),
-          supabase.from("page_views").select("created_at"),
-          supabase.from("payment_orders").select("amount, status, paid_at").eq("status", "success"),
+          countSince(startOfToday),
+          countSince(startOfWeek),
+          countSince(startOfMonth),
+          supabase.from("payment_orders").select("id, plan_slug, amount, grant_error, created_at").not("grant_error", "is", null).order("created_at", { ascending: false }).limit(20),
         ]);
+        // Supabase istemcisi hata durumunda fırlatmaz, {error} döner — hiçbirini
+        // sessizce "0" saymıyoruz.
+        const failed = [plansRes, todayRes, weekRes, monthRes, grantRes].find((r) => r.error);
+        if (failed) throw failed.error;
         if (cancelled) return;
-        setPageViews(viewsRes.data || []);
-        setOrders(ordersRes.data || []);
-        const profilesData = profilesRes.data || [];
+        setViewCounts({ today: todayRes.count ?? 0, week: weekRes.count ?? 0, month: monthRes.count ?? 0 });
+        setOrders(ordersData);
+        setGrantErrors(grantRes.data || []);
         const profilesById = {};
         profilesData.forEach((p) => { profilesById[p.id] = p; });
         const plansById = {};
         (plansRes.data || []).forEach((p) => { plansById[p.id] = p; });
-        const enrichedSubs = (subsRes.data || []).map((s) => ({
+        const enrichedSubs = subsData.map((s) => ({
           ...s,
           planName: plansById[s.plan_id]?.name || plansById[s.plan_id]?.slug || "Bilinmiyor",
           userName: profilesById[s.profile_id]?.business_name || profilesById[s.profile_id]?.full_name || "Bilinmiyor",
         }));
         setProfiles(profilesData);
-        setServices(servicesRes.data || []);
+        setServices(servicesData);
         setSubs(enrichedSubs);
       } catch (e) {
         if (!cancelled) setError(true);
@@ -8245,13 +8305,13 @@ function AdminDashboardView({ onBack }) {
   // gibi gösterirdi.
   const activeSubs = subs.filter((s) => s.status === "active" && s.current_period_end && new Date(s.current_period_end) > now).length;
 
-  const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
-  const viewsToday = pageViews.filter((v) => new Date(v.created_at).getTime() >= todayStart.getTime()).length;
-  const viewsThisWeek = pageViews.filter((v) => new Date(v.created_at).getTime() >= weekAgo).length;
+  const viewsToday = viewCounts.today;
+  const viewsThisWeek = viewCounts.week;
 
   // Gerçek gelir — PayTR 2026-09-13'te canlıya geçti, artık payment_orders'ta
   // gerçekten başarılı (status='success') satırlar birikiyor.
   const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
+  const viewsThisMonth = viewCounts.month;
   const totalRevenue = orders.reduce((sum, o) => sum + Number(o.amount || 0), 0);
   const revenueThisMonth = orders
     .filter((o) => o.paid_at && new Date(o.paid_at).getTime() >= monthStart.getTime())
@@ -8259,27 +8319,33 @@ function AdminDashboardView({ onBack }) {
 
   const soon = now + 7 * 24 * 60 * 60 * 1000;
   const renewalsSoon = subs
-    .filter((s) => s.status === "active" && s.current_period_end && new Date(s.current_period_end).getTime() <= soon)
+    .filter((s) => s.status === "active" && !s.cancel_at_period_end && s.current_period_end && new Date(s.current_period_end).getTime() > now && new Date(s.current_period_end).getTime() <= soon)
     .sort((a, b) => new Date(a.current_period_end) - new Date(b.current_period_end));
 
   // Büyüme grafiği: profilleri seçili aralığa göre kovala (gün/hafta/ay).
   const buckets = {};
   profiles.forEach((p) => {
-    const d = new Date(p.created_at);
-    let key;
-    if (rangeMode === "day") {
-      key = d.toISOString().slice(0, 10);
-    } else if (rangeMode === "week") {
-      const dow = (d.getUTCDay() + 6) % 7; // Pazartesi=0
-      const monday = new Date(d);
-      monday.setUTCDate(d.getUTCDate() - dow);
-      key = monday.toISOString().slice(0, 10);
-    } else {
-      key = d.toISOString().slice(0, 7);
-    }
+    const key = localBucketKey(new Date(p.created_at), rangeMode);
     buckets[key] = (buckets[key] || 0) + 1;
   });
-  const bucketEntries = Object.entries(buckets).sort(([a], [b]) => a.localeCompare(b));
+  // Kayıt olmayan gün/hafta/ay da 0 olarak çizilsin (eskiden sadece dolu
+  // kovalar çiziliyordu, aradaki boşluk yokmuş gibi görünüyordu). Mobilde
+  // taşmasın diye son 14 (aylıkta 12) kova.
+  const bucketEntries = [];
+  const bucketKeys = Object.keys(buckets).sort();
+  if (bucketKeys.length > 0) {
+    const cursor = new Date(`${bucketKeys[0]}${rangeMode === "month" ? "-01" : ""}T00:00:00`);
+    const lastKey = localBucketKey(new Date(), rangeMode);
+    for (let guard = 0; guard < 5000; guard++) {
+      const key = localBucketKey(cursor, rangeMode);
+      bucketEntries.push([key, buckets[key] || 0]);
+      if (key >= lastKey) break;
+      if (rangeMode === "day") cursor.setDate(cursor.getDate() + 1);
+      else if (rangeMode === "week") cursor.setDate(cursor.getDate() + 7);
+      else cursor.setMonth(cursor.getMonth() + 1);
+    }
+  }
+  bucketEntries.splice(0, Math.max(0, bucketEntries.length - (rangeMode === "month" ? 12 : 14)));
   const maxBucket = Math.max(1, ...bucketEntries.map(([, c]) => c));
 
   const profilesById = {};
@@ -8327,8 +8393,16 @@ function AdminDashboardView({ onBack }) {
       sub: info.firstTitle,
       right: `${info.count} vitrin`,
     }));
+  } else if (selectedDetail === "vitrins") {
+    detailTitle = "Tüm vitrinler";
+    detailRows = services.map((s) => ({
+      key: s.id,
+      name: `${s.display_name || s.title || "Başlıksız vitrin"}${(s.description || "").startsWith("DEMO VİTRİN") ? " · DEMO" : ""}`,
+      sub: `${nameOf(profilesById[s.provider_id])} · ${s.title || ""}`,
+      right: s.active ? "Yayında" : "Kapalı",
+    }));
   } else if (selectedDetail === "newThisWeek") {
-    detailTitle = "Bu hafta kayıt olanlar";
+    detailTitle = "Son 7 günde kayıt olanlar";
     detailRows = profiles
       .filter((p) => new Date(p.created_at).getTime() >= weekAgo)
       .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
@@ -8360,13 +8434,31 @@ function AdminDashboardView({ onBack }) {
         </div>
       ) : (
         <>
+          {grantErrors.length > 0 && (
+            <div className="rounded-2xl border p-4 mb-4" style={{ borderColor: "#FCA5A5", background: "#FEF2F2" }}>
+              <p className="text-sm font-bold" style={{ color: "#B91C1C" }}>
+                ⚠ {grantErrors.length} ödeme alındı ama ürün/abonelik verilemedi
+              </p>
+              <p className="text-[11px] mt-1 mb-2" style={{ color: "#7F1D1D" }}>Müşteri parayı ödedi; ürünü elle vermen ya da iade etmen gerekiyor.</p>
+              <div className="space-y-1.5">
+                {grantErrors.map((g) => (
+                  <div key={g.id} className="text-[11px] rounded-lg px-2.5 py-1.5 break-words" style={{ background: "#FFFFFF", color: "#7F1D1D" }}>
+                    {new Date(g.created_at).toLocaleDateString("tr-TR")} · {g.plan_slug} · {Number(g.amount || 0).toLocaleString("tr-TR")}₺ — {g.grant_error}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-3 mb-4">
             <StatCard icon={<Users size={15} style={{ color: "#2563EB" }} />} label="Toplam kayıtlı kullanıcı" value={totalUsers} accent="#2563EB" detailKey="users" />
             <StatCard icon={<Briefcase size={15} style={{ color: "#16321F" }} />} label="Aktif sağlayıcı (vitrin açan)" value={totalProviders} accent="#16321F" detailKey="providers" />
-            <StatCard icon={<TrendingUp size={15} style={{ color: "#34D399" }} />} label="Bu hafta yeni kayıt" value={newThisWeek} accent="#34D399" detailKey="newThisWeek" />
+            <StatCard icon={<Briefcase size={15} style={{ color: "#0EA5E9" }} />} label={`Toplam vitrin (${services.filter((s) => s.active).length} yayında)`} value={services.length} accent="#0EA5E9" detailKey="vitrins" />
+            <StatCard icon={<TrendingUp size={15} style={{ color: "#34D399" }} />} label="Son 7 gün yeni kayıt" value={newThisWeek} accent="#34D399" detailKey="newThisWeek" />
             <StatCard icon={<Award size={15} style={{ color: "#F59E0B" }} />} label="Aktif Pro/Standart plan" value={activeSubs} accent="#F59E0B" detailKey="subs" />
             <StatCard icon={<Eye size={15} style={{ color: "#8B5CF6" }} />} label="Bugün ziyaret" value={viewsToday} accent="#8B5CF6" />
-            <StatCard icon={<Eye size={15} style={{ color: "#8B5CF6" }} />} label="Bu hafta ziyaret" value={viewsThisWeek} accent="#8B5CF6" />
+            <StatCard icon={<Eye size={15} style={{ color: "#8B5CF6" }} />} label="Son 7 gün ziyaret" value={viewsThisWeek} accent="#8B5CF6" />
+            <StatCard icon={<Eye size={15} style={{ color: "#8B5CF6" }} />} label="Bu ay ziyaret" value={viewsThisMonth} accent="#8B5CF6" />
           </div>
           <p className="text-[11px] mb-4 -mt-2" style={{ color: "#9CA3AF" }}>
             Ziyaret sayıları kimlik bilgisi taşımaz, o yüzden detayları yok — aynı kişi farklı zamanlarda gelirse her seferinde ayrı sayılır (tekil ziyaretçi değil, ziyaret).
@@ -8383,12 +8475,12 @@ function AdminDashboardView({ onBack }) {
               ) : (
                 <div className="space-y-2">
                   {detailRows.map((r) => (
-                    <div key={r.key} className="flex items-center justify-between rounded-xl px-3 py-2.5" style={{ background: "#FAFAFA" }}>
-                      <div>
-                        <p className="text-sm font-bold" style={{ color: "#0F1115" }}>{r.name}</p>
-                        {r.sub && <p className="text-[11px]" style={{ color: "#8A8368" }}>{r.sub}</p>}
+                    <div key={r.key} className="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5" style={{ background: "#FAFAFA" }}>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-bold break-words" style={{ color: "#0F1115" }}>{r.name}</p>
+                        {r.sub && <p className="text-[11px] break-words" style={{ color: "#8A8368" }}>{r.sub}</p>}
                       </div>
-                      <span className="text-[11px] font-bold" style={{ color: "#9CA3AF" }}>{r.right}</span>
+                      <span className="text-[11px] font-bold shrink-0" style={{ color: "#6B7280" }}>{r.right}</span>
                     </div>
                   ))}
                 </div>
@@ -8403,7 +8495,7 @@ function AdminDashboardView({ onBack }) {
             </div>
             <p className="text-2xl font-black mt-2" style={{ color: "#0F1115" }}>{totalRevenue.toLocaleString("tr-TR")}₺</p>
             <p className="text-xs mt-1" style={{ color: "#9CA3AF" }}>
-              Bu ay: {revenueThisMonth.toLocaleString("tr-TR")}₺ · PayTR üzerinden gerçekten tahsil edilmiş ödemeler (iade/başarısız hariç).
+              Bu ay: {revenueThisMonth.toLocaleString("tr-TR")}₺ · PayTR üzerinden gerçekten tahsil edilmiş brüt (KDV dahil) ödemeler. KDV hariç yaklaşık: {(totalRevenue / 1.2).toLocaleString("tr-TR", { maximumFractionDigits: 0 })}₺ (toplam) · {(revenueThisMonth / 1.2).toLocaleString("tr-TR", { maximumFractionDigits: 0 })}₺ (bu ay). İadeler bu tabloda ayrı izlenmiyor.
             </p>
           </div>
 
@@ -8428,9 +8520,9 @@ function AdminDashboardView({ onBack }) {
             {bucketEntries.length === 0 ? (
               <p className="text-sm text-center py-6" style={{ color: "#9CA3AF" }}>Henüz kayıt yok.</p>
             ) : (
-              <div className="flex items-end gap-1.5" style={{ height: 100 }}>
+              <div className="flex items-end gap-1 overflow-hidden" style={{ height: 100 }}>
                 {bucketEntries.map(([key, count]) => (
-                  <div key={key} className="flex-1 flex flex-col items-center gap-1" title={`${key}: ${count}`}>
+                  <div key={key} className="flex-1 min-w-0 flex flex-col items-center gap-1" title={`${key}: ${count}`}>
                     <div
                       className="w-full rounded-t-md"
                       style={{ height: `${Math.max(6, (count / maxBucket) * 80)}px`, background: "linear-gradient(180deg, #60A5FA, #2563EB)" }}
@@ -8455,12 +8547,12 @@ function AdminDashboardView({ onBack }) {
             ) : (
               <div className="space-y-2">
                 {renewalsSoon.map((s) => (
-                  <div key={s.id} className="flex items-center justify-between rounded-xl px-3 py-2.5" style={{ background: "#FAFAFA" }}>
-                    <div>
-                      <p className="text-sm font-bold" style={{ color: "#0F1115" }}>{s.userName}</p>
+                  <div key={s.id} className="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5" style={{ background: "#FAFAFA" }}>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold break-words" style={{ color: "#0F1115" }}>{s.userName}</p>
                       <p className="text-[11px]" style={{ color: "#8A8368" }}>{s.planName} · {s.billing_cycle === "yearly" ? "yıllık" : "aylık"}</p>
                     </div>
-                    <span className="text-[11px] font-bold px-2 py-1 rounded-full" style={{ background: "rgba(156,74,60,0.12)", color: "#9C4A3C" }}>
+                    <span className="text-[11px] font-bold px-2 py-1 rounded-full shrink-0" style={{ background: "rgba(156,74,60,0.12)", color: "#9C4A3C" }}>
                       {formatDaysUntilTr(s.current_period_end)}
                     </span>
                   </div>
@@ -8525,16 +8617,25 @@ function AdminReportsView({ onBack, reports, userId, isAdmin }) {
   const [realTickets, setRealTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState(null);
+  const [loadError, setLoadError] = useState(false);
+  const [actionError, setActionError] = useState("");
 
+  // isAdmin bayrağı sonradan (false -> true) çözülüyor; iki yükleme üst üste
+  // binerse yavaş kalan ESKİ (sadece kendi taleplerim) yanıtı yenisini ezmesin.
+  const reqIdRef = useRef(0);
   const loadTickets = async () => {
     if (!userId) { setLoading(false); return; }
+    const myReq = ++reqIdRef.current;
     setLoading(true);
     let query = supabase
       .from("support_tickets")
       .select("id, title, category, summary, transcript, status, created_at, reporter_id")
       .order("created_at", { ascending: false });
     if (!isAdmin) query = query.eq("reporter_id", userId);
-    const { data } = await query;
+    const { data, error: loadErr } = await query;
+    if (myReq !== reqIdRef.current) return;
+    if (loadErr) { setLoadError(true); setLoading(false); return; }
+    setLoadError(false);
     let rows = data || [];
     if (isAdmin && rows.length > 0) {
       const reporterIds = [...new Set(rows.map((r) => r.reporter_id))];
@@ -8543,6 +8644,7 @@ function AdminReportsView({ onBack, reports, userId, isAdmin }) {
       (profilesData || []).forEach((p) => { profilesById[p.id] = p; });
       rows = rows.map((r) => ({ ...r, reporterName: (profilesById[r.reporter_id]?.business_name || profilesById[r.reporter_id]?.full_name || "Bilinmiyor") }));
     }
+    if (myReq !== reqIdRef.current) return;
     setRealTickets(rows);
     setLoading(false);
   };
@@ -8554,9 +8656,14 @@ function AdminReportsView({ onBack, reports, userId, isAdmin }) {
 
   const updateStatus = async (id, status) => {
     setUpdatingId(id);
-    const { error } = await supabase.from("support_tickets").update({ status }).eq("id", id);
+    setActionError("");
+    const { data: updated, error } = await supabase.from("support_tickets").update({ status }).eq("id", id).select("id");
     setUpdatingId(null);
-    if (!error) setRealTickets((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
+    if (error || !updated || updated.length === 0) {
+      setActionError("Durum güncellenemedi — yetkin yok ya da kayıt silinmiş olabilir. Sayfayı yenileyip tekrar dene.");
+      return;
+    }
+    setRealTickets((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
   };
 
   const merged = [
@@ -8577,8 +8684,15 @@ function AdminReportsView({ onBack, reports, userId, isAdmin }) {
         {isAdmin ? "Tüm kullanıcıların destek asistanına yazdığı ve bildirdiği talepler" : "Destek asistanına yazdığın ve bildirdiğin geçmiş talepler"}
       </p>
 
+      {actionError && <p className="text-xs mb-3 rounded-lg px-3 py-2" style={{ background: "#FEF2F2", color: "#B91C1C" }}>{actionError}</p>}
+
       {loading ? (
         <div className="flex items-center justify-center py-8"><Loader2 size={18} className="animate-spin" style={{ color: "#9CA3AF" }} /></div>
+      ) : loadError ? (
+        <div className="rounded-2xl border p-6 text-center" style={{ borderColor: "#FCA5A5", background: "#FEF2F2" }}>
+          <p className="text-sm font-bold" style={{ color: "#B91C1C" }}>Veriler yüklenemedi</p>
+          <p className="text-xs mt-1" style={{ color: "#7F1D1D" }}>Oturumun düşmüş ya da yetkin değişmiş olabilir. Sayfayı yenileyip tekrar dene — kayıtlar silinmedi.</p>
+        </div>
       ) : merged.length === 0 ? (
         <div className="rounded-2xl border p-8 text-center" style={{ borderColor: "#F0F0F0", background: "#FAFAFA" }}>
           <Inbox size={28} className="mx-auto mb-2" style={{ color: "#D1D5DB" }} />
@@ -8640,13 +8754,17 @@ function AdminUserReportsView({ onBack }) {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState(null);
+  const [loadError, setLoadError] = useState(false);
+  const [actionError, setActionError] = useState("");
 
   const loadReports = async () => {
     setLoading(true);
-    const { data } = await supabase
+    const { data, error: loadErr } = await supabase
       .from("user_reports")
       .select("id, reporter_id, reported_id, reason, detail, status, created_at")
       .order("created_at", { ascending: false });
+    if (loadErr) { setLoadError(true); setLoading(false); return; }
+    setLoadError(false);
     const rows = data || [];
     if (rows.length > 0) {
       const profileIds = [...new Set(rows.flatMap((r) => [r.reporter_id, r.reported_id]))];
@@ -8668,9 +8786,14 @@ function AdminUserReportsView({ onBack }) {
 
   const updateStatus = async (id, status) => {
     setUpdatingId(id);
-    const { error } = await supabase.from("user_reports").update({ status }).eq("id", id);
+    setActionError("");
+    const { data: updated, error } = await supabase.from("user_reports").update({ status }).eq("id", id).select("id");
     setUpdatingId(null);
-    if (!error) setReports((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
+    if (error || !updated || updated.length === 0) {
+      setActionError("Durum güncellenemedi — yetkin yok ya da kayıt silinmiş olabilir. Sayfayı yenileyip tekrar dene.");
+      return;
+    }
+    setReports((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
   };
 
   return (
@@ -8684,8 +8807,15 @@ function AdminUserReportsView({ onBack }) {
       </div>
       <p className="text-sm mb-6" style={{ color: "#6B7280" }}>Kullanıcıların mesajlaşma ekranından bildirdiği şikayetler</p>
 
+      {actionError && <p className="text-xs mb-3 rounded-lg px-3 py-2" style={{ background: "#FEF2F2", color: "#B91C1C" }}>{actionError}</p>}
+
       {loading ? (
         <div className="flex items-center justify-center py-8"><Loader2 size={18} className="animate-spin" style={{ color: "#9CA3AF" }} /></div>
+      ) : loadError ? (
+        <div className="rounded-2xl border p-6 text-center" style={{ borderColor: "#FCA5A5", background: "#FEF2F2" }}>
+          <p className="text-sm font-bold" style={{ color: "#B91C1C" }}>Veriler yüklenemedi</p>
+          <p className="text-xs mt-1" style={{ color: "#7F1D1D" }}>Oturumun düşmüş ya da yetkin değişmiş olabilir. Sayfayı yenileyip tekrar dene — kayıtlar silinmedi.</p>
+        </div>
       ) : reports.length === 0 ? (
         <div className="rounded-2xl border p-8 text-center" style={{ borderColor: "#F0F0F0", background: "#FAFAFA" }}>
           <ShieldCheck size={28} className="mx-auto mb-2" style={{ color: "#D1D5DB" }} />
@@ -8733,13 +8863,17 @@ function AdminListingReportsView({ onBack }) {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState(null);
+  const [loadError, setLoadError] = useState(false);
+  const [actionError, setActionError] = useState("");
 
   const loadReports = async () => {
     setLoading(true);
-    const { data } = await supabase
+    const { data, error: loadErr } = await supabase
       .from("listing_reports")
       .select("id, reporter_id, service_id, job_id, reason, detail, status, created_at")
       .order("created_at", { ascending: false });
+    if (loadErr) { setLoadError(true); setLoading(false); return; }
+    setLoadError(false);
     const rows = data || [];
     if (rows.length > 0) {
       const reporterIds = [...new Set(rows.map((r) => r.reporter_id))];
@@ -8775,9 +8909,14 @@ function AdminListingReportsView({ onBack }) {
 
   const updateStatus = async (id, status) => {
     setUpdatingId(id);
-    const { error } = await supabase.from("listing_reports").update({ status }).eq("id", id);
+    setActionError("");
+    const { data: updated, error } = await supabase.from("listing_reports").update({ status }).eq("id", id).select("id");
     setUpdatingId(null);
-    if (!error) setReports((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
+    if (error || !updated || updated.length === 0) {
+      setActionError("Durum güncellenemedi — yetkin yok ya da kayıt silinmiş olabilir. Sayfayı yenileyip tekrar dene.");
+      return;
+    }
+    setReports((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
   };
 
   return (
@@ -8791,8 +8930,15 @@ function AdminListingReportsView({ onBack }) {
       </div>
       <p className="text-sm mb-6" style={{ color: "#6B7280" }}>Vitrin/iş ilanlarının kendisi için bildirilen şikayetler (yanlış kategori, sahte, kopya vb.)</p>
 
+      {actionError && <p className="text-xs mb-3 rounded-lg px-3 py-2" style={{ background: "#FEF2F2", color: "#B91C1C" }}>{actionError}</p>}
+
       {loading ? (
         <div className="flex items-center justify-center py-8"><Loader2 size={18} className="animate-spin" style={{ color: "#9CA3AF" }} /></div>
+      ) : loadError ? (
+        <div className="rounded-2xl border p-6 text-center" style={{ borderColor: "#FCA5A5", background: "#FEF2F2" }}>
+          <p className="text-sm font-bold" style={{ color: "#B91C1C" }}>Veriler yüklenemedi</p>
+          <p className="text-xs mt-1" style={{ color: "#7F1D1D" }}>Oturumun düşmüş ya da yetkin değişmiş olabilir. Sayfayı yenileyip tekrar dene — kayıtlar silinmedi.</p>
+        </div>
       ) : reports.length === 0 ? (
         <div className="rounded-2xl border p-8 text-center" style={{ borderColor: "#F0F0F0", background: "#FAFAFA" }}>
           <AlertCircle size={28} className="mx-auto mb-2" style={{ color: "#D1D5DB" }} />
@@ -8847,13 +8993,17 @@ function AdminContentFlagsView({ onBack }) {
   const [flags, setFlags] = useState([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState(null);
+  const [loadError, setLoadError] = useState(false);
+  const [actionError, setActionError] = useState("");
 
   const loadFlags = async () => {
     setLoading(true);
-    const { data } = await supabase
+    const { data, error: loadErr } = await supabase
       .from("content_flags")
       .select("id, content_type, content_id, flagged_profile_id, reason, excerpt, status, created_at")
       .order("created_at", { ascending: false });
+    if (loadErr) { setLoadError(true); setLoading(false); return; }
+    setLoadError(false);
     const rows = data || [];
     if (rows.length > 0) {
       const profileIds = [...new Set(rows.map((r) => r.flagged_profile_id).filter(Boolean))];
@@ -8879,9 +9029,14 @@ function AdminContentFlagsView({ onBack }) {
 
   const updateStatus = async (id, status) => {
     setUpdatingId(id);
-    const { error } = await supabase.from("content_flags").update({ status }).eq("id", id);
+    setActionError("");
+    const { data: updated, error } = await supabase.from("content_flags").update({ status }).eq("id", id).select("id");
     setUpdatingId(null);
-    if (!error) setFlags((prev) => prev.map((f) => (f.id === id ? { ...f, status } : f)));
+    if (error || !updated || updated.length === 0) {
+      setActionError("Durum güncellenemedi — yetkin yok ya da kayıt silinmiş olabilir. Sayfayı yenileyip tekrar dene.");
+      return;
+    }
+    setFlags((prev) => prev.map((f) => (f.id === id ? { ...f, status } : f)));
   };
 
   return (
@@ -8895,8 +9050,15 @@ function AdminContentFlagsView({ onBack }) {
       </div>
       <p className="text-sm mb-6" style={{ color: "#6B7280" }}>AI'nin şüpheli bulduğu mesaj/vitrin/iş ilanı metinleri — hiçbiri otomatik engellenmedi</p>
 
+      {actionError && <p className="text-xs mb-3 rounded-lg px-3 py-2" style={{ background: "#FEF2F2", color: "#B91C1C" }}>{actionError}</p>}
+
       {loading ? (
         <div className="flex items-center justify-center py-8"><Loader2 size={18} className="animate-spin" style={{ color: "#9CA3AF" }} /></div>
+      ) : loadError ? (
+        <div className="rounded-2xl border p-6 text-center" style={{ borderColor: "#FCA5A5", background: "#FEF2F2" }}>
+          <p className="text-sm font-bold" style={{ color: "#B91C1C" }}>Veriler yüklenemedi</p>
+          <p className="text-xs mt-1" style={{ color: "#7F1D1D" }}>Oturumun düşmüş ya da yetkin değişmiş olabilir. Sayfayı yenileyip tekrar dene — kayıtlar silinmedi.</p>
+        </div>
       ) : flags.length === 0 ? (
         <div className="rounded-2xl border p-8 text-center" style={{ borderColor: "#F0F0F0", background: "#FAFAFA" }}>
           <ShieldCheck size={28} className="mx-auto mb-2" style={{ color: "#D1D5DB" }} />
@@ -8968,7 +9130,7 @@ function PaytrCheckoutModal({ token, onClose, onSuccess }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(15,17,21,0.7)" }}>
-      <div className="rounded-2xl overflow-hidden w-full flex flex-col" style={{ maxWidth: 480, height: "min(85vh, 720px)", background: "#fff" }}>
+      <div className="rounded-2xl overflow-hidden w-full flex flex-col" style={{ maxWidth: 480, height: "min(85dvh, 720px)", background: "#fff" }}>
         <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: "#F0F0F0" }}>
           <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>Güvenli ödeme — PayTR</p>
           <button onClick={onClose} style={{ color: "#9CA3AF" }}><X size={18} /></button>
@@ -8998,11 +9160,9 @@ function PricingView({ onBack, onJoined, userId }) {
   const [proError, setProError] = useState("");
   const [paytrToken, setPaytrToken] = useState(null);
   const [checkoutIntent, setCheckoutIntent] = useState(null); // { kind: "standart"|"boost", label }
-  // Öne Çıkarma artık gerçekten "seçtiğin bir vitrini" öne çıkarıyor
-  // (2026-09-14) — hangi vitrinlerin var olduğunu burada yüklüyoruz ki
-  // gerçekten seçebilesin.
+  // Öne Çıkarma kişinin TÜM aktif vitrinlerine birden uygulanır (vitrin seçimi
+  // yok); en az bir aktif vitrin olması gerektiği için sayısını burada yüklüyoruz.
   const [myVitrins, setMyVitrins] = useState([]);
-  const [selectedVitrinId, setSelectedVitrinId] = useState("");
   useEffect(() => {
     if (!userId) { setMyVitrins([]); return; }
     let cancelled = false;
@@ -9010,7 +9170,6 @@ function PricingView({ onBack, onJoined, userId }) {
       if (cancelled) return;
       const rows = data || [];
       setMyVitrins(rows);
-      if (rows.length === 1) setSelectedVitrinId(rows[0].id);
     });
     return () => { cancelled = true; };
   }, [userId]);
@@ -9067,9 +9226,9 @@ function PricingView({ onBack, onJoined, userId }) {
   };
   const payForStandart = () => startPaytrPurchase({ planSlug: "standart", billingCycle: cycle }, { kind: "standart" });
   const payForBoost = () => {
-    if (!selectedVitrinId) { setJoinError(t("pricing.errSelectVitrin")); return; }
+    if (myVitrins.length === 0) { setJoinError(t("pricing.noActiveVitrinForBoost")); return; }
     startPaytrPurchase(
-      { addonSlug: boostDuration === "weekly" ? "one-cikarma-haftalik" : "one-cikarma", billingCycle: "monthly", serviceId: selectedVitrinId },
+      { addonSlug: boostDuration === "weekly" ? "one-cikarma-haftalik" : "one-cikarma", billingCycle: "monthly" },
       { kind: "boost" }
     );
   };
@@ -9114,12 +9273,11 @@ function PricingView({ onBack, onJoined, userId }) {
     else setJoinError(result.message);
   };
   const payForBoostSaved = async () => {
-    if (!selectedVitrinId) { setJoinError(t("pricing.errSelectVitrin")); return; }
+    if (myVitrins.length === 0) { setJoinError(t("pricing.noActiveVitrinForBoost")); return; }
     setJoinError(""); setJoining(true); setSavedCardMode("boost");
     const result = await runSavedCardCharge({
       addonSlug: boostDuration === "weekly" ? "one-cikarma-haftalik" : "one-cikarma",
       billingCycle: "monthly",
-      serviceId: selectedVitrinId,
     });
     setJoining(false); setSavedCardMode(null);
     if (result.ok) { setCheckoutIntent({ kind: "boost" }); setJoined(true); }
@@ -9301,6 +9459,9 @@ function PricingView({ onBack, onJoined, userId }) {
         {proError && (
           <p className="text-xs mb-3 px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{proError}</p>
         )}
+        <p className="text-[11px] mb-2 text-center" style={{ color: "#6B7280" }}>
+          Ücretli Standart üyeysen, kalan sürenin değeri Pro fiyatından otomatik düşülür.
+        </p>
         <button
           onClick={joinPro}
           disabled={proJoining || proJoined}
@@ -9381,34 +9542,16 @@ function PricingView({ onBack, onJoined, userId }) {
           ))}
         </div>
 
-        {/* Hangi vitrin öne çıkacak — "seçtiğin bir vitrini öne çıkarır"
-            sözünün gerçek karşılığı (2026-09-14). boostSelected olunca
-            görünür; tek vitrini varsa zaten otomatik seçili gelir. */}
+        {/* Öne Çıkarma tüm aktif vitrinlerine birden uygulanır — seçim yok. */}
         {boostSelected && (
           myVitrins.length === 0 ? (
             <p className="text-xs mb-4 px-3 py-2 rounded-lg" style={{ background: "#FFFBEB", color: "#92400E" }}>
               {t("pricing.noActiveVitrinForBoost")}
             </p>
           ) : (
-            <div className="mb-4">
-              <p className="text-xs font-bold mb-2" style={{ color: "#1B2B24" }}>{t("pricing.chooseVitrinPrompt")}</p>
-              <div className="space-y-1.5">
-                {myVitrins.map((v) => (
-                  <button
-                    key={v.id}
-                    type="button"
-                    onClick={() => setSelectedVitrinId(v.id)}
-                    className="w-full flex items-center gap-2 rounded-lg border-2 px-3 py-2 text-left text-xs font-medium"
-                    style={selectedVitrinId === v.id ? { borderColor: "#F59E0B", background: "#FFFBEB", color: "#1B2B24" } : { borderColor: "#E5E1D3", background: "#FFFFFF", color: "#5C5744" }}
-                  >
-                    <div className="w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0" style={selectedVitrinId === v.id ? { borderColor: "#F59E0B", background: "#F59E0B" } : { borderColor: "#D9D0BA" }}>
-                      {selectedVitrinId === v.id && <Check size={10} className="text-white" />}
-                    </div>
-                    {v.title}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <p className="text-xs mb-4 px-3 py-2 rounded-lg" style={{ background: "#FFFBEB", color: "#92400E" }}>
+              {t("pricing.boostAppliesToAll", { count: myVitrins.length })}
+            </p>
           )
         )}
 
@@ -9417,14 +9560,14 @@ function PricingView({ onBack, onJoined, userId }) {
         )}
         <button
           onClick={payForBoost}
-          disabled={joining || !boostSelected || !selectedVitrinId}
+          disabled={joining || !boostSelected || myVitrins.length === 0}
           className="w-full py-2.5 rounded-full text-sm font-medium text-white flex items-center justify-center gap-1.5"
-          style={{ background: "#F59E0B", opacity: joining || !boostSelected || !selectedVitrinId ? 0.5 : 1 }}
+          style={{ background: "#F59E0B", opacity: joining || !boostSelected || myVitrins.length === 0 ? 0.5 : 1 }}
         >
           {joining && savedCardMode !== "boost" && <Loader2 size={13} className="animate-spin" />}
-          {!boostSelected ? t("pricing.chooseDurationFirst") : !selectedVitrinId ? t("pricing.chooseVitrinFirst") : joining && savedCardMode === "boost" ? t("pricing.processing") : joining ? t("pricing.redirecting") : t("pricing.payNowWithPrice", { price: boostPrice })}
+          {!boostSelected ? t("pricing.chooseDurationFirst") : myVitrins.length === 0 ? t("pricing.chooseVitrinFirst") : joining && savedCardMode === "boost" ? t("pricing.processing") : joining ? t("pricing.redirecting") : t("pricing.payNowWithPrice", { price: boostPrice })}
         </button>
-        {hasSavedCard && boostSelected && selectedVitrinId && (
+        {hasSavedCard && boostSelected && myVitrins.length > 0 && (
           <button
             onClick={payForBoostSaved}
             disabled={joining}
@@ -9456,7 +9599,94 @@ function PricingView({ onBack, onJoined, userId }) {
   );
 }
 
-function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOpenModeration, onOpenUserReports, onOpenListingReports, onOpenContentFlags, isAdmin, pendingMediaApprovals, onApproveMedia, onRejectMedia, onListingsChanged, onJobsChanged, onEditJob, onCreateListing, onViewListing, realListings }) {
+// Üyeliğim kartı: plan, bitiş tarihi ve iptal / iptali geri alma. İptal, ödenen
+// dönemin sonunda geçerli olur (cancel_at_period_end): o tarihe kadar vitrinler
+// yayında kalır, sonra günlük cron aboneliği kapatıp vitrinleri yayından kaldırır.
+function SubscriptionCard({ userId, onGoToPlans }) {
+  const [sub, setSub] = useState(undefined); // undefined: yükleniyor, null: aktif üyelik yok
+  const [busy, setBusy] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+
+  const load = async () => {
+    if (!userId) { setSub(null); return; }
+    const { data, error: loadErr } = await supabase
+      .from("provider_subscriptions")
+      .select("status, billing_cycle, current_period_end, cancel_at_period_end, subscription_plans(name)")
+      .eq("profile_id", userId)
+      .in("status", ["active", "trialing"])
+      .gt("current_period_end", new Date().toISOString())
+      .maybeSingle();
+    if (loadErr) { setSub(null); setError("Üyelik bilgisi yüklenemedi."); return; }
+    setSub(data || null);
+  };
+  useEffect(() => { load(); }, [userId]);
+
+  const run = async (fn, okMessage) => {
+    setBusy(true); setError(""); setMessage("");
+    const { error: rpcErr } = await supabase.rpc(fn);
+    setBusy(false); setConfirming(false);
+    if (rpcErr) { setError(rpcErr.message || "İşlem başarısız oldu."); return; }
+    setMessage(okMessage);
+    await load();
+  };
+
+  if (sub === undefined) return null;
+  const endLabel = sub ? new Date(sub.current_period_end).toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" }) : "";
+
+  return (
+    <div className="rounded-2xl border p-4 mb-3" style={{ borderColor: "#D9D0BA", background: "#FFFFFF" }}>
+      <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>Üyeliğim</p>
+      {!sub ? (
+        <>
+          <p className="text-xs mt-1 mb-3" style={{ color: "#8A8368" }}>Şu an aktif bir üyeliğin yok, bu yüzden vitrinlerin yayında değil. Telefon numaranı doğrulayarak ücretsiz denemeyi başlatabilir ya da bir plan seçebilirsin.</p>
+          {onGoToPlans && (
+            <button onClick={onGoToPlans} className="px-4 py-2 rounded-full text-xs font-bold text-white" style={{ background: "#F59E0B" }}>Planlara Git</button>
+          )}
+        </>
+      ) : (
+        <>
+          <p className="text-xs mt-1" style={{ color: "#5C5744" }}>
+            {sub.subscription_plans?.name || "Üyelik"} · {sub.status === "trialing" ? "Ücretsiz deneme" : sub.billing_cycle === "yearly" ? "Yıllık" : "Aylık"} · Bitiş: {endLabel}
+          </p>
+          {sub.cancel_at_period_end ? (
+            <>
+              <p className="text-xs mt-2 px-3 py-2 rounded-lg" style={{ background: "#FEF3C7", color: "#92400E" }}>
+                Üyeliğin iptal edildi. {endLabel} tarihine kadar vitrinlerin yayında kalır; o tarihte üyeliğin sona erer ve vitrinlerin yayından kaldırılır.
+              </p>
+              <button onClick={() => run("resume_subscription", "İptal geri alındı, üyeliğin devam edecek.")} disabled={busy}
+                className="mt-3 px-4 py-2 rounded-full text-xs font-bold text-white" style={{ background: "#1B2B24", opacity: busy ? 0.6 : 1 }}>
+                {busy ? "İşleniyor…" : "İptali Geri Al"}
+              </button>
+            </>
+          ) : confirming ? (
+            <div className="mt-3 rounded-xl p-3" style={{ background: "#FEF2F2" }}>
+              <p className="text-xs" style={{ color: "#7F1D1D" }}>
+                Üyeliğin {endLabel} tarihinde sona erecek ve o gün vitrinlerin yayından kaldırılacak. Kalan süre için iade yapılmaz, sonraki dönem için ücret alınmaz. Emin misin?
+              </p>
+              <div className="flex gap-2 mt-3">
+                <button onClick={() => setConfirming(false)} disabled={busy} className="px-4 py-2 rounded-full text-xs font-bold border" style={{ borderColor: "#D9D0BA", color: "#1B2B24" }}>Vazgeç</button>
+                <button onClick={() => run("cancel_subscription", "Üyeliğin iptal edildi; ödenen dönem bitene kadar kullanmaya devam edebilirsin.")} disabled={busy}
+                  className="px-4 py-2 rounded-full text-xs font-bold text-white" style={{ background: "#B91C1C", opacity: busy ? 0.6 : 1 }}>
+                  {busy ? "İşleniyor…" : "Evet, iptal et"}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button onClick={() => setConfirming(true)} className="mt-3 px-4 py-2 rounded-full text-xs font-bold border" style={{ borderColor: "#D9D0BA", color: "#9C4A3C" }}>
+              Üyeliği İptal Et
+            </button>
+          )}
+        </>
+      )}
+      {message && <p className="text-xs mt-2" style={{ color: "#059669" }}>{message}</p>}
+      {error && <p className="text-xs mt-2 break-words" style={{ color: "#B91C1C" }}>{error}</p>}
+    </div>
+  );
+}
+
+function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOpenModeration, onOpenUserReports, onOpenListingReports, onOpenContentFlags, isAdmin, pendingMediaApprovals, onApproveMedia, onRejectMedia, onListingsChanged, onJobsChanged, onEditJob, onCreateListing, onViewListing, realListings, onGoToPlans }) {
   const { t } = useLanguage();
   // Video tanıtım/portföy/sertifika/CV artık vitrine özel — bkz. ListingDetail sahip modu
   // (supabase/vitrin_media.sql). Burada sadece paylaşılan profil fotoğrafı kalıyor
@@ -9714,7 +9944,15 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
 
   const togglePhonePublic = async (val) => {
     if (!userId) return;
-    await supabase.from("profile_phone").update({ show_publicly: val }).eq("profile_id", userId);
+    // GİZLİLİK: sonuç doğrulanmazsa "numarayı gizle" başarısız olsa bile arayüz
+    // "gizli" gösterir, numara herkese açık kalırdı. Ancak DB gerçekten güncellendiyse
+    // arayüzü değiştiriyoruz.
+    const { data: updated, error } = await supabase.from("profile_phone").update({ show_publicly: val }).eq("profile_id", userId).select("profile_id");
+    if (error || !updated?.length) {
+      setPhoneError(t("profile.errGeneric"));
+      return;
+    }
+    setPhoneError("");
     setMyPhone((p) => (p ? { ...p, show_publicly: val } : p));
   };
 
@@ -9791,7 +10029,9 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
     const { data, error } = await supabase.from("profiles").update(patch).eq("id", userId).select("*").maybeSingle();
     setSaving(false);
     if (error) { setSaveError(t("profile.errSaveFailed", { message: error.message })); return; }
-    setProfile(data || { ...profile, ...patch });
+    // 0 satır güncellendiyse (RLS/oturum) "kaydedildi" deme.
+    if (!data) { setSaveError(t("profile.errSaveFailed", { message: t("common.errNoPermission") })); return; }
+    setProfile(data);
     setEditing(false);
     setSaveDone(true);
     setTimeout(() => setSaveDone(false), 2500);
@@ -10340,6 +10580,8 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
         </div>
       )}
 
+      <SubscriptionCard userId={userId} onGoToPlans={onGoToPlans} />
+
       <button
         onClick={onOpenAdminReports}
         className="w-full rounded-xl border p-5 mb-4 text-left flex items-center gap-3 hover:shadow-sm transition-shadow"
@@ -10472,7 +10714,15 @@ function DraggableSupportButton({ onClick }) {
   useEffect(() => {
     try {
       const saved = localStorage.getItem("isinn_support_btn_pos");
-      if (saved) setPos(JSON.parse(saved));
+      if (saved) {
+        // Kayıtlı konum başka bir ekran boyutundan/yönünden kalmış olabilir —
+        // düğme ekran dışında kalmasın diye mevcut pencereye sıkıştır.
+        const p = JSON.parse(saved);
+        setPos({
+          x: Math.max(4, Math.min(window.innerWidth - BTN - 4, Number(p.x) || 4)),
+          y: Math.max(4, Math.min(window.innerHeight - BTN - 4, Number(p.y) || 4)),
+        });
+      }
     } catch {}
   }, []);
 
@@ -10703,7 +10953,15 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
   // Gerçek ilanları services tablosundan çeker. Hem ilk yüklemede hem de yeni
   // bir ilan yayınlandıktan sonra çağrılıyor — böylece "sayfayı yenile, hâlâ
   // görünüyor mu" testi gerçekten kalıcılığı sınıyor (local state değil).
+  // Üst üste binen çekimlerde (sekme odağı, 60 sn zamanlayıcı, kullanıcının kendi
+  // işlemi) yalnızca EN SON başlatılan sonuç state'e yazılır — yavaş kalan eski
+  // bir istek, az önce kapattığın vitrini listeye geri getiremez.
+  const listingsReqRef = useRef(0);
+  const lastListingsFetchRef = useRef(0);
+  const hasLoadedListingsRef = useRef(false);
   const fetchListings = async () => {
+    const myReq = ++listingsReqRef.current;
+    lastListingsFetchRef.current = Date.now();
     const { data, error } = await supabase
       .from("services")
       .select("*, profiles(business_name, full_name), categories(slug)")
@@ -10719,18 +10977,37 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
       if (providerIds.length > 0) {
         const serviceIds = mapped.map((l) => l.dbId).filter(Boolean);
         // Birbirinden bağımsız üç sorgu — art arda beklemek yerine paralel.
-        const [{ data: ratingsData }, { data: addonRows }, { data: deliveredJobs }] = await Promise.all([
-          supabase.from("ratings").select("rated_profile_id, service_id, value").in("rated_profile_id", providerIds),
-          supabase
-            .from("provider_addons")
-            .select("profile_id, service_id, current_period_end, addon_products!inner(slug)")
-            .in("profile_id", providerIds)
-            .eq("status", "active")
-            .in("addon_products.slug", ["one-cikarma", "one-cikarma-haftalik"]),
-          serviceIds.length > 0
-            ? supabase.from("jobs").select("service_id").eq("state", "delivered").in("service_id", serviceIds)
-            : Promise.resolve({ data: [] }),
-        ]);
+        // Sayfalı çekim (PostgREST 1000 satır sınırı ortalamayı/seviyeyi sessizce
+        // bozmasın) + hata tespiti: bir yardımcı sorgu başarısız olursa puanlar/
+        // öne çıkarma/seviye varsayılana düşerdi — arka plan tazelemesinde bunu
+        // ekrana YAZMAYIZ (eski, doğru veri kalır).
+        let ratingsData = [];
+        let addonRows = [];
+        let deliveredJobs = [];
+        let helperFailed = false;
+        try {
+          [ratingsData, addonRows, deliveredJobs] = await Promise.all([
+            fetchAllPages(() => supabase.from("ratings").select("rated_profile_id, service_id, value").in("rated_profile_id", providerIds).order("id")),
+            fetchAllPages(() =>
+              supabase
+                .from("provider_addons")
+                .select("profile_id, service_id, current_period_end, addon_products!inner(slug)")
+                .in("profile_id", providerIds)
+                .eq("status", "active")
+                .in("addon_products.slug", ["one-cikarma", "one-cikarma-haftalik"])
+                .order("id")
+            ),
+            serviceIds.length > 0
+              ? fetchAllPages(() => supabase.from("jobs").select("service_id").eq("state", "delivered").in("service_id", serviceIds).order("id"))
+              : Promise.resolve([]),
+          ]);
+        } catch {
+          helperFailed = true;
+        }
+        if (helperFailed && hasLoadedListingsRef.current) {
+          setListingsLoading(false);
+          return;
+        }
         const byProvider = {};
         const byService = {};
         (ratingsData || []).forEach((r) => {
@@ -10811,6 +11088,8 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
           });
         }
       }
+      if (myReq !== listingsReqRef.current) return; // daha yeni bir çekim başlatıldı
+      hasLoadedListingsRef.current = true;
       setRealListings(mapped);
     }
     setListingsLoading(false);
@@ -10818,6 +11097,27 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
 
   useEffect(() => {
     fetchListings();
+  }, []);
+
+  // Liste sadece açılışta çekilirse başka yerde (başka cihaz/kullanıcı, panel)
+  // yapılan değişiklikler sayfa yenilenene kadar görünmez. Sekme tekrar öne
+  // gelince ve sayfa açıkken 60 sn'de bir sessizce tazele (en az 15 sn arayla).
+  const fetchListingsRef = useRef(fetchListings);
+  fetchListingsRef.current = fetchListings;
+  useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState !== "visible") return;
+      if (Date.now() - lastListingsFetchRef.current < 15000) return;
+      fetchListingsRef.current();
+    };
+    document.addEventListener("visibilitychange", refresh);
+    window.addEventListener("focus", refresh);
+    const timer = setInterval(refresh, 60000);
+    return () => {
+      document.removeEventListener("visibilitychange", refresh);
+      window.removeEventListener("focus", refresh);
+      clearInterval(timer);
+    };
   }, []);
 
   useEffect(() => {
@@ -11043,9 +11343,9 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
   }, [userId]);
 
   return (
-    <div className="min-h-screen" style={{ background: "#FFFFFF", fontFamily: "ui-sans-serif, system-ui" }}>
+    <div className="min-h-[100dvh]" style={{ background: "#FFFFFF", fontFamily: "ui-sans-serif, system-ui" }}>
       {favError && (
-        <div role="alert" className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-full text-xs font-medium text-white shadow-lg" style={{ background: "#9C4A3C" }}>{favError}</div>
+        <div role="alert" className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-max max-w-[calc(100vw-2rem)] text-center px-4 py-2.5 rounded-2xl text-xs font-medium text-white shadow-lg" style={{ background: "#9C4A3C" }}>{favError}</div>
       )}
       <Header onNav={handleNav} onSearch={runSearch} pendingCount={pendingMediaApprovals.length + staffModerationQueue.length} session={session} onNotificationClick={handleNotificationClick} />
       {!trialBannerDismissed && trialBanner?.status === "trialing" && trialBanner.daysLeft <= 7 && (
@@ -11097,6 +11397,7 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
         <CreateListingView
           onBack={() => goBack()}
           onGoToProfile={() => setView("profile")}
+          onGoToPlans={() => setView("pricing")}
           onCreated={() => fetchListings()}
           userId={userId}
         />
@@ -11202,6 +11503,7 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
           onJobsChanged={fetchJobs}
           onCreateListing={() => setView("createListing")}
           onViewListing={(l) => { setSelected(l); setView("detail"); }}
+          onGoToPlans={() => setView("pricing")}
           realListings={realListings}
           onEditJob={(j) => { setEditingJob(j); setView("post"); }}
           onBack={() => goBack()}

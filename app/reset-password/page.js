@@ -46,7 +46,7 @@ export default function ResetPasswordPage() {
     setDone(true);
   };
 
-  const shellStyle = { minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#FFFFFF", padding: 24 };
+  const shellStyle = { minHeight: "100dvh", display: "flex", alignItems: "center", justifyContent: "center", background: "#FFFFFF", padding: 24 };
 
   if (checking) {
     return <div style={shellStyle} />;
