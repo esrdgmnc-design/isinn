@@ -9,6 +9,7 @@ import { getAuthedUser } from "../../../lib/serverAuth";
 import { checkRateLimit, getClientIp } from "../../../lib/rateLimit";
 import { computeGetTokenHash, generateMerchantOid } from "../../../lib/paytr";
 import { computeUpgradeCredit, applyCredit } from "../../../lib/upgradeCredit";
+import { isFreePeriod } from "../../../lib/freePeriod";
 
 export async function POST(request) {
   const merchantId = process.env.PAYTR_MERCHANT_ID;
@@ -38,6 +39,11 @@ export async function POST(request) {
   // Vitrin Paketi, Öne Çıkarma vb., addon_products) — ikisi de aynı akıştan
   // geçiyor, sadece fiyatı hangi tablodan okuduğumuz değişiyor. Addon'lar
   // şu an sadece aylık (addon_products'ta price_yearly yok).
+  // 90 günlük herkese ücretsiz dönemde plan/paket satışı kapalı (bkz. lib/freePeriod.js).
+  if (isFreePeriod()) {
+    return Response.json({ ok: false, message: "Şu an herkese 90 gün ücretsiz dönemdeyiz, plan satın almana gerek yok." }, { status: 403 });
+  }
+
   const { planSlug, addonSlug, billingCycle, serviceId } = await request.json();
   const orderType = addonSlug ? "addon" : "plan";
   const itemSlug = addonSlug || planSlug;

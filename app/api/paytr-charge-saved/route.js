@@ -7,6 +7,7 @@ import { createClient } from "@supabase/supabase-js";
 import { getAuthedUser } from "../../../lib/serverAuth";
 import { checkRateLimit, getClientIp } from "../../../lib/rateLimit";
 import { chargeSavedCard } from "../../../lib/paytrRecurringCharge";
+import { isFreePeriod } from "../../../lib/freePeriod";
 
 export async function POST(request) {
   const user = await getAuthedUser(request);
@@ -15,6 +16,10 @@ export async function POST(request) {
   }
   if (!checkRateLimit(`paytr-charge-saved:${user.id}`, { limit: 10, windowMs: 60 * 60 * 1000 })) {
     return Response.json({ ok: false, message: "Çok fazla deneme yaptın, bir süre sonra tekrar dene." }, { status: 429 });
+  }
+
+  if (isFreePeriod()) {
+    return Response.json({ ok: false, message: "Şu an herkese 90 gün ücretsiz dönemdeyiz, plan satın almana gerek yok." }, { status: 403 });
   }
 
   const { planSlug, addonSlug, billingCycle } = await request.json();

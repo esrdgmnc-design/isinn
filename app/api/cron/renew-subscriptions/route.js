@@ -18,6 +18,7 @@
 // center.sql başındaki not).
 import { createClient } from "@supabase/supabase-js";
 import { chargeSavedCard } from "../../../../lib/paytrRecurringCharge";
+import { isFreePeriod } from "../../../../lib/freePeriod";
 
 const WARN_DAYS_BEFORE_END = 3;
 // Ödeme dönemi bittikten sonra bu kadar gün geçmesine rağmen hâlâ yenilenememişse
@@ -231,18 +232,24 @@ export async function GET(request) {
   // günkü cron çalışmasında tekrar denenip (kartla) gerçekten reddedilirse
   // o zaman kapanır. En kötü ihtimalle bu bir günlük bir gecikme demek,
   // erken/sahte bir kapatmadan daha güvenli bir taraf tutma.
+  // 90 günlük herkese ücretsiz dönemde tahsilat ve ödeme kaynaklı kapatma yok
+  // (aboneliklerin bitişi zaten dönem sonuna çekildi). Kapasite taraması ve uyarılar sürer.
+  const freePeriod = isFreePeriod();
   const { data: dueSubs, error } = await admin
     .from("provider_subscriptions")
     .select("id, profile_id, plan_id, billing_cycle, current_period_end, cancel_at_period_end, subscription_plans(slug)")
     .eq("status", "active")
     .lte("current_period_end", nowIso);
+  if (freePeriod) {
+    // hiçbir şey yapma: dueSubs boş sayılır
+  }
 
   if (error) {
     return Response.json({ ok: false, message: error.message }, { status: 500 });
   }
 
   const results = [];
-  for (const sub of dueSubs || []) {
+  for (const sub of freePeriod ? [] : dueSubs || []) {
     const planSlug = sub.subscription_plans?.slug;
     if (!planSlug) { results.push({ profile_id: sub.profile_id, skipped: "no plan slug" }); continue; }
 
@@ -306,6 +313,7 @@ export async function GET(request) {
   // sürpriz tahsilat yapılmaz.
   const addonResults = [];
   try {
+    if (freePeriod) throw new Error("free period: addon renewals skipped");
     const graceStartIso = new Date(Date.now() - GRACE_DAYS_AFTER_END * 24 * 60 * 60 * 1000).toISOString();
     const { data: dueAddons } = await admin
       .from("provider_addons")

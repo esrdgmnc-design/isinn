@@ -6,6 +6,7 @@ import { supabase } from "../lib/supabaseClient";
 // Kırpma kütüphanesi sadece fotoğraf kırpma modalı açılınca yüklensin (ilk paket küçük kalsın).
 const Cropper = dynamic(() => import("react-easy-crop"), { ssr: false, loading: () => null });
 import { COMPANY } from "../lib/companyInfo";
+import { isFreePeriod, FREE_PERIOD_UNTIL_ISO } from "../lib/freePeriod";
 import { useLanguage } from "../lib/i18n/LanguageContext";
 import {
   Search, MapPin, Star, Heart, PlayCircle, ChevronLeft, ChevronRight,
@@ -141,7 +142,7 @@ const LEVEL_META = {
   "top-rated": { labelKey: "common.levelTopRated", label: "Top Rated", color: "#C2872B" },
   "level-2": { labelKey: "common.levelLevel2", label: "Level 2", color: "#6B4FA0" },
   "level-1": { labelKey: "common.levelLevel1", label: "Level 1", color: "#3A5BA0" },
-  "new": { labelKey: "common.levelNew", label: "Yeni Vitrin", color: "#8A8368" },
+  "new": { labelKey: "common.levelNew", label: "Yeni Vitrin", color: "#6B6550" },
 };
 
 // getCategoryName/getCategoryGroupName ile aynı t()-ile-fallback deseni —
@@ -744,8 +745,15 @@ function formatMessageTime(iso) {
 // QuotaGuard Static proxy üzerinden sabit IP'den, doğru kullanıcı adı/şifre
 // çiftiyle) gerçekten çalışıyor — canlı testte SMS telefona ulaştı. Önceki
 // "geçici kapatma" notu artık geçersiz, buradan silindi.
-async function checkPhoneGate(userId) {
+async function checkPhoneGate(userId, { allowFirstMessage = false } = {}) {
   if (!userId) return { ok: false, reason: "Giriş yapmış olmalısın." };
+  // Müşterinin İLK mesajı doğrulamasız gider (ilk mesaja kadar kapı sayısı azalır);
+  // ikinci mesajdan itibaren telefon doğrulaması gerekir. Spam için hız sınırı ve
+  // şüpheli içerik taraması zaten var.
+  if (allowFirstMessage) {
+    const { count } = await supabase.from("messages").select("id", { count: "exact", head: true }).eq("sender_id", userId);
+    if (!count) return { ok: true };
+  }
   try {
     const cfgRes = await fetch("/api/send-otp");
     const cfg = await cfgRes.json();
@@ -767,6 +775,10 @@ async function checkPhoneGate(userId) {
 // bu yüzden ertelenecek bir sebep yok — baştan itibaren gerçek bir kilit.
 async function checkProfileGate(userId) {
   if (!userId) return { ok: false, reason: "Giriş yapmış olmalısın." };
+  // Fotoğraf ve şehir şartı yalnızca vitrin sahibi (sağlayıcı) için; müşteri bunları
+  // doldurmadan mesaj/ilan verebilir (alıcı tarafındaki kapılar azaltıldı).
+  const { count: vitrinCount } = await supabase.from("services").select("id", { count: "exact", head: true }).eq("provider_id", userId);
+  if (!vitrinCount) return { ok: true };
   const { data: prof } = await supabase.from("profiles").select("avatar_url, city").eq("id", userId).maybeSingle();
   if (!prof?.avatar_url || !prof?.city) {
     return { ok: false, reason: "Devam etmeden önce profiline bir fotoğraf ve şehir eklemen gerekiyor." };
@@ -774,190 +786,6 @@ async function checkProfileGate(userId) {
   return { ok: true };
 }
 
-
-const OFFER_POOLS = {
-  bakici: [
-    { name: "Ayşe T.", initials: "AT", price: "280₺/gün", priceValue: 280, time: "8 dk önce", minutesAgo: 8, rating: 4.9, message: "5 yıldır çocuk gelişimi alanında çalışıyorum, oyun temelli aktivitelerle vaktini değerlendiririm. Referanslarım mevcut." },
-    { name: "Zehra K.", initials: "ZK", price: "300₺/gün", priceValue: 300, time: "15 dk önce", minutesAgo: 15, rating: 4.8, message: "Anaokulu öğretmenliği geçmişim var. Sabah 9 - akşam 6 arası müsaitim, hafta içi/sonu fark etmez." },
-    { name: "Melis Y.", initials: "MY", price: "260₺/gün", priceValue: 260, time: "22 dk önce", minutesAgo: 22, rating: 4.7, message: "Üniversite öğrencisiyim, esnek saatlerde uygunum. İlk yardım sertifikam var, çocuklarla aram çok iyi." },
-    { name: "Nur Bakım Hizmetleri", initials: "NB", price: "320₺/gün", priceValue: 320, time: "35 dk önce", minutesAgo: 35, rating: 4.9, message: "Kurumsal bakıcılık hizmeti veriyoruz, sigortalı personel ve referans kontrolü yapılmış ekip." },
-    { name: "Elif D.", initials: "ED", price: "270₺/gün", priceValue: 270, time: "1 saat önce", minutesAgo: 60, rating: 4.6, message: "Psikoloji bölümü son sınıf öğrencisiyim, çocuk gelişimi dersleri aldım. Haftalık düzenli çalışabilirim." },
-    { name: "Aile Yanında Bakım", initials: "AY", price: "290₺/gün", priceValue: 290, time: "1 saat önce", minutesAgo: 65, rating: 4.8, message: "7 yıllık tecrübe, 2-8 yaş arası çocuklarla oyun ve eğitim odaklı vakit geçiriyoruz." },
-    { name: "Sema A.", initials: "SA", price: "250₺/gün", priceValue: 250, time: "2 saat önce", minutesAgo: 120, rating: 4.5, message: "Part-time uygun, öğretmenlik okuyorum. Referans verebilirim, deneme günü de yapabiliriz." },
-  ],
-  tadilat: [
-    { name: "Hakan Y.", initials: "HY", price: "7.800₺", priceValue: 7800, time: "12 dk önce", minutesAgo: 12, rating: 4.9, message: "Merhaba, fotoğrafları inceledim. Malzeme dahil 7.800₺'ye 3 günde teslim ederim. Referanslarımı profilimden görebilirsiniz." },
-    { name: "Kaya Tadilat", initials: "KT", price: "6.500₺", priceValue: 6500, time: "40 dk önce", minutesAgo: 40, rating: 4.6, message: "İşi yerinde görmem lazım ama tahmini 6.500₺ civarı. Yarın öğleden sonra uygun olur mu?" },
-    { name: "Onur Usta", initials: "OU", price: "9.200₺", priceValue: 9200, time: "1 saat önce", minutesAgo: 60, rating: 5.0, message: "20 yıllık ustayım, kaliteli malzeme kullanıyorum. Fiyatım biraz yüksek ama garantili iş çıkarıyorum." },
-    { name: "Serdar Yapı", initials: "SY", price: "7.200₺", priceValue: 7200, time: "2 saat önce", minutesAgo: 120, rating: 4.7, message: "Ekip olarak çalışıyoruz, işi 2 günde bitiririz. Öncesinde ücretsiz keşif yapabiliriz." },
-  ],
-  tirnakci: [
-    { name: "Naz Nail Art", initials: "NN", price: "450₺", priceValue: 450, time: "5 dk önce", minutesAgo: 5, rating: 5.0, message: "Gel manikür + istediğin tasarım dahil. Bu hafta cuma/cumartesi müsaitlik var, DM'den saat ayarlayalım." },
-    { name: "Ela Beauty", initials: "EB", price: "380₺", priceValue: 380, time: "18 dk önce", minutesAgo: 18, rating: 4.8, message: "Minimal ve chrome tasarımlarda uzmanım. Referans fotoğraflarımı profilimde görebilirsin." },
-    { name: "Cilalı Stüdyo", initials: "CS", price: "500₺", priceValue: 500, time: "30 dk önce", minutesAgo: 30, rating: 4.9, message: "3D nail art ve baby boomer tasarım yapıyoruz, ürünlerimiz hijyenik ambalajlı ve tek kullanımlık." },
-    { name: "Buse Tırnak Sanatı", initials: "BT", price: "420₺", priceValue: 420, time: "1 saat önce", minutesAgo: 60, rating: 4.7, message: "Evimde stüdyo ortamında çalışıyorum, sakin bir ortamda rahat işlem yapabiliriz." },
-    { name: "Glow Nails", initials: "GN", price: "460₺", priceValue: 460, time: "1 saat önce", minutesAgo: 62, rating: 4.9, message: "Ombre ve French tasarımlarda deneyimliyim, kalıcılık garantisi veriyorum." },
-  ],
-  generic: [
-    { name: "Can B.", initials: "CB", price: "850₺", priceValue: 850, time: "10 dk önce", minutesAgo: 10, rating: 4.7, message: "İlanını gördüm, detayları konuşabilir miyiz? Deneyimliyim ve referans verebilirim." },
-    { name: "Selin K.", initials: "SK", price: "700₺", priceValue: 700, time: "25 dk önce", minutesAgo: 25, rating: 4.8, message: "Bu alanda birkaç yıldır çalışıyorum, uygun bir zamanda görüşelim isterim." },
-    { name: "Profesyonel Ekip", initials: "PE", price: "1.100₺", priceValue: 1100, time: "45 dk önce", minutesAgo: 45, rating: 4.6, message: "Ekibimizle bu tür işleri sıkça yapıyoruz, portföyümüzü paylaşabiliriz." },
-    { name: "Murat D.", initials: "MD", price: "650₺", priceValue: 650, time: "1 saat önce", minutesAgo: 60, rating: 4.5, message: "Merhaba, ihtiyacını daha net anlamak isterim, mesaj atabilir misin?" },
-    { name: "Aylin T.", initials: "AT", price: "780₺", priceValue: 780, time: "2 saat önce", minutesAgo: 120, rating: 4.9, message: "Bu konuda deneyimliyim, kısa sürede tamamlayabilirim." },
-  ],
-  temizlik: [
-    { name: "TemizPark Ekibi", initials: "TP", price: "900₺", priceValue: 900, time: "9 dk önce", minutesAgo: 9, rating: 4.8, message: "Ekip halinde geliyoruz, malzemeler bizde. Bugün öğleden sonra da müsaitlik var." },
-    { name: "Selin Temizlik", initials: "ST", price: "800₺", priceValue: 800, time: "20 dk önce", minutesAgo: 20, rating: 4.9, message: "Cam ve derin temizlik dahil paket sunuyorum. Referanslarım profilimde mevcut." },
-    { name: "Pak Temizlik", initials: "PK", price: "1.050₺", priceValue: 1050, time: "38 dk önce", minutesAgo: 38, rating: 4.7, message: "Profesyonel ekipmanla çalışıyoruz, halı yıkama da dahil edebiliriz." },
-    { name: "Parlak Ev Bakım", initials: "PE", price: "750₺", priceValue: 750, time: "1 saat önce", minutesAgo: 55, rating: 4.6, message: "Haftalık düzenli anlaşma yaparsak fiyatta indirim yapabilirim." },
-    { name: "Deniz Temizlik", initials: "DT", price: "870₺", priceValue: 870, time: "1 saat önce", minutesAgo: 70, rating: 4.8, message: "Bugün için uygunum, 2 kişilik ekiple 2-3 saatte biter." },
-  ],
-  nakliye: [
-    { name: "Murat Nakliyat", initials: "MN", price: "3.200₺", priceValue: 3200, time: "14 dk önce", minutesAgo: 14, rating: 4.7, message: "Sigortalı taşıma yapıyoruz, asansörlü araç mevcut. Paketleme de dahil edebiliriz." },
-    { name: "Hızlı Nakliyat", initials: "HN", price: "2.900₺", priceValue: 2900, time: "27 dk önce", minutesAgo: 27, rating: 4.5, message: "Bugün akşam müsaitim, ekip 3 kişi. Montaj-demontaj hizmeti de veriyoruz." },
-    { name: "Güven Evden Eve", initials: "GE", price: "3.600₺", priceValue: 3600, time: "50 dk önce", minutesAgo: 50, rating: 4.9, message: "20 yıllık firma, tam sigortalı. Ücretsiz keşif yapıp kesin fiyat veririz." },
-    { name: "Ekspres Taşımacılık", initials: "ET", price: "2.750₺", priceValue: 2750, time: "1 saat önce", minutesAgo: 65, rating: 4.4, message: "Uygun fiyat garantisi veriyoruz, hafta içi indirimli çalışıyoruz." },
-  ],
-  cilingir: [
-    { name: "Ortaköy Anahtar Usta", initials: "OA", price: "450₺", priceValue: 450, time: "4 dk önce", minutesAgo: 4, rating: 4.8, message: "15 dakikada adresinize ulaşabilirim, kapı açma + kilit kontrolü dahil." },
-    { name: "Hızlı Çilingir Servisi", initials: "HC", price: "400₺", priceValue: 400, time: "9 dk önce", minutesAgo: 9, rating: 4.9, message: "7/24 hizmet veriyorum, şu an yakınınızdayım, 10 dakikada gelirim." },
-    { name: "Barış Çilingir", initials: "BC", price: "500₺", priceValue: 500, time: "16 dk önce", minutesAgo: 16, rating: 4.6, message: "Kilit değişimi de gerekiyorsa uygun fiyata yapabilirim, yanımda stok var." },
-    { name: "Güvenlik Kilit Sistemleri", initials: "GK", price: "480₺", priceValue: 480, time: "25 dk önce", minutesAgo: 25, rating: 4.7, message: "Çelik kapı ve site girişlerinde uzmanız, faturalı hizmet veriyoruz." },
-  ],
-  ogretmen: [
-    { name: "Deniz Aydın", initials: "DA", price: "350₺/saat", priceValue: 350, time: "11 dk önce", minutesAgo: 11, rating: 4.9, message: "10 yıllık matematik öğretmeniyim, LGS'ye hazırlık konusunda deneyimliyim. İlk ders tanışma amaçlı indirimli." },
-    { name: "İstanbul Özel Ders Merkezi", initials: "İÖ", price: "320₺/saat", priceValue: 320, time: "24 dk önce", minutesAgo: 24, rating: 4.7, message: "Alanında uzman öğretmen kadromuzla birebir veya grup ders imkanı sunuyoruz." },
-    { name: "Ege Akademi", initials: "EA", price: "300₺/saat", priceValue: 300, time: "40 dk önce", minutesAgo: 40, rating: 4.8, message: "Online veya yüz yüze esnek program, deneme dersi ücretsiz." },
-    { name: "Can Hoca", initials: "CH", price: "280₺/saat", priceValue: 280, time: "55 dk önce", minutesAgo: 55, rating: 4.6, message: "Üniversite öğrencisiyim, alanımda başarılıyım. Uygun fiyata düzenli ders verebilirim." },
-  ],
-  muhendis: [
-    { name: "Emre Y. İnşaat Müh.", initials: "EY", price: "6.000₺", priceValue: 6000, time: "18 dk önce", minutesAgo: 18, rating: 4.9, message: "Statik proje ve zemin etüdü değerlendirmesi dahil, 5 iş günü teslim." },
-    { name: "Yılmaz Mühendislik", initials: "YM", price: "5.500₺", priceValue: 5500, time: "33 dk önce", minutesAgo: 33, rating: 4.7, message: "Yerinde keşif yapıp kesin teklif veririz, proje çizimleri dahildir." },
-    { name: "Duran Usta Tadilat", initials: "DU", price: "5.800₺", priceValue: 5800, time: "50 dk önce", minutesAgo: 50, rating: 4.9, message: "Yapı denetim danışmanlığı da verebiliriz, referans projelerimiz mevcut." },
-  ],
-  tasarim: [
-    { name: "Zeynep D.", initials: "ZD", price: "2.800₺", priceValue: 2800, time: "7 dk önce", minutesAgo: 7, rating: 4.9, message: "Marka kimliği + logo paketi, 3 revizyon hakkı dahil. Portföyümü paylaşabilirim." },
-    { name: "Onur Grafik", initials: "OG", price: "2.200₺", priceValue: 2200, time: "19 dk önce", minutesAgo: 19, rating: 4.6, message: "Minimal ve modern tasarım tarzım var, 4 gün içinde teslim ederim." },
-    { name: "Pixel Studio", initials: "PS", price: "3.500₺", priceValue: 3500, time: "35 dk önce", minutesAgo: 35, rating: 5.0, message: "Kurumsal kimlik kılavuzu dahil tam paket sunuyoruz, ekip çalışması." },
-  ],
-  yazilim: [
-    { name: "Elif K.", initials: "EK", price: "450₺/saat", priceValue: 450, time: "6 dk önce", minutesAgo: 6, rating: 5.0, message: "React & Node.js ile 5 yıllık deneyimim var, benzer bir projeyi geçen ay tamamladım." },
-    { name: "Kaan Yazılım", initials: "KY", price: "380₺/saat", priceValue: 380, time: "21 dk önce", minutesAgo: 21, rating: 4.7, message: "Full-stack geliştirici, API entegrasyonu ve veritabanı tasarımı dahil çalışıyorum." },
-    { name: "Code Atölyesi", initials: "CA", price: "500₺/saat", priceValue: 500, time: "40 dk önce", minutesAgo: 40, rating: 4.9, message: "3 kişilik ekibiz, sprint bazlı çalışıp düzenli demo sunuyoruz." },
-    { name: "Berk S.", initials: "BS", price: "320₺/saat", priceValue: 320, time: "1 saat önce", minutesAgo: 58, rating: 4.5, message: "Freelance olarak çalışıyorum, esnek saatlerde iletişimde kalabilirim." },
-  ],
-  "hasta-bakici": [
-    { name: "Songül T.", initials: "ST", price: "350₺/gün", priceValue: 350, time: "9 dk önce", minutesAgo: 9, rating: 4.9, message: "12 yıllık deneyimim var, gece nöbeti de alabilirim. İlaç takibi konusunda titizim." },
-    { name: "Nazan Bakım Hizmetleri", initials: "NB", price: "380₺/gün", priceValue: 380, time: "20 dk önce", minutesAgo: 20, rating: 4.7, message: "Kurumsal ekip olarak çalışıyoruz, sigortalı ve referans kontrollü personel sağlıyoruz." },
-    { name: "Yasemin K.", initials: "YK", price: "320₺/gün", priceValue: 320, time: "35 dk önce", minutesAgo: 35, rating: 4.6, message: "Hasta bakıcılık sertifikam var, yatalak hasta deneyimim mevcut." },
-  ],
-  hemsire: [
-    { name: "Hemşire Aylin K.", initials: "AK", price: "300₺", priceValue: 300, time: "6 dk önce", minutesAgo: 6, rating: 5.0, message: "Lisanslıyım, 15 dakikada adresinize ulaşabilirim. Serum ve enjeksiyon konusunda deneyimliyim." },
-    { name: "Hemşire Onur D.", initials: "OD", price: "280₺", priceValue: 280, time: "18 dk önce", minutesAgo: 18, rating: 4.8, message: "Evde sağlık hizmetleri konusunda 8 yıllık tecrübem var, acil çağrılara da bakabilirim." },
-    { name: "SağlıkEv Hemşirelik", initials: "SE", price: "340₺", priceValue: 340, time: "40 dk önce", minutesAgo: 40, rating: 4.9, message: "7/24 hizmet veren bir ekibiz, tüm hemşirelerimiz lisanslı ve sigortalı." },
-  ],
-  fizyoterapist: [
-    { name: "Fzt. Kerem A.", initials: "KA", price: "500₺/seans", priceValue: 500, time: "14 dk önce", minutesAgo: 14, rating: 4.8, message: "Ameliyat sonrası rehabilitasyon konusunda uzmanım, evde seans yapabilirim." },
-    { name: "Fzt. Selin B.", initials: "SB", price: "450₺/seans", priceValue: 450, time: "28 dk önce", minutesAgo: 28, rating: 4.9, message: "Manuel terapi ve egzersiz programı dahil paket sunuyorum, ilk seansta değerlendirme yaparım." },
-    { name: "Fizyo Merkez Ekibi", initials: "FM", price: "480₺/seans", priceValue: 480, time: "50 dk önce", minutesAgo: 50, rating: 4.7, message: "3 fizyoterapistten oluşan ekibiz, uygun saatlere göre eşleştirme yapıyoruz." },
-  ],
-  makyaj: [
-    { name: "Melis Makyaj Atölyesi", initials: "MM", price: "1.200₺", priceValue: 1200, time: "7 dk önce", minutesAgo: 7, rating: 4.9, message: "Prova dahil paket sunuyorum, adresinize gelebilirim. Portföyümü DM'den paylaşabilirim." },
-    { name: "Ela Beauty", initials: "EB", price: "950₺", priceValue: 950, time: "20 dk önce", minutesAgo: 20, rating: 4.7, message: "Doğal ve kalıcı makyaj konusunda uzmanım, ürünlerim hassas ciltlere uygun." },
-    { name: "Naz Güzellik", initials: "NG", price: "1.400₺", priceValue: 1400, time: "35 dk önce", minutesAgo: 35, rating: 5.0, message: "Saç + makyaj paketi de sunuyorum, davet öncesi prova ücretsiz." },
-  ],
-  bakim: [
-    { name: "Dermo Güzellik Merkezi", initials: "DG", price: "650₺", priceValue: 650, time: "11 dk önce", minutesAgo: 11, rating: 4.8, message: "Cihazlı cilt analizi ile başlıyoruz, cilt tipine özel bakım planı çıkarıyoruz. Ağda ve kaş tasarımı da ekleyebiliriz." },
-    { name: "Studio Reyhan", initials: "SR", price: "500₺", priceValue: 500, time: "8 dk önce", minutesAgo: 8, rating: 4.9, message: "Saç, kaş ve cilt bakımından hangisini istersen aynı randevuda halledebiliriz. Çocuklu misafirler için oyun köşemiz de mevcut." },
-    { name: "Brow Studio Zeynep", initials: "BZ", price: "600₺", priceValue: 600, time: "16 dk önce", minutesAgo: 16, rating: 4.9, message: "Kirpik lifting, kaş tasarımı ve ağda bir arada yapılabilir. Hijyenik tek kullanımlık malzemeler kullanıyorum." },
-    { name: "Huzur Masaj Stüdyosu", initials: "HM", price: "700₺", priceValue: 700, time: "23 dk önce", minutesAgo: 23, rating: 4.8, message: "Masaj, cilt bakımı ve aromaterapiyi tek pakette sunuyorum, evinize gelebilirim." },
-    { name: "Glow Skin Studio", initials: "GS", price: "580₺", priceValue: 580, time: "34 dk önce", minutesAgo: 34, rating: 4.6, message: "Akne/leke tedavisi ve genel cilt bakımında deneyimliyim, ilk seansta ücretsiz analiz yapıyorum." },
-  ],
-  terzi: [
-    { name: "Terzi Necla Hanım", initials: "TN", price: "150₺", priceValue: 150, time: "13 dk önce", minutesAgo: 13, rating: 4.8, message: "Aynı gün teslim yapabilirim, dükkanım mahallenizde, kolayca uğrayabilirsiniz." },
-    { name: "Moda Terzi Atölyesi", initials: "MT", price: "180₺", priceValue: 180, time: "26 dk önce", minutesAgo: 26, rating: 4.6, message: "Özel dikim ve tadilat işlerinde 15 yıllık deneyimim var, prova imkanı sunuyorum." },
-    { name: "Hızlı Tadilat Terzi", initials: "HT", price: "130₺", priceValue: 130, time: "42 dk önce", minutesAgo: 42, rating: 4.5, message: "Paça/kol kısaltma gibi basit işlerde 1 saatte teslim edebiliyorum." },
-  ],
-  yemek: [
-    { name: "Elif'in Mutfağı", initials: "EM", price: "800₺/hafta", priceValue: 800, time: "9 dk önce", minutesAgo: 9, rating: 4.9, message: "Bebek/çocuk beslenmesine uygun tarifler hazırlayabilirim, alerjen bilgisini paylaşırım." },
-    { name: "Ev Sofrası Catering", initials: "ES", price: "950₺/hafta", priceValue: 950, time: "21 dk önce", minutesAgo: 21, rating: 4.7, message: "Haftalık menü planı çıkarıp evinizde pişiriyoruz, dondurucuya uygun paketleme de yapabiliriz." },
-    { name: "Anne Eli Değmiş", initials: "AE", price: "700₺/hafta", priceValue: 700, time: "37 dk önce", minutesAgo: 37, rating: 4.8, message: "Ev yemekleri konusunda 12 yıllık deneyimim var, özel diyet taleplerine göre de hazırlarım." },
-  ],
-  "yoga-koc": [
-    { name: "Ayşe Nur — Yoga & Yaşam Koçu", initials: "AN", price: "450₺", priceValue: 450, time: "10 dk önce", minutesAgo: 10, rating: 4.9, message: "Doğum sonrası toparlanma yogası ve meditasyon konusunda uzmanım, evinizde birebir ders verebilirim." },
-    { name: "Zen Yaşam Koçluğu", initials: "ZY", price: "500₺", priceValue: 500, time: "22 dk önce", minutesAgo: 22, rating: 4.7, message: "Online grup dersleri ve bireysel yaşam koçluğu seansları sunuyorum, ilk seans tanışma amaçlı." },
-    { name: "Huzur Yoga Stüdyosu", initials: "HY", price: "400₺", priceValue: 400, time: "36 dk önce", minutesAgo: 36, rating: 4.8, message: "Anne-bebek yogası dahil çeşitli programlarımız var, esnek saatlerde ders açabiliriz." },
-  ],
-  "bahce-bakim": [
-    { name: "Yeşil Bahçe Ekibi", initials: "YB", price: "500₺", priceValue: 500, time: "12 dk önce", minutesAgo: 12, rating: 4.7, message: "Çocuk güvenli ürünler kullanıyoruz, düzenli bakım aboneliği de sunabiliriz." },
-    { name: "Bahçıvan Kemal", initials: "BK", price: "400₺", priceValue: 400, time: "25 dk önce", minutesAgo: 25, rating: 4.5, message: "Çim biçme ve budama konusunda deneyimliyim, bugün için uygunum." },
-    { name: "Yeşillik Peyzaj", initials: "YP", price: "650₺", priceValue: 650, time: "40 dk önce", minutesAgo: 40, rating: 4.8, message: "Balkon ve teras bitkilendirme konusunda uzmanız, tasarım önerisi de sunuyoruz." },
-  ],
-  "profesyonel-fotograf": [
-    { name: "Cansu Kaya Fotoğrafçılık", initials: "CK", price: "2.500₺", priceValue: 2500, time: "8 dk önce", minutesAgo: 8, rating: 5.0, message: "Evinize gelip çocuğunuzun rahat olduğu bir ortamda çekim yapabiliriz, tüm kareler düzenlenmiş teslim edilir." },
-    { name: "Foto Stüdyo Aile", initials: "FA", price: "1.800₺", priceValue: 1800, time: "19 dk önce", minutesAgo: 19, rating: 4.7, message: "Doğum günü ve aile çekimlerinde deneyimliyim, dijital albüm de dahil paket sunuyorum." },
-    { name: "Işıl Görsel", initials: "IG", price: "2.200₺", priceValue: 2200, time: "31 dk önce", minutesAgo: 31, rating: 4.8, message: "Yeni doğan fotoğrafçılığında uzmanım, bebeğin uyku saatine göre planlama yapıyoruz." },
-  ],
-  "spor-egitmeni": [
-    { name: "Buğra Fit — Kişisel Antrenör", initials: "BF", price: "500₺", priceValue: 500, time: "9 dk önce", minutesAgo: 9, rating: 4.8, message: "Doğum sonrası toparlanma programında deneyimliyim, evinize gelip ekipmansız antrenman planı hazırlayabilirim." },
-    { name: "Zeynep PT", initials: "ZP", price: "450₺", priceValue: 450, time: "20 dk önce", minutesAgo: 20, rating: 4.7, message: "Online takip ve haftalık program desteği sunuyorum, ilk seans değerlendirme amaçlı." },
-    { name: "Form Stüdyo", initials: "FS", price: "550₺", priceValue: 550, time: "34 dk önce", minutesAgo: 34, rating: 4.9, message: "3 eğitmenden oluşan ekibiz, evde veya stüdyoda esnek saatlerde çalışabiliriz." },
-  ],
-  diyetisyen: [
-    { name: "Dyt. Ceren Yıldız", initials: "CY", price: "600₺", priceValue: 600, time: "9 dk önce", minutesAgo: 9, rating: 4.9, message: "İlk görüşme ücretsiz, doğum sonrası ve emzirme dönemi beslenmesinde deneyimliyim." },
-    { name: "Dyt. Onur Bey", initials: "OB", price: "500₺", priceValue: 500, time: "20 dk önce", minutesAgo: 20, rating: 4.6, message: "Çocuk beslenmesi konusunda uzmanım, aile için toplu paket de sunuyorum." },
-    { name: "Beslenme Kliniği", initials: "BK", price: "650₺", priceValue: 650, time: "35 dk önce", minutesAgo: 35, rating: 4.8, message: "3 diyetisyenden oluşan ekibiz, online takip uygulamamız da mevcut." },
-  ],
-  psikolog: [
-    { name: "Psk. Selin Arslan", initials: "SA", price: "750₺", priceValue: 750, time: "6 dk önce", minutesAgo: 6, rating: 5.0, message: "Doğum sonrası depresyon konusunda uzmanım, gizlilik esastır, online seans da yapabiliriz." },
-    { name: "Psk. Barış Ünal", initials: "BU", price: "650₺", priceValue: 650, time: "19 dk önce", minutesAgo: 19, rating: 4.7, message: "Aile danışmanlığı ve ebeveynlik kaygısı konusunda deneyimliyim." },
-    { name: "Yaşam Terapi Merkezi", initials: "YT", price: "800₺", priceValue: 800, time: "33 dk önce", minutesAgo: 33, rating: 4.9, message: "Klinik ekibimizde doğum sonrası sürece özel uzmanlaşmış terapistler var." },
-  ],
-  "logusa-bakicisi": [
-    { name: "Hemşire Gül T.", initials: "GT", price: "400₺/gün", priceValue: 400, time: "8 dk önce", minutesAgo: 8, rating: 4.9, message: "Hemşirelik geçmişim var, gece nöbeti de alabilirim. İlk 40 gün deneyimim geniş." },
-    { name: "Loğusa Destek Ekibi", initials: "LD", price: "450₺/gün", priceValue: 450, time: "17 dk önce", minutesAgo: 17, rating: 4.8, message: "Anne ve bebek bakımı konusunda uzman ekibiz, referanslarımızı paylaşabiliriz." },
-    { name: "Sevgi H.", initials: "SH", price: "380₺/gün", priceValue: 380, time: "29 dk önce", minutesAgo: 29, rating: 4.6, message: "10 yıllık loğusa bakım deneyimim var, sabırlı ve titiz çalışırım." },
-  ],
-  "emzirme-danismani": [
-    { name: "IBCLC Deniz K.", initials: "DK", price: "500₺", priceValue: 500, time: "10 dk önce", minutesAgo: 10, rating: 5.0, message: "Uluslararası sertifikalıyım, evde destek verebilirim, ilk seans değerlendirme amaçlıdır." },
-    { name: "IBCLC Pınar Ş.", initials: "PS", price: "450₺", priceValue: 450, time: "24 dk önce", minutesAgo: 24, rating: 4.8, message: "Süt yetersizliği ve pozisyon sorunlarında deneyimliyim, online destek de sunuyorum." },
-  ],
-  elektrikci: [
-    { name: "Elektrikçi Hasan Usta", initials: "HU", price: "350₺", priceValue: 350, time: "7 dk önce", minutesAgo: 7, rating: 4.7, message: "Sigortalı çalışıyorum, çocuklu evlerde güvenlik kontrolü de yapıyorum." },
-    { name: "Hızlı Elektrik Servisi", initials: "HE", price: "300₺", priceValue: 300, time: "16 dk önce", minutesAgo: 16, rating: 4.5, message: "Bugün için müsaitim, 30 dakikada adresinize ulaşabilirim." },
-    { name: "Güven Elektrik", initials: "GE", price: "400₺", priceValue: 400, time: "31 dk önce", minutesAgo: 31, rating: 4.9, message: "20 yıllık ustayım, faturalı ve garantili işçilik sunuyorum." },
-  ],
-  "su-tesisatcisi": [
-    { name: "Tesisatçı Murat", initials: "TM", price: "400₺", priceValue: 400, time: "5 dk önce", minutesAgo: 5, rating: 4.6, message: "7/24 acil çağrı hattım var, su kaçağı tespitinde kameralı cihaz kullanıyorum." },
-    { name: "Su Tesisat Ekspres", initials: "SE", price: "350₺", priceValue: 350, time: "14 dk önce", minutesAgo: 14, rating: 4.7, message: "Gider tıkanıklığı ve batarya tamiri konusunda hızlı çözüm sunuyorum." },
-    { name: "Anadolu Tesisat", initials: "AT", price: "450₺", priceValue: 450, time: "27 dk önce", minutesAgo: 27, rating: 4.8, message: "Kombiden musluğa her türlü tesisat işini yapıyoruz, faturalı hizmet." },
-  ],
-  "hali-yikama": [
-    { name: "TemizPark Halı Yıkama", initials: "TP", price: "80₺/m²", priceValue: 80, time: "11 dk önce", minutesAgo: 11, rating: 4.8, message: "Bebek/çocuk dostu, kimyasal içermeyen deterjan kullanıyoruz, aynı gün kurutma." },
-    { name: "Işıl Halı Yıkama", initials: "IH", price: "65₺/m²", priceValue: 65, time: "23 dk önce", minutesAgo: 23, rating: 4.6, message: "Evde yerinde yıkama yapıyoruz, koltuk yıkama da dahil paket sunabiliriz." },
-    { name: "Anadolu Halı Yıkama", initials: "AH", price: "90₺/m²", priceValue: 90, time: "40 dk önce", minutesAgo: 40, rating: 4.9, message: "20 yıllık tesisimiz var, isteyen fabrikaya da bırakabilir." },
-  ],
-  "etkinlik-organizatoru": [
-    { name: "Renkli Partiler Ekibi", initials: "RP", price: "3.500₺", priceValue: 3500, time: "9 dk önce", minutesAgo: 9, rating: 4.9, message: "Tema kurulumu, animasyon ve ikramlar dahil anahtar teslim organizasyon sunuyoruz." },
-    { name: "Küçük Şölen", initials: "KS", price: "2.800₺", priceValue: 2800, time: "22 dk önce", minutesAgo: 22, rating: 4.7, message: "Evde küçük ölçekli, samimi doğum günü organizasyonları konusunda uzmanız." },
-    { name: "Parti Zamanı", initials: "PZ", price: "4.200₺", priceValue: 4200, time: "38 dk önce", minutesAgo: 38, rating: 4.8, message: "Mekan + animasyon + pasta dahil tam paket, fotoğrafçı da ekleyebiliriz." },
-  ],
-  "sosyal-medya": [
-    { name: "Buse K.", initials: "BK", price: "4.200₺/ay", priceValue: 4200, time: "10 dk önce", minutesAgo: 10, rating: 4.7, message: "İçerik takvimi + reels çekimi + topluluk yönetimi dahil, aylık rapor sunarım." },
-    { name: "Can B.", initials: "CB", price: "3.500₺/ay", priceValue: 3500, time: "22 dk önce", minutesAgo: 22, rating: 4.6, message: "Meta reklam yönetimi konusunda uzmanım, performans odaklı çalışırım." },
-    { name: "Sosyal Atölye", initials: "SA", price: "5.000₺/ay", priceValue: 5000, time: "45 dk önce", minutesAgo: 45, rating: 4.9, message: "3 kişilik ajans ekibiyiz, çekim + kurgu + yönetim tek pakette." },
-  ],
-  dijital: [
-    { name: "Can B.", initials: "CB", price: "3.500₺/ay", priceValue: 3500, time: "13 dk önce", minutesAgo: 13, rating: 4.6, message: "Instagram ve Meta reklam yönetimi, aylık performans raporlaması dahil." },
-    { name: "Growth Ajans", initials: "GA", price: "4.800₺/ay", priceValue: 4800, time: "28 dk önce", minutesAgo: 28, rating: 4.8, message: "SEO + reklam yönetimi birlikte sunuyoruz, ilk ay ücretsiz denetim." },
-    { name: "Merve P.", initials: "MP", price: "2.900₺/ay", priceValue: 2900, time: "50 dk önce", minutesAgo: 50, rating: 4.5, message: "Küçük işletmelere özel uygun fiyatlı paketlerim var." },
-  ],
-};
-
-function getOffersForCategory(categoryId) {
-  const pool = OFFER_POOLS[categoryId] || OFFER_POOLS.generic;
-  return pool.map((o, i) => ({ id: i + 1, status: "pending", ...o }));
-}
 
 function Stars({ value, size = 14 }) {
   return (
@@ -2448,7 +2276,7 @@ function ReviewCard({ review, onOpenMedia, isReal, currentUserId, providerId }) 
           </div>
           <div>
             <p className="text-sm font-medium" style={{ color: "#1B2B24" }}>{review.name}</p>
-            <p className="text-[11px]" style={{ color: "#8A8368" }}>{review.verified ? "Onaylı iş" : "Yorum"} · {review.time}</p>
+            <p className="text-[11px]" style={{ color: "#6B6550" }}>{review.verified ? "Onaylı iş" : "Yorum"} · {review.time}</p>
           </div>
         </div>
         <Stars value={review.value} />
@@ -2514,7 +2342,7 @@ function ReviewCard({ review, onOpenMedia, isReal, currentUserId, providerId }) 
             >
               {replySubmitting ? "Gönderiliyor..." : providerReply ? "Yanıtı Güncelle" : "Yanıtı Yayınla"}
             </button>
-            <button onClick={() => { setShowReplyForm(false); setReplyText(providerReply); }} className="text-xs font-medium" style={{ color: "#8A8368" }}>Vazgeç</button>
+            <button onClick={() => { setShowReplyForm(false); setReplyText(providerReply); }} className="text-xs font-medium" style={{ color: "#6B6550" }}>Vazgeç</button>
           </div>
         </div>
       )}
@@ -2651,12 +2479,12 @@ function DocConsentToggle({ visible, onChange }) {
           <span className="absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white transition-all" style={{ left: visible ? "16px" : "2px" }} />
         </button>
         <span className="text-[11px] font-medium" style={{ color: "#1B2B24" }}>{t("vitrinMedia.docVisibleLabel")}</span>
-        <span className="text-[10px] ml-auto flex items-center gap-1" style={{ color: visible ? "#3F7D5C" : "#8A8368" }}>
+        <span className="text-[10px] ml-auto flex items-center gap-1" style={{ color: visible ? "#3F7D5C" : "#6B6550" }}>
           {!visible && <Lock size={10} />}
           {visible ? t("vitrinMedia.docPublicBadge") : t("vitrinMedia.docPrivateBadge")}
         </span>
       </div>
-      <p className="text-[10px] mt-1.5" style={{ color: "#8A8368" }}>{t("vitrinMedia.docVisibleHint")}</p>
+      <p className="text-[10px] mt-1.5" style={{ color: "#6B6550" }}>{t("vitrinMedia.docVisibleHint")}</p>
     </div>
   );
 }
@@ -2680,7 +2508,7 @@ function OwnerVitrinPanel({ userId, serviceId, onListingsChanged, onReviewSettin
         <h2 className="font-serif text-xl flex-1" style={{ color: "#1B2B24" }}>{t("listingDetail.ownerPanelTitle")}</h2>
         <ChevronRight size={18} style={{ color: "#5C5744", transform: open ? "rotate(90deg)" : "none", transition: "transform 0.15s" }} />
       </button>
-      <p className="text-xs mt-1" style={{ color: "#8A8368" }}>{t("listingDetail.ownerPanelSubtext")}</p>
+      <p className="text-xs mt-1" style={{ color: "#6B6550" }}>{t("listingDetail.ownerPanelSubtext")}</p>
       {open && (
         <OwnerVitrinPanelBody
           userId={userId}
@@ -2921,7 +2749,7 @@ function OwnerVitrinPanelBody({ userId, serviceId, onListingsChanged, onReviewSe
   const certAllPublic = certificates.length > 0 && certificates.every((c) => c.visible);
   const cvPublic = !!cv?.visible;
   const ownerOnlyBadge = (
-    <span className="ml-auto text-[10px] flex items-center gap-1 shrink-0" style={{ color: "#8A8368" }}>
+    <span className="ml-auto text-[10px] flex items-center gap-1 shrink-0" style={{ color: "#6B6550" }}>
       <Lock size={10} /> {t("listingDetail.ownerPanelTitle")}
     </span>
   );
@@ -2934,24 +2762,24 @@ function OwnerVitrinPanelBody({ userId, serviceId, onListingsChanged, onReviewSe
           <h3 className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("vitrinMedia.statsHeading")}</h3>
         </div>
         {statsLoading ? (
-          <p className="text-xs" style={{ color: "#8A8368" }}>{t("common.loading")}</p>
+          <p className="text-xs" style={{ color: "#6B6550" }}>{t("common.loading")}</p>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div>
               <p className="font-serif text-2xl" style={{ color: "#1B2B24" }}>{stats?.conversations ?? 0}</p>
-              <p className="text-[11px]" style={{ color: "#8A8368" }}>{t("vitrinMedia.statConversations")}</p>
+              <p className="text-[11px]" style={{ color: "#6B6550" }}>{t("vitrinMedia.statConversations")}</p>
             </div>
             <div>
               <p className="font-serif text-2xl" style={{ color: "#1B2B24" }}>{stats?.completed ?? 0}</p>
-              <p className="text-[11px]" style={{ color: "#8A8368" }}>{t("vitrinMedia.statCompleted")}</p>
+              <p className="text-[11px]" style={{ color: "#6B6550" }}>{t("vitrinMedia.statCompleted")}</p>
             </div>
             <div>
               <p className="font-serif text-2xl" style={{ color: "#1B2B24" }}>{stats?.avgRating ?? "—"}{stats?.reviewCount ? ` (${stats.reviewCount})` : ""}</p>
-              <p className="text-[11px]" style={{ color: "#8A8368" }}>{t("vitrinMedia.statAvgRating")}</p>
+              <p className="text-[11px]" style={{ color: "#6B6550" }}>{t("vitrinMedia.statAvgRating")}</p>
             </div>
             <div>
               <p className="font-serif text-2xl" style={{ color: "#1B2B24" }}>{stats?.favorites ?? 0}</p>
-              <p className="text-[11px]" style={{ color: "#8A8368" }}>{t("vitrinMedia.statFavorites")}</p>
+              <p className="text-[11px]" style={{ color: "#6B6550" }}>{t("vitrinMedia.statFavorites")}</p>
             </div>
           </div>
         )}
@@ -2961,7 +2789,7 @@ function OwnerVitrinPanelBody({ userId, serviceId, onListingsChanged, onReviewSe
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("vitrinMedia.reviewsHeading")}</p>
-            <p className="text-xs mt-0.5" style={{ color: "#8A8368" }}>
+            <p className="text-xs mt-0.5" style={{ color: "#6B6550" }}>
               {shareReviews ? t("vitrinMedia.reviewsSharedNote") : t("vitrinMedia.reviewsOwnNote")}
             </p>
           </div>
@@ -2979,7 +2807,7 @@ function OwnerVitrinPanelBody({ userId, serviceId, onListingsChanged, onReviewSe
           <BadgeCheck size={16} style={{ color: "#3A5BA0" }} />
           <h3 className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("vitrinMedia.credentialHeading")}</h3>
         </div>
-        <p className="text-xs mb-3" style={{ color: "#8A8368" }}>
+        <p className="text-xs mb-3" style={{ color: "#6B6550" }}>
           {t("vitrinMedia.credentialIntro")}
         </p>
         <input
@@ -2991,7 +2819,7 @@ function OwnerVitrinPanelBody({ userId, serviceId, onListingsChanged, onReviewSe
           className="w-full px-3 py-2.5 rounded-lg border text-xs mb-1"
           style={{ borderColor: "#D9D0BA" }}
         />
-        <p className="text-[11px] flex items-center gap-1" style={{ color: credentialSaved ? "#3F7D5C" : "#8A8368" }}>
+        <p className="text-[11px] flex items-center gap-1" style={{ color: credentialSaved ? "#3F7D5C" : "#6B6550" }}>
           {credentialSaving && <Loader2 size={10} className="animate-spin" />}
           {credentialSaving ? t("common.savingEllipsis") : credentialSaved ? t("vitrinMedia.credentialSaved") : t("vitrinMedia.credentialAutoSaveHint")}
         </p>
@@ -2999,7 +2827,7 @@ function OwnerVitrinPanelBody({ userId, serviceId, onListingsChanged, onReviewSe
       </div>
 
       {loading ? (
-        <p className="text-xs" style={{ color: "#8A8368" }}>{t("common.loading")}</p>
+        <p className="text-xs" style={{ color: "#6B6550" }}>{t("common.loading")}</p>
       ) : (
         <>
           <DocViewerModal doc={docViewer} onClose={() => setDocViewer(null)} />
@@ -3010,7 +2838,7 @@ function OwnerVitrinPanelBody({ userId, serviceId, onListingsChanged, onReviewSe
               <h3 className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("vitrinMedia.certHeading")}</h3>
               {!certAllPublic && ownerOnlyBadge}
             </div>
-            <p className="text-xs mb-4" style={{ color: "#8A8368" }}>
+            <p className="text-xs mb-4" style={{ color: "#6B6550" }}>
               {t("vitrinMedia.certIntro")}
             </p>
             {certError && (
@@ -3054,7 +2882,7 @@ function OwnerVitrinPanelBody({ userId, serviceId, onListingsChanged, onReviewSe
               <h3 className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("vitrinMedia.cvHeading")}</h3>
               {!cvPublic && ownerOnlyBadge}
             </div>
-            <p className="text-xs mb-4" style={{ color: "#8A8368" }}>
+            <p className="text-xs mb-4" style={{ color: "#6B6550" }}>
               {t("vitrinMedia.cvIntro")}
             </p>
             {cvError && (
@@ -3836,7 +3664,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
           ownerRow ? (
             <ListingInfoEditor row={ownerRow} userId={currentUserId} onSaved={handleInfoSaved} onCancel={() => setEditingInfo(false)} />
           ) : (
-            <div className="w-full max-w-xl py-10 flex justify-center"><Loader2 size={18} className="animate-spin" style={{ color: "#8A8368" }} /></div>
+            <div className="w-full max-w-xl py-10 flex justify-center"><Loader2 size={18} className="animate-spin" style={{ color: "#6B6550" }} /></div>
           )
         ) : (
         <div className="max-w-xl">
@@ -3869,7 +3697,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
                 <p className="text-sm font-medium" style={{ color: "#1B2B24" }}>{listing.provider}</p>
                 <LevelBadge level={listing.level} />
               </div>
-              {avgResponseLabel && <p className="text-[11px]" style={{ color: "#8A8368" }}>{t("listingDetail.avgResponse", { time: avgResponseLabel })}</p>}
+              {avgResponseLabel && <p className="text-[11px]" style={{ color: "#6B6550" }}>{t("listingDetail.avgResponse", { time: avgResponseLabel })}</p>}
             </div>
           </div>
           {listing.verified && listing.verified.length > 0 && (
@@ -3883,10 +3711,10 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
               "doğrulanmış" rengiyle değil, nötr bir tonla ve açık etiketle. */}
           {listing.professionalCredential && (
             <div className="mb-4 pb-4 border-b flex items-start gap-1.5" style={{ borderColor: "#D9D0BA" }}>
-              <BadgeCheck size={14} style={{ color: "#8A8368" }} className="mt-0.5 shrink-0" />
+              <BadgeCheck size={14} style={{ color: "#6B6550" }} className="mt-0.5 shrink-0" />
               <p className="text-xs" style={{ color: "#5C5744" }}>
                 {listing.professionalCredential}
-                <span className="block text-[10px] mt-0.5" style={{ color: "#8A8368" }}>{t("listingDetail.credentialDisclaimer")}</span>
+                <span className="block text-[10px] mt-0.5" style={{ color: "#6B6550" }}>{t("listingDetail.credentialDisclaimer")}</span>
               </p>
             </div>
           )}
@@ -3957,7 +3785,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
             <ShieldCheck size={18} style={{ color: "#3F7D5C" }} />
             <h2 className="font-serif text-xl" style={{ color: "#1B2B24" }}>{t("listingDetail.trustCenterHeading")}</h2>
           </div>
-          <p className="text-xs mb-5" style={{ color: "#8A8368" }}>
+          <p className="text-xs mb-5" style={{ color: "#6B6550" }}>
             {t("listingDetail.trustCenterSubtext")}
           </p>
 
@@ -3997,7 +3825,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
                     <div key={i} className="flex items-start gap-2.5 text-xs">
                       <BadgeCheck size={15} style={{ color: "#3F7D5C" }} className="shrink-0 mt-0.5" />
                       <div>
-                        <p className="font-medium" style={{ color: "#1B2B24" }}>{check.label} <span className="font-normal" style={{ color: "#8A8368" }}>· {check.date}</span></p>
+                        <p className="font-medium" style={{ color: "#1B2B24" }}>{check.label} <span className="font-normal" style={{ color: "#6B6550" }}>· {check.date}</span></p>
                         <p style={{ color: "#5C5744" }}>{check.note}</p>
                       </div>
                     </div>
@@ -4029,12 +3857,12 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
             <Grid3x3 size={18} style={{ color: "#3F7D5C" }} />
             <h2 className="font-serif text-xl" style={{ color: "#1B2B24" }}>{t("listingDetail.showcaseHeading", { provider: listing.provider })}</h2>
           </div>
-          <p className="text-xs mb-5" style={{ color: "#8A8368" }}>
+          <p className="text-xs mb-5" style={{ color: "#6B6550" }}>
             {t("listingDetail.showcaseSubtext")}
           </p>
 
           {providerShowcaseLoading && (
-            <p className="text-xs mb-5 flex items-center gap-1.5" style={{ color: "#8A8368" }}>
+            <p className="text-xs mb-5 flex items-center gap-1.5" style={{ color: "#6B6550" }}>
               <Loader2 size={12} className="animate-spin" /> {t("common.loading")}
             </p>
           )}
@@ -4158,7 +3986,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
                   </button>
                 ))}
                 {ownerMode && providerPortfolio.length < 9 && (
-                  <label className="aspect-square rounded-lg border-2 border-dashed flex flex-col items-center justify-center cursor-pointer gap-1" style={{ borderColor: "#D9D0BA", color: "#8A8368", opacity: ownerPortfolio.uploading ? 0.6 : 1 }}>
+                  <label className="aspect-square rounded-lg border-2 border-dashed flex flex-col items-center justify-center cursor-pointer gap-1" style={{ borderColor: "#D9D0BA", color: "#6B6550", opacity: ownerPortfolio.uploading ? 0.6 : 1 }}>
                     {ownerPortfolio.uploading ? <Loader2 size={18} className="animate-spin" /> : <UploadCloud size={18} />}
                     <span className="text-[10px] font-medium">{ownerPortfolio.uploading ? t("common.loading") : t("listingDetail.ownerAddMedia")}</span>
                     <input type="file" accept="image/*,video/*" multiple className="hidden" onChange={ownerPortfolio.add} disabled={ownerPortfolio.uploading} />
@@ -4176,7 +4004,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
             <FileText size={18} style={{ color: "#3A5BA0" }} />
             <h2 className="font-serif text-xl" style={{ color: "#1B2B24" }}>{t("listingDetail.docsHeading")}</h2>
           </div>
-          <p className="text-xs mb-4" style={{ color: "#8A8368" }}>{t("listingDetail.docsSubtext")}</p>
+          <p className="text-xs mb-4" style={{ color: "#6B6550" }}>{t("listingDetail.docsSubtext")}</p>
           <div className="grid sm:grid-cols-2 gap-2">
             {sharedDocs.map((d) => (
               <button
@@ -4188,7 +4016,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
                 {d.doc_type === "cv" ? <FileText size={16} style={{ color: "#3A5BA0" }} className="shrink-0" /> : <Award size={16} style={{ color: "#C2872B" }} className="shrink-0" />}
                 <span className="min-w-0">
                   <span className="block text-xs font-medium truncate" style={{ color: "#1B2B24" }}>{d.file_name || d.label || t("createListing.docFallbackName")}</span>
-                  <span className="block text-[10px]" style={{ color: "#8A8368" }}>{d.doc_type === "cv" ? t("listingDetail.docTypeCv") : t("listingDetail.docTypeCertificate")}</span>
+                  <span className="block text-[10px]" style={{ color: "#6B6550" }}>{d.doc_type === "cv" ? t("listingDetail.docTypeCv") : t("listingDetail.docTypeCertificate")}</span>
                 </span>
               </button>
             ))}
@@ -4233,7 +4061,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
               yazılanlardır (gizlilik) — sayılar tutmuyorsa (12 yorum ama 8
               listeleniyor gibi) kafa karışmasın diye açıkça belirtiyoruz. */}
           {isRealListing && shareProfileReviews && allReviews.length !== displayReviews.length && (
-            <p className="text-[11px] w-full" style={{ color: "#8A8368" }}>
+            <p className="text-[11px] w-full" style={{ color: "#6B6550" }}>
               {t("listingDetail.mergedReviewsNote")}
             </p>
           )}
@@ -4260,7 +4088,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
           </button>
           )}
         </div>
-        <p className="text-xs mb-4" style={{ color: "#8A8368" }}>{t("listingDetail.reviewsSortNote")}</p>
+        <p className="text-xs mb-4" style={{ color: "#6B6550" }}>{t("listingDetail.reviewsSortNote")}</p>
 
         {isRealListing && (summaryLoading || reviewSummary) && (
           <div className="flex items-start gap-2 rounded-xl p-3.5 mb-4" style={{ background: "#EFF6FF" }}>
@@ -4289,23 +4117,23 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
                     : t("listingDetail.reviewPublished")}
                 </p>
                 {reviewSubmitted === "pending" && (
-                  <p className="text-xs" style={{ color: "#8A8368" }}>{t("listingDetail.pendingMediaNote")}</p>
+                  <p className="text-xs" style={{ color: "#6B6550" }}>{t("listingDetail.pendingMediaNote")}</p>
                 )}
                 {reviewSubmitted === "staff-review" && (
-                  <p className="text-xs" style={{ color: "#8A8368" }}>{t("listingDetail.staffReviewNote")}</p>
+                  <p className="text-xs" style={{ color: "#6B6550" }}>{t("listingDetail.staffReviewNote")}</p>
                 )}
                 {reviewSubmitted === "rejected" && (
-                  <p className="text-xs" style={{ color: "#8A8368" }}>{t("listingDetail.rejectedMediaNote")}</p>
+                  <p className="text-xs" style={{ color: "#6B6550" }}>{t("listingDetail.rejectedMediaNote")}</p>
                 )}
                 {reviewSubmitted === "child" && (
-                  <p className="text-xs" style={{ color: "#8A8368" }}>{t("listingDetail.childMediaNote")}</p>
+                  <p className="text-xs" style={{ color: "#6B6550" }}>{t("listingDetail.childMediaNote")}</p>
                 )}
                 <button onClick={() => { setShowReviewForm(false); setReviewSubmitted(null); }} className="text-xs font-medium mt-2" style={{ color: "#2563EB" }}>{t("listingDetail.close")}</button>
               </div>
             ) : isRealListing && reviewEligibility?.checking ? (
               <div className="flex items-center gap-2 py-3 justify-center">
-                <Loader2 size={14} className="animate-spin" style={{ color: "#8A8368" }} />
-                <span className="text-xs" style={{ color: "#8A8368" }}>{t("listingDetail.checkingEligibility")}</span>
+                <Loader2 size={14} className="animate-spin" style={{ color: "#6B6550" }} />
+                <span className="text-xs" style={{ color: "#6B6550" }}>{t("listingDetail.checkingEligibility")}</span>
               </div>
             ) : isRealListing && !reviewEligibility?.ok ? (
               <div className="text-center py-3">
@@ -4368,7 +4196,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
                         <input type="file" accept={isRealListing ? "image/*" : "image/*,video/*"} className="hidden" onChange={handleReviewMedia} />
                       </label>
                     </div>
-                    <p className="text-[11px] mb-3" style={{ color: "#8A8368" }}>
+                    <p className="text-[11px] mb-3" style={{ color: "#6B6550" }}>
                       {t("listingDetail.mediaConsentNote")}
                     </p>
                   </>
@@ -4528,7 +4356,7 @@ function MapView({ onBack, onSelectProvider, onSelectJob, realListings, realJobs
       )}
 
       <div className="flex items-center gap-2 mb-3">
-        <MapPin size={14} style={{ color: "#8A8368" }} />
+        <MapPin size={14} style={{ color: "#6B6550" }} />
         <select
           value={cityId}
           onChange={(e) => { setCityId(e.target.value); setActive(null); }}
@@ -4560,18 +4388,18 @@ function MapView({ onBack, onSelectProvider, onSelectJob, realListings, realJobs
           />
           {mapQuery && (
             <button onClick={() => setMapQuery("")} className="absolute right-3.5 top-1/2 -translate-y-1/2" aria-label={t("common.clearSearchAria")}>
-              <X size={14} style={{ color: "#8A8368" }} />
+              <X size={14} style={{ color: "#6B6550" }} />
             </button>
           )}
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[11px] font-medium" style={{ color: "#8A8368" }}>{t("mapView.popularLabel")}</span>
+          <span className="text-[11px] font-medium" style={{ color: "#6B6550" }}>{t("mapView.popularLabel")}</span>
           {["Çilingir", "Temizlik", "Bakıcı", "Kuaför", "Hemşire", "Yoga & Meditasyon"].map((term) => (
             <button
               key={term}
               onClick={() => setMapQuery(term)}
               className="text-xs font-medium px-3 py-1.5 rounded-full border"
-              style={mapQuery === term ? { background: "#EFE8D8", color: "#1B2B24", borderColor: "#1B2B24" } : { borderColor: "#D9D0BA", color: "#8A8368" }}
+              style={mapQuery === term ? { background: "#EFE8D8", color: "#1B2B24", borderColor: "#1B2B24" } : { borderColor: "#D9D0BA", color: "#6B6550" }}
             >
               {term}
             </button>
@@ -4625,7 +4453,7 @@ function MapView({ onBack, onSelectProvider, onSelectJob, realListings, realJobs
         <div className="rounded-2xl border p-4 h-[480px] overflow-y-auto" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
           {active ? (
             <div>
-              <button onClick={() => setActive(null)} className="text-xs mb-3" style={{ color: "#8A8368" }}>{t("mapView.backToList")}</button>
+              <button onClick={() => setActive(null)} className="text-xs mb-3" style={{ color: "#6B6550" }}>{t("mapView.backToList")}</button>
               {active.kind === "job" && (
                 <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full mb-2" style={{ background: "#FFF3E0", color: "#C2872B" }}>
                   <Megaphone size={10} /> {t("mapView.jobBadge")}
@@ -4633,7 +4461,7 @@ function MapView({ onBack, onSelectProvider, onSelectJob, realListings, realJobs
               )}
               <img loading="lazy" decoding="async" src={active.img} alt="" className="w-full h-28 object-cover rounded-lg mb-3" />
               <p className="text-sm font-medium" style={{ color: "#1B2B24" }}>{active.name}</p>
-              <p className="text-xs mb-2" style={{ color: "#8A8368" }}>{active.district}, {city?.name}</p>
+              <p className="text-xs mb-2" style={{ color: "#6B6550" }}>{active.district}, {city?.name}</p>
               {active.kind !== "job" && (
                 <div className="flex items-center gap-1 mb-1">
                   <Stars value={active.rating} size={12} />
@@ -4654,11 +4482,11 @@ function MapView({ onBack, onSelectProvider, onSelectJob, realListings, realJobs
             </div>
           ) : (
             <div className="space-y-2">
-              <p className="text-xs font-medium mb-2" style={{ color: "#8A8368" }}>
+              <p className="text-xs font-medium mb-2" style={{ color: "#6B6550" }}>
                 {userLoc ? t("mapView.nearestProviders") : t("mapView.mapProviders")}
               </p>
               {sorted.length === 0 && (
-                <p className="text-xs" style={{ color: "#8A8368" }}>{t("mapView.noProviders")}</p>
+                <p className="text-xs" style={{ color: "#6B6550" }}>{t("mapView.noProviders")}</p>
               )}
               {sorted.map((p) => (
                 <button
@@ -4671,7 +4499,7 @@ function MapView({ onBack, onSelectProvider, onSelectJob, realListings, realJobs
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-xs font-medium truncate" style={{ color: "#1B2B24" }}>{p.name}</p>
-                    <p className="text-[11px] truncate" style={{ color: "#8A8368" }}>{p.district} · {p.price}</p>
+                    <p className="text-[11px] truncate" style={{ color: "#6B6550" }}>{p.district} · {p.price}</p>
                   </div>
                   {p.distance != null && (
                     <span className="text-[11px] font-medium shrink-0" style={{ color: "#3F7D5C" }}>{p.distance.toFixed(1)} km</span>
@@ -4682,7 +4510,7 @@ function MapView({ onBack, onSelectProvider, onSelectJob, realListings, realJobs
           )}
         </div>
       </div>
-      <p className="text-xs mt-3" style={{ color: "#8A8368" }}>
+      <p className="text-xs mt-3" style={{ color: "#6B6550" }}>
         {t("mapView.disclaimerNote")}
       </p>
     </div>
@@ -4834,130 +4662,6 @@ function JobDetailView({ job, onBack, onContact, currentUserId }) {
           )}
         </div>
       </div>
-    </div>
-  );
-}
-
-function OffersView({ onBack, job }) {
-  const { t } = useLanguage();
-  const [offers, setOffers] = useState(() => getOffersForCategory(job?.categoryId));
-  const [sortBy, setSortBy] = useState("price"); // price | rating | recent
-  const respond = (id, status) => setOffers(offers.map((o) => (o.id === id ? { ...o, status } : o)));
-  const jobTitle = job?.title || "iş ilanın";
-
-  const cheapest = Math.min(...offers.map((o) => o.priceValue));
-  const topRated = Math.max(...offers.map((o) => o.rating));
-
-  const sorted = [...offers].sort((a, b) => {
-    if (sortBy === "price") return a.priceValue - b.priceValue;
-    if (sortBy === "rating") return b.rating - a.rating;
-    return a.minutesAgo - b.minutesAgo;
-  });
-
-  const SortHeader = ({ label, value }) => (
-    <button
-      onClick={() => setSortBy(value)}
-      className="flex items-center gap-1 text-xs font-medium"
-      style={{ color: sortBy === value ? "#C2872B" : "#8A8368" }}
-    >
-      {label}
-      {sortBy === value && <ChevronRight size={12} className="rotate-90" />}
-    </button>
-  );
-
-  return (
-    <div className="max-w-3xl mx-auto px-5 py-8">
-      <button onClick={onBack} className="flex items-center gap-1 text-sm mb-4" style={{ color: "#5C5744" }}>
-        <ChevronLeft size={16} /> Geri
-      </button>
-      <h1 className="font-serif text-2xl mb-1" style={{ color: "#1B2B24" }}>Gelen Teklifler</h1>
-      <p className="text-sm mb-2" style={{ color: "#5C5744" }}>"{jobTitle}" ilanına {offers.length} teklif geldi — karşılaştırıp seçebilirsin</p>
-      {job?.homeServicePref && (
-        <p className="text-xs mb-5 flex items-center gap-1" style={{ color: "#3F7D5C" }}>
-          <Home size={12} />
-          {job.homeServicePref === "evde" ? "Evine gelebilecek sağlayıcılar önceliklendirildi" : job.homeServicePref === "mekanda" ? "Mekana gidebileceğini belirttin" : "Konum tercihin: fark etmez"}
-        </p>
-      )}
-
-      <div className="rounded-xl border overflow-hidden" style={{ borderColor: "#D9D0BA" }}>
-        {/* Table header with sort controls */}
-        <div
-          className="hidden sm:grid text-xs font-medium px-4 py-2.5"
-          style={{ gridTemplateColumns: "2fr 1fr 1fr 1fr 2fr 1.6fr", background: "#E4DCC5", color: "#5C5744" }}
-        >
-          <span>Sağlayıcı</span>
-          <SortHeader label="Puan" value="rating" />
-          <SortHeader label="Fiyat" value="price" />
-          <SortHeader label="Zaman" value="recent" />
-          <span>Mesaj</span>
-          <span>İşlem</span>
-        </div>
-
-        <div className="divide-y" style={{ borderColor: "#D9D0BA" }}>
-          {sorted.map((o) => (
-            <div
-              key={o.id}
-              className="grid grid-cols-1 sm:grid-cols-[2fr_1fr_1fr_1fr_2fr_1.6fr] gap-2 sm:gap-3 px-4 py-3 items-center"
-              style={{ background: "#F8F4E9" }}
-            >
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-medium text-white shrink-0" style={{ background: "#1B2B24" }}>{o.initials}</div>
-                <div className="min-w-0">
-                  <p className="text-sm font-medium truncate" style={{ color: "#1B2B24" }}>{o.name}</p>
-                  {o.priceValue === cheapest && (
-                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full inline-block mt-0.5" style={{ background: "rgba(63,125,92,0.15)", color: "#3F7D5C" }}>En uygun fiyat</span>
-                  )}
-                  {o.rating === topRated && o.priceValue !== cheapest && (
-                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full inline-block mt-0.5" style={{ background: "rgba(194,135,43,0.15)", color: "#C2872B" }}>En yüksek puan</span>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex sm:block items-center gap-1 text-xs" style={{ color: "#5C5744" }}>
-                <span className="sm:hidden" style={{ color: "#8A8368" }}>Puan: </span>
-                <span className="flex items-center gap-1"><Star size={11} fill="#C2872B" stroke="#C2872B" />{o.rating}</span>
-              </div>
-
-              <div className="text-sm font-medium" style={{ color: "#C2872B" }}>
-                <span className="sm:hidden text-xs font-normal" style={{ color: "#8A8368" }}>Fiyat: </span>
-                {o.price}
-              </div>
-
-              <div className="flex items-center gap-1 text-xs" style={{ color: "#8A8368" }}>
-                <Clock size={11} />{o.time}
-              </div>
-
-              <p className="text-xs leading-relaxed line-clamp-2" style={{ color: "#3D3B30" }}>{o.message}</p>
-
-              {o.status === "pending" ? (
-                <div className="flex gap-1.5">
-                  <button onClick={() => respond(o.id, "accepted")} className="flex-1 py-1.5 rounded-full text-[11px] font-medium text-white flex items-center justify-center gap-1" style={{ background: "#3F7D5C" }}>
-                    <Check size={11} /> Kabul
-                  </button>
-                  <button className="p-1.5 rounded-full border flex items-center justify-center" style={{ borderColor: "#D9D0BA", color: "#1B2B24" }} aria-label={t("common.messageAria")}>
-                    <MessageCircle size={12} />
-                  </button>
-                  <button onClick={() => respond(o.id, "declined")} className="p-1.5 rounded-full border" style={{ borderColor: "#D9D0BA", color: "#8A8368" }}>
-                    <X size={12} />
-                  </button>
-                </div>
-              ) : (
-                <div
-                  className="text-[11px] font-medium px-2 py-1.5 rounded-lg text-center"
-                  style={o.status === "accepted"
-                    ? { background: "rgba(63,125,92,0.12)", color: "#3F7D5C" }
-                    : { background: "rgba(0,0,0,0.05)", color: "#8A8368" }}
-                >
-                  {o.status === "accepted" ? "Kabul edildi" : "Reddedildi"}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-      <p className="text-xs mt-3" style={{ color: "#8A8368" }}>
-        Sıralamayı değiştirmek için tablo başlığındaki Puan, Fiyat veya Zaman'a tıkla.
-      </p>
     </div>
   );
 }
@@ -5144,7 +4848,7 @@ function SearchResultsView({ query, cityFilter, onBack, onSelectListing, realLis
               <div className="p-3.5">
                 <p className="text-sm font-medium leading-snug line-clamp-2" style={{ color: "#1B2B24" }}>{l.title}</p>
                 <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                  <p className="text-xs" style={{ color: "#8A8368" }}>{l.provider} · {l.city}</p>
+                  <p className="text-xs" style={{ color: "#6B6550" }}>{l.provider} · {l.city}</p>
                   <LevelBadge level={l.level} />
                 </div>
                 <div className="flex items-center justify-between mt-2.5">
@@ -5199,7 +4903,7 @@ function FavoritesView({ onBack, onSelectListing, onOpenJob, realListings, realJ
                       </div>
                       <div className="p-3.5">
                         <p className="text-sm font-medium leading-snug line-clamp-2" style={{ color: "#1B2B24" }}>{l.title}</p>
-                        <p className="text-xs mt-1" style={{ color: "#8A8368" }}>{l.provider} · {l.city}</p>
+                        <p className="text-xs mt-1" style={{ color: "#6B6550" }}>{l.provider} · {l.city}</p>
                       </div>
                     </button>
                     <button
@@ -5223,7 +4927,7 @@ function FavoritesView({ onBack, onSelectListing, onOpenJob, realListings, realJ
                   <div key={j.id} className="rounded-xl overflow-hidden border" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
                     <button onClick={() => onOpenJob(j)} className="w-full text-left p-3.5">
                       <p className="text-sm font-medium leading-snug line-clamp-2" style={{ color: "#1B2B24" }}>{j.title}</p>
-                      <p className="text-xs mt-1" style={{ color: "#8A8368" }}>{j.district} · {j.budget}</p>
+                      <p className="text-xs mt-1" style={{ color: "#6B6550" }}>{j.district} · {j.budget}</p>
                     </button>
                     <button
                       onClick={() => onToggleJobFavorite?.(j)}
@@ -5389,10 +5093,18 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
       return Number.isNaN(n) ? null : n;
     };
     const cityLabel = `${district.trim() ? district.trim() + ", " : ""}${cityName}`;
+    // Aciliyet ve hizmet yeri tercihi eskiden hiçbir yere kaydedilmiyordu; sağlayıcı
+    // ilanda göremiyordu. Şema değişikliği beklemeden açıklama metninin sonuna ekleniyor
+    // (yalnızca yeni ilanlarda; düzenlemede mevcut metin aynen korunur).
+    const urgencyLabel = urgency === "now" ? "Hemen / acil" : urgency === "today" ? "Bugün" : "Esnek";
+    const prefLabel = homeServicePref === "evde" ? "Evde" : homeServicePref === "mekanda" ? "Sağlayıcının mekânında" : "Fark etmez";
+    const detailsLine = isEditing ? "" : `
+
+Aciliyet: ${urgencyLabel}${mode === "local" ? ` · Hizmet yeri: ${prefLabel}` : ""}`;
     const payload = {
       category_id: categoryDbId,
       title: title.trim(),
-      description: desc.trim(),
+      description: desc.trim() + detailsLine,
       budget_min: minBudget.trim() ? parseBudget(minBudget.trim()) : null,
       budget_max: maxBudget.trim() ? parseBudget(maxBudget.trim()) : null,
       is_remote: mode === "remote",
@@ -5445,7 +5157,7 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
         <p className="text-sm mb-1" style={{ color: "#5C5744" }}>
           {notifiedText}
         </p>
-        <p className="text-xs mb-6" style={{ color: "#8A8368" }}>{t("postJob.etaHint", { eta })}</p>
+        <p className="text-xs mb-6" style={{ color: "#6B6550" }}>{t("postJob.etaHint", { eta })}</p>
         <button
           onClick={() => onMatchAI({ title, categoryId, desc, cityId, mode, urgency, homeServicePref })}
           className="w-full mb-3 py-3 rounded-full text-sm font-medium text-white flex items-center justify-center gap-2"
@@ -5455,7 +5167,7 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
         </button>
         <div className="flex gap-2 justify-center">
           <button
-            onClick={() => onViewOffers({ title, categoryId, homeServicePref, ...postedJob })}
+            onClick={() => onViewOffers()}
             className="px-5 py-2.5 rounded-full text-sm font-medium text-white"
             style={{ background: "#C2872B" }}
           >
@@ -5463,7 +5175,7 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
           </button>
           <button onClick={onSubmitted} className="px-5 py-2.5 rounded-full text-sm font-medium border" style={{ borderColor: "#D9D0BA", color: "#1B2B24" }}>{t("common.backToHome")}</button>
         </div>
-        <p className="text-[11px] mt-4" style={{ color: "#8A8368" }}>
+        <p className="text-[11px] mt-4" style={{ color: "#6B6550" }}>
           {t("postJob.noteOffersDemo")}
         </p>
       </div>
@@ -5473,7 +5185,7 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
   if (gateCheck.checking) {
     return (
       <div className="max-w-md mx-auto px-5 py-20 text-center">
-        <Loader2 size={20} className="animate-spin mx-auto" style={{ color: "#8A8368" }} />
+        <Loader2 size={20} className="animate-spin mx-auto" style={{ color: "#6B6550" }} />
       </div>
     );
   }
@@ -5553,7 +5265,7 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
                 className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
                 style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
               />
-              <p className="text-xs mt-1.5" style={{ color: "#8A8368" }}>
+              <p className="text-xs mt-1.5" style={{ color: "#6B6550" }}>
                 {t("postJob.customCategoryNote")}
               </p>
             </div>
@@ -5619,7 +5331,7 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
                 </button>
               ))}
             </div>
-            <p className="text-[11px] mt-1.5" style={{ color: "#8A8368" }}>
+            <p className="text-[11px] mt-1.5" style={{ color: "#6B6550" }}>
               {t("postJob.whereHint")}
             </p>
           </div>
@@ -5637,33 +5349,8 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
           />
         </div>
 
-        <div>
-          <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("postJob.photosLabel")}</label>
-          <div className="flex gap-2 flex-wrap">
-            {photos.map((p, i) => (
-              <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden">
-                <img loading="lazy" decoding="async" src={p.url} alt="" className="w-full h-full object-cover" />
-                <button
-                  onClick={() => setPhotos(photos.filter((_, idx) => idx !== i))}
-                  aria-label={t("common.remove")}
-                  className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-black/60 flex items-center justify-center"
-                >
-                  <X size={10} className="text-white" />
-                </button>
-              </div>
-            ))}
-            {photos.length < 3 && (
-              <label
-                className="w-16 h-16 rounded-lg border-2 border-dashed flex flex-col items-center justify-center cursor-pointer"
-                style={{ borderColor: "#D9D0BA", color: "#8A8368" }}
-              >
-                <span className="text-lg leading-none">+</span>
-                <span className="text-[9px]">{t("postJob.photosAdd")}</span>
-                <input type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoAdd} />
-              </label>
-            )}
-          </div>
-        </div>
+        {/* Fotoğraf yükleme geçici olarak kapalı: eskiden seçilen fotoğraflar hiçbir yere
+            kaydedilmiyordu (kullanıcı yüklediğini sanıyordu). Depolama + moderasyon hazır olunca geri gelecek. */}
 
         {mode === "local" && (
           <div className="grid grid-cols-2 gap-3">
@@ -5885,7 +5572,7 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
               </button>
             );
           })}
-          <p className="text-xs mt-2" style={{ color: "#8A8368" }}>
+          <p className="text-xs mt-2" style={{ color: "#6B6550" }}>
             {t("aiMatch.disclaimer")}
           </p>
         </div>
@@ -5916,6 +5603,7 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
   const [loading, setLoading] = useState(!!currentUserId);
   const [sending, setSending] = useState(false);
   const [gateError, setGateError] = useState("");
+  const [riskWarnBody, setRiskWarnBody] = useState("");
   const [draftingMessage, setDraftingMessage] = useState(false);
   // Gerçek, kalıcı engelleme/şikayet (bkz. supabase/user_safety.sql) —
   // önceki "Destek Talepleri" ekranı tamamen sahteydi, hiçbir yere yazmıyordu.
@@ -6261,6 +5949,13 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
     if (!active?.otherId || !currentUserId) return;
     const body = input.trim();
     if (!body) return;
+    // Şüpheli ifade (IBAN, kapora, WhatsApp vb.) varsa göndermeden ÖNCE bir kez uyar —
+    // engellemez: kullanıcı aynı mesajı tekrar gönderirse gider. Ödeme platform dışı
+    // olduğu için dolandırıcılığa karşı tek koruma bilinçli kullanıcıdır.
+    if (SUSPICIOUS_CONTENT_PATTERN.test(body) && riskWarnBody !== body) {
+      setRiskWarnBody(body);
+      return;
+    }
     setSending(true);
     // Aramızda herhangi bir yönde engel varsa (ben onu engelledim ya da o beni
     // engelledi) mesaj gitmez — yönü açıklamıyor, sadece engelli olduğunu
@@ -6277,7 +5972,7 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
       setGateError(profileGate.reason);
       return;
     }
-    const gate = await checkPhoneGate(currentUserId);
+    const gate = await checkPhoneGate(currentUserId, { allowFirstMessage: true });
     if (!gate.ok) {
       setSending(false);
       setGateError(gate.reason);
@@ -6298,6 +5993,7 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
       return;
     }
     setInput("");
+    setRiskWarnBody("");
     const time = formatMessageTime(data.created_at);
     setThreads((t) => ({ ...t, [activeId]: [...(t[activeId] || []), { id: data.id, sender: "me", text: body, time }] }));
     setConversations((cs) => cs.map((c) => (c.id === activeId ? { ...c, lastMessage: body, time } : c)));
@@ -6323,10 +6019,10 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
             <div className="flex items-center gap-1.5">
               <p className="text-sm font-medium" style={{ color: "#1B2B24" }}>{active.name}</p>
               {active.demo && (
-                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "#F0EAD6", color: "#8A8368" }}>{t("messages.demoBadge")}</span>
+                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "#F0EAD6", color: "#6B6550" }}>{t("messages.demoBadge")}</span>
               )}
             </div>
-            <p className="text-[11px]" style={{ color: "#8A8368" }}>{active.listingTitle}</p>
+            <p className="text-[11px]" style={{ color: "#6B6550" }}>{active.listingTitle}</p>
           </div>
           {!active.demo && (
             <div className="flex items-center gap-1 shrink-0">
@@ -6341,7 +6037,7 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
               <button
                 onClick={() => setShowReportForm((v) => !v)}
                 className="text-[11px] font-medium px-2.5 py-1.5 rounded-full"
-                style={{ color: "#8A8368" }}
+                style={{ color: "#6B6550" }}
               >
                 {t("messages.report")}
               </button>
@@ -6458,7 +6154,7 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
         <div className="flex-1 overflow-y-auto space-y-2.5 pr-1">
           {activeMessages.length === 0 && (
             <div className="text-center mt-8">
-              <p className="text-xs mb-2" style={{ color: "#8A8368" }}>{t("messages.emptyThread")}</p>
+              <p className="text-xs mb-2" style={{ color: "#6B6550" }}>{t("messages.emptyThread")}</p>
               {!active.demo && (
                 <button
                   onClick={suggestOpeningMessage}
@@ -6487,13 +6183,23 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
           ))}
           {typing && (
             <div className="flex justify-start">
-              <div className="rounded-2xl px-3.5 py-2 text-xs" style={{ background: "#F8F4E9", border: "1px solid #D9D0BA", color: "#8A8368" }}>
+              <div className="rounded-2xl px-3.5 py-2 text-xs" style={{ background: "#F8F4E9", border: "1px solid #D9D0BA", color: "#6B6550" }}>
                 {t("messages.typingIndicator")}
               </div>
             </div>
           )}
         </div>
 
+        {!active.demo && (
+          <div className="px-3 py-2 rounded-lg text-xs mt-2 shrink-0" style={{ background: "#FEF3C7", color: "#78350F" }} role="note">
+            <b>Güvenliğin için:</b> İşinn ödemeye aracılık etmez. Hizmeti görmeden ön ödeme, kapora ya da IBAN gönderme. Şüpheli bir istek gelirse kullanıcıyı şikayet et.
+          </div>
+        )}
+        {riskWarnBody && riskWarnBody === input.trim() && (
+          <div className="px-3 py-2 rounded-lg text-xs mt-2 shrink-0" style={{ background: "#FDECEC", color: "#7F1D1D" }} role="alert">
+            <b>Dikkat:</b> Mesajında ödeme, IBAN, kapora ya da platform dışı iletişimle ilgili bir ifade var. Hizmeti görmeden para göndermek dolandırıcılık riski taşır. Yine de göndermek istiyorsan tekrar gönder tuşuna bas.
+          </div>
+        )}
         {gateError && (
           <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs mt-2 shrink-0" style={{ background: "#FDECEC", color: "#B3261E" }}>
             <Lock size={13} className="shrink-0" />
@@ -6502,7 +6208,7 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
         )}
         {!active.demo && myBlockOfThem ? (
           <div className="flex items-center justify-between gap-2 pt-3 mt-2 border-t shrink-0" style={{ borderColor: "#D9D0BA" }}>
-            <p className="text-xs" style={{ color: "#8A8368" }}>{t("messages.blockedNotice")}</p>
+            <p className="text-xs" style={{ color: "#6B6550" }}>{t("messages.blockedNotice")}</p>
             <button onClick={toggleBlock} className="text-xs font-bold shrink-0" style={{ color: "#3F7D5C" }}>{t("messages.unblock")}</button>
           </div>
         ) : (
@@ -6532,8 +6238,8 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
       <h1 className="font-serif text-2xl mb-6" style={{ color: "#1B2B24" }}>{t("messages.title")}</h1>
       {loading && (
         <div className="flex items-center gap-2 mb-4">
-          <Loader2 size={14} className="animate-spin" style={{ color: "#8A8368" }} />
-          <span className="text-xs" style={{ color: "#8A8368" }}>{t("messages.loadingConversations")}</span>
+          <Loader2 size={14} className="animate-spin" style={{ color: "#6B6550" }} />
+          <span className="text-xs" style={{ color: "#6B6550" }}>{t("messages.loadingConversations")}</span>
         </div>
       )}
       <div className="space-y-1">
@@ -6556,10 +6262,10 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
                 <div className="flex items-center gap-1.5 min-w-0">
                   <p className="text-sm font-medium truncate" style={{ color: "#1B2B24" }}>{c.name}</p>
                   {c.demo && (
-                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0" style={{ background: "#F0EAD6", color: "#8A8368" }}>{t("messages.demoBadge")}</span>
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0" style={{ background: "#F0EAD6", color: "#6B6550" }}>{t("messages.demoBadge")}</span>
                   )}
                 </div>
-                <span className="text-[11px] shrink-0" style={{ color: "#8A8368" }}>{c.time}</span>
+                <span className="text-[11px] shrink-0" style={{ color: "#6B6550" }}>{c.time}</span>
               </div>
               {/* Hangi ilan/vitrinle ilgili olduğu eskiden sadece konuşmayı
                   AÇINCA görünüyordu — birden fazla ilanı olan biri listeye
@@ -6568,7 +6274,7 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
               {c.listingTitle && (
                 <p className="text-[11px] truncate font-medium" style={{ color: "#2563EB" }}>{c.listingTitle}</p>
               )}
-              <p className="text-xs truncate" style={{ color: c.unread > 0 ? "#1B2B24" : "#8A8368" }}>{c.lastMessage}</p>
+              <p className="text-xs truncate" style={{ color: c.unread > 0 ? "#1B2B24" : "#6B6550" }}>{c.lastMessage}</p>
             </div>
           </button>
         ))}
@@ -6590,7 +6296,7 @@ const PLANS = [
     id: "standart", name: "Standart Üyelik", priceMonthly: 159, priceYearly: 799, trialMonths: 1, currency: "₺",
     tagline: "Herkes için tek, basit plan",
     features: [
-      "2 vitrin dahil", "Sınırsız teklif, 5 aktif ilan hakkı", "Tam profil sayfası (video, sertifika, CV)", "Mesajlaşma + bildirimler",
+      "2 vitrin dahil", "5 aktif ilan hakkı", "Tam profil sayfası (video, sertifika, CV)", "Mesajlaşma + bildirimler",
       "AI eşleştirmede yer alma", "Harita ve arama görünürlüğü", "Diğer tüm ilan ve vitrinleri görüntüleme",
     ],
     notIncluded: [],
@@ -6627,7 +6333,7 @@ const PRO_PACKAGE = {
   id: "pro", name: "Pro Üyelik", priceMonthly: 649, priceYearly: 3999, currency: "₺",
   tagline: "Birden fazla vitrin açmak isteyenler için",
   features: [
-    "3 vitrin hakkı (Standart'ta 2)", "Sınırsız teklif, geniş ilan hakkı",
+    "3 vitrin hakkı (Standart'ta 2)", "Geniş ilan hakkı",
     "Her ayın ilk haftası tüm vitrinlerin Öne Çıkarma Paketi hediyeli", "AI eşleştirmede öncelik",
   ],
 };
@@ -6792,14 +6498,14 @@ function ListingCoverPhotoField({ cover, hint }) {
       {moderation && (
         <p
           className="text-[11px] mt-1.5 flex items-center gap-1"
-          style={{ color: moderation.status === "checking" ? "#8A8368" : moderation.status === "approved" ? "#3F7D5C" : "#9C4A3C" }}
+          style={{ color: moderation.status === "checking" ? "#6B6550" : moderation.status === "approved" ? "#3F7D5C" : "#9C4A3C" }}
         >
           {moderation.status === "checking" && <><Loader2 size={11} className="animate-spin" /> {t("createListing.moderationChecking")}</>}
           {moderation.status === "approved" && <><ShieldCheck size={11} /> {t("createListing.moderationApproved")}</>}
           {moderation.status === "flagged" && <><AlertCircle size={11} /> {moderation.reason || t("createListing.moderationFlaggedDefault")}</>}
         </p>
       )}
-      {hint && <p className="text-[11px] mt-1.5" style={{ color: "#8A8368" }}>{hint}</p>}
+      {hint && <p className="text-[11px] mt-1.5" style={{ color: "#6B6550" }}>{hint}</p>}
     </div>
   );
 }
@@ -6881,7 +6587,7 @@ function ListingCategoryField({ mode, categoryId, setCategoryId, customCategoryL
             className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
             style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
           />
-          <p className="text-xs mt-1.5" style={{ color: "#8A8368" }}>
+          <p className="text-xs mt-1.5" style={{ color: "#6B6550" }}>
             {t("createListing.customCategoryNote")}
           </p>
         </div>
@@ -7692,7 +7398,7 @@ function CreateListingView({ onBack, onCreated, userId, onGoToProfile, onGoToPla
               <div className="flex flex-col gap-1.5 mb-2">
                 {certificates.map((c) => (
                   <div key={c.id} className="flex items-center gap-2 text-xs rounded-lg px-3 py-2" style={{ background: "#FFFFFF", border: "1px solid #EAE3CE" }}>
-                    <FileText size={13} style={{ color: "#8A8368" }} />
+                    <FileText size={13} style={{ color: "#6B6550" }} />
                     <span className="truncate flex-1" style={{ color: "#1B2B24" }}>{c.name}</span>
                   </div>
                 ))}
@@ -7728,7 +7434,7 @@ function CreateListingView({ onBack, onCreated, userId, onGoToProfile, onGoToPla
             <p className="text-xs font-bold mb-2" style={{ color: "#5C5744" }}>{t("createListing.cvLabel")}</p>
             {cv ? (
               <div className="flex items-center gap-2 text-xs rounded-lg px-3 py-2" style={{ background: "#FFFFFF", border: "1px solid #EAE3CE" }}>
-                <FileText size={13} style={{ color: "#8A8368" }} />
+                <FileText size={13} style={{ color: "#6B6550" }} />
                 <span className="truncate flex-1" style={{ color: "#1B2B24" }}>{cv.name}</span>
                 <Check size={14} style={{ color: "#2FBF71" }} />
               </div>
@@ -7756,7 +7462,7 @@ function CreateListingView({ onBack, onCreated, userId, onGoToProfile, onGoToPla
         </p>
 
         {recLoading && (
-          <div className="rounded-2xl border p-4 mb-6 text-xs flex items-center justify-center gap-2" style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#8A8368" }}>
+          <div className="rounded-2xl border p-4 mb-6 text-xs flex items-center justify-center gap-2" style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#6B6550" }}>
             <Loader2 size={13} className="animate-spin" /> {t("createListing.recLoading")}
           </div>
         )}
@@ -7788,7 +7494,7 @@ function CreateListingView({ onBack, onCreated, userId, onGoToProfile, onGoToPla
   if (gateCheck.checking) {
     return (
       <div className="max-w-md mx-auto px-5 py-20 text-center">
-        <Loader2 size={20} className="animate-spin mx-auto" style={{ color: "#8A8368" }} />
+        <Loader2 size={20} className="animate-spin mx-auto" style={{ color: "#6B6550" }} />
       </div>
     );
   }
@@ -7873,7 +7579,7 @@ function CreateListingView({ onBack, onCreated, userId, onGoToProfile, onGoToPla
             </button>
           </div>
         ) : null}
-        <button onClick={onBack} className="text-xs font-medium" style={{ color: "#8A8368" }}>{t("createListing.limitDismiss")}</button>
+        <button onClick={onBack} className="text-xs font-medium" style={{ color: "#6B6550" }}>{t("createListing.limitDismiss")}</button>
         {paytrToken && (
           <PaytrCheckoutModal
             token={paytrToken}
@@ -7992,7 +7698,7 @@ function CreateListingView({ onBack, onCreated, userId, onGoToProfile, onGoToPla
           {submitting && <Loader2 size={14} className="animate-spin" />}
           {submitting ? t("common.publishingEllipsis") : t("createListing.submitPublish")}
         </button>
-        <p className="text-[11px] text-center" style={{ color: "#8A8368" }}>
+        <p className="text-[11px] text-center" style={{ color: "#6B6550" }}>
           {t("createListing.completeProfileHint")}
         </p>
       </div>
@@ -8478,7 +8184,7 @@ function AdminDashboardView({ onBack }) {
                     <div key={r.key} className="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5" style={{ background: "#FAFAFA" }}>
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-bold break-words" style={{ color: "#0F1115" }}>{r.name}</p>
-                        {r.sub && <p className="text-[11px] break-words" style={{ color: "#8A8368" }}>{r.sub}</p>}
+                        {r.sub && <p className="text-[11px] break-words" style={{ color: "#6B6550" }}>{r.sub}</p>}
                       </div>
                       <span className="text-[11px] font-bold shrink-0" style={{ color: "#6B7280" }}>{r.right}</span>
                     </div>
@@ -8550,7 +8256,7 @@ function AdminDashboardView({ onBack }) {
                   <div key={s.id} className="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5" style={{ background: "#FAFAFA" }}>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-bold break-words" style={{ color: "#0F1115" }}>{s.userName}</p>
-                      <p className="text-[11px]" style={{ color: "#8A8368" }}>{s.planName} · {s.billing_cycle === "yearly" ? "yıllık" : "aylık"}</p>
+                      <p className="text-[11px]" style={{ color: "#6B6550" }}>{s.planName} · {s.billing_cycle === "yearly" ? "yıllık" : "aylık"}</p>
                     </div>
                     <span className="text-[11px] font-bold px-2 py-1 rounded-full shrink-0" style={{ background: "rgba(156,74,60,0.12)", color: "#9C4A3C" }}>
                       {formatDaysUntilTr(s.current_period_end)}
@@ -8709,7 +8415,7 @@ function AdminReportsView({ onBack, reports, userId, isAdmin }) {
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: `${meta.color}18`, color: meta.color }}>{meta.label}</span>
                 </div>
                 {isAdmin && r.reporterName && (
-                  <p className="text-[11px] mb-1" style={{ color: "#8A8368" }}>Bildiren: <span className="font-medium">{r.reporterName}</span></p>
+                  <p className="text-[11px] mb-1" style={{ color: "#6B6550" }}>Bildiren: <span className="font-medium">{r.reporterName}</span></p>
                 )}
                 <p className="text-xs leading-relaxed mb-2" style={{ color: "#6B7280" }}>{r.summary}</p>
                 <p className="text-[11px] mb-2" style={{ color: "#9CA3AF" }}>{r.time}</p>
@@ -8957,7 +8663,7 @@ function AdminListingReportsView({ onBack }) {
                   {LISTING_REPORT_REASON_LABELS[r.reason] || r.reason}
                 </span>
               </div>
-              <p className="text-[11px] mb-1" style={{ color: "#8A8368" }}>Bildiren: <span className="font-medium">{r.reporterName}</span></p>
+              <p className="text-[11px] mb-1" style={{ color: "#6B6550" }}>Bildiren: <span className="font-medium">{r.reporterName}</span></p>
               {r.detail && <p className="text-xs leading-relaxed mb-2" style={{ color: "#6B7280" }}>{r.detail}</p>}
               <p className="text-[11px] mb-2" style={{ color: "#9CA3AF" }}>{formatRelativeTr(r.created_at)}</p>
               <div className="flex items-center gap-2">
@@ -9348,11 +9054,26 @@ function PricingView({ onBack, onJoined, userId }) {
     );
   }
 
+  // 90 günlük "herkese ücretsiz" dönem: planlar mat/kapalı gösterilir, satın alma yok
+  // (sunucu rotaları da reddeder). Süre dolunca kendiliğinden yeniden açılır.
+  const freePeriod = isFreePeriod();
+  const freeUntilLabel = new Date(FREE_PERIOD_UNTIL_ISO).toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" });
+
   return (
     <div className="max-w-md mx-auto px-5 py-14">
       <button onClick={onBack} className="flex items-center gap-1 text-sm mb-6" style={{ color: "#5C5744" }}>
         <ChevronLeft size={16} /> {t("common.back")}
       </button>
+      {freePeriod && (
+        <div className="rounded-2xl p-5 mb-6 text-center" style={{ background: "#ECFDF5", border: "1px solid #A7F3D0" }} role="status">
+          <p className="text-base font-bold" style={{ color: "#065F46" }}>{t("pricing.freePeriodTitle")}</p>
+          <p className="text-sm mt-1" style={{ color: "#047857" }}>{t("pricing.freePeriodBody", { date: freeUntilLabel })}</p>
+        </div>
+      )}
+      <div
+        aria-hidden={freePeriod ? "true" : undefined}
+        style={freePeriod ? { opacity: 0.45, filter: "grayscale(1)", pointerEvents: "none", userSelect: "none" } : undefined}
+      >
       <div className="text-center mb-6">
         <h1 className="font-serif text-3xl mb-3" style={{ color: "#1B2B24" }}>{t("pricing.heroTitle")}</h1>
         <p className="text-sm mb-4" style={{ color: "#5C5744" }}>
@@ -9364,7 +9085,7 @@ function PricingView({ onBack, onJoined, userId }) {
         >
           <Sparkles size={13} /> {t("pricing.trialBadge", { months: plan.trialMonths })}
         </span>
-        <p className="text-[11px] mt-2" style={{ color: "#8A8368" }}>{t("pricing.trialAutoStartNote")}</p>
+        <p className="text-[11px] mt-2" style={{ color: "#6B6550" }}>{t("pricing.trialAutoStartNote")}</p>
       </div>
 
       <div className="flex justify-center mb-6">
@@ -9374,7 +9095,7 @@ function PricingView({ onBack, onJoined, userId }) {
               key={key}
               onClick={() => setCycle(key)}
               className="text-sm font-bold px-4 py-1.5 rounded-full transition-all"
-              style={cycle === key ? { background: "#2563EB", color: "#FFFFFF" } : { color: "#8A8368" }}
+              style={cycle === key ? { background: "#2563EB", color: "#FFFFFF" } : { color: "#6B6550" }}
             >
               {label} {key === "yearly" && <span className="text-[10px]" style={{ color: cycle === key ? "#DBEAFE" : "#2563EB" }}>{t("pricing.firstYearDeal")}</span>}
             </button>
@@ -9384,10 +9105,10 @@ function PricingView({ onBack, onJoined, userId }) {
 
       <div className="rounded-2xl border-2 p-6 flex flex-col mb-4" style={{ borderColor: "#2563EB", background: "#F8F4E9" }}>
         <p className="font-serif text-lg mb-1" style={{ color: "#1B2B24" }}>{getPlanName(plan, t)}</p>
-        <p className="text-xs mb-4" style={{ color: "#8A8368" }}>{getPlanTagline(plan, t)}</p>
+        <p className="text-xs mb-4" style={{ color: "#6B6550" }}>{getPlanTagline(plan, t)}</p>
         <div className="mb-1 flex items-baseline gap-1">
           <span className="font-serif text-4xl" style={{ color: "#1B2B24" }}>{basePrice}₺</span>
-          <span className="text-sm" style={{ color: "#8A8368" }}>{period}</span>
+          <span className="text-sm" style={{ color: "#6B6550" }}>{period}</span>
           {cycle === "yearly" && (
             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "#DBEAFE", color: "#1D4ED8" }}>{t("pricing.firstYearDeal")}</span>
           )}
@@ -9424,7 +9145,7 @@ function PricingView({ onBack, onJoined, userId }) {
             {joining && savedCardMode === "standart" ? t("pricing.processing") : t("pricing.payWithSavedCard")}
           </button>
         )}
-        <p className="text-[11px] mt-2 text-center" style={{ color: "#8A8368" }}>
+        <p className="text-[11px] mt-2 text-center" style={{ color: "#6B6550" }}>
           {t("pricing.standartHintNote")}
         </p>
       </div>
@@ -9440,10 +9161,10 @@ function PricingView({ onBack, onJoined, userId }) {
             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: "#2FBF71" }}>{t("pricing.activeBadge")}</span>
           )}
         </div>
-        <p className="text-xs mb-4" style={{ color: "#8A8368" }}>{t("pricing.proTaglineFull", { tagline: getPlanTagline(PRO_PACKAGE, t) })}</p>
+        <p className="text-xs mb-4" style={{ color: "#6B6550" }}>{t("pricing.proTaglineFull", { tagline: getPlanTagline(PRO_PACKAGE, t) })}</p>
         <div className="mb-4 flex items-baseline gap-1">
           <span className="font-serif text-2xl" style={{ color: "#1B2B24" }}>{proPrice}₺</span>
-          <span className="text-sm" style={{ color: "#8A8368" }}>{period}</span>
+          <span className="text-sm" style={{ color: "#6B6550" }}>{period}</span>
           {cycle === "yearly" && (
             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "#EDE9FE", color: "#6D28D9" }}>{t("pricing.firstYearDeal")}</span>
           )}
@@ -9496,7 +9217,7 @@ function PricingView({ onBack, onJoined, userId }) {
           sayfanın en üstündeki Aylık/Yıllık toggle'ıyla aynı mantık. */}
       <div className="w-full rounded-2xl border-2 p-6 flex flex-col mb-6" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
         <p className="font-serif text-lg mb-1" style={{ color: "#1B2B24" }}>{getPlanName(BOOST_PACKAGE, t)}</p>
-        <p className="text-xs mb-4" style={{ color: "#8A8368" }}>{t("pricing.boostTaglineFull", { tagline: getPlanTagline(BOOST_PACKAGE, t) })}</p>
+        <p className="text-xs mb-4" style={{ color: "#6B6550" }}>{t("pricing.boostTaglineFull", { tagline: getPlanTagline(BOOST_PACKAGE, t) })}</p>
 
         <div className="grid grid-cols-2 gap-2.5 mb-4">
           {[
@@ -9526,7 +9247,7 @@ function PricingView({ onBack, onJoined, userId }) {
                 </div>
                 <div className="flex items-baseline gap-0.5">
                   <span className="font-serif text-lg" style={{ color: "#1B2B24" }}>+{opt.price}₺</span>
-                  <span className="text-[11px]" style={{ color: "#8A8368" }}>{opt.unit}</span>
+                  <span className="text-[11px]" style={{ color: "#6B6550" }}>{opt.unit}</span>
                 </div>
               </button>
             );
@@ -9592,9 +9313,10 @@ function PricingView({ onBack, onJoined, userId }) {
         />
       )}
 
-      <p className="text-xs text-center mt-6" style={{ color: "#8A8368" }}>
+      <p className="text-xs text-center mt-6" style={{ color: "#6B6550" }}>
         {t("pricing.footerNote")}
       </p>
+      </div>
     </div>
   );
 }
@@ -9640,7 +9362,7 @@ function SubscriptionCard({ userId, onGoToPlans }) {
       <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>Üyeliğim</p>
       {!sub ? (
         <>
-          <p className="text-xs mt-1 mb-3" style={{ color: "#8A8368" }}>Şu an aktif bir üyeliğin yok, bu yüzden vitrinlerin yayında değil. Telefon numaranı doğrulayarak ücretsiz denemeyi başlatabilir ya da bir plan seçebilirsin.</p>
+          <p className="text-xs mt-1 mb-3" style={{ color: "#6B6550" }}>Şu an aktif bir üyeliğin yok, bu yüzden vitrinlerin yayında değil. Telefon numaranı doğrulayarak ücretsiz denemeyi başlatabilir ya da bir plan seçebilirsin.</p>
           {onGoToPlans && (
             <button onClick={onGoToPlans} className="px-4 py-2 rounded-full text-xs font-bold text-white" style={{ background: "#F59E0B" }}>Planlara Git</button>
           )}
@@ -10116,7 +9838,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
         ].map(([val, label]) => (
           <div key={label} className="rounded-xl border p-4 text-center" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
             <p className="font-serif text-xl" style={{ color: "#1B2B24" }}>{val}</p>
-            <p className="text-xs mt-1" style={{ color: "#8A8368" }}>{label}</p>
+            <p className="text-xs mt-1" style={{ color: "#6B6550" }}>{label}</p>
           </div>
         ))}
       </div>
@@ -10132,12 +9854,12 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
           )}
         </div>
         {profileLoading ? (
-          <p className="text-xs mt-3" style={{ color: "#8A8368" }}>{t("common.loading")}</p>
+          <p className="text-xs mt-3" style={{ color: "#6B6550" }}>{t("common.loading")}</p>
         ) : !editing ? (
           <div className="mt-3 space-y-1.5 text-sm" style={{ color: "#3D3B30" }}>
-            <p><span style={{ color: "#8A8368" }}>{t("profile.fieldFullName")}</span> {profile?.full_name || "—"}</p>
-            <p><span style={{ color: "#8A8368" }}>{t("profile.fieldCity")}</span> {profile?.city || "—"}</p>
-            <p><span style={{ color: "#8A8368" }}>{t("profile.fieldBio")}</span> {profile?.bio || "—"}</p>
+            <p><span style={{ color: "#6B6550" }}>{t("profile.fieldFullName")}</span> {profile?.full_name || "—"}</p>
+            <p><span style={{ color: "#6B6550" }}>{t("profile.fieldCity")}</span> {profile?.city || "—"}</p>
+            <p><span style={{ color: "#6B6550" }}>{t("profile.fieldBio")}</span> {profile?.bio || "—"}</p>
             {saveDone && <p className="text-xs" style={{ color: "#2FBF71" }}>{t("profile.savedCheck")}</p>}
           </div>
         ) : (
@@ -10218,7 +9940,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: "#3F7D5C" }}>{t("profile.phoneVerifiedBadge")}</span>
           )}
         </div>
-        <p className="text-xs mb-4" style={{ color: "#8A8368" }}>
+        <p className="text-xs mb-4" style={{ color: "#6B6550" }}>
           {t("profile.phoneIntro")}
         </p>
 
@@ -10310,13 +10032,13 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
             <Bell size={16} style={{ color: "#2563EB" }} />
             <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("profile.savedSearchesHeading", { count: savedSearches.length })}</h2>
           </div>
-          <p className="text-xs mb-3" style={{ color: "#8A8368" }}>{t("profile.savedSearchesIntro")}</p>
+          <p className="text-xs mb-3" style={{ color: "#6B6550" }}>{t("profile.savedSearchesIntro")}</p>
           <div className="space-y-2">
             {savedSearches.map((s) => (
               <div key={s.id} className="flex items-center justify-between gap-2 p-2.5 rounded-lg" style={{ background: "#EFE8D8" }}>
                 <span className="text-xs font-medium" style={{ color: "#1B2B24" }}>"{s.query}"</span>
                 <button onClick={() => deleteSavedSearch(s.id)} className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" title={t("common.remove")} aria-label={t("common.remove")}>
-                  <X size={13} style={{ color: "#8A8368" }} />
+                  <X size={13} style={{ color: "#6B6550" }} />
                 </button>
               </div>
             ))}
@@ -10359,10 +10081,10 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
           <p className="text-xs mb-2 px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{deleteError}</p>
         )}
         {profileLoading ? (
-          <p className="text-xs" style={{ color: "#8A8368" }}>{t("common.loading")}</p>
+          <p className="text-xs" style={{ color: "#6B6550" }}>{t("common.loading")}</p>
         ) : myListings.length === 0 ? (
           <div>
-            <p className="text-xs mb-3" style={{ color: "#8A8368" }}>{t("profile.noListings")}</p>
+            <p className="text-xs mb-3" style={{ color: "#6B6550" }}>{t("profile.noListings")}</p>
             {onCreateListing && (
               <button
                 onClick={onCreateListing}
@@ -10394,7 +10116,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
                     {l.title}
                     {l.active === false && <span className="ml-2 text-[10px] font-bold px-1.5 py-0.5 rounded-full align-middle" style={{ background: "#E4DEC9", color: "#5C5744" }}>{t("profile.unpublishedBadge")}</span>}
                   </p>
-                  <p className="text-[11px] truncate" style={{ color: "#8A8368" }}>
+                  <p className="text-[11px] truncate" style={{ color: "#6B6550" }}>
                     {l.is_remote ? t("profile.remoteLabel") : l.city || "—"} · {formatPriceLabel(l.price, l.price_type)}
                   </p>
                 </div>
@@ -10449,7 +10171,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
           <img src="/rozet.svg" alt={t("profile.verifiedProviderBadgeAlt")} width={140} height={40} className="shrink-0" />
           <div className="flex-1 min-w-0">
             <p className="text-xs font-bold mb-1" style={{ color: "#1B2B24" }}>{t("profile.badgeReadyTitle")}</p>
-            <p className="text-[11px] mb-2" style={{ color: "#8A8368" }}>{t("profile.badgeReadyDesc")}</p>
+            <p className="text-[11px] mb-2" style={{ color: "#6B6550" }}>{t("profile.badgeReadyDesc")}</p>
             <a href="/rozet" target="_blank" rel="noopener noreferrer" className="text-[11px] font-bold underline" style={{ color: "#3A5BA0" }}>
               {t("profile.getBadgeLink")}
             </a>
@@ -10466,16 +10188,16 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
           <p className="text-xs mb-2 px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{jobsError}</p>
         )}
         {profileLoading ? (
-          <p className="text-xs" style={{ color: "#8A8368" }}>{t("common.loading")}</p>
+          <p className="text-xs" style={{ color: "#6B6550" }}>{t("common.loading")}</p>
         ) : myJobs.length === 0 ? (
-          <p className="text-xs" style={{ color: "#8A8368" }}>{t("profile.noJobs")}</p>
+          <p className="text-xs" style={{ color: "#6B6550" }}>{t("profile.noJobs")}</p>
         ) : (
           <div className="space-y-2">
             {myJobs.map((j) => (
               <div key={j.id} className="flex items-center gap-3 p-2.5 rounded-lg" style={{ background: "#EFE8D8" }}>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-medium truncate" style={{ color: "#1B2B24" }}>{j.title}</p>
-                  <p className="text-[11px] truncate" style={{ color: "#8A8368" }}>
+                  <p className="text-[11px] truncate" style={{ color: "#6B6550" }}>
                     {j.is_remote ? t("profile.remoteLabel") : j.city || "—"}
                     {(j.budget_min != null || j.budget_max != null) &&
                       ` · ${j.budget_min != null ? Number(j.budget_min).toLocaleString("tr-TR") + "₺" : ""}${j.budget_min != null && j.budget_max != null ? "–" : ""}${j.budget_max != null ? Number(j.budget_max).toLocaleString("tr-TR") + "₺" : ""}`}
@@ -10537,7 +10259,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
             <AlertCircle size={16} style={{ color: "#F59E0B" }} />
             <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("profile.pendingMediaHeading", { count: (pendingMediaApprovals?.length || 0) + realPendingMedia.length })}</h2>
           </div>
-          <p className="text-xs mb-4" style={{ color: "#8A8368" }}>
+          <p className="text-xs mb-4" style={{ color: "#6B6550" }}>
             {t("profile.pendingMediaIntro")}
           </p>
           <div className="space-y-3">
@@ -10550,7 +10272,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
                 )}
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-bold truncate" style={{ color: "#1B2B24" }}>{item.reviewerName}</p>
-                  <p className="text-[11px] truncate" style={{ color: "#8A8368" }}>{item.listingTitle} · {item.submittedAt}</p>
+                  <p className="text-[11px] truncate" style={{ color: "#6B6550" }}>{item.listingTitle} · {item.submittedAt}</p>
                   {item.isVideo && (
                     <p className="text-[10px]" style={{ color: "#9C4A3C" }}>{t("profile.pendingMediaVideoWarning")}</p>
                   )}
@@ -10571,7 +10293,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
                     className="w-8 h-8 rounded-full flex items-center justify-center border"
                     style={{ borderColor: "#D9D0BA", opacity: item.real && mediaActionId === item.dbId ? 0.6 : 1 }}
                   >
-                    <X size={14} style={{ color: "#8A8368" }} />
+                    <X size={14} style={{ color: "#6B6550" }} />
                   </button>
                 </div>
               </div>
@@ -10592,9 +10314,9 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
         </div>
         <div className="flex-1">
           <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>{isAdmin ? t("profile.supportRequestsAdmin") : t("profile.supportRequestsMine")}</p>
-          <p className="text-xs" style={{ color: "#8A8368" }}>{isAdmin ? t("profile.supportRequestsAdminDesc") : t("profile.supportRequestsMineDesc")}</p>
+          <p className="text-xs" style={{ color: "#6B6550" }}>{isAdmin ? t("profile.supportRequestsAdminDesc") : t("profile.supportRequestsMineDesc")}</p>
         </div>
-        <ChevronRight size={16} style={{ color: "#8A8368" }} />
+        <ChevronRight size={16} style={{ color: "#6B6550" }} />
       </button>
 
       {isAdmin && (
@@ -10608,9 +10330,9 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
           </div>
           <div className="flex-1">
             <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("profile.adminDashboardTitle")}</p>
-            <p className="text-xs" style={{ color: "#8A8368" }}>{t("profile.adminDashboardDesc")}</p>
+            <p className="text-xs" style={{ color: "#6B6550" }}>{t("profile.adminDashboardDesc")}</p>
           </div>
-          <ChevronRight size={16} style={{ color: "#8A8368" }} />
+          <ChevronRight size={16} style={{ color: "#6B6550" }} />
         </button>
       )}
 
@@ -10625,9 +10347,9 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
           </div>
           <div className="flex-1">
             <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("profile.userReportsTitle")}</p>
-            <p className="text-xs" style={{ color: "#8A8368" }}>{t("profile.userReportsDesc")}</p>
+            <p className="text-xs" style={{ color: "#6B6550" }}>{t("profile.userReportsDesc")}</p>
           </div>
-          <ChevronRight size={16} style={{ color: "#8A8368" }} />
+          <ChevronRight size={16} style={{ color: "#6B6550" }} />
         </button>
       )}
 
@@ -10642,9 +10364,9 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
           </div>
           <div className="flex-1">
             <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("profile.listingReportsTitle")}</p>
-            <p className="text-xs" style={{ color: "#8A8368" }}>{t("profile.listingReportsDesc")}</p>
+            <p className="text-xs" style={{ color: "#6B6550" }}>{t("profile.listingReportsDesc")}</p>
           </div>
-          <ChevronRight size={16} style={{ color: "#8A8368" }} />
+          <ChevronRight size={16} style={{ color: "#6B6550" }} />
         </button>
       )}
 
@@ -10659,9 +10381,9 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
           </div>
           <div className="flex-1">
             <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("profile.contentFlagsTitle")}</p>
-            <p className="text-xs" style={{ color: "#8A8368" }}>{t("profile.contentFlagsDesc")}</p>
+            <p className="text-xs" style={{ color: "#6B6550" }}>{t("profile.contentFlagsDesc")}</p>
           </div>
-          <ChevronRight size={16} style={{ color: "#8A8368" }} />
+          <ChevronRight size={16} style={{ color: "#6B6550" }} />
         </button>
       )}
 
@@ -11361,7 +11083,7 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
           </p>
           <button onClick={() => handleNav("pricing")} className="text-xs font-bold shrink-0" style={{ color: "#C2872B" }}>{t("header.plans")}</button>
           <button onClick={() => setTrialBannerDismissed(true)} className="shrink-0" aria-label={t("common.closeAria")}>
-            <X size={14} style={{ color: "#8A8368" }} />
+            <X size={14} style={{ color: "#6B6550" }} />
           </button>
         </div>
       )}
@@ -11436,7 +11158,7 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
           onBack={() => goBack()}
           onGoToProfile={() => { setEditingJob(null); setView("profile"); }}
           onSubmitted={() => setView("home")}
-          onViewOffers={(job) => { setLastJob(job); setView("offers"); }}
+          onViewOffers={() => setView("messages")}
           onMatchAI={(job) => { setLastJob(job); setView("aimatch"); }}
           userId={userId}
           onJobPosted={() => fetchJobs()}
@@ -11466,7 +11188,6 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
           currentUserId={userId}
         />
       )}
-      {view === "offers" && <OffersView onBack={() => goBack()} job={lastJob} />}
       {view === "aimatch" && (
         <AIMatchView
           job={lastJob}
