@@ -107,15 +107,11 @@ const CATEGORIES = [
 // talebi) — bkz. CreateListingView/PostJobView handleSubmit.
 const CUSTOM_CATEGORY_ID = "diger-ozel";
 
-// Öncelikli dikey (karar 2026-09-21): İstanbul, anne-çocuk ve aile hizmetleri. Bu grup
-// listenin başında; ana sayfada ayrı bir bölüm olarak da öne çıkarılıyor (bkz. HomeView).
-const MOM_CHILD_CATEGORY_IDS = ["bakici", "logusa-bakicisi", "emzirme-danismani", "oyun-ablasi", "ogretmen", "egitmen", "etkinlik-organizatoru", "muzik-egitmeni"];
-
 const PARENT_CATEGORIES = [
-  { id: "egitim-aile", name: "Anne-Çocuk & Aile", icon: GraduationCap, categoryIds: MOM_CHILD_CATEGORY_IDS },
   { id: "ev-hizmetleri", name: "Ev Hizmetleri", icon: Home, categoryIds: ["temizlik", "nakliye", "tadilat", "cilingir", "terzi", "elektrikci", "su-tesisatcisi", "hali-yikama", "yemek", "boya-badana", "klima-beyaz-esya", "ic-mimarlik", "teknik-servis", "oto-tamir", "bocek-ilaclama"] },
   { id: "guzellik-bakim", name: "Güzellik & Bakım", icon: Wand2, categoryIds: ["tirnakci", "makyaj", "bakim", "kuafor-berber"] },
   { id: "saglik", name: "Sağlık", icon: HeartPulse, categoryIds: ["hasta-bakici", "hemsire", "fizyoterapist", "diyetisyen", "psikolog", "yoga-koc", "spor-egitmeni", "veteriner"] },
+  { id: "egitim-aile", name: "Eğitim & Aile", icon: GraduationCap, categoryIds: ["ogretmen", "egitmen", "bakici", "logusa-bakicisi", "emzirme-danismani", "etkinlik-organizatoru", "muzik-egitmeni", "oyun-ablasi"] },
   { id: "profesyonel", name: "Profesyonel Hizmetler", icon: Briefcase, categoryIds: ["tasarim", "yazilim", "dijital", "muhasebe", "ceviri", "icerik-yazarligi", "video-duzenleme", "seslendirme", "sanal-asistan", "moda-tekstil-tasarim", "avukat"] },
   { id: "diger", name: "Diğer", icon: MoreHorizontal, categoryIds: ["bahce-bakim", "muhendis", "sosyal-medya", "profesyonel-fotograf", "evcil-hayvan"] },
 ];
@@ -1773,17 +1769,6 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
           bugünden gerçek bir "uygulamaya" sahip olduklarını ziyaretçilere
           kendi kendine anlatıyor — her seferinde elle anlatmaya gerek kalmasın. */}
       <InstallAppBanner />
-
-      {/* Öncelikli dikey: anne-çocuk ve aile hizmetleri */}
-      <section className="max-w-6xl mx-auto px-5 mt-8">
-        <h2 className="font-sans text-2xl font-black mb-1" style={{ color: "#0F1115" }}>{t("home.momChildHeading")}</h2>
-        <p className="text-sm mb-4" style={{ color: "#4B5563" }}>{t("home.momChildSubtext")}</p>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {MOM_CHILD_CATEGORY_IDS.map((id) => CATEGORIES.find((c) => c.id === id)).filter(Boolean).map((c, i) => (
-            <CategoryTile key={c.id} c={c} i={i} onClick={() => onSearch(c.name)} />
-          ))}
-        </div>
-      </section>
 
       {featured.length > 0 && (
         <section className="max-w-6xl mx-auto px-5 mt-8">
