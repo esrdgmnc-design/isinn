@@ -3704,6 +3704,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
           {listing.verified && listing.verified.length > 0 && (
             <div className="mb-4 pb-4 border-b" style={{ borderColor: "#D9D0BA" }}>
               <VerifiedBadges items={listing.verified} />
+              <p className="text-[10px] mt-2" style={{ color: "#6B6550" }}>{t("listingDetail.docsDisclaimer")}</p>
             </div>
           )}
           {/* Meslek odası/sicil no — Seçenek A, şeffaflık katmanı (2026-09-14).
