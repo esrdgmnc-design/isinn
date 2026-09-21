@@ -53,6 +53,15 @@ Platforma yüklediğiniz içeriğin telif hakkı size aittir. Bu içeriğin İş
 
 İşinn, bu şartları ihlal eden hesapları önceden bildirimde bulunmaksızın askıya alabilir veya kapatabilir. Kullanıcı, hesabını dilediği zaman kapatabilir.
 
+## 9-A. Üyelik, Vitrin Yayını ve İptal
+
+- **Vitrin yayını üyeliğe bağlıdır.** Geçerli (aktif ya da ücretsiz deneme) bir üyeliği olmayan hesapta vitrin yayında olmaz. Yayından kaldırılan vitrinin içeriği silinmez, gizlenir; üyelik yeniden başladığında hak sınırları dahilinde yeniden yayına alınır.
+- **İptal.** Üyeliğinizi profilinizdeki “Üyeliğim” bölümünden dilediğiniz zaman iptal edebilirsiniz. İptal, ödenmiş dönemin sonunda geçerli olur; o güne kadar vitrinleriniz yayında kalır, sonraki dönem için ücret alınmaz, kalan süre için iade yapılmaz.
+- **Standart’tan Pro’ya geçiş.** Ücretli Standart üyeliğin kalan süresinin değeri, Pro ücretinden düşülür. Ücretsiz deneme süresi için kredi verilmez. Pro’dan Standart’a geçişte kalan süre için iade veya kredi yapılmaz.
+- **Ücretsiz dönem.** İşinn’in duyurduğu ücretsiz dönem boyunca plan satın alma kapalıdır; dönem sonrasında uygulanacak koşullar önceden duyurulur.
+- **Ücretli görünürlük.** “Öne Çıkarma” gibi ücretli görünürlük ürünleri “Sponsorlu” olarak etiketlenir ve kalite veya doğrulama anlamına gelmez.
+- **Değerlendirmeler.** Değerlendirmeler, hizmeti aldığını beyan eden müşteriler tarafından yazılır; İşinn bu beyanı bağımsız olarak doğrulamaz. “İşinn Sağlayıcısı” ifadesi kimlik, belge veya sabıka doğrulaması anlamına gelmez.
+
 ## 10. Değişiklikler
 
 Bu şartlar zaman zaman güncellenebilir; önemli değişikliklerde kullanıcılar bilgilendirilir.

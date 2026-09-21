@@ -3,7 +3,7 @@ import { Analytics } from "@vercel/analytics/react";
 
 export const metadata = {
   metadataBase: new URL("https://www.isinn.com.tr"),
-  title: "İşinn — Güvenilir Usta, Temizlikçi, Özel Ders Bul | Komisyonsuz Hizmet Pazaryeri",
+  title: "İşinn — Güvenilir Usta, Temizlikçi, Özel Ders Bul",
   description: "Temizlikçiden özel ders öğretmenine, ustadan danışmana — ihtiyacın olan yerel ya da uzaktan hizmeti İşinn'de bul, sıfır komisyonla kendi hizmetini sun.",
   // Mobil uygulama çalışmasının (bkz. docs/mobile-app.md) yan ürünü — site
   // artık gerçek bir PWA da (telefon tarayıcısından "Ana ekrana ekle").
@@ -44,52 +44,6 @@ export const viewport = {
 // Perplexity) İşinn'i doğru tanıyıp alıntılama ihtimalini artırır. Bu dosya
 // sunucu bileşeni olduğu için ilk HTML'de doğrudan yer alır, client-side
 // render'ı beklemez.
-const faqJsonLd = {
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  mainEntity: [
-    {
-      "@type": "Question",
-      name: "İşinn nedir?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "İşinn, Türkiye'de yerel ve uzaktan hizmet sağlayıcılarla (temizlikçi, usta, özel ders öğretmeni, danışman ve daha fazlası) müşterileri buluşturan bir hizmet pazaryeridir.",
-      },
-    },
-    {
-      "@type": "Question",
-      name: "İşinn'de komisyon var mı?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "Hayır. İşinn sıfır komisyon prensibiyle çalışır — sağlayıcılar aylık/yıllık sabit üyelik ücreti öder, kazandıkları işten platforma ayrıca komisyon vermez.",
-      },
-    },
-    {
-      "@type": "Question",
-      name: "İşinn'de hizmet almak ücretsiz mi?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "Evet. Hizmet arayan kullanıcılar için İşinn'de gezinmek, sağlayıcı profillerini incelemek ve mesajlaşmak tamamen ücretsizdir.",
-      },
-    },
-    {
-      "@type": "Question",
-      name: "İşinn'de kendi hizmetimi nasıl sunarım?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "\"Hizmet Ekle\" butonuyla birkaç dakikada bir vitrin oluşturup fotoğraf, açıklama ve fiyat bilgisi ekleyerek hizmetini yayına alabilirsin.",
-      },
-    },
-    {
-      "@type": "Question",
-      name: "İşinn'de sağlayıcılar güvenilir mi?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "Sağlayıcılar telefon doğrulaması ve profil bilgileriyle platformda yer alır; geçmiş müşterilerin gerçek değerlendirmelerini görerek karar verebilirsin.",
-      },
-    },
-  ],
-};
 
 // Marka/kuruluş yapılandırılmış verisi — Google'ın "İşinn" marka aramalarında
 // bir Knowledge Panel oluşturma ihtimalini artırır, sosyal hesaplar
@@ -115,8 +69,6 @@ export default function RootLayout({ children }) {
   return (
     <html lang="tr">
       <body>
-        {/* eslint-disable-next-line react/no-danger */}
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
         {/* eslint-disable-next-line react/no-danger */}
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }} />
         {children}

@@ -25,24 +25,29 @@ export default async function sitemap() {
   ];
   const staticEntries = staticPaths.map((path) => ({
     url: `${BASE_URL}${path}`,
-    lastModified: new Date(),
+    lastModified: new Date("2026-09-21T00:00:00Z"),
     changeFrequency: path === "" ? "daily" : "monthly",
     priority: path === "" ? 1 : 0.3,
   }));
 
   const rehberEntries = REHBER_POSTS.map((post) => ({
     url: `${BASE_URL}/rehber/${post.slug}`,
-    lastModified: new Date(),
+    lastModified: new Date("2026-09-21T00:00:00Z"),
     changeFrequency: "monthly",
     priority: 0.5,
   }));
 
   const { data: services } = await supabase
     .from("services")
-    .select("id, updated_at, created_at, city, is_remote, category_id, categories(slug)")
+    .select("id, updated_at, created_at, city, is_remote, category_id, description, categories(slug)")
     .eq("active", true);
 
-  const vitrinEntries = (services || []).map((row) => ({
+  // DEMO ve içeriği çok ince vitrinler sitemap'e girmez (sayfaları da noindex).
+  const indexable = (services || []).filter((row) => {
+    const d = (row.description || "").trim();
+    return !d.startsWith("DEMO VİTRİN") && d.length >= 40;
+  });
+  const vitrinEntries = indexable.map((row) => ({
     url: `${BASE_URL}/vitrin/${row.id}`,
     lastModified: new Date(row.updated_at || row.created_at || Date.now()),
     changeFrequency: "weekly",
@@ -63,7 +68,7 @@ export default async function sitemap() {
   const citySlugsWithContent = new Set();
   const comboKeysWithContent = new Set();
 
-  for (const row of services || []) {
+  for (const row of indexable) {
     const categorySlug = row.categories?.slug;
     const knownCategory = categorySlug && knownCategorySlugs.has(categorySlug) ? categorySlug : null;
     if (knownCategory) categorySlugsWithContent.add(knownCategory);
@@ -79,14 +84,14 @@ export default async function sitemap() {
 
   const categoryEntries = SEO_CATEGORIES.filter((c) => categorySlugsWithContent.has(c.slug)).map((c) => ({
     url: `${BASE_URL}/kategori/${c.slug}`,
-    lastModified: new Date(),
+    lastModified: new Date("2026-09-21T00:00:00Z"),
     changeFrequency: "daily",
     priority: 0.6,
   }));
 
   const cityEntries = [...citySlugsWithContent].map((slug) => ({
     url: `${BASE_URL}/sehir/${slug}`,
-    lastModified: new Date(),
+    lastModified: new Date("2026-09-21T00:00:00Z"),
     changeFrequency: "daily",
     priority: 0.6,
   }));
@@ -95,7 +100,7 @@ export default async function sitemap() {
     const [categorySlug, citySlug] = key.split("|");
     return {
       url: `${BASE_URL}/kategori/${categorySlug}/${citySlug}`,
-      lastModified: new Date(),
+      lastModified: new Date("2026-09-21T00:00:00Z"),
       changeFrequency: "daily",
       priority: 0.8,
     };

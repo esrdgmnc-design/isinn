@@ -56,6 +56,8 @@ Kişisel verileriniz, yalnızca platformun işletilebilmesi ve yukarıda belirti
 - **Anthropic (Claude AI)** — fotoğraf uygunluk kontrolü, akıllı arama ve yazım yardımı gibi yapay zekâ destekli özellikler için ilgili metin ve/veya görseller işlenebilir
 - **PayTR** — ödeme işlemlerinin gerçekleştirilmesi; kart bilgileriniz İşinn sunucularına aktarılmaz, doğrudan PayTR'ye iletilir
 - **Netgsm** — telefon numarası doğrulama işlemleri kapsamında SMS gönderimi
+- **Resend** — hesap doğrulama ve şifre yenileme gibi işlemsel e-postaların gönderimi
+- **Vercel** — internet sitesinin barındırılması ve çerezsiz ziyaret istatistikleri
 
 Bunun yanında, kullanıcı tarafından platformda herkese açık şekilde paylaşılması tercih edilen bilgiler, platformun diğer kullanıcıları tarafından görüntülenebilir.
 
@@ -82,6 +84,8 @@ Kişisel verileriniz, işleme faaliyetinin niteliğine göre KVKK'nın 5. maddes
 ## 9. Kişisel Verilerin Saklanması
 
 Kişisel verileriniz, işleme amaçlarının gerektirdiği süre boyunca ve ilgili mevzuatta öngörülen saklama sürelerine uygun olarak muhafaza edilir. Hesabınızın silinmesi halinde profil, vitrin ve belgeleriniz kaldırılır; mevzuat uyarınca saklanması zorunlu kayıtlar ise öngörülen süre boyunca muhafaza edilebilir.
+
+**Yurt dışına aktarım.** Yukarıda sayılan hizmet sağlayıcıların bir kısmının sunucuları Türkiye dışında bulunabilir. Bu aktarımlar KVKK’nın 9. maddesi çerçevesinde yürütülür.
 
 ## 10. KVKK Kapsamındaki Haklarınız
 

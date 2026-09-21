@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { supabase } from "../../../lib/supabaseClient";
 import ShareButton from "../../../components/ShareButton";
 import { formatPrice, getProviderName } from "../../../lib/seoFormat";
@@ -32,12 +33,16 @@ export async function generateMetadata({ params }) {
   const city = row.is_remote ? "Uzaktan" : (row.city || "Türkiye");
   const title = `${row.title} — ${provider} | İşinn`;
   const description = (row.description?.trim() || `${provider} tarafından ${city} bölgesinde sunulan "${row.title}" hizmeti — İşinn'de komisyonsuz keşfet.`).slice(0, 160);
+  // DEMO (örnek) ve içeriği çok ince vitrinler arama motoruna açılmaz.
+  const isDemo = (row.description || "").trim().startsWith("DEMO VİTRİN");
+  const isThin = (row.description || "").trim().length < 40;
   const img = (Array.isArray(row.images) && row.images[0]) || FALLBACK_IMG;
   const url = `${BASE_URL}/vitrin/${row.id}`;
   return {
     title,
     description,
     alternates: { canonical: url },
+    robots: isDemo || isThin ? { index: false, follow: true } : undefined,
     openGraph: { title, description, url, siteName: "İşinn", locale: "tr_TR", type: "website", images: [{ url: img }] },
     twitter: { card: "summary_large_image", title, description, images: [img] },
   };
@@ -46,15 +51,8 @@ export async function generateMetadata({ params }) {
 export default async function VitrinPage({ params }) {
   const row = await getListing(params.id);
 
-  if (!row) {
-    return (
-      <div className="max-w-lg mx-auto px-5 py-24 text-center">
-        <h1 className="font-sans text-xl font-bold mb-3" style={{ color: "#0F1115" }}>Bu vitrin artık aktif değil</h1>
-        <p className="text-sm mb-6" style={{ color: "#6B7280" }}>Kaldırılmış ya da yayından kaldırılmış olabilir.</p>
-        <Link href="/" className="inline-block text-sm font-bold px-5 py-2.5 rounded-full text-white" style={{ background: "#2563EB" }}>İşinn'e Dön</Link>
-      </div>
-    );
-  }
+  // Yayından kalkan / silinen vitrin gerçek 404 döner (eskiden 200 + "artık aktif değil" — soft-404).
+  if (!row) notFound();
 
   const provider = getProviderName(row);
   const city = row.is_remote ? "Uzaktan" : (row.city || "Belirtilmemiş");

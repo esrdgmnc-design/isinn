@@ -7,6 +7,7 @@ import { supabase } from "../lib/supabaseClient";
 const Cropper = dynamic(() => import("react-easy-crop"), { ssr: false, loading: () => null });
 import { COMPANY } from "../lib/companyInfo";
 import { isFreePeriod, FREE_PERIOD_UNTIL_ISO } from "../lib/freePeriod";
+import { trackEvent, captureAttribution } from "../lib/analytics";
 import { useLanguage } from "../lib/i18n/LanguageContext";
 import {
   Search, MapPin, Star, Heart, PlayCircle, ChevronLeft, ChevronRight,
@@ -106,11 +107,15 @@ const CATEGORIES = [
 // talebi) — bkz. CreateListingView/PostJobView handleSubmit.
 const CUSTOM_CATEGORY_ID = "diger-ozel";
 
+// Öncelikli dikey (karar 2026-09-21): İstanbul, anne-çocuk ve aile hizmetleri. Bu grup
+// listenin başında; ana sayfada ayrı bir bölüm olarak da öne çıkarılıyor (bkz. HomeView).
+const MOM_CHILD_CATEGORY_IDS = ["bakici", "logusa-bakicisi", "emzirme-danismani", "oyun-ablasi", "ogretmen", "egitmen", "etkinlik-organizatoru", "muzik-egitmeni"];
+
 const PARENT_CATEGORIES = [
+  { id: "egitim-aile", name: "Anne-Çocuk & Aile", icon: GraduationCap, categoryIds: MOM_CHILD_CATEGORY_IDS },
   { id: "ev-hizmetleri", name: "Ev Hizmetleri", icon: Home, categoryIds: ["temizlik", "nakliye", "tadilat", "cilingir", "terzi", "elektrikci", "su-tesisatcisi", "hali-yikama", "yemek", "boya-badana", "klima-beyaz-esya", "ic-mimarlik", "teknik-servis", "oto-tamir", "bocek-ilaclama"] },
   { id: "guzellik-bakim", name: "Güzellik & Bakım", icon: Wand2, categoryIds: ["tirnakci", "makyaj", "bakim", "kuafor-berber"] },
   { id: "saglik", name: "Sağlık", icon: HeartPulse, categoryIds: ["hasta-bakici", "hemsire", "fizyoterapist", "diyetisyen", "psikolog", "yoga-koc", "spor-egitmeni", "veteriner"] },
-  { id: "egitim-aile", name: "Eğitim & Aile", icon: GraduationCap, categoryIds: ["ogretmen", "egitmen", "bakici", "logusa-bakicisi", "emzirme-danismani", "etkinlik-organizatoru", "muzik-egitmeni", "oyun-ablasi"] },
   { id: "profesyonel", name: "Profesyonel Hizmetler", icon: Briefcase, categoryIds: ["tasarim", "yazilim", "dijital", "muhasebe", "ceviri", "icerik-yazarligi", "video-duzenleme", "seslendirme", "sanal-asistan", "moda-tekstil-tasarim", "avukat"] },
   { id: "diger", name: "Diğer", icon: MoreHorizontal, categoryIds: ["bahce-bakim", "muhendis", "sosyal-medya", "profesyonel-fotograf", "evcil-hayvan"] },
 ];
@@ -139,9 +144,9 @@ function getCategoryGroupName(id, t) {
 }
 
 const LEVEL_META = {
-  "top-rated": { labelKey: "common.levelTopRated", label: "Top Rated", color: "#C2872B" },
-  "level-2": { labelKey: "common.levelLevel2", label: "Level 2", color: "#6B4FA0" },
-  "level-1": { labelKey: "common.levelLevel1", label: "Level 1", color: "#3A5BA0" },
+  "top-rated": { labelKey: "common.levelTopRated", label: "Üst Düzey", color: "#C2872B" },
+  "level-2": { labelKey: "common.levelLevel2", label: "Deneyimli", color: "#6B4FA0" },
+  "level-1": { labelKey: "common.levelLevel1", label: "Gelişen", color: "#3A5BA0" },
   "new": { labelKey: "common.levelNew", label: "Yeni Vitrin", color: "#6B6550" },
 };
 
@@ -1447,7 +1452,7 @@ const HomeListingCard = memo(function HomeListingCard({ l, isFavorite, onSelectL
               <span className="text-[10px] font-black px-2 py-0.5 rounded-full text-white tracking-wide" style={{ background: "#DC2626" }}>{t("searchResults.demoBadge")}</span>
             )}
             {l.isBoosted && (
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white flex items-center gap-0.5" style={{ background: "#F59E0B" }}><Sparkles size={9} />{t("searchResults.featuredBadge")}</span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white flex items-center gap-0.5" style={{ background: "#F59E0B" }}><Sparkles size={9} />{t("searchResults.sponsoredBadge")}</span>
             )}
             {l.isReal && (
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: "#2FBF71" }}>{t("searchResults.newBadge")}</span>
@@ -1723,7 +1728,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
                           className="absolute top-2 left-2 text-[10px] font-bold px-2 py-0.5 rounded-full text-white flex items-center gap-1"
                           style={{ background: "linear-gradient(135deg, #F59E0B 0%, #D97706 100%)" }}
                         >
-                          <Sparkles size={9} /> {t("searchResults.featuredBadge")}
+                          <Sparkles size={9} /> {l.isBoosted ? t("searchResults.sponsoredBadge") : t("searchResults.highlyRatedBadge")}
                         </span>
                       )}
                     </button>
@@ -1768,6 +1773,17 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
           bugünden gerçek bir "uygulamaya" sahip olduklarını ziyaretçilere
           kendi kendine anlatıyor — her seferinde elle anlatmaya gerek kalmasın. */}
       <InstallAppBanner />
+
+      {/* Öncelikli dikey: anne-çocuk ve aile hizmetleri */}
+      <section className="max-w-6xl mx-auto px-5 mt-8">
+        <h2 className="font-sans text-2xl font-black mb-1" style={{ color: "#0F1115" }}>{t("home.momChildHeading")}</h2>
+        <p className="text-sm mb-4" style={{ color: "#4B5563" }}>{t("home.momChildSubtext")}</p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {MOM_CHILD_CATEGORY_IDS.map((id) => CATEGORIES.find((c) => c.id === id)).filter(Boolean).map((c, i) => (
+            <CategoryTile key={c.id} c={c} i={i} onClick={() => onSearch(c.name)} />
+          ))}
+        </div>
+      </section>
 
       {featured.length > 0 && (
         <section className="max-w-6xl mx-auto px-5 mt-8">
@@ -4838,7 +4854,7 @@ function SearchResultsView({ query, cityFilter, onBack, onSelectListing, realLis
                     <span className="text-[10px] font-black px-2 py-0.5 rounded-full text-white tracking-wide" style={{ background: "#DC2626" }}>{t("searchResults.demoBadge")}</span>
                   )}
                   {l.isBoosted && (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white flex items-center gap-0.5" style={{ background: "#F59E0B" }}><Sparkles size={9} />{t("searchResults.featuredBadge")}</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white flex items-center gap-0.5" style={{ background: "#F59E0B" }}><Sparkles size={9} />{t("searchResults.sponsoredBadge")}</span>
                   )}
                   {l.isReal && (
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: "#2FBF71" }}>{t("searchResults.newBadge")}</span>
@@ -5127,6 +5143,7 @@ Aciliyet: ${urgencyLabel}${mode === "local" ? ` · Hizmet yeri: ${prefLabel}` : 
       return;
     }
     setPostedJob({ dbId: data.id, posterId: data.client_id, categoryDbId: data.category_id });
+    trackEvent("job_posted", { category: categoryId }, userId);
     onJobPosted?.();
     setStep("success");
     // Şüpheli içerik taraması — sessiz, engellemeyen.
@@ -5994,6 +6011,7 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
     }
     setInput("");
     setRiskWarnBody("");
+    trackEvent("message_sent", {}, currentUserId);
     const time = formatMessageTime(data.created_at);
     setThreads((t) => ({ ...t, [activeId]: [...(t[activeId] || []), { id: data.id, sender: "me", text: body, time }] }));
     setConversations((cs) => cs.map((c) => (c.id === activeId ? { ...c, lastMessage: body, time } : c)));
@@ -7309,6 +7327,7 @@ function CreateListingView({ onBack, onCreated, userId, onGoToProfile, onGoToPla
     }
 
     const listing = mapServiceRowToListing(data);
+    trackEvent("vitrin_created", { category: categoryId }, userId);
     setSubmitting(false);
     setCreated(listing);
     onCreated();
@@ -7461,12 +7480,12 @@ function CreateListingView({ onBack, onCreated, userId, onGoToProfile, onGoToPla
           {t("createListing.successBodyCreate", { title: created?.title })}
         </p>
 
-        {recLoading && (
+        {recLoading && !isFreePeriod() && (
           <div className="rounded-2xl border p-4 mb-6 text-xs flex items-center justify-center gap-2" style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#6B6550" }}>
             <Loader2 size={13} className="animate-spin" /> {t("createListing.recLoading")}
           </div>
         )}
-        {recommendation && (
+        {recommendation && !isFreePeriod() && (
           <div className="rounded-2xl border-2 p-5 mb-6 text-left" style={{ borderColor: "#2563EB", background: "#EFF6FF" }}>
             <div className="flex items-center gap-1.5 mb-2">
               <Sparkles size={13} style={{ color: "#2563EB" }} />
@@ -7483,6 +7502,29 @@ function CreateListingView({ onBack, onCreated, userId, onGoToProfile, onGoToPla
             gibi hissettiriyordu — kapak fotoğrafı zaten formdaydı ama gerisi
             değildi. Artık hepsi burada, aynı yerde, sayfa değiştirmeden. */}
         {mediaUploadSection}
+
+        {created?.dbId && (() => {
+          const shareUrl = `https://www.isinn.com.tr/vitrin/${created.dbId}`;
+          const shareText = `İşinn'de vitrinim yayında: ${created.title}`;
+          return (
+            <div className="rounded-2xl border p-5 mb-6 text-left" style={{ borderColor: "#D9D0BA", background: "#FFFDF8" }}>
+              <p className="text-sm font-bold mb-1" style={{ color: "#1B2B24" }}>Vitrinini paylaş</p>
+              <p className="text-xs mb-3" style={{ color: "#5C5744" }}>Tanıdıklarına ve sosyal medya hesaplarına gönder; ilk müşterilerin en çok senin çevrenden gelir.</p>
+              <div className="flex gap-2 flex-wrap">
+                <a
+                  href={`https://wa.me/?text=${encodeURIComponent(shareText + " " + shareUrl)}`}
+                  target="_blank" rel="noopener noreferrer"
+                  onClick={() => trackEvent("vitrin_shared", { via: "whatsapp" }, userId)}
+                  className="px-4 py-2 rounded-full text-xs font-bold text-white" style={{ background: "#16A34A" }}
+                >WhatsApp'ta paylaş</a>
+                <button
+                  onClick={async () => { try { await navigator.clipboard.writeText(shareUrl); trackEvent("vitrin_shared", { via: "copy" }, userId); } catch {} }}
+                  className="px-4 py-2 rounded-full text-xs font-bold border" style={{ borderColor: "#D9D0BA", color: "#1B2B24" }}
+                >Bağlantıyı kopyala</button>
+              </div>
+            </div>
+          );
+        })()}
 
         <div className="flex gap-2 justify-center">
           <button onClick={onBack} className="px-5 py-2.5 rounded-full text-sm font-medium text-white" style={{ background: "#C2872B" }}>{t("common.backToHome")}</button>
@@ -7903,9 +7945,10 @@ function formatDaysUntilTr(iso) {
 // PostgREST tek istekte en fazla 1000 satır döndürür; toplamlar (kullanıcı, gelir,
 // abonelik) sessizce kırpılmasın diye tüm sayfaları çeker. Hata varsa fırlatır —
 // panel "0" göstermek yerine "yüklenemedi" desin.
-async function fetchAllPages(buildQuery) {
+async function fetchAllPages(buildQuery, maxPages = Infinity) {
   const rows = [];
-  for (let from = 0; ; from += 1000) {
+  for (let page = 0; page < maxPages; page++) {
+    const from = page * 1000;
     const { data, error } = await buildQuery().range(from, from + 999);
     if (error) throw error;
     rows.push(...(data || []));
@@ -9408,6 +9451,57 @@ function SubscriptionCard({ userId, onGoToPlans }) {
   );
 }
 
+// Hesap silme: yazılı onay ("SİL") ister, sunucuda kimlik doğrulanır. Geri alınamaz.
+function DeleteAccountCard() {
+  const [open, setOpen] = useState(false);
+  const [confirmText, setConfirmText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const remove = async () => {
+    setBusy(true); setError("");
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch("/api/delete-account", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}) },
+        body: JSON.stringify({ confirm: confirmText }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.message || "Hesap silinemedi.");
+      await supabase.auth.signOut();
+      window.location.href = "/";
+    } catch (e) {
+      setError(e.message || "Hesap silinemedi.");
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="rounded-2xl border p-4 mt-6" style={{ borderColor: "#FCA5A5", background: "#FFFDF8" }}>
+      <p className="text-sm font-bold" style={{ color: "#7F1D1D" }}>Hesabımı sil</p>
+      {!open ? (
+        <>
+          <p className="text-xs mt-1 mb-3" style={{ color: "#5C5744" }}>Hesabın, vitrinlerin, mesajların ve yorumların kalıcı olarak silinir. Yasal saklama zorunluluğu olan ödeme kayıtları kimliksiz olarak saklanır.</p>
+          <button onClick={() => setOpen(true)} className="px-4 py-2 rounded-full text-xs font-bold border" style={{ borderColor: "#FCA5A5", color: "#B91C1C" }}>Hesabı silmek istiyorum</button>
+        </>
+      ) : (
+        <div className="mt-2">
+          <p className="text-xs mb-2" style={{ color: "#7F1D1D" }}>Bu işlem geri alınamaz. Onaylamak için aşağıya <b>SİL</b> yaz.</p>
+          <input value={confirmText} onChange={(e) => setConfirmText(e.target.value)} className="w-full px-3 py-2 rounded-lg border text-sm outline-none" style={{ borderColor: "#FCA5A5" }} aria-label="Silme onayı" />
+          <div className="flex gap-2 mt-3">
+            <button onClick={() => { setOpen(false); setConfirmText(""); setError(""); }} disabled={busy} className="px-4 py-2 rounded-full text-xs font-bold border" style={{ borderColor: "#D9D0BA", color: "#1B2B24" }}>Vazgeç</button>
+            <button onClick={remove} disabled={busy || confirmText.trim().toLocaleUpperCase("tr-TR") !== "SİL"} className="px-4 py-2 rounded-full text-xs font-bold text-white" style={{ background: "#B91C1C", opacity: busy || confirmText.trim().toLocaleUpperCase("tr-TR") !== "SİL" ? 0.5 : 1 }}>
+              {busy ? "Siliniyor…" : "Hesabımı kalıcı olarak sil"}
+            </button>
+          </div>
+          {error && <p className="text-xs mt-2 break-words" style={{ color: "#B91C1C" }}>{error}</p>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOpenModeration, onOpenUserReports, onOpenListingReports, onOpenContentFlags, isAdmin, pendingMediaApprovals, onApproveMedia, onRejectMedia, onListingsChanged, onJobsChanged, onEditJob, onCreateListing, onViewListing, realListings, onGoToPlans }) {
   const { t } = useLanguage();
   // Video tanıtım/portföy/sertifika/CV artık vitrine özel — bkz. ListingDetail sahip modu
@@ -10303,6 +10397,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
       )}
 
       <SubscriptionCard userId={userId} onGoToPlans={onGoToPlans} />
+      <DeleteAccountCard />
 
       <button
         onClick={onOpenAdminReports}
@@ -10507,6 +10602,7 @@ function DraggableSupportButton({ onClick }) {
 export default function IsinnPrototype({ session, onRequireAuth }) {
   const { t } = useLanguage();
   const [view, setView] = useState(getInitialView);
+  useEffect(() => { captureAttribution(); trackEvent("app_open", {}, null); }, []);
   const [selected, setSelected] = useState(null);
   const [selectedJob, setSelectedJob] = useState(null);
   const [editingJob, setEditingJob] = useState(null); // Düzenle ile açılan iş ilanı (PostJobView)
@@ -10684,12 +10780,23 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
   const fetchListings = async () => {
     const myReq = ++listingsReqRef.current;
     lastListingsFetchRef.current = Date.now();
-    const { data, error } = await supabase
-      .from("services")
-      .select("*, profiles(business_name, full_name), categories(slug)")
-      .eq("active", true)
-      .order("created_at", { ascending: false })
-      .limit(300);
+    // Eskiden yalnızca en yeni 300 vitrin çekiliyordu (fazlası aramada hiç görünmüyordu);
+    // artık sayfalı, en fazla 3000.
+    let data = null;
+    let error = null;
+    try {
+      data = await fetchAllPages(
+        () => supabase
+          .from("services")
+          .select("*, profiles(business_name, full_name), categories(slug)")
+          .eq("active", true)
+          .order("created_at", { ascending: false })
+          .order("id"),
+        3
+      );
+    } catch (e) {
+      error = e;
+    }
     if (!error && data) {
       const mapped = data.map(mapServiceRowToListing);
       // Gerçek ortalama puan/yorum sayısını da kartlara yansıtıyoruz — ratings
@@ -10823,7 +10930,7 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
 
   // Liste sadece açılışta çekilirse başka yerde (başka cihaz/kullanıcı, panel)
   // yapılan değişiklikler sayfa yenilenene kadar görünmez. Sekme tekrar öne
-  // gelince ve sayfa açıkken 60 sn'de bir sessizce tazele (en az 15 sn arayla).
+  // gelince ve sayfa açıkken 5 dk'da bir sessizce tazele (en az 15 sn arayla).
   const fetchListingsRef = useRef(fetchListings);
   fetchListingsRef.current = fetchListings;
   useEffect(() => {
@@ -10834,7 +10941,7 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
     };
     document.addEventListener("visibilitychange", refresh);
     window.addEventListener("focus", refresh);
-    const timer = setInterval(refresh, 60000);
+    const timer = setInterval(refresh, 300000);
     return () => {
       document.removeEventListener("visibilitychange", refresh);
       window.removeEventListener("focus", refresh);
@@ -10993,6 +11100,7 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
   }, [userId]);
 
   const runSearch = (q, city = "") => {
+    trackEvent("search", { has_city: !!city }, userId);
     setQuery(q);
     setCityFilter(city);
     setView("search");
@@ -11019,6 +11127,10 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
     if (n.type === "subscription_ending_soon" || n.type === "vitrin_deactivated") {
       setView("pricing");
       return;
+    }
+    if (n.type === "new_job_match" && n.related_job_id) {
+      const { data: jobRow } = await supabase.from("jobs").select("*, profiles(*), categories(*)").eq("id", n.related_job_id).maybeSingle();
+      if (jobRow) { setSelectedJob(mapJobRowToPosting(jobRow)); setView("jobDetail"); return; }
     }
     if ((n.type === "media_approved" || n.type === "media_rejected" || n.type === "saved_search_match") && n.related_service_id) {
       const { data } = await supabase.from("services").select("*, profiles(*), categories(*)").eq("id", n.related_service_id).maybeSingle();
