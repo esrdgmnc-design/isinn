@@ -42,6 +42,20 @@ export default function RehberPostPage({ params }) {
       { "@type": "ListItem", position: 3, name: post.title, item: `${BASE_URL}/rehber/${post.slug}` },
     ],
   };
+  // Bu sayfaya özel SSS şeması — Google'ın "İnsanlar ayrıca soruyor" kutusunda
+  // gösterebileceği türden, gerçek ve sayfa içeriğiyle birebir eşleşen sorular
+  // (bkz. lib/rehberContent.js'teki faq alanı). Sitedeki her sayfaya aynı genel
+  // SSS'yi basmak yerine (eskiden layout'ta öyleydi) yalnızca bu yazıyla ilgili
+  // sorular, yalnızca bu sayfada.
+  const faqJsonLd = post.faq && post.faq.length > 0 ? {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: post.faq.map((f) => ({
+      "@type": "Question",
+      name: f.q,
+      acceptedAnswer: { "@type": "Answer", text: f.a },
+    })),
+  } : null;
 
   return (
     <>
@@ -49,6 +63,10 @@ export default function RehberPostPage({ params }) {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       {/* eslint-disable-next-line react/no-danger */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
+      {faqJsonLd && (
+        // eslint-disable-next-line react/no-danger
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
+      )}
       <div className="max-w-2xl mx-auto px-5 py-10">
         <Link href="/rehber" className="text-sm font-bold" style={{ color: "#2563EB" }}>← Rehberler</Link>
         <h1 className="font-sans text-2xl md:text-3xl font-black mt-4 mb-6" style={{ color: "#0F1115" }}>{post.title}</h1>
@@ -58,6 +76,19 @@ export default function RehberPostPage({ params }) {
           // eslint-disable-next-line react/no-danger
           dangerouslySetInnerHTML={{ __html: post.bodyHtml }}
         />
+        {post.faq && post.faq.length > 0 && (
+          <div className="mt-8 pt-6 border-t" style={{ borderColor: "#E5E7EB" }}>
+            <h2 className="font-sans text-lg font-black mb-4" style={{ color: "#0F1115" }}>Sıkça Sorulan Sorular</h2>
+            <div className="space-y-4">
+              {post.faq.map((f, i) => (
+                <div key={i}>
+                  <p className="text-sm font-bold mb-1" style={{ color: "#0F1115" }}>{f.q}</p>
+                  <p className="text-sm" style={{ color: "#4B5563" }}>{f.a}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         <Link
           href={post.ctaHref}
           className="inline-block mt-8 text-sm font-bold px-6 py-3 rounded-full text-white"

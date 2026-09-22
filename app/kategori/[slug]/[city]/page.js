@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { supabase } from "../../../../lib/supabaseClient";
 import { SEO_CATEGORIES, SEO_CITIES, matchesCitySlug } from "../../../../lib/seoTaxonomy";
 import { formatPrice, getProviderName } from "../../../../lib/seoFormat";
+import { getCategoryFaq } from "../../../../lib/categoryFaq";
 
 // SEO'nun en değerli sayfası: "istanbul temizlikçi", "ankara özel ders" gibi
 // uzun kuyruk aramaların doğrudan hedefi — bkz. SEO stratejisi dokümanı,
@@ -77,10 +78,25 @@ export default async function CategoryCityPage({ params }) {
     ],
   };
 
+  const categoryFaq = services.length > 0 ? getCategoryFaq(categoryMeta.name, cityMeta.name) : null;
+  const faqJsonLd = categoryFaq ? {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: categoryFaq.map((f) => ({
+      "@type": "Question",
+      name: f.q,
+      acceptedAnswer: { "@type": "Answer", text: f.a },
+    })),
+  } : null;
+
   return (
     <>
       {/* eslint-disable-next-line react/no-danger */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      {faqJsonLd && (
+        // eslint-disable-next-line react/no-danger
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
+      )}
       <div className="max-w-5xl mx-auto px-5 py-10">
         <Link href="/" className="text-sm font-bold" style={{ color: "#2563EB" }}>← İşinn</Link>
         <p className="text-xs mt-4 mb-1" style={{ color: "#9CA3AF" }}>
@@ -116,6 +132,20 @@ export default async function CategoryCityPage({ params }) {
                 </Link>
               );
             })}
+          </div>
+        )}
+
+        {categoryFaq && (
+          <div className="mt-10 pt-8 border-t" style={{ borderColor: "#F0F0F0" }}>
+            <h2 className="font-sans text-lg font-black mb-4" style={{ color: "#0F1115" }}>Sıkça Sorulan Sorular</h2>
+            <div className="space-y-4">
+              {categoryFaq.map((f, i) => (
+                <div key={i}>
+                  <p className="text-sm font-bold mb-1" style={{ color: "#0F1115" }}>{f.q}</p>
+                  <p className="text-sm" style={{ color: "#6B7280" }}>{f.a}</p>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>

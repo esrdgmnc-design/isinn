@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { supabase } from "../../../lib/supabaseClient";
 import { SEO_CATEGORIES } from "../../../lib/seoTaxonomy";
 import { formatPrice, getProviderName } from "../../../lib/seoFormat";
+import { getCategoryFaq } from "../../../lib/categoryFaq";
 
 // SEO için eklendi: kategoriler eskiden sadece ana sayfadaki bir istemci
 // tarafı filtreydi, kendi URL'leri yoktu — Google "istanbul temizlikçi" gibi
@@ -80,6 +81,16 @@ export default async function CategoryPage({ params }) {
       { "@type": "ListItem", position: 2, name: meta.name, item: `${BASE_URL}/kategori/${params.slug}` },
     ],
   };
+  const categoryFaq = services.length > 0 ? getCategoryFaq(meta.name) : null;
+  const faqJsonLd = categoryFaq ? {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: categoryFaq.map((f) => ({
+      "@type": "Question",
+      name: f.q,
+      acceptedAnswer: { "@type": "Answer", text: f.a },
+    })),
+  } : null;
 
   return (
     <>
@@ -88,6 +99,10 @@ export default async function CategoryPage({ params }) {
       {services.length > 0 && (
         // eslint-disable-next-line react/no-danger
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      )}
+      {faqJsonLd && (
+        // eslint-disable-next-line react/no-danger
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
       )}
       <div className="max-w-5xl mx-auto px-5 py-10">
         <Link href="/" className="text-sm font-bold" style={{ color: "#2563EB" }}>← İşinn</Link>
@@ -122,6 +137,20 @@ export default async function CategoryPage({ params }) {
                 </Link>
               );
             })}
+          </div>
+        )}
+
+        {categoryFaq && (
+          <div className="mt-10 pt-8 border-t" style={{ borderColor: "#F0F0F0" }}>
+            <h2 className="font-sans text-lg font-black mb-4" style={{ color: "#0F1115" }}>Sıkça Sorulan Sorular</h2>
+            <div className="space-y-4">
+              {categoryFaq.map((f, i) => (
+                <div key={i}>
+                  <p className="text-sm font-bold mb-1" style={{ color: "#0F1115" }}>{f.q}</p>
+                  <p className="text-sm" style={{ color: "#6B7280" }}>{f.a}</p>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>
