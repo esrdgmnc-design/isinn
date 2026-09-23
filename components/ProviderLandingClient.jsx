@@ -26,7 +26,7 @@ export default function ProviderLandingClient({ audienceSlug }) {
         className="inline-block text-center text-sm font-bold px-7 py-3.5 rounded-full text-white"
         style={{ background: "#2563EB" }}
       >
-        Ücretsiz Vitrinini Aç
+        Ücretsiz Vitrin Oluşturun
       </a>
       <a
         href="/"
@@ -34,7 +34,7 @@ export default function ProviderLandingClient({ audienceSlug }) {
         className="inline-block text-center text-sm font-bold px-7 py-3.5 rounded-full border"
         style={{ borderColor: "#D9D0BA", color: "#1B2B24" }}
       >
-        Önce Açık İş İlanlarına Bak
+        Açık İş İlanlarını İnceleyin
       </a>
     </div>
   );
