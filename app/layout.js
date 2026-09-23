@@ -55,7 +55,7 @@ const organizationJsonLd = {
   name: "İşinn",
   url: "https://www.isinn.com.tr",
   logo: "https://www.isinn.com.tr/icons/icon-512.webp",
-  description: "Türkiye'de yerel ve uzaktan hizmet sağlayıcılarla müşterileri buluşturan, sıfır komisyonlu hizmet pazaryeri.",
+  description: "İşinn, hizmet almak isteyenlerle hizmet vermek isteyenleri buluşturan, fayda ve güven odaklı bir platformdur. Sıfır komisyon ile çalışır.",
   parentOrganization: {
     "@type": "Organization",
     name: "CODE G LTD (Code G Teknoloji ve Ticaret Limited Şirketi)",

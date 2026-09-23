@@ -23,7 +23,8 @@ export default function HizmetVerPage({ searchParams }) {
     <div className="max-w-md mx-auto px-5 py-14 text-center">
       <p className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: "#2563EB" }}>{audience.title}</p>
       <h1 className="font-sans text-3xl font-black mb-3" style={{ color: "#0F1115" }}>{audience.headline}</h1>
-      <p className="text-sm mb-4" style={{ color: "#4B5563" }}>{audience.sub}</p>
+      <p className="text-sm mb-2" style={{ color: "#4B5563" }}>{audience.sub}</p>
+      <p className="text-xs mb-4" style={{ color: "#9CA3AF" }}>İşinn, hizmet almak isteyenlerle hizmet vermek isteyenleri buluşturan, fayda ve güven odaklı bir platformdur.</p>
       <span
         className="inline-block text-xs font-bold px-4 py-2 rounded-full text-white mb-8"
         style={{ background: "linear-gradient(135deg, #F59E0B 0%, #D97706 100%)" }}
