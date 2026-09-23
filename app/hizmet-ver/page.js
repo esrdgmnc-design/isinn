@@ -47,8 +47,8 @@ export default function HizmetVerPage({ searchParams }) {
       </div>
 
       <div className="rounded-2xl p-5 mb-8 text-left" style={{ background: "#EFF6FF" }}>
-        <p className="text-sm font-bold mb-1" style={{ color: "#1D4ED8" }}>Instagram'ınız zaten mı var?</p>
-        <p className="text-sm mb-4" style={{ color: "#1B2B24" }}>İşinn onun yerine geçmez, tamamlar: Instagram'da sizi zaten bilenler görür; İşinn'de o an tam olarak sizin hizmetinizi arayan, sizi hiç tanımayan yeni müşterilere ulaşırsınız.</p>
+        <p className="text-sm font-bold mb-1" style={{ color: "#1D4ED8" }}>Sosyal medya hesabınız zaten mı var?</p>
+        <p className="text-sm mb-4" style={{ color: "#1B2B24" }}>İşinn onun yerine geçmez, tamamlar: sosyal medyada sizi zaten bilenler görür; İşinn'de o an tam olarak sizin hizmetinizi arayan, sizi hiç tanımayan yeni müşterilere ulaşırsınız.</p>
         <div className="space-y-3">
           {[
             "Müşteriler uygulama içinde sizi harita üzerinden ve kategoriye göre filtreleyerek hemen bulur.",
