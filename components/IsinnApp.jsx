@@ -6557,7 +6557,14 @@ Kullanıcının anlattıkları:
 SADECE aşağıdaki listede yer alan kategori id'lerinden seç, listede olmayan bir kategori UYDURMA:
 ${categoryList}
 
-En uygun 2-3 kategoriyi seç, her biri için kullanıcının anlattıklarına dayanan, kişiselleştirilmiş, tek cümlelik bir gerekçe yaz. SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
+ÖNEMLİ KURALLAR:
+1. Bu özellik gerçekten ek gelire odaklanıyor — resmi bir lisans/diploma/unvan gerektiren kategorileri (İç Mimarlık, Avukat, Hemşire, Fizyoterapist, Veteriner, Diyetisyen, Psikolog, Muhasebe, Mühendis gibi) HİÇ ÖNERME, kullanıcı bu alanda deneyimli olduğunu söylese bile önerme. Sadece herkesin uzmanlık/sertifika olmadan gerçekten başlayabileceği kategorilere odaklan.
+2. Gerekçe, kullanıcının kendi yaptığı gerçek işleri/örnekleri (ev düzenlemeleri, hazırladığı yemekler, kurduğu sofralar, el işleri gibi) vitrininde sergileyerek somut bir ek gelire nasıl başlayabileceğini anlatan, harekete geçirici bir dille yazılmalı.
+3. Gerekçe genel bir övgü cümlesi olmamalı, "önce şunu vitrininde göster" gibi somut bir ipucu içermeli.
+4. Amaç kullanıcının zaten bildiği şeyi doğrulamak değil, "bunu hiç düşünmemiştim, neden olmasın" dedirtmek. Bu yüzden önerdiğin 2-3 kategoriden EN AZ BİRİ, kullanıcının söylediği beceriyle birebir/bariz eşleşen değil, aklına hiç gelmeyecek ama mantığı gerekçede açıkça kurulmuş, şaşırtıcı bir bağlantı olsun (örn. "düzenli olmayı seviyorum" -> sadece "temizlik" değil, "etkinlik organizatörü" ya da "sanal asistan" gibi daha az bariz bir çıkarım). Kullanıcı zaten lisanslı bir meslek sahibiyse (örn. "iç mimarım, dekorasyondan hoşlanıyorum" dediyse) ona o mesleği ASLA önerme (zaten biliyor) — bunun yerine "el yeteneği" ipucunu yakalayıp, kendi özgün ürünlerini (örn. dekor ürünleri) üretip satmasını öner; zaten sahip olduğu unvanı değil, hiç değerlendirmediği üretim/satış yönünü öne çıkar.
+5. Kullanıcı "bilgisayarla uğraşmayı seviyorum" gibi teknoloji ilgisi belirtirse, gerekçede somut ve güncel araç isimleri geçir: örneğin Claude gibi bir yapay zeka asistanıyla küçük işletmelere web sitesi metni/kodu yazabileceğini, ya da Buzzy gibi bir araçla tanıtım videosu üretebileceğini net bir örnekle anlat — soyut "teknolojiyle ilgileniyorsun" demek yerine, tam olarak hangi araçla hangi işi yapabileceğini göster.
+
+En uygun 2-3 kategoriyi seç, her biri için yukarıdaki kurallara uygun, kişiselleştirilmiş, tek cümlelik bir gerekçe yaz. SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
 {"suggestions": [{"categoryId": "yukarıdaki listeden bir id", "reason": "tek cümlelik kişiselleştirilmiş gerekçe"}]}`;
   const response = await fetch("/api/claude", {
     method: "POST",
@@ -6607,6 +6614,24 @@ function TalentDiscoveryBanner({ onOpen }) {
     </section>
   );
 }
+
+// Her kategori için önceden üretilmiş, orijinal (AI ile üretilmiş, telifsiz)
+// bir ilham görseli — kullanıcının kararı: "her defasında bir görsel olsa
+// kişiyi buradan yakalarız". Kapsam kasıtlı olarak kısmi (tüm ~50 kategori
+// değil, en sık çıkması beklenenler) — eşleşme yoksa görsel gösterilmez.
+const TALENT_INSPIRATION_IMAGES = {
+  "yemek": "/images/ilham/yemek.jpg",
+  "sosyal-medya": "/images/ilham/sosyal-medya.jpg",
+  "yazilim": "/images/ilham/yazilim-tasarim.jpg",
+  "tasarim": "/images/ilham/yazilim-tasarim.jpg",
+  "ogretmen": "/images/ilham/ogretmen-egitmen.jpg",
+  "egitmen": "/images/ilham/ogretmen-egitmen.jpg",
+  "bahce-bakim": "/images/ilham/bahce-bakim.jpg",
+  "moda-tekstil-tasarim": "/images/ilham/moda-tekstil.jpg",
+  "terzi": "/images/ilham/moda-tekstil.jpg",
+  "etkinlik-organizatoru": "/images/ilham/etkinlik-organizatoru.jpg",
+  "ic-mimarlik": "/images/ilham/ic-mimarlik.jpg",
+};
 
 // "Yeteneğini Keşfet" — 4 sabit soru, tek AI çağrısı, çok-turlu sohbet YOK
 // (kasıtlı olarak dar kapsam — bkz. proje hafızası isinn-faz3-firsat-yaratma).
@@ -6722,8 +6747,13 @@ function TalentDiscoveryView({ onBack, onCreateListing }) {
               const cat = CATEGORIES.find((c) => c.id === s.categoryId);
               if (!cat) return null;
               const Icon = cat.icon;
+              const inspImg = TALENT_INSPIRATION_IMAGES[s.categoryId];
               return (
-                <div key={s.categoryId} className="rounded-2xl p-4" style={{ border: "1px solid #F0F0F0" }}>
+                <div key={s.categoryId} className="rounded-2xl overflow-hidden" style={{ border: "1px solid #F0F0F0" }}>
+                  {inspImg && (
+                    <img src={inspImg} alt="" loading="lazy" className="w-full h-36 object-cover" />
+                  )}
+                  <div className="p-4">
                   <div className="flex items-center gap-2 mb-1.5">
                     <Icon size={16} style={{ color: "#2563EB" }} />
                     <p className="text-sm font-black" style={{ color: "#0F1115" }}>{cat.name}</p>
@@ -6736,6 +6766,7 @@ function TalentDiscoveryView({ onBack, onCreateListing }) {
                   >
                     {t("talentDiscovery.createListingButton")}
                   </button>
+                  </div>
                 </div>
               );
             })}
