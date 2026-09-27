@@ -6333,8 +6333,9 @@ const WEEKLY_BOOST_PACKAGE = {
 // döngüsünden (aylık/yıllık) bağımsız olarak (bkz. pro_boost_monthly_fix.sql
 // — eski hâli yıllık ödeyenlerde yılda bir kereye düşüyordu, gerçek bir hataydı).
 const PRO_PACKAGE = {
-  // priceYearly: 6490 (649×10) yerine ilk yıla özel indirimli fiyat — bkz. PLANS'taki aynı not.
-  id: "pro", name: "Pro Üyelik", priceMonthly: 649, priceYearly: 3999, currency: "₺",
+  // 2026-09-27: 649/3999 -> 399/2999 indirildi (Standart'ın 4 katı yerine 2,5 katı
+  // — kullanıcının kararı, "fiyat yüksek kaldı" geri bildirimi üzerine).
+  id: "pro", name: "Pro Üyelik", priceMonthly: 399, priceYearly: 2999, currency: "₺",
   tagline: "Birden fazla vitrin açmak isteyenler için",
   features: [
     "3 vitrin hakkı (Standart'ta 2)", "Geniş ilan hakkı",
