@@ -3,8 +3,8 @@ import { Analytics } from "@vercel/analytics/react";
 
 export const metadata = {
   metadataBase: new URL("https://www.isinn.com.tr"),
-  title: "İşinn — Güvenilir Usta, Temizlikçi, Özel Ders Bul",
-  description: "Temizlikçiden özel ders öğretmenine, ustadan danışmana — ihtiyacın olan yerel ya da uzaktan hizmeti İşinn'de bul, sıfır komisyonla kendi hizmetini sun.",
+  title: "İşinn — Usta, Temizlikçi Bul; Yeteneğini Gelire Dönüştür",
+  description: "Temizlikçiden özel ders öğretmenine, ustadan danışmana — ihtiyacın olan hizmeti bul. Bir yeteneğin mi var? İşinn'de fark et, sıfır komisyonla gelire dönüştür.",
   // Mobil uygulama çalışmasının (bkz. docs/mobile-app.md) yan ürünü — site
   // artık gerçek bir PWA da (telefon tarayıcısından "Ana ekrana ekle").
   // Asıl mağaza dağıtımı Capacitor/Codemagic üzerinden, bu sadece bonus.

@@ -4,7 +4,7 @@ import { faqJsonLd } from "../lib/faqJsonLd";
 // Ana sayfa artık sunucu bileşeni: kanonik adres "/" (parametreli ?vitrin=… gibi URL'ler
 // ayrı sayfa sayılmasın) ve SSS şeması yalnızca burada.
 export const metadata = {
-  title: "İşinn — Güvenilir Usta, Temizlikçi, Özel Ders Bul",
+  title: "İşinn — Usta, Temizlikçi Bul; Yeteneğini Gelire Dönüştür",
   alternates: { canonical: "/" },
 };
 
