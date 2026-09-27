@@ -6616,7 +6616,10 @@ function TalentDiscoveryView({ onBack, onCreateListing }) {
   const { t } = useLanguage();
   const [skills, setSkills] = useState("");
   const [hours, setHours] = useState("");
-  const [experience, setExperience] = useState(null); // true | false | null
+  // Eskiden evet/hayır butonuydu — kullanıcının kararı: bu bir "deneyimin var
+  // mı" testi değil, çevresindekilerin ondan zaten ne için yardım istediğini
+  // fark ettirme anı. Açık uçlu, düşündüren bir soru daha samimi/derin.
+  const [strength, setStrength] = useState("");
   const [district, setDistrict] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -6628,8 +6631,7 @@ function TalentDiscoveryView({ onBack, onCreateListing }) {
     setLoading(true);
     setSuggestions(null);
     try {
-      const experienceLabel = experience === true ? t("talentDiscovery.qExperienceYes") : experience === false ? t("talentDiscovery.qExperienceNo") : "";
-      const result = await requestTalentSuggestions({ skills: skills.trim(), hours: hours.trim(), experience: experienceLabel, district: district.trim() });
+      const result = await requestTalentSuggestions({ skills: skills.trim(), hours: hours.trim(), experience: strength.trim(), district: district.trim() });
       setSuggestions(result);
     } catch (err) {
       setError(t("talentDiscovery.errFailed"));
@@ -6678,24 +6680,14 @@ function TalentDiscoveryView({ onBack, onCreateListing }) {
           </div>
           <div>
             <label className="text-sm font-bold block mb-2" style={{ color: "#0F1115" }}>{t("talentDiscovery.qExperienceLabel")}</label>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setExperience(true)}
-                className="flex-1 text-sm font-bold py-2.5 rounded-xl"
-                style={experience === true ? { background: "#2563EB", color: "#FFFFFF" } : { border: "1px solid #E5E7EB", color: "#0F1115" }}
-              >
-                {t("talentDiscovery.qExperienceYes")}
-              </button>
-              <button
-                type="button"
-                onClick={() => setExperience(false)}
-                className="flex-1 text-sm font-bold py-2.5 rounded-xl"
-                style={experience === false ? { background: "#2563EB", color: "#FFFFFF" } : { border: "1px solid #E5E7EB", color: "#0F1115" }}
-              >
-                {t("talentDiscovery.qExperienceNo")}
-              </button>
-            </div>
+            <textarea
+              value={strength}
+              onChange={(e) => setStrength(e.target.value)}
+              placeholder={t("talentDiscovery.qExperienceYesPlaceholder")}
+              rows={2}
+              className="w-full rounded-xl p-3 text-sm"
+              style={{ border: "1px solid #E5E7EB" }}
+            />
           </div>
           <div>
             <label className="text-sm font-bold block mb-2" style={{ color: "#0F1115" }}>{t("talentDiscovery.qDistrictLabel")}</label>
