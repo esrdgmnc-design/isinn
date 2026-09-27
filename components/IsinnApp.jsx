@@ -10587,7 +10587,15 @@ function DraggableSupportButton({ onClick }) {
 
 export default function IsinnPrototype({ session, onRequireAuth }) {
   const { t } = useLanguage();
-  const [view, setView] = useState(getInitialView);
+  // Lazy-initializer olarak getInitialView() vermek hydration hatası veriyordu:
+  // sunucuda window yok -> hep "home"; istemcide ilk render'da window zaten var
+  // -> gerçek ?view= okunuyor, ikisi uyuşmuyor. Sunucuyla aynı "home" ile başlayıp
+  // mount sonrası (React commit tamamlandıktan sonra) gerçek görünüme geçiyoruz.
+  const [view, setView] = useState("home");
+  useEffect(() => {
+    const v = getInitialView();
+    if (v !== "home") setView(v);
+  }, []);
   useEffect(() => { captureAttribution(); trackEvent("app_open", {}, null); }, []);
   const [selected, setSelected] = useState(null);
   const [selectedJob, setSelectedJob] = useState(null);
