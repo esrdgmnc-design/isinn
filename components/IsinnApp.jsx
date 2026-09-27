@@ -1769,6 +1769,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
           bugünden gerçek bir "uygulamaya" sahip olduklarını ziyaretçilere
           kendi kendine anlatıyor — her seferinde elle anlatmaya gerek kalmasın. */}
       <InstallAppBanner />
+      <TalentDiscoveryBanner onOpen={() => onNav("talentDiscovery")} />
 
       {featured.length > 0 && (
         <section className="max-w-6xl mx-auto px-5 mt-8">
@@ -6533,6 +6534,212 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
   return JSON.parse(clean);
 }
 
+// "Yeteneğini Keşfet": kullanıcının serbest metinle anlattığı becerilerden,
+// SADECE gerçekte var olan CATEGORIES listesinden 2-3 öneri çıkarır —
+// halüsinasyonla var olmayan bir kategori uydurmasın diye prompt'a tüm gerçek
+// kategori id+isim listesi veriliyor, dönen her id ayrıca client-side de
+// CATEGORIES'e karşı doğrulanıyor (bkz. TalentDiscoveryView).
+async function requestTalentSuggestions({ skills, hours, experience, district }) {
+  const categoryList = CATEGORIES.map((c) => `${c.id}: ${c.name}`).join("\n");
+  const prompt = `Bir hizmet pazaryeri uygulamasında, kullanıcının anlattığı becerilerden hangi hizmet kategorisini sunabileceğini öner.
+
+Kullanıcının anlattıkları:
+- Ne yapmayı seviyor/neye yatkın: "${skills}"
+- Haftada ayırabileceği zaman: "${hours || "belirtmedi"}"
+- Bundan önce para kazanmış mı: "${experience || "belirtmedi"}"
+- Bölge: "${district || "belirtmedi"}"
+
+SADECE aşağıdaki listede yer alan kategori id'lerinden seç, listede olmayan bir kategori UYDURMA:
+${categoryList}
+
+En uygun 2-3 kategoriyi seç, her biri için kullanıcının anlattıklarına dayanan, kişiselleştirilmiş, tek cümlelik bir gerekçe yaz. SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
+{"suggestions": [{"categoryId": "yukarıdaki listeden bir id", "reason": "tek cümlelik kişiselleştirilmiş gerekçe"}]}`;
+  const response = await fetch("/api/claude", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 600, messages: [{ role: "user", content: prompt }] }),
+  });
+  const data = await response.json();
+  const text = (data.content || []).map((b) => b.text || "").join("\n");
+  const clean = text.replace(/```json|```/g, "").trim();
+  const parsed = JSON.parse(clean);
+  const validIds = new Set(CATEGORIES.map((c) => c.id));
+  const suggestions = (parsed.suggestions || []).filter((s) => validIds.has(s.categoryId));
+  if (suggestions.length === 0) throw new Error("no valid suggestions");
+  return suggestions;
+}
+
+// Ana sayfadaki giriş noktası — "Yeteneğini Keşfet" reklam posterindeki
+// vaadi (bkz. 2026-09-27 kampanya görselleri) gerçek bir özelliğe bağlıyor.
+function TalentDiscoveryBanner({ onOpen }) {
+  const { t } = useLanguage();
+  return (
+    <section className="max-w-6xl mx-auto px-5 mt-8">
+      <button
+        onClick={onOpen}
+        className="w-full text-left rounded-2xl p-5 flex items-center justify-between gap-4 hover:shadow-lg transition-shadow"
+        style={{ background: "linear-gradient(135deg, #16321F 0%, #0F1E14 100%)" }}
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 rounded-full flex items-center justify-center shrink-0" style={{ background: "rgba(255,255,255,0.12)" }}>
+            <Sparkles size={20} style={{ color: "#2563EB" }} />
+          </div>
+          <div>
+            <p className="text-sm sm:text-base font-black" style={{ color: "#FFFFFF" }}>{t("talentDiscovery.navCardTitle")}</p>
+            <p className="text-xs sm:text-sm mt-0.5" style={{ color: "#B8BCC4" }}>{t("talentDiscovery.navCardSubtitle")}</p>
+          </div>
+        </div>
+        <ChevronRight size={20} style={{ color: "#FFFFFF" }} className="shrink-0" />
+      </button>
+    </section>
+  );
+}
+
+// "Yeteneğini Keşfet" — 4 sabit soru, tek AI çağrısı, çok-turlu sohbet YOK
+// (kasıtlı olarak dar kapsam — bkz. proje hafızası isinn-faz3-firsat-yaratma).
+// Kullanıcı bir öneriyi seçince Hizmet Ekle'ye kategori + not önceden dolu
+// gider (onCreateListing), formu sıfırdan doldurmak zorunda kalmaz.
+function TalentDiscoveryView({ onBack, onCreateListing }) {
+  const { t } = useLanguage();
+  const [skills, setSkills] = useState("");
+  const [hours, setHours] = useState("");
+  const [experience, setExperience] = useState(null); // true | false | null
+  const [district, setDistrict] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [suggestions, setSuggestions] = useState(null);
+
+  const handleSubmit = async () => {
+    if (!skills.trim()) { setError(t("talentDiscovery.errMissingSkills")); return; }
+    setError("");
+    setLoading(true);
+    setSuggestions(null);
+    try {
+      const experienceLabel = experience === true ? t("talentDiscovery.qExperienceYes") : experience === false ? t("talentDiscovery.qExperienceNo") : "";
+      const result = await requestTalentSuggestions({ skills: skills.trim(), hours: hours.trim(), experience: experienceLabel, district: district.trim() });
+      setSuggestions(result);
+    } catch (err) {
+      setError(t("talentDiscovery.errFailed"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="max-w-xl mx-auto px-5 py-8">
+      <button onClick={onBack} className="text-sm font-bold mb-6" style={{ color: "#2563EB" }}>{t("talentDiscovery.backLink")}</button>
+      <h1 className="font-sans text-2xl font-black mb-2" style={{ color: "#0F1115" }}>{t("talentDiscovery.heroTitle")}</h1>
+      <p className="text-sm mb-8" style={{ color: "#6B7280" }}>{t("talentDiscovery.heroSubtitle")}</p>
+
+      {!suggestions && (
+        <div className="flex flex-col gap-5">
+          <div>
+            <label className="text-sm font-bold block mb-2" style={{ color: "#0F1115" }}>{t("talentDiscovery.qSkillsLabel")}</label>
+            <textarea
+              value={skills}
+              onChange={(e) => setSkills(e.target.value)}
+              placeholder={t("talentDiscovery.qSkillsPlaceholder")}
+              rows={3}
+              className="w-full rounded-xl p-3 text-sm"
+              style={{ border: "1px solid #E5E7EB" }}
+            />
+          </div>
+          <div>
+            <label className="text-sm font-bold block mb-2" style={{ color: "#0F1115" }}>{t("talentDiscovery.qHoursLabel")}</label>
+            <input
+              type="text"
+              value={hours}
+              onChange={(e) => setHours(e.target.value)}
+              placeholder={t("talentDiscovery.qHoursPlaceholder")}
+              className="w-full rounded-xl p-3 text-sm"
+              style={{ border: "1px solid #E5E7EB" }}
+            />
+          </div>
+          <div>
+            <label className="text-sm font-bold block mb-2" style={{ color: "#0F1115" }}>{t("talentDiscovery.qExperienceLabel")}</label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setExperience(true)}
+                className="flex-1 text-sm font-bold py-2.5 rounded-xl"
+                style={experience === true ? { background: "#2563EB", color: "#FFFFFF" } : { border: "1px solid #E5E7EB", color: "#0F1115" }}
+              >
+                {t("talentDiscovery.qExperienceYes")}
+              </button>
+              <button
+                type="button"
+                onClick={() => setExperience(false)}
+                className="flex-1 text-sm font-bold py-2.5 rounded-xl"
+                style={experience === false ? { background: "#2563EB", color: "#FFFFFF" } : { border: "1px solid #E5E7EB", color: "#0F1115" }}
+              >
+                {t("talentDiscovery.qExperienceNo")}
+              </button>
+            </div>
+          </div>
+          <div>
+            <label className="text-sm font-bold block mb-2" style={{ color: "#0F1115" }}>{t("talentDiscovery.qDistrictLabel")}</label>
+            <input
+              type="text"
+              value={district}
+              onChange={(e) => setDistrict(e.target.value)}
+              placeholder={t("talentDiscovery.qDistrictPlaceholder")}
+              className="w-full rounded-xl p-3 text-sm"
+              style={{ border: "1px solid #E5E7EB" }}
+            />
+          </div>
+          {error && <p className="text-xs font-bold" style={{ color: "#DC2626" }}>{error}</p>}
+          <button
+            onClick={handleSubmit}
+            disabled={loading}
+            className="text-sm font-bold py-3.5 rounded-full text-white flex items-center justify-center gap-2"
+            style={{ background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)" }}
+          >
+            {loading ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
+            {loading ? t("talentDiscovery.loading") : t("talentDiscovery.submitButton")}
+          </button>
+        </div>
+      )}
+
+      {suggestions && (
+        <div>
+          <h2 className="text-lg font-black mb-1" style={{ color: "#0F1115" }}>{t("talentDiscovery.resultsTitle")}</h2>
+          <p className="text-xs mb-5" style={{ color: "#6B7280" }}>{t("talentDiscovery.resultsSubtitle")}</p>
+          <div className="flex flex-col gap-3">
+            {suggestions.map((s) => {
+              const cat = CATEGORIES.find((c) => c.id === s.categoryId);
+              if (!cat) return null;
+              const Icon = cat.icon;
+              return (
+                <div key={s.categoryId} className="rounded-2xl p-4" style={{ border: "1px solid #F0F0F0" }}>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <Icon size={16} style={{ color: "#2563EB" }} />
+                    <p className="text-sm font-black" style={{ color: "#0F1115" }}>{cat.name}</p>
+                  </div>
+                  <p className="text-xs mb-3" style={{ color: "#6B7280" }}>{s.reason}</p>
+                  <button
+                    onClick={() => onCreateListing(cat.id, skills.trim())}
+                    className="text-xs font-bold px-4 py-2 rounded-full text-white"
+                    style={{ background: "#2563EB" }}
+                  >
+                    {t("talentDiscovery.createListingButton")}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+          <button
+            onClick={() => setSuggestions(null)}
+            className="text-xs font-bold mt-5"
+            style={{ color: "#6B7280" }}
+          >
+            {t("talentDiscovery.tryAgainButton")}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AiWriteButton({ onClick, busy }) {
   const { t } = useLanguage();
   return (
@@ -6948,14 +7155,16 @@ function OwnerVisibilityCard({ row, busy, error, onToggle, onGoToPlans }) {
   );
 }
 
-function CreateListingView({ onBack, onCreated, userId, onGoToProfile, onGoToPlans }) {
+function CreateListingView({ onBack, onCreated, userId, onGoToProfile, onGoToPlans, onOpenTalentDiscovery, initialCategoryId, initialNote }) {
   const { t } = useLanguage();
   const [mode, setMode] = useState("local");
   const [providerName, setProviderName] = useState("");
-  const [categoryId, setCategoryId] = useState("");
+  // "Yeteneğini Keşfet"ten gelindiyse kategori ve kısa not önceden dolu gelir
+  // (bkz. TalentDiscoveryView) — kullanıcı formu sıfırdan doldurmak zorunda kalmaz.
+  const [categoryId, setCategoryId] = useState(initialCategoryId || "");
   const [customCategoryLabel, setCustomCategoryLabel] = useState("");
   const [title, setTitle] = useState("");
-  const [desc, setDesc] = useState("");
+  const [desc, setDesc] = useState(initialNote ? `${initialNote}` : "");
   const [cityId, setCityId] = useState("istanbul");
   const [district, setDistrict] = useState("");
   const [price, setPrice] = useState("");
@@ -7662,6 +7871,11 @@ function CreateListingView({ onBack, onCreated, userId, onGoToProfile, onGoToPla
           customCategoryLabel={customCategoryLabel}
           setCustomCategoryLabel={setCustomCategoryLabel}
         />
+        {onOpenTalentDiscovery && !categoryId && (
+          <button type="button" onClick={onOpenTalentDiscovery} className="text-xs font-bold -mt-2 block" style={{ color: "#2563EB" }}>
+            {t("talentDiscovery.createListingHint")}
+          </button>
+        )}
 
         <div>
           <div className="flex items-center justify-between mb-1.5">
@@ -10492,6 +10706,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
 const RESTORABLE_VIEWS = new Set([
   "home", "profile", "createListing", "map", "post", "pricing", "messages",
   "search", "support", "adminReports", "adminModeration", "adminDashboard", "favorites",
+  "talentDiscovery",
 ]);
 
 function getInitialView() {
@@ -10599,6 +10814,9 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
   }, []);
   useEffect(() => { captureAttribution(); trackEvent("app_open", {}, null); }, []);
   const [selected, setSelected] = useState(null);
+  // "Yeteneğini Keşfet"te bir öneri seçilince Hizmet Ekle'ye kategori+not
+  // önceden dolu gitsin diye — bkz. TalentDiscoveryView/CreateListingView.
+  const [talentPrefill, setTalentPrefill] = useState(null); // { categoryId, note }
   const [selectedJob, setSelectedJob] = useState(null);
   const [editingJob, setEditingJob] = useState(null); // Düzenle ile açılan iş ilanı (PostJobView)
   const [favError, setFavError] = useState("");
@@ -11224,11 +11442,20 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
       )}
       {view === "createListing" && (
         <CreateListingView
-          onBack={() => goBack()}
+          onBack={() => { setTalentPrefill(null); goBack(); }}
           onGoToProfile={() => setView("profile")}
           onGoToPlans={() => setView("pricing")}
           onCreated={() => fetchListings()}
           userId={userId}
+          onOpenTalentDiscovery={() => setView("talentDiscovery")}
+          initialCategoryId={talentPrefill?.categoryId}
+          initialNote={talentPrefill?.note}
+        />
+      )}
+      {view === "talentDiscovery" && (
+        <TalentDiscoveryView
+          onBack={() => goBack()}
+          onCreateListing={(categoryId, note) => { setTalentPrefill({ categoryId, note }); handleNav("createListing"); }}
         />
       )}
       {view === "detail" && selected && (
