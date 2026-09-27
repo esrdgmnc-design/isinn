@@ -6564,7 +6564,7 @@ ${categoryList}
 4. Amaç kullanıcının zaten bildiği şeyi doğrulamak değil, "bunu hiç düşünmemiştim, neden olmasın" dedirtmek. Bu yüzden önerdiğin 2-3 kategoriden EN AZ BİRİ, kullanıcının söylediği beceriyle birebir/bariz eşleşen değil, aklına hiç gelmeyecek ama mantığı gerekçede açıkça kurulmuş, şaşırtıcı bir bağlantı olsun (örn. "düzenli olmayı seviyorum" -> sadece "temizlik" değil, "etkinlik organizatörü" ya da "sanal asistan" gibi daha az bariz bir çıkarım). Kullanıcı zaten lisanslı bir meslek sahibiyse (örn. "iç mimarım, dekorasyondan hoşlanıyorum" dediyse) ona o mesleği ASLA önerme (zaten biliyor) — bunun yerine "el yeteneği" ipucunu yakalayıp, kendi özgün ürünlerini (örn. dekor ürünleri) üretip satmasını öner; zaten sahip olduğu unvanı değil, hiç değerlendirmediği üretim/satış yönünü öne çıkar.
 5. Kullanıcı "bilgisayarla uğraşmayı seviyorum" gibi teknoloji ilgisi belirtirse, gerekçede somut ve güncel araç isimleri geçir: örneğin Claude gibi bir yapay zeka asistanıyla küçük işletmelere web sitesi metni/kodu yazabileceğini, ya da Buzzy gibi bir araçla tanıtım videosu üretebileceğini net bir örnekle anlat — soyut "teknolojiyle ilgileniyorsun" demek yerine, tam olarak hangi araçla hangi işi yapabileceğini göster.
 6. Kullanıcı "ders vermeyi/öğretmeyi seviyorum" gibi bir şey söylerse, ona sadece bire bir özel ders vermeyi önerme (çok bariz) — bunun yerine bilgisini kayıtlı bir ürüne (video ders seti, PDF rehber, hazır içerik paketi gibi) dönüştürüp satmasını da öner; bu hem daha az bariz hem de her seferinde yeniden aynı emeği harcamadan tekrar tekrar satılabilen bir gelir modeli sunar.
-7. Gerekçe soyut kalmasın, mümkün olduğunca kullanıcının bu işe nereden başlayabileceğine dair gerçek, bilinen bir örnek platform/site ismi geçir (örneğin: video ders/PDF rehber satışı için Udemy ya da kendi Instagram/TikTok hesabı; freelance yazılım/tasarım/metin işleri için Bionluk ya da Fiverr; el yapımı ürün satışı için Etsy ya da Trendyol; danışmanlık/koçluk için kendi vitrini). Bu, önerinin "peki nereden başlayacağım" sorusuna da somut bir cevap vermesini sağlar — ama İşinn'in kendi vitrin/ilan sistemi hep birincil ve önerilen adım olarak kalsın, dışarıdaki platform sadece ek bir ilham/örnek olarak geçsin.
+7. Gerekçe soyut kalmasın, somut bir örnek içersin — ama ASLA İşinn'e rakip bir hizmet/serbest-çalışma pazaryeri (Bionluk, Fiverr, Upwork, Armut, gigbi gibi) önerme; bunlar tam da İşinn'in kendisinin sunduğu hizmeti (tasarım, yazılım, danışmanlık, ders, temizlik gibi) sunuyor ve kullanıcıyı oraya yönlendirmek İşinn'in kendi rakibine müşteri kazandırmak anlamına gelir. Hizmet/emek temelli her kategoride (tasarım, yazılım, danışmanlık, ders, temizlik, bakım vb.) tek adres İşinn'in kendi vitrini olsun, başka hiçbir platform adı geçmesin. Sadece İşinn'in bizzat sunmadığı, somut FİZİKSEL ÜRÜN ya da KAYITLI İÇERİK satışı söz konusu olduğunda (el yapımı ürün, kendi ürettiği dekor/takı/kek gibi ürünler, ya da video ders/PDF rehber gibi bir kere üretilip tekrar tekrar satılan içerik) örnek bir kanal adı geçebilir (örn. Etsy, Trendyol, Udemy, kendi Instagram/TikTok hesabı) — ve bu durumda bile önce İşinn vitrininde tanıtım/portföy olarak sergilemesi önerilsin, dış platform sadece "üretimi nerede satışa sunabileceğine" dair ek bir fikir olarak geçsin.
 
 En uygun 2-3 kategoriyi seç, her biri için yukarıdaki kurallara uygun, kişiselleştirilmiş, tek cümlelik bir gerekçe yaz. SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
 {"suggestions": [{"categoryId": "yukarıdaki listeden bir id", "reason": "tek cümlelik kişiselleştirilmiş gerekçe"}]}`;
@@ -6591,26 +6591,35 @@ function TalentDiscoveryBanner({ onOpen }) {
     <section className="max-w-6xl mx-auto px-5 mt-8">
       <button
         onClick={onOpen}
-        className="w-full text-left rounded-2xl p-4 sm:p-5 flex items-center gap-4 hover:shadow-lg transition-shadow"
+        className="w-full text-left rounded-3xl p-5 sm:p-8 flex flex-col sm:flex-row items-center gap-5 sm:gap-8 hover:shadow-2xl transition-shadow"
         style={{ background: "linear-gradient(135deg, #16321F 0%, #0F1E14 100%)" }}
       >
         {/* Orijinal, AI ile üretilmiş ilham görsellerinden (örgü, ev yapımı
-            pasta, kumaş çiçek, hediye paketleme) oluşan sessiz döngü video —
-            "bende de yapabilirim" hissini metinden önce, görselle veriyor. */}
+            pasta, kumaş çiçek, hediye paketleme, web tasarımı, mikro-influencer,
+            bahçe dekorasyonu) oluşan sessiz döngü video — "bende de yapabilirim"
+            hissini metinden önce, görselle veriyor. Kullanıcının kararı
+            (2026-09-28): bu alan İşinn'in gerçek farkı, o yüzden küçük bir
+            simge değil, sayfanın odak noktalarından biri olmalı. */}
         <video
           src="/videos/yetenek-ilham.mp4"
           autoPlay
           loop
           muted
           playsInline
-          className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl object-cover shrink-0"
+          className="w-full sm:w-72 h-40 sm:h-44 rounded-2xl object-cover shrink-0"
         />
-        <div className="flex-1 flex items-center justify-between gap-3">
-          <div>
-            <p className="text-sm sm:text-base font-black" style={{ color: "#FFFFFF" }}>{t("talentDiscovery.navCardTitle")}</p>
-            <p className="text-xs sm:text-sm mt-0.5" style={{ color: "#B8BCC4" }}>{t("talentDiscovery.navCardSubtitle")}</p>
+        <div className="flex-1 flex flex-col sm:flex-row items-center sm:items-center justify-between gap-4 w-full">
+          <div className="text-center sm:text-left">
+            <p className="text-xl sm:text-3xl font-black leading-tight" style={{ color: "#FFFFFF" }}>{t("talentDiscovery.navCardTitle")}</p>
+            <p className="text-sm sm:text-lg mt-2" style={{ color: "#B8BCC4" }}>{t("talentDiscovery.navCardSubtitle")}</p>
           </div>
-          <ChevronRight size={20} style={{ color: "#FFFFFF" }} className="shrink-0" />
+          <div
+            className="shrink-0 flex items-center gap-2 px-5 py-3 rounded-xl font-bold text-sm sm:text-base whitespace-nowrap"
+            style={{ background: "#FFFFFF", color: "#16321F" }}
+          >
+            {t("talentDiscovery.submitButton")}
+            <ChevronRight size={18} />
+          </div>
         </div>
       </button>
     </section>
