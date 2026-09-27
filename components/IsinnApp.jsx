@@ -1768,8 +1768,13 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
           onayı beklemeden (Play Store/App Store günler-haftalar sürüyor)
           bugünden gerçek bir "uygulamaya" sahip olduklarını ziyaretçilere
           kendi kendine anlatıyor — her seferinde elle anlatmaya gerek kalmasın. */}
-      <InstallAppBanner />
+      {/* Kullanıcının kendi kararı (2026-09-27): birisi ana sayfaya girip "burada
+          pek kimse yok" demeden ÖNCE odağı "ben ne yapabilirim"e çekmeliyiz —
+          bu yüzden bu banner, sağlayıcı sayısını dolaylı da olsa ele veren her
+          şeyden (Öne Çıkan, Vitrinler ızgarası) önce, hero'nun hemen ardından
+          geliyor. */}
       <TalentDiscoveryBanner onOpen={() => onNav("talentDiscovery")} />
+      <InstallAppBanner />
 
       {featured.length > 0 && (
         <section className="max-w-6xl mx-auto px-5 mt-8">
@@ -6577,19 +6582,27 @@ function TalentDiscoveryBanner({ onOpen }) {
     <section className="max-w-6xl mx-auto px-5 mt-8">
       <button
         onClick={onOpen}
-        className="w-full text-left rounded-2xl p-5 flex items-center justify-between gap-4 hover:shadow-lg transition-shadow"
+        className="w-full text-left rounded-2xl p-4 sm:p-5 flex items-center gap-4 hover:shadow-lg transition-shadow"
         style={{ background: "linear-gradient(135deg, #16321F 0%, #0F1E14 100%)" }}
       >
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-full flex items-center justify-center shrink-0" style={{ background: "rgba(255,255,255,0.12)" }}>
-            <Sparkles size={20} style={{ color: "#2563EB" }} />
-          </div>
+        {/* Orijinal, AI ile üretilmiş ilham görsellerinden (örgü, ev yapımı
+            pasta, kumaş çiçek, hediye paketleme) oluşan sessiz döngü video —
+            "bende de yapabilirim" hissini metinden önce, görselle veriyor. */}
+        <video
+          src="/videos/yetenek-ilham.mp4"
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl object-cover shrink-0"
+        />
+        <div className="flex-1 flex items-center justify-between gap-3">
           <div>
             <p className="text-sm sm:text-base font-black" style={{ color: "#FFFFFF" }}>{t("talentDiscovery.navCardTitle")}</p>
             <p className="text-xs sm:text-sm mt-0.5" style={{ color: "#B8BCC4" }}>{t("talentDiscovery.navCardSubtitle")}</p>
           </div>
+          <ChevronRight size={20} style={{ color: "#FFFFFF" }} className="shrink-0" />
         </div>
-        <ChevronRight size={20} style={{ color: "#FFFFFF" }} className="shrink-0" />
       </button>
     </section>
   );
@@ -6628,6 +6641,14 @@ function TalentDiscoveryView({ onBack, onCreateListing }) {
   return (
     <div className="max-w-xl mx-auto px-5 py-8">
       <button onClick={onBack} className="text-sm font-bold mb-6" style={{ color: "#2563EB" }}>{t("talentDiscovery.backLink")}</button>
+      <video
+        src="/videos/yetenek-ilham.mp4"
+        autoPlay
+        loop
+        muted
+        playsInline
+        className="w-full aspect-video rounded-2xl object-cover mb-6"
+      />
       <h1 className="font-sans text-2xl font-black mb-2" style={{ color: "#0F1115" }}>{t("talentDiscovery.heroTitle")}</h1>
       <p className="text-sm mb-8" style={{ color: "#6B7280" }}>{t("talentDiscovery.heroSubtitle")}</p>
 
