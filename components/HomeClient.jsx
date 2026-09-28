@@ -6,7 +6,7 @@ import IsinnApp from "./IsinnApp";
 import ErrorBoundary from "./ErrorBoundary";
 import { LanguageProvider } from "../lib/i18n/LanguageContext";
 
-export default function HomeClient() {
+export default function HomeClient({ discoveryPopularCategories, discoveryRecentListings }) {
   const [session, setSession] = useState(undefined); // undefined = still checking, null = signed out
   // Fiverr modeli: gezinme (ana sayfa, vitrinler, ilanlar, haritada gör,
   // profil görüntüleme) session'sız da açık — giriş ekranı sadece bu bayrak
@@ -49,7 +49,12 @@ export default function HomeClient() {
     <LanguageProvider>
       <ErrorBoundary>
         <div className="relative">
-          <IsinnApp session={session} onRequireAuth={() => setShowAuth(true)} />
+          <IsinnApp
+            session={session}
+            onRequireAuth={() => setShowAuth(true)}
+            discoveryPopularCategories={discoveryPopularCategories}
+            discoveryRecentListings={discoveryRecentListings}
+          />
         </div>
       </ErrorBoundary>
     </LanguageProvider>

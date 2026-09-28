@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo, memo } from "react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { supabase } from "../lib/supabaseClient";
 // Kırpma kütüphanesi sadece fotoğraf kırpma modalı açılınca yüklensin (ilk paket küçük kalsın).
 const Cropper = dynamic(() => import("react-easy-crop"), { ssr: false, loading: () => null });
@@ -1479,7 +1480,7 @@ const HomeListingCard = memo(function HomeListingCard({ l, isFavorite, onSelectL
   );
 });
 
-function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApplyJob, onOpenJob, realListings, listingsLoading, realJobs, favoriteIds, onToggleFavorite, onToggleJobFavorite, platformStats }) {
+function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApplyJob, onOpenJob, realListings, listingsLoading, realJobs, favoriteIds, onToggleFavorite, onToggleJobFavorite, platformStats, discoveryPopularCategories, discoveryRecentListings }) {
   const { t } = useLanguage();
   const rotatingWords = t("rotatingWords");
   const [heroQ, setHeroQ] = useState("");
@@ -2112,6 +2113,62 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
       </section>
 
       <SiteFooter onNav={onNav} />
+
+      {/* SEO denetimi (2026-09-28): bu blok önceden app/page.js'te <HomeClient/>'ın
+          DIŞINDA, koşulsuz bir kardeş eleman olarak render ediliyordu — bu yüzden
+          kullanıcı SPA içinde başka bir view'a (ör. yönetim paneli) geçtiğinde de
+          altta görünmeye devam ediyordu (kullanıcı fark etti: "yönetim panelinin
+          altında da görünüyor"). Buraya, sadece view==="home" iken render edilen
+          HomeView'ın içine taşındı — server component (app/page.js) hâlâ view
+          "home" ile başladığı için (bkz. IsinnPrototype'taki hydration notu) ilk
+          SSR HTML'de aynen yer alıyor, SEO amacı korunuyor; ama artık kullanıcı
+          başka bir view'a geçtiğinde gerçekten kayboluyor. */}
+      {(discoveryPopularCategories?.length > 0 || discoveryRecentListings?.length > 0) && (
+        <div className="max-w-6xl mx-auto px-5 py-12 border-t" style={{ borderColor: "#F0F0F0" }}>
+          {discoveryPopularCategories?.length > 0 && (
+            <div className="mb-10">
+              <h2 className="font-sans text-xl font-black mb-4" style={{ color: "#0F1115" }}>Popüler Kategoriler</h2>
+              <div className="flex flex-wrap gap-2">
+                {discoveryPopularCategories.map((c) => (
+                  <Link
+                    key={c.slug}
+                    href={`/kategori/${c.slug}`}
+                    className="text-sm font-bold px-4 py-2 rounded-full"
+                    style={{ border: "1px solid #E5E7EB", color: "#1B2B24" }}
+                  >
+                    {c.name}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+          {discoveryRecentListings?.length > 0 && (
+            <div>
+              <h2 className="font-sans text-xl font-black mb-4" style={{ color: "#0F1115" }}>Yeni Eklenen Vitrinler</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                {discoveryRecentListings.map((row) => {
+                  const provider = (row.display_name && row.display_name.trim()) || (row.profiles?.business_name && row.profiles.business_name.trim()) || row.profiles?.full_name || "Sağlayıcı";
+                  const city = row.is_remote ? "Uzaktan" : (row.city || "Türkiye");
+                  const img = (Array.isArray(row.images) && row.images[0]) || "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=1200";
+                  return (
+                    <Link key={row.id} href={`/vitrin/${row.id}`} className="rounded-2xl overflow-hidden block" style={{ border: "1px solid #F0F0F0" }}>
+                      <img src={img} alt={row.title} className="w-full h-32 object-cover" />
+                      <div className="p-3">
+                        {row.categories?.name && (
+                          <p className="text-[11px] font-bold uppercase tracking-wide mb-1" style={{ color: "#2563EB" }}>{row.categories.name}</p>
+                        )}
+                        <p className="text-sm font-bold mb-1 line-clamp-2" style={{ color: "#0F1115" }}>{row.title}</p>
+                        <p className="text-xs mb-1" style={{ color: "#6B7280" }}>{provider} · {city}</p>
+                        <p className="text-sm font-black" style={{ color: "#0F1115" }}>{formatPriceLabel(row.price, row.price_type)}</p>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -10842,7 +10899,7 @@ function DraggableSupportButton({ onClick }) {
   );
 }
 
-export default function IsinnPrototype({ session, onRequireAuth }) {
+export default function IsinnPrototype({ session, onRequireAuth, discoveryPopularCategories, discoveryRecentListings }) {
   const { t } = useLanguage();
   // Lazy-initializer olarak getInitialView() vermek hydration hatası veriyordu:
   // sunucuda window yok -> hep "home"; istemcide ilk render'da window zaten var
@@ -11469,6 +11526,8 @@ export default function IsinnPrototype({ session, onRequireAuth }) {
           onToggleFavorite={toggleFavorite}
           onToggleJobFavorite={(job) => toggleFavorite(job, "job")}
           platformStats={platformStats}
+          discoveryPopularCategories={discoveryPopularCategories}
+          discoveryRecentListings={discoveryRecentListings}
         />
       )}
       {view === "search" && (
