@@ -1,6 +1,7 @@
 import "./globals.css";
 import { Analytics } from "@vercel/analytics/react";
 import { COMPANY } from "../lib/companyInfo";
+import ServiceWorkerRegister from "../components/ServiceWorkerRegister";
 
 export const metadata = {
   metadataBase: new URL("https://www.isinn.com.tr"),
@@ -94,6 +95,7 @@ export default function RootLayout({ children }) {
         {/* eslint-disable-next-line react/no-danger */}
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }} />
         {children}
+        <ServiceWorkerRegister />
         {/* Ziyaretçi/sayfa görüntüleme sayısı hiç tutulmuyordu ("kaç kişi
             tıklamış siteyi" — cevap yoktu). Vercel Web Analytics çerezsiz
             çalışır (gizlilik politikasındaki "takip çerezi kullanmıyoruz"
