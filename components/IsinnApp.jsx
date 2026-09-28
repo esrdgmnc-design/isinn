@@ -7,6 +7,7 @@ import { supabase } from "../lib/supabaseClient";
 // Kırpma kütüphanesi sadece fotoğraf kırpma modalı açılınca yüklensin (ilk paket küçük kalsın).
 const Cropper = dynamic(() => import("react-easy-crop"), { ssr: false, loading: () => null });
 import { COMPANY } from "../lib/companyInfo";
+import { FALLBACK_LISTING_IMG, formatPriceLabel, mapServiceRowToListing } from "../lib/mapServiceRowToListing";
 import { isFreePeriod, FREE_PERIOD_UNTIL_ISO } from "../lib/freePeriod";
 import { trackEvent, captureAttribution } from "../lib/analytics";
 import { useLanguage } from "../lib/i18n/LanguageContext";
@@ -293,8 +294,10 @@ function distanceKm(lat1, lng1, lat2, lng2) {
 // Bu sayede bileşenlerin JSX'i neredeyse hiç değişmeden gerçek veriyle
 // çalışabiliyor — sadece veri kaynağı değişiyor.
 // ---------------------------------------------------------------
-const FALLBACK_LISTING_IMG = "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=600";
-
+// GERÇEK BUG DÜZELTMESİ (2026-09-28): FALLBACK_LISTING_IMG, formatPriceLabel
+// ve mapServiceRowToListing artık ../lib/mapServiceRowToListing.js'te — bu
+// dosyanın "use client" işareti yüzünden app/page.js (server component)
+// bunları buradan import edemiyordu (bkz. o dosyadaki yorum).
 // services.price bir numeric alan, ama arayüz "8.500₺'den" / "450₺/saat" gibi
 // serbest metin bekliyor/üretiyor. Formu gönderirken metinden sayı çıkarıyoruz,
 // listelerken de sayıdan aynı formatta bir etiket geri üretiyoruz.
@@ -313,13 +316,6 @@ function parsePriceInput(raw) {
   return { numeric: Number.isNaN(numeric) ? null : numeric, priceType };
 }
 
-function formatPriceLabel(price, priceType) {
-  if (price == null) return priceType === "hourly" ? "Fiyat belirtilmemiş/saat" : "Fiyat belirtilmemiş";
-  const formatted = Number(price).toLocaleString("tr-TR");
-  if (priceType === "hourly") return `${formatted}₺/saat`;
-  if (priceType === "quote") return "Teklif alın";
-  return `${formatted}₺'den`;
-}
 
 // Bir kullanıcının kaç vitrin hakkı olduğunu hesaplar (plan tavanı + varsa
 // Ek Vitrin Paketi). CreateListingView'daki checkVitrinLimit ile ProfileView'ın
@@ -565,70 +561,6 @@ function PhotoCropModal({ imageSrc, aspect = 1, shape = "rect", fileName, onCanc
   );
 }
 
-// supabase.from('services').select('*, profiles(*), categories(*)') sonucundaki
-// bir satırı, LISTINGS dizisindeki nesnelerle aynı şekle çevirir.
-function mapServiceRowToListing(row) {
-  const profile = row.profiles;
-  const category = row.categories;
-  // Görünecek isim artık vitrine özel (services.display_name) — eskiden
-  // profiles.business_name'i paylaşıyordu, bu da bir vitrinde ismini
-  // değiştirince diğer tüm vitrinlerin de adını sessizce değiştiriyordu (gerçek
-  // bir hataydı). display_name boşsa (henüz ayarlanmamış eski vitrinler) eski
-  // paylaşılan isme düşülüyor.
-  const provider = (row.display_name && row.display_name.trim()) || (profile?.business_name && profile.business_name.trim()) || profile?.full_name || "Sağlayıcı";
-  return {
-    id: row.id,
-    dbId: row.id,
-    isReal: true,
-    category: category?.slug || "",
-    categoryDbId: row.category_id,
-    customCategoryLabel: row.custom_category_label || "", // bkz. CUSTOM_CATEGORY_ID
-    mode: row.is_remote ? "remote" : "local",
-    title: row.title,
-    provider,
-    providerId: row.provider_id,
-    city: row.is_remote ? "Uzaktan" : (row.city || "Belirtilmemiş"),
-    price: formatPriceLabel(row.price, row.price_type),
-    rating: 0,
-    reviewCount: 0,
-    img: (Array.isArray(row.images) && row.images[0]) || FALLBACK_LISTING_IMG,
-    desc: row.description || "",
-    level: "new",
-    // "Doğrulanmış" değil bilerek — kimse belgeyi incelemedi/onaylamadı, sadece
-    // en az bir sertifika yüklendiğini dürüstçe belirtiyoruz (bkz.
-    // vitrin_media.sql'deki sync_service_has_certificates — artık vitrin bazlı,
-    // bir vitrindeki belge başka vitrini etkilemiyor).
-    verified: row.has_certificates ? ["Belge Paylaştı"] : [],
-    // Meslek odası/lisans/sicil no — sağlayıcının kendi yazdığı serbest metin,
-    // DOĞRULANMADI (bkz. professional_credential.sql). ListingDetail bunu ayrı,
-    // açıkça "sağlayıcı beyanı" etiketiyle gösteriyor — verified rozetiyle
-    // karıştırılmasın diye bilerek ayrı bir alan.
-    professionalCredential: row.professional_credential || "",
-    // GERÇEK HATA (2026-09-15, kullanıcının "vitrinime giren kişi videomu
-    // göremiyor" şikayetiyle bulundu — bir önceki "yükleniyor" göstergesi
-    // yeterli değildi, gecikme hâlâ kötü bir ilk izlenimdi): ana select zaten
-    // "*" ile video_intro_url'i getiriyordu, ama mapServiceRowToListing onu
-    // hiç taşımıyordu — ListingDetail bu yüzden AYRI bir sorguyla, gecikmeli
-    // olarak çekmek zorunda kalıyordu. Artık video, vitrin listesi ilk
-    // yüklendiği anda (ana sayfa/arama/karusel) zaten elde — detay sayfası
-    // açılır açılmaz, hiç beklemeden gösterilebiliyor.
-    videoIntroUrl: row.video_intro_url || null,
-    videoIntroName: row.video_intro_name || null,
-    // Eskiden burada her zaman "evde" sabitlenmişti — sağlayıcının formda
-    // ne seçtiğine hiç bakılmıyordu (alan zaten kaydedilmiyordu). Artık
-    // gerçek services.home_service_type okunuyor, yoksa (eski satırlar için)
-    // eski varsayılana düşülüyor.
-    homeService: row.is_remote ? undefined : (row.home_service_type || "evde"),
-    // Örnek (demo) vitrin — açıklaması "DEMO VİTRİN" ile başlıyorsa. Ayrı bir kolon
-    // yok (migration gerektirmesin); kartlarda ve detayda görünür rozet gösteriliyor.
-    isDemo: /^s*DEMO V[İI]TR[İI]N/i.test(row.description || ""),
-    isBoosted: false, // fetchListings, aktif Öne Çıkarma Paketi'ne göre bunu güncelliyor
-    // Değerlendirmeler bu vitrinle diğer vitrinler arasında birleşik mi
-    // gösterilsin (varsayılan) yoksa sadece bu vitrine mi özel — vitrin
-    // sahibinin kararı (bkz. OwnerVitrinPanel, vitrin_media.sql).
-    shareProfileReviews: row.share_profile_reviews ?? true,
-  };
-}
 
 // Gerçek bir ilanı, MapView'ın stilize haritasında gösterebileceği bir "pin"e çevirir.
 // Gerçek adres/ilçe koordinatımız yok, bu yüzden şehir merkezinin lat/lng'sini
@@ -10899,7 +10831,7 @@ function DraggableSupportButton({ onClick }) {
   );
 }
 
-export default function IsinnPrototype({ session, onRequireAuth, discoveryPopularCategories, discoveryRecentListings }) {
+export default function IsinnPrototype({ session, onRequireAuth, discoveryPopularCategories, discoveryRecentListings, initialListings }) {
   const { t } = useLanguage();
   // Lazy-initializer olarak getInitialView() vermek hydration hatası veriyordu:
   // sunucuda window yok -> hep "home"; istemcide ilk render'da window zaten var
@@ -10927,8 +10859,17 @@ export default function IsinnPrototype({ session, onRequireAuth, discoveryPopula
   const [cityFilter, setCityFilter] = useState("");
   const [lastJob, setLastJob] = useState(null);
   const [messageContact, setMessageContact] = useState(null);
-  const [realListings, setRealListings] = useState([]); // services tablosundan gelen gerçek ilanlar
-  const [listingsLoading, setListingsLoading] = useState(true);
+  // SEO/AEO denetimi (2026-09-28): JS çalıştırmayan araçlar (AI arama
+  // botları, bazı tarayıcı-öncesi analiz araçları) hiçbir zaman useEffect
+  // çalıştırmadığı için bu state hep başlangıç değerinde ([] + loading=true)
+  // kalıyordu — ham HTML'de gerçek vitrin yerine sonsuza kadar "Vitrinler
+  // yükleniyor..." görünüyordu (kullanıcı "bir yapay zeka aracı sitemi neden
+  // göremiyor, yükleniyor hatası alıyor" diye fark etti). app/page.js artık
+  // sunucu tarafında gerçek, aktif vitrinleri çekip initialListings olarak
+  // gönderiyor — ilk render (SSR dahil) zaten gerçek veriyle başlıyor,
+  // fetchListings() mount sonrası bunu tam/güncel listeyle değiştiriyor.
+  const [realListings, setRealListings] = useState(initialListings || []);
+  const [listingsLoading, setListingsLoading] = useState(!initialListings || initialListings.length === 0);
   const [realJobs, setRealJobs] = useState([]); // jobs tablosundan gelen gerçek iş ilanları ("İlan Ver")
   // Ana sayfa hero'sundaki "12.400+ Sağlayıcı" gibi rakamlar eskiden sabit,
   // sahte sayılardı — platformda o kadar gerçek kullanıcı yokken bu yanıltıcı

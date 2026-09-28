@@ -2,6 +2,7 @@ import HomeClient from "../components/HomeClient";
 import { faqJsonLd } from "../lib/faqJsonLd";
 import { supabase } from "../lib/supabaseClient";
 import { SEO_CATEGORIES } from "../lib/seoTaxonomy";
+import { mapServiceRowToListing } from "../lib/mapServiceRowToListing";
 
 // Ana sayfa artık sunucu bileşeni: kanonik adres "/" (parametreli ?vitrin=… gibi URL'ler
 // ayrı sayfa sayılmasın) ve SSS şeması yalnızca burada.
@@ -23,9 +24,13 @@ export const metadata = {
 // (2026-09-28'de fark edilen bir hatanın düzeltmesi: önceden bu JSX burada,
 // <HomeClient/>'ın dışında koşulsuz render ediliyordu).
 async function getDiscoveryData() {
+  // "*" ile fetchListings'in (IsinnApp.jsx) kendi seçimiyle aynı — bu, aşağıda
+  // mapServiceRowToListing'e eksiksiz, gerçek şekilli satırlar veriyor (ayrıca
+  // GERÇEK BUG DÜZELTMESİ, 2026-09-28: bu satırların işlenmiş hali artık
+  // realListings'in başlangıç durumunu da besliyor — bkz. Page() içindeki not).
   const { data } = await supabase
     .from("services")
-    .select("id, title, price, price_type, city, is_remote, description, display_name, images, created_at, profiles(business_name, full_name), categories(name, slug)")
+    .select("*, profiles(business_name, full_name), categories(name, slug)")
     .eq("active", true)
     .order("created_at", { ascending: false })
     .limit(300);
@@ -49,17 +54,32 @@ async function getDiscoveryData() {
 
   const recentListings = indexable.slice(0, 8);
 
-  return { popularCategories, recentListings };
+  // GERÇEK BUG (2026-09-28, kullanıcı "bir yapay zeka aracı sitemi neden
+  // göremiyor, yükleniyor hatası alıyor" diye fark etti): realListings state'i
+  // IsinnApp.jsx'te [] ile başlıyor, gerçek veri sadece mount-sonrası bir
+  // useEffect'te (fetchListings) çekiliyordu — JS çalıştırmayan hiçbir araç
+  // (AI arama botları dahil) bu efekti hiç tetiklemediği için ham HTML'de ana
+  // vitrin ızgarası sonsuza kadar "Vitrinler yükleniyor..." gösteriyordu.
+  // Aynı satırları mapServiceRowToListing'den geçirip ilk render'ı (SSR dahil)
+  // gerçek veriyle başlatıyoruz — fetchListings() mount sonrası bunu güncel/tam
+  // listeyle (rating, boost vb. ile zenginleştirilmiş) sessizce değiştiriyor.
+  const initialListings = indexable.map(mapServiceRowToListing);
+
+  return { popularCategories, recentListings, initialListings };
 }
 
 export default async function Page() {
-  const { popularCategories, recentListings } = await getDiscoveryData();
+  const { popularCategories, recentListings, initialListings } = await getDiscoveryData();
 
   return (
     <>
       {/* eslint-disable-next-line react/no-danger */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
-      <HomeClient discoveryPopularCategories={popularCategories} discoveryRecentListings={recentListings} />
+      <HomeClient
+        discoveryPopularCategories={popularCategories}
+        discoveryRecentListings={recentListings}
+        initialListings={initialListings}
+      />
     </>
   );
 }
