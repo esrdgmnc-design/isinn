@@ -1,5 +1,6 @@
 import "./globals.css";
 import { Analytics } from "@vercel/analytics/react";
+import { COMPANY } from "../lib/companyInfo";
 
 export const metadata = {
   metadataBase: new URL("https://www.isinn.com.tr"),
@@ -59,6 +60,27 @@ const organizationJsonLd = {
   parentOrganization: {
     "@type": "Organization",
     name: "CODE G LTD (Code G Teknoloji ve Ticaret Limited Şirketi)",
+  },
+  // Konum/hizmet alanı bilgisi eskiden hiç yoktu — AI arama motorlarının ve
+  // Google'ın İşinn'i "Türkiye'de yerleşik, yerel" bir varlık olarak
+  // çözümlemesini (Knowledge Panel'de adres/harita gösterimi dahil)
+  // kolaylaştırıyor. Tek kaynak lib/companyInfo.js — burada elle tekrar
+  // yazılmıyor.
+  address: {
+    "@type": "PostalAddress",
+    streetAddress: COMPANY.address.split(",")[0]?.trim(),
+    addressLocality: "Şişli",
+    addressRegion: "İstanbul",
+    addressCountry: "TR",
+  },
+  areaServed: "TR",
+  contactPoint: {
+    "@type": "ContactPoint",
+    contactType: "customer service",
+    email: COMPANY.email,
+    telephone: COMPANY.phoneHref,
+    areaServed: "TR",
+    availableLanguage: ["Turkish"],
   },
   sameAs: [
     "https://www.tiktok.com/@isinn.com.tr",

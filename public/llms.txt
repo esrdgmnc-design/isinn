@@ -15,3 +15,4 @@
 
 - Fiyatlar ve aktif vitrinler sürekli güncellenir; en güncel liste için [sitemap.xml](https://www.isinn.com.tr/sitemap.xml)'e bakın.
 - İşinn bir aracı pazaryeridir; hizmetin tarafı değildir.
+- Sıkça sorulan sorular ve rehber içeriklerinin tam metni (ikinci bir istek yapmadan alıntılamak için) [llms-full.txt](https://www.isinn.com.tr/llms-full.txt)'de.

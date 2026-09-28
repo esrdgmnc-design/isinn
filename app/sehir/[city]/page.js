@@ -1,8 +1,10 @@
 import Link from "next/link";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import { supabase } from "../../../lib/supabaseClient";
 import { SEO_CITIES, matchesCitySlug } from "../../../lib/seoTaxonomy";
-import { formatPrice, getProviderName } from "../../../lib/seoFormat";
+import { formatPrice, getProviderName, getCityIntro } from "../../../lib/seoFormat";
+import { getCityFaq } from "../../../lib/categoryFaq";
 
 // SEO için eklendi — bkz. app/kategori/[slug]/page.js'teki aynı gerekçe.
 // services.city serbest metin olduğu için (bkz. lib/seoTaxonomy.js) şehir
@@ -18,7 +20,7 @@ function findCity(slug) {
 async function getServices(citySlug) {
   const { data: services } = await supabase
     .from("services")
-    .select("*, profiles(*), categories(name)")
+    .select("*, profiles(*), categories(name, slug)")
     .eq("active", true)
     .eq("is_remote", false)
     .order("updated_at", { ascending: false });
@@ -74,6 +76,17 @@ export default async function CityPage({ params }) {
     ],
   };
 
+  const cityFaq = services.length > 0 ? getCityFaq(meta.name) : null;
+  const faqJsonLd = cityFaq ? {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: cityFaq.map((f) => ({
+      "@type": "Question",
+      name: f.q,
+      acceptedAnswer: { "@type": "Answer", text: f.a },
+    })),
+  } : null;
+
   return (
     <>
       {/* eslint-disable-next-line react/no-danger */}
@@ -82,13 +95,17 @@ export default async function CityPage({ params }) {
         // eslint-disable-next-line react/no-danger
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       )}
+      {faqJsonLd && (
+        // eslint-disable-next-line react/no-danger
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
+      )}
       <div className="max-w-5xl mx-auto px-5 py-10">
         <Link href="/" className="text-sm font-bold" style={{ color: "#2563EB" }}>← İşinn</Link>
         <h1 className="font-sans text-2xl md:text-3xl font-black mt-4 mb-2" style={{ color: "#0F1115" }}>
           {meta.name} Hizmet Sağlayıcıları
         </h1>
         <p className="text-sm mb-8" style={{ color: "#6B7280" }}>
-          {meta.name} bölgesinde güvenilir hizmet sağlayıcılarını keşfet, doğrudan ulaş — komisyonsuz.
+          {getCityIntro(meta.name)}
         </p>
 
         {services.length === 0 ? (
@@ -104,17 +121,39 @@ export default async function CityPage({ params }) {
               const provider = getProviderName(row);
               const img = (Array.isArray(row.images) && row.images[0]) || FALLBACK_IMG;
               return (
-                <Link key={row.id} href={`/vitrin/${row.id}`} className="rounded-2xl overflow-hidden block" style={{ border: "1px solid #F0F0F0" }}>
-                  <img src={img} alt={row.title} className="w-full h-40 object-cover" />
+                <div key={row.id} className="rounded-2xl overflow-hidden" style={{ border: "1px solid #F0F0F0" }}>
+                  <Link href={`/vitrin/${row.id}`} className="block relative w-full h-40">
+                    <Image src={img} alt={row.title} fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
+                  </Link>
                   <div className="p-4">
-                    <p className="text-xs font-bold uppercase tracking-wide mb-1" style={{ color: "#2563EB" }}>{row.categories?.name || ""}</p>
-                    <p className="text-sm font-bold mb-1 line-clamp-2" style={{ color: "#0F1115" }}>{row.title}</p>
-                    <p className="text-xs mb-2" style={{ color: "#6B7280" }}>{provider}</p>
-                    <p className="text-sm font-black" style={{ color: "#0F1115" }}>{formatPrice(row.price, row.price_type)}</p>
+                    {row.categories?.slug && (
+                      <Link href={`/kategori/${row.categories.slug}`} className="text-xs font-bold uppercase tracking-wide mb-1 block" style={{ color: "#2563EB" }}>
+                        {row.categories.name}
+                      </Link>
+                    )}
+                    <Link href={`/vitrin/${row.id}`} className="block">
+                      <p className="text-sm font-bold mb-1 line-clamp-2" style={{ color: "#0F1115" }}>{row.title}</p>
+                      <p className="text-xs mb-2" style={{ color: "#6B7280" }}>{provider}</p>
+                      <p className="text-sm font-black" style={{ color: "#0F1115" }}>{formatPrice(row.price, row.price_type)}</p>
+                    </Link>
                   </div>
-                </Link>
+                </div>
               );
             })}
+          </div>
+        )}
+
+        {cityFaq && (
+          <div className="mt-10 pt-8 border-t" style={{ borderColor: "#F0F0F0" }}>
+            <h2 className="font-sans text-lg font-black mb-4" style={{ color: "#0F1115" }}>Sıkça Sorulan Sorular</h2>
+            <div className="space-y-4">
+              {cityFaq.map((f, i) => (
+                <div key={i}>
+                  <p className="text-sm font-bold mb-1" style={{ color: "#0F1115" }}>{f.q}</p>
+                  <p className="text-sm" style={{ color: "#6B7280" }}>{f.a}</p>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>

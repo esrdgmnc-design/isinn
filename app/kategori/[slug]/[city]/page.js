@@ -1,8 +1,9 @@
 import Link from "next/link";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import { supabase } from "../../../../lib/supabaseClient";
 import { SEO_CATEGORIES, SEO_CITIES, matchesCitySlug } from "../../../../lib/seoTaxonomy";
-import { formatPrice, getProviderName } from "../../../../lib/seoFormat";
+import { formatPrice, getProviderName, getCategoryCityIntro } from "../../../../lib/seoFormat";
 import { getCategoryFaq } from "../../../../lib/categoryFaq";
 
 // SEO'nun en değerli sayfası: "istanbul temizlikçi", "ankara özel ders" gibi
@@ -51,7 +52,7 @@ export async function generateMetadata({ params }) {
   const { services } = await getServices(params.slug, params.city);
   const url = `${BASE_URL}/kategori/${params.slug}/${params.city}`;
   const title = `${cityMeta.name} ${categoryMeta.name} — Güvenilir ${categoryMeta.name} Bul | İşinn`;
-  const description = `${cityMeta.name} bölgesinde güvenilir ${categoryMeta.name.toLocaleLowerCase("tr-TR")} sağlayıcılarını keşfet, doğrudan ulaş — komisyonsuz, İşinn'de.`;
+  const description = getCategoryCityIntro(categoryMeta.name, cityMeta.name, `${params.slug}-${params.city}`);
   return {
     title,
     description,
@@ -106,7 +107,7 @@ export default async function CategoryCityPage({ params }) {
           {cityMeta.name} {categoryMeta.name}
         </h1>
         <p className="text-sm mb-8" style={{ color: "#6B7280" }}>
-          {cityMeta.name} bölgesinde güvenilir {categoryMeta.name.toLocaleLowerCase("tr-TR")} sağlayıcılarını keşfet, doğrudan ulaş — komisyonsuz.
+          {getCategoryCityIntro(categoryMeta.name, cityMeta.name, `${params.slug}-${params.city}`)}
         </p>
 
         {services.length === 0 ? (
@@ -123,7 +124,9 @@ export default async function CategoryCityPage({ params }) {
               const img = (Array.isArray(row.images) && row.images[0]) || FALLBACK_IMG;
               return (
                 <Link key={row.id} href={`/vitrin/${row.id}`} className="rounded-2xl overflow-hidden block" style={{ border: "1px solid #F0F0F0" }}>
-                  <img src={img} alt={row.title} className="w-full h-40 object-cover" />
+                  <div className="relative w-full h-40">
+                    <Image src={img} alt={row.title} fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
+                  </div>
                   <div className="p-4">
                     <p className="text-sm font-bold mb-1 line-clamp-2" style={{ color: "#0F1115" }}>{row.title}</p>
                     <p className="text-xs mb-2" style={{ color: "#6B7280" }}>{provider}</p>

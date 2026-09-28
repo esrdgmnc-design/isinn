@@ -25,6 +25,15 @@ export default function RehberPostPage({ params }) {
   const post = findRehberPost(params.slug);
   if (!post) notFound();
 
+  // Yazılar birbirine hiç link vermiyordu — her biri kendi kategorisine tek
+  // yönlü bir CTA veriyordu, aralarında iç link akışı yoktu. Aynı kategoriden
+  // başlayıp gerekirse diğerleriyle 3'e tamamlayan basit bir "ilgili rehber"
+  // listesi, hem kullanıcıyı sitede tutuyor hem de rehber sayfalarının
+  // birbirine PageRank/keşif değeri aktarmasını sağlıyor.
+  const sameCategory = REHBER_POSTS.filter((p) => p.slug !== post.slug && p.category === post.category);
+  const others = REHBER_POSTS.filter((p) => p.slug !== post.slug && p.category !== post.category);
+  const relatedPosts = [...sameCategory, ...others].slice(0, 3);
+
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Article",
@@ -96,6 +105,19 @@ export default function RehberPostPage({ params }) {
         >
           {post.ctaText}
         </Link>
+
+        {relatedPosts.length > 0 && (
+          <div className="mt-10 pt-6 border-t" style={{ borderColor: "#E5E7EB" }}>
+            <h2 className="font-sans text-lg font-black mb-4" style={{ color: "#0F1115" }}>İlgini Çekebilir</h2>
+            <div className="space-y-3">
+              {relatedPosts.map((p) => (
+                <Link key={p.slug} href={`/rehber/${p.slug}`} className="block text-sm font-bold" style={{ color: "#2563EB" }}>
+                  {p.title} →
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
         <style>{`.rehber-body h2 { font-size: 18px; font-weight: 800; color: #0F1115; margin: 24px 0 8px; } .rehber-body p { margin: 0 0 12px; } .rehber-body ul { margin: 0 0 12px; padding-left: 20px; } .rehber-body li { margin-bottom: 6px; }`}</style>
       </div>
     </>

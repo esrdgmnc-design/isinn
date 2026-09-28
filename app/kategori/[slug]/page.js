@@ -1,8 +1,9 @@
 import Link from "next/link";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import { supabase } from "../../../lib/supabaseClient";
 import { SEO_CATEGORIES } from "../../../lib/seoTaxonomy";
-import { formatPrice, getProviderName } from "../../../lib/seoFormat";
+import { formatPrice, getProviderName, getCategoryIntro } from "../../../lib/seoFormat";
 import { getCategoryFaq } from "../../../lib/categoryFaq";
 
 // SEO için eklendi: kategoriler eskiden sadece ana sayfadaki bir istemci
@@ -42,7 +43,7 @@ export async function generateMetadata({ params }) {
   const { services } = await getServices(params.slug);
   const url = `${BASE_URL}/kategori/${params.slug}`;
   const title = `${meta.name} Hizmeti Bul — İşinn`;
-  const description = `Türkiye genelinde güvenilir ${meta.name.toLocaleLowerCase("tr-TR")} sağlayıcılarını keşfet, doğrudan ulaş — komisyonsuz, İşinn'de.`;
+  const description = getCategoryIntro(meta.name, params.slug);
   return {
     title,
     description,
@@ -110,7 +111,7 @@ export default async function CategoryPage({ params }) {
           {meta.name} Hizmeti Bul
         </h1>
         <p className="text-sm mb-8" style={{ color: "#6B7280" }}>
-          Türkiye genelinde güvenilir {meta.name.toLocaleLowerCase("tr-TR")} sağlayıcılarını keşfet, doğrudan ulaş — komisyonsuz.
+          {getCategoryIntro(meta.name, params.slug)}
         </p>
 
         {services.length === 0 ? (
@@ -128,7 +129,9 @@ export default async function CategoryPage({ params }) {
               const img = (Array.isArray(row.images) && row.images[0]) || FALLBACK_IMG;
               return (
                 <Link key={row.id} href={`/vitrin/${row.id}`} className="rounded-2xl overflow-hidden block" style={{ border: "1px solid #F0F0F0" }}>
-                  <img src={img} alt={row.title} className="w-full h-40 object-cover" />
+                  <div className="relative w-full h-40">
+                    <Image src={img} alt={row.title} fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
+                  </div>
                   <div className="p-4">
                     <p className="text-sm font-bold mb-1 line-clamp-2" style={{ color: "#0F1115" }}>{row.title}</p>
                     <p className="text-xs mb-2" style={{ color: "#6B7280" }}>{provider} · {city}</p>
