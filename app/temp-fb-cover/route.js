@@ -16,15 +16,15 @@ export async function GET() {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          background: "linear-gradient(135deg, #16321F 0%, #0F1E14 100%)",
+          background: "#FFFFFF",
           fontFamily: "sans-serif",
         }}
       >
         <div style={{ display: "flex", alignItems: "baseline", marginBottom: 28 }}>
-          <span style={{ color: "#FFFFFF", fontSize: 140, fontWeight: 800, letterSpacing: -3 }}>İşinn</span>
+          <span style={{ color: "#0F1115", fontSize: 140, fontWeight: 800, letterSpacing: -3 }}>İşinn</span>
           <span style={{ color: "#2563EB", fontSize: 140, fontWeight: 800 }}>.</span>
         </div>
-        <div style={{ color: "#B8BCC4", fontSize: 34, fontWeight: 500, maxWidth: 1100, textAlign: "center", lineHeight: 1.4 }}>
+        <div style={{ color: "#6B7280", fontSize: 34, fontWeight: 500, maxWidth: 1100, textAlign: "center", lineHeight: 1.4 }}>
           İhtiyacın olan hizmeti bul, ya da kendi hizmetini sun — komisyonsuz.
         </div>
       </div>
