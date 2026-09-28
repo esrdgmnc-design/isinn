@@ -9373,20 +9373,6 @@ function PricingView({ onBack, onJoined, userId }) {
         aria-hidden={freePeriod ? "true" : undefined}
         style={freePeriod ? { opacity: 0.45, filter: "grayscale(1)", pointerEvents: "none", userSelect: "none" } : undefined}
       >
-      <div className="text-center mb-6">
-        <h1 className="font-serif text-3xl mb-3" style={{ color: "#1B2B24" }}>{t("pricing.heroTitle")}</h1>
-        <p className="text-sm mb-4" style={{ color: "#5C5744" }}>
-          {t("pricing.heroSubtitle")}
-        </p>
-        <span
-          className="inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-full text-white"
-          style={{ background: "linear-gradient(135deg, #F59E0B 0%, #D97706 100%)" }}
-        >
-          <Sparkles size={13} /> {t("pricing.trialBadge", { months: plan.trialMonths })}
-        </span>
-        <p className="text-[11px] mt-2" style={{ color: "#6B6550" }}>{t("pricing.trialAutoStartNote")}</p>
-      </div>
-
       <div className="flex justify-center mb-6">
         <div className="inline-flex items-center gap-1 p-1 rounded-full" style={{ background: "#F8F4E9", border: "1px solid #D9D0BA" }}>
           {[["monthly", t("pricing.monthly")], ["yearly", t("pricing.yearly")]].map(([key, label]) => (
