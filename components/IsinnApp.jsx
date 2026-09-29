@@ -8103,6 +8103,58 @@ function CreateListingView({ onBack, onCreated, userId, onGoToProfile, onGoToPla
   );
 }
 
+// Destek asistanı Claude'dan gelen metni ham "**kalın**"/"## başlık"/"- madde"
+// işaretleriyle birlikte olduğu gibi basıyordu (kullanıcı sohbette yıldızları
+// ve kare işaretlerini kelimenin tam anlamıyla görüyordu). Tam bir markdown
+// kütüphanesi eklemek yerine, Claude'un burada gerçekte ürettiği dar
+// kalıpları (kalın, başlık, madde/numaralı liste, yatay çizgi) satır satır
+// ayrıştırıp gerçek React elemanlarına çeviriyoruz.
+function renderInlineBold(line, keyPrefix) {
+  const parts = line.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, i) =>
+    part.startsWith("**") && part.endsWith("**")
+      ? <strong key={`${keyPrefix}-${i}`}>{part.slice(2, -2)}</strong>
+      : <span key={`${keyPrefix}-${i}`}>{part}</span>
+  );
+}
+function renderChatMarkdown(text) {
+  const lines = (text || "").split("\n");
+  const blocks = [];
+  let listBuffer = [];
+  const flushList = () => {
+    if (listBuffer.length) {
+      blocks.push(
+        <ul key={`ul-${blocks.length}`} className="list-disc pl-4 space-y-0.5">
+          {listBuffer.map((item, i) => <li key={i}>{renderInlineBold(item, `li-${blocks.length}-${i}`)}</li>)}
+        </ul>
+      );
+      listBuffer = [];
+    }
+  };
+  lines.forEach((line, idx) => {
+    const trimmed = line.trim();
+    if (/^---+$/.test(trimmed)) {
+      flushList();
+      blocks.push(<hr key={`hr-${idx}`} className="my-1.5 border-t" style={{ borderColor: "currentColor", opacity: 0.15 }} />);
+    } else if (/^#{1,4}\s+/.test(trimmed)) {
+      flushList();
+      const headingText = trimmed.replace(/^#{1,4}\s+/, "");
+      blocks.push(<p key={`h-${idx}`} className="font-bold">{renderInlineBold(headingText, `h-${idx}`)}</p>);
+    } else if (/^[-•]\s+/.test(trimmed) || /^\d+\.\s+/.test(trimmed)) {
+      listBuffer.push(trimmed.replace(/^([-•]|\d+\.)\s+/, ""));
+    } else {
+      flushList();
+      if (trimmed.length === 0) {
+        blocks.push(<div key={`sp-${idx}`} className="h-1.5" />);
+      } else {
+        blocks.push(<p key={`p-${idx}`}>{renderInlineBold(line, `p-${idx}`)}</p>);
+      }
+    }
+  });
+  flushList();
+  return blocks;
+}
+
 const SUPPORT_CATEGORY_META = {
   "teknik sorun": { label: "Teknik Sorun", color: "#EF4444" },
   "istek": { label: "İstek", color: "#3B82F6" },
@@ -8130,8 +8182,8 @@ function SupportChatView({ onBack, onReport, currentUserId }) {
     if (!currentUserId) return;
     let cancelled = false;
     (async () => {
-      const [{ data: profile }, { data: phone }, { data: sub }] = await Promise.all([
-        supabase.from("profiles").select("full_name, business_name").eq("id", currentUserId).maybeSingle(),
+      const [{ data: profile }, { data: phone }, { data: sub }, { count: activeVitrinCount }, { count: reviewCount }] = await Promise.all([
+        supabase.from("profiles").select("full_name, business_name, avatar_url, bio, business_about, has_certificates, video_intro_url").eq("id", currentUserId).maybeSingle(),
         supabase.from("profile_phone").select("verified").eq("profile_id", currentUserId).maybeSingle(),
         supabase
           .from("provider_subscriptions")
@@ -8141,13 +8193,37 @@ function SupportChatView({ onBack, onReport, currentUserId }) {
           .order("current_period_end", { ascending: false })
           .limit(1)
           .maybeSingle(),
+        supabase.from("services").select("id", { count: "exact", head: true }).eq("provider_id", currentUserId).eq("active", true),
+        supabase.from("ratings").select("id", { count: "exact", head: true }).eq("rated_profile_id", currentUserId),
       ]);
       if (cancelled) return;
       const name = (profile?.business_name && profile.business_name.trim()) || profile?.full_name || "İsimsiz kullanıcı";
       const planLine = sub
         ? `Aktif plan: ${sub.subscription_plans?.name || "bilinmiyor"} (${sub.status === "trialing" ? "deneme" : "aktif"}, ${new Date(sub.current_period_end).toLocaleDateString("tr-TR")} tarihine kadar)`
         : "Aktif bir ücretli üyeliği yok.";
-      setUserContext(`KULLANICI BİLGİSİ (bu konuştuğun gerçek kişi — cevaplarını buna göre kişiselleştir, ama bu bilgiyi kullanıcıya "sistemden okudum" diye tuhaf şekilde tekrar etme, doğal kullan):\nAd: ${name}\nTelefon doğrulaması: ${phone?.verified ? "yapılmış" : "yapılmamış"}\n${planLine}`);
+      // "Profilim güçlü mü" gibi bir soruya AI'nin uydurma bir yüzde
+      // söylemesindense, gerçek profil doluluk sinyallerinden KODUN
+      // hesapladığı bir puan veriyoruz — AI sadece bu gerçek sayıyı
+      // aktarıyor, kendi tahminini üretmiyor.
+      const signals = [
+        !!profile?.avatar_url,
+        !!(profile?.bio?.trim() || profile?.business_about?.trim()),
+        !!profile?.has_certificates,
+        !!profile?.video_intro_url,
+        (activeVitrinCount || 0) > 0,
+        (reviewCount || 0) > 0,
+        !!phone?.verified,
+      ];
+      const strengthPct = Math.round((signals.filter(Boolean).length / signals.length) * 100);
+      const missing = [];
+      if (!profile?.avatar_url) missing.push("profil fotoğrafı");
+      if (!(profile?.bio?.trim() || profile?.business_about?.trim())) missing.push("hakkımda/bio yazısı");
+      if (!profile?.has_certificates) missing.push("sertifika/CV");
+      if (!profile?.video_intro_url) missing.push("tanıtım videosu");
+      if (!(activeVitrinCount > 0)) missing.push("aktif vitrin");
+      if (!(reviewCount > 0)) missing.push("müşteri değerlendirmesi");
+      if (!phone?.verified) missing.push("telefon doğrulaması");
+      setUserContext(`KULLANICI BİLGİSİ (bu konuştuğun gerçek kişi — cevaplarını buna göre kişiselleştir, ama bu bilgiyi kullanıcıya "sistemden okudum" diye tuhaf şekilde tekrar etme, doğal kullan):\nAd: ${name}\nTelefon doğrulaması: ${phone?.verified ? "yapılmış" : "yapılmamış"}\n${planLine}\nProfil doluluk puanı: %${strengthPct} (7 gerçek sinyalden hesaplandı: profil fotoğrafı, bio, sertifika/CV, tanıtım videosu, aktif vitrin, müşteri değerlendirmesi, telefon doğrulaması). "Profilim güçlü mü/yeterli mi" gibi bir soru gelirse SADECE bu gerçek %${strengthPct} rakamını ve eksik olanları (${missing.length ? missing.join(", ") : "eksik yok"}) söyle, kendi başına farklı bir yüzde uydurma.`);
     })();
     return () => { cancelled = true; };
   }, [currentUserId]);
@@ -8260,12 +8336,12 @@ ${convoText}`;
         {messages.map((m, i) => (
           <div key={i} className={`flex ${m.sender === "me" ? "justify-end" : "justify-start"}`}>
             <div
-              className="max-w-[80%] rounded-2xl px-3.5 py-2 text-sm whitespace-pre-wrap"
+              className="max-w-[80%] rounded-2xl px-3.5 py-2 text-sm whitespace-pre-wrap space-y-0.5"
               style={m.sender === "me"
                 ? { background: "#2563EB", color: "white", borderBottomRightRadius: 4 }
                 : { background: "#F7F7F8", color: "#0F1115", borderBottomLeftRadius: 4 }}
             >
-              {m.text}
+              {m.sender === "ai" ? renderChatMarkdown(m.text) : m.text}
             </div>
           </div>
         ))}
