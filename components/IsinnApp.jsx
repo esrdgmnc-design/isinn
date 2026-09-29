@@ -5201,7 +5201,7 @@ Aciliyet: ${urgencyLabel}${mode === "local" ? ` · Hizmet yeri: ${prefLabel}` : 
         </p>
         <p className="text-xs mb-6" style={{ color: "#6B6550" }}>{t("postJob.etaHint", { eta })}</p>
         <button
-          onClick={() => onMatchAI({ title, categoryId, desc, cityId, mode, urgency, homeServicePref })}
+          onClick={() => onMatchAI({ title, categoryId, desc, cityId, mode, urgency, homeServicePref, jobId: postedJob?.dbId })}
           className="w-full mb-3 py-3 rounded-full text-sm font-medium text-white flex items-center justify-center gap-2"
           style={{ background: "#2FBF71" }}
         >
@@ -5469,11 +5469,15 @@ Aciliyet: ${urgencyLabel}${mode === "local" ? ` · Hizmet yeri: ${prefLabel}` : 
   );
 }
 
-function AIMatchView({ job, onBack, onSelectListing, realListings }) {
+function AIMatchView({ job, onBack, onSelectListing, realListings, currentUserId }) {
   const { t } = useLanguage();
   const [status, setStatus] = useState("loading"); // loading | done | error
   const [matches, setMatches] = useState([]);
   const [errorMsg, setErrorMsg] = useState("");
+  // Aday adı -> ai_match_log satır id'si. Seçim yapıldığında hangi log
+  // satırının "selected=true" olacağını bulmak için (bkz. TÜBİTAK kanıtı
+  // ihtiyacı: eşleştirmenin gerçekten kaç kez çalıştığı ve seçim oranı).
+  const logRowIdsRef = useRef({});
 
   const category = CATEGORIES.find((c) => c.id === job?.categoryId);
   const cityName = CITIES.find((c) => c.id === job?.cityId)?.name;
@@ -5545,6 +5549,30 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
         if (cancelled) return;
         setMatches(parsed);
         setStatus("done");
+
+        // Sonucu kalıcı olarak logla — sessiz, engellemeyen. currentUserId
+        // yoksa (teorik olarak olmamalı, buton sadece giriş yapmış ilan
+        // sahibine gösteriliyor) hiç denemiyoruz.
+        if (currentUserId) {
+          const rows = parsed.map((m, i) => {
+            const listing = candidates.find((c) => c.provider === m.name);
+            return {
+              job_id: job?.jobId || null,
+              client_id: currentUserId,
+              candidate_service_id: listing?.dbId || null,
+              candidate_name: m.name,
+              match_score: m.matchScore,
+              reason: m.reason,
+              rank: i + 1,
+            };
+          });
+          supabase.from("ai_match_log").insert(rows).select("id, candidate_name").then(({ data: inserted, error }) => {
+            if (error || !inserted) return;
+            const map = {};
+            inserted.forEach((r) => { map[r.candidate_name] = r.id; });
+            logRowIdsRef.current = map;
+          });
+        }
       } catch (err) {
         if (cancelled) return;
         setStatus("error");
@@ -5587,7 +5615,12 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
             return (
               <button
                 key={i}
-                onClick={() => listing && onSelectListing(listing)}
+                onClick={() => {
+                  if (!listing) return;
+                  const logId = logRowIdsRef.current[m.name];
+                  if (logId) supabase.from("ai_match_log").update({ selected: true }).eq("id", logId).then(() => {});
+                  onSelectListing(listing);
+                }}
                 disabled={!listing}
                 className="w-full text-left rounded-xl border p-4 hover:shadow-md transition-shadow"
                 style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}
@@ -6437,6 +6470,31 @@ function useCategoryIdBySlug() {
   return categoryIdBySlug;
 }
 
+// Ortak AI fotoğraf içerik kontrolü — /api/listing-photo-check sunucu
+// route'unu kullanıyor (sahiplik doğrulaması + rate limit + moderated_images
+// kaydı zaten orada, bkz. o dosyanın üstündeki not). Kapak fotoğrafı, profil
+// fotoğrafı ve portfolyo fotoğrafları aynı kriterlerle, tek bir yerden kontrol
+// edilsin diye paylaşılan bir fonksiyona çıkarıldı.
+async function checkPhotoModeration(url, mimeType) {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const response = await fetch("/api/listing-photo-check", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+      },
+      body: JSON.stringify({ url, mimeType }),
+    });
+    const data = await response.json();
+    if (data.error) throw new Error(data.error);
+    return { approved: !!data.approved, reason: data.reason };
+  } catch {
+    // Fail-safe: kontrol başarısız olursa ONAYLAMA.
+    return { approved: false, reason: null };
+  }
+}
+
 // Kapak fotoğrafı: dosya seçilince önce kırpma modalı (PhotoCropModal), sonra
 // yükleme, sonra sunucu tarafı AI içerik kontrolü. Asıl zorlama services
 // tablosundaki trigger'da (bkz. supabase/listing_photo_moderation.sql) — buradaki
@@ -6451,23 +6509,8 @@ function useListingCoverPhoto({ userId, initialUrl }) {
 
   const checkPhotoContent = async (url, mimeType) => {
     setModeration({ status: "checking" });
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const response = await fetch("/api/listing-photo-check", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
-        },
-        body: JSON.stringify({ url, mimeType }),
-      });
-      const data = await response.json();
-      if (data.error) throw new Error(data.error);
-      setModeration({ status: data.approved ? "approved" : "flagged", reason: data.reason });
-    } catch (err) {
-      // Fail-safe: eğer otomatik kontrol başarısız olursa, ONAYLAMA — incelemeye al.
-      setModeration({ status: "flagged", reason: t("createListing.moderationFailSafe") });
-    }
+    const { approved, reason } = await checkPhotoModeration(url, mimeType);
+    setModeration({ status: approved ? "approved" : "flagged", reason: reason || t("createListing.moderationFailSafe") });
   };
 
   const handlePhoto = (e) => {
@@ -7348,6 +7391,14 @@ function CreateListingView({ onBack, onCreated, userId, onGoToProfile, onGoToPla
           if (validationError) throw new Error(validationError);
         }
         const { publicUrl } = await uploadToProfileMedia(file, "portfolio");
+        // Portfolyo fotoğrafları herkese açık şekilde vitrinde gösteriliyor —
+        // kapak/profil fotoğrafıyla aynı AI içerik kontrolünden geçiyor. Video
+        // için Claude vision kullanılamadığından (bkz. checkReviewMedia'daki
+        // not) bu kontrol sadece fotoğraflara uygulanıyor, dürüstçe.
+        if (type === "image") {
+          const { approved, reason } = await checkPhotoModeration(publicUrl, file.type);
+          if (!approved) throw new Error(reason ? t("createListing.errPortfolioPhotoFlagged", { reason }) : t("createListing.moderationFailSafe"));
+        }
         const { data: row, error } = await supabase
           .from("portfolio_items")
           .insert({ profile_id: userId, service_id: serviceId, media_type: type, url: publicUrl, file_name: file.name })
@@ -9792,6 +9843,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
   const [profilePhoto, setProfilePhoto] = useState(null); // { url }
   const [photoUploading, setPhotoUploading] = useState(false);
   const [photoError, setPhotoError] = useState("");
+  const [photoModeration, setPhotoModeration] = useState(null); // { status: 'checking'|'approved'|'flagged', reason }
 
   // Gerçek profil — profiles tablosundan okunur/güncellenir.
   const [profile, setProfile] = useState(null);
@@ -10153,9 +10205,22 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
     setCropSrc(null);
     if (!file || !userId) return;
     setPhotoError("");
+    setPhotoModeration(null);
     setPhotoUploading(true);
     try {
       const { publicUrl } = await uploadToProfileMedia(file, "avatar");
+      // Herkese açık profil fotoğrafı — kapak fotoğrafıyla aynı AI içerik
+      // kontrolünden geçmeden avatar_url'e yazılmıyor. Kullanıcı bu kontrolü
+      // (çekilen bir andaki gibi) görebilsin diye durum artık görünür bir
+      // rozetle gösteriliyor — eskiden tamamen sessizdi.
+      setPhotoModeration({ status: "checking" });
+      const { approved, reason } = await checkPhotoModeration(publicUrl, file.type);
+      if (!approved) {
+        setPhotoModeration({ status: "flagged", reason });
+        setPhotoError(reason ? t("profile.errPhotoFlagged", { reason }) : t("createListing.moderationFailSafe"));
+        return;
+      }
+      setPhotoModeration({ status: "approved" });
       const { error } = await supabase.from("profiles").update({ avatar_url: publicUrl }).eq("id", userId);
       if (error) throw error;
       setProfilePhoto({ url: publicUrl });
@@ -10203,6 +10268,16 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
           <p className="text-sm" style={{ color: "#5C5744" }}>
             {profile?.city ? `${profile.city} · ` : ""}{joinedLabel ? t("profile.memberSince", { date: joinedLabel }) : ""}
           </p>
+          {photoModeration && (
+            <p
+              className="flex items-center gap-1 text-xs mt-1"
+              style={{ color: photoModeration.status === "checking" ? "#6B6550" : photoModeration.status === "approved" ? "#3F7D5C" : "#9C4A3C" }}
+            >
+              {photoModeration.status === "checking" && <><Loader2 size={11} className="animate-spin" /> {t("createListing.moderationChecking")}</>}
+              {photoModeration.status === "approved" && <><ShieldCheck size={11} /> {t("createListing.moderationApproved")}</>}
+              {photoModeration.status === "flagged" && <><AlertCircle size={11} /> {photoModeration.reason || t("createListing.moderationFlaggedDefault")}</>}
+            </p>
+          )}
           {photoError && <p className="text-xs mt-1" style={{ color: "#9C4A3C" }}>{photoError}</p>}
         </div>
       </div>
@@ -11620,6 +11695,7 @@ export default function IsinnPrototype({ session, onRequireAuth, discoveryPopula
           onBack={() => goBack()}
           onSelectListing={(l) => { setSelected(l); setView("detail"); }}
           realListings={realListings}
+          currentUserId={userId}
         />
       )}
       {view === "messages" && (
