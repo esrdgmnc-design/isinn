@@ -62,9 +62,9 @@ export async function POST(request) {
             { type: "image", source: { type: "base64", media_type: mimeType || "image/jpeg", data: base64 } },
             { type: "text", text: `Bu görsel, bakıcı/temizlikçi/öğretmen'den yazılımcıya/muhasebeciye kadar çok geniş bir kategori yelpazesindeki hizmet sağlayıcı profillerinin bulunduğu bir pazaryerinde kapak fotoğrafı olarak kullanılacak.
 
-Şu kategorilerden herhangi birine GERÇEKTEN giriyorsa "approved: false" ver: çıplaklık veya cinsel içerik, şiddet/silah/kan/yaralanma görüntüsü, nefret sembolü ya da söylemi, ya da başka bir gerçek/ünlü kişiyi izinsiz kötüleyici/aşağılayıcı şekilde kullanan bir görsel.
+Şu kategorilerden herhangi birine GERÇEKTEN giriyorsa "approved: false" ver: çıplaklık veya cinsel içerik, GERÇEKTEN tehdit/şiddet/yaralanma içeren görüntü (birinin bir silahı tehdit ederek/saldırgan şekilde kullanması, kan, yaralanma), nefret sembolü ya da söylemi, ya da başka bir gerçek/ünlü kişiyi izinsiz kötüleyici/aşağılayıcı şekilde kullanan bir görsel.
 
-Şunlar SEBEBIYLE reddetme — hepsi bu platformda meşru: insan/yüz görünmeyen görseller (logo, ürün, çalışma alanı, ekran görüntüsü, portre olmayan portföy işi vb.), belirli bir meslek/kategoriye özgü olması, ya da düşük çözünürlük/estetik zayıflık. Kararsız kaldığın sınır durumlarda ONAYLA (approved: true) — sadece yukarıdaki gerçek güvenlik kategorilerinden birinden GERÇEKTEN eminsen reddet.
+Şunlar SEBEBIYLE reddetme — hepsi bu platformda meşru: insan/yüz görünmeyen görseller (logo, ürün, çalışma alanı, ekran görüntüsü, portre olmayan portföy işi vb.), belirli bir meslek/kategoriye özgü olması, düşük çözünürlük/estetik zayıflık, ya da halka açık bir fuar/müze/sergi/gösteri ortamında görülen askeri/savunma sanayi araçları, uçaklar ya da ekipman (ör. bir havacılık fuarında F-16 önünde çekilmiş bir fotoğraf tehdit değildir, reddetme). Kararsız kaldığın sınır durumlarda ONAYLA (approved: true) — sadece yukarıdaki gerçek güvenlik kategorilerinden birinden GERÇEKTEN eminsen reddet.
 
 SADECE şu JSON formatında yanıt ver: {"approved": true veya false, "reason": "kısa gerekçe (en fazla 12 kelime)"}` },
           ],
