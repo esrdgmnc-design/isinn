@@ -11435,7 +11435,7 @@ export default function IsinnPrototype({ session, onRequireAuth, discoveryPopula
       const { data: jobRow } = await supabase.from("jobs").select("*, profiles(*), categories(*)").eq("id", n.related_job_id).maybeSingle();
       if (jobRow) { setSelectedJob(mapJobRowToPosting(jobRow)); setView("jobDetail"); return; }
     }
-    if ((n.type === "media_approved" || n.type === "media_rejected" || n.type === "saved_search_match") && n.related_service_id) {
+    if ((n.type === "media_approved" || n.type === "media_rejected" || n.type === "saved_search_match" || n.type === "service_favorited") && n.related_service_id) {
       const { data } = await supabase.from("services").select("*, profiles(*), categories(*)").eq("id", n.related_service_id).maybeSingle();
       if (data) { setSelected(mapServiceRowToListing(data)); setView("detail"); return; }
     }
