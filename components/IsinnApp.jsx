@@ -434,6 +434,30 @@ function computeVisibilityScore(l) {
   return ratingScore + confidenceBonus + boostBonus;
 }
 
+// Kullanıcının kararı: eğitim/danışmanlık/koçluk/mentörlük vitrinleriyle
+// güzellik/tırnak vitrinleri ana sayfa ızgarasında yan yana gelince "çok
+// alakasız şeyler" izlenimi veriyordu. Puan sırasını bozmadan, sadece bu iki
+// grubun DOĞRUDAN bitişik çıktığı yerlerde hafif bir yer değiştirme yapıyoruz
+// — tam bir kategoriye-göre-gruplama değil, bilinçli olarak hafif bir dokunuş.
+const HOMEGRID_CLASH_GROUP_A = new Set(["ogretmen", "egitmen", "psikolog", "yoga-koc"]);
+const HOMEGRID_CLASH_GROUP_B = new Set(["tirnakci", "makyaj", "bakim", "kuafor-berber"]);
+function avoidAdjacentCategoryClash(list) {
+  const arr = list.slice();
+  const groupOf = (l) => (HOMEGRID_CLASH_GROUP_A.has(l.category) ? "A" : HOMEGRID_CLASH_GROUP_B.has(l.category) ? "B" : null);
+  for (let i = 0; i < arr.length - 1; i++) {
+    const curr = groupOf(arr[i]);
+    const next = groupOf(arr[i + 1]);
+    if (!curr || !next || curr === next) continue;
+    for (let j = i + 2; j < arr.length; j++) {
+      if (groupOf(arr[j]) !== curr) {
+        [arr[i + 1], arr[j]] = [arr[j], arr[i + 1]];
+        break;
+      }
+    }
+  }
+  return arr;
+}
+
 // "Öne Çıkan" şeridi gibi sınırlı-kapasiteli alanlarda, uygun havuzun TAMAMI
 // arasında GÜNLÜK olarak adil rotasyon sağlar — yoksa havuzda kaç kişi olursa
 // olsun hep en yüksek puanlılar sabit kalır, geri kalanının parası boşa gider.
@@ -1448,7 +1472,8 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
       filter === "all" ? all :
       filter === "home" ? all.filter((l) => l.mode === "local" && (l.homeService === "evde" || l.homeService === "esnek")) :
       all.filter((l) => l.mode === filter);
-    return base.slice().sort((a, b) => computeVisibilityScore(b) - computeVisibilityScore(a));
+    const sorted = base.slice().sort((a, b) => computeVisibilityScore(b) - computeVisibilityScore(a));
+    return avoidAdjacentCategoryClash(sorted);
   }, [realListings, filter]);
 
   useEffect(() => {
@@ -6771,9 +6796,10 @@ function TalentDiscoveryView({ onBack, onCreateListing }) {
               );
             })}
           </div>
+          <p className="text-xs mt-5 italic" style={{ color: "#9CA3AF" }}>{t("talentDiscovery.motivationLine")}</p>
           <button
             onClick={() => setSuggestions(null)}
-            className="text-xs font-bold mt-5"
+            className="text-xs font-bold mt-3"
             style={{ color: "#6B7280" }}
           >
             {t("talentDiscovery.tryAgainButton")}
