@@ -2391,6 +2391,23 @@ function ReviewCard({ review, onOpenMedia, isReal, currentUserId, providerId }) 
   );
 }
 
+// GERÇEK KULLANICI SORUNU (2026-09-29): "profile-media" bucket'ı en fazla
+// 100MB ve sadece mp4/quicktime kabul ediyor (bkz. profile_media_setup.sql),
+// ama dosya seçim ekranı (accept="video/*") her formatı seçtirip Supabase'in
+// ham/teknik hata mesajını gösteriyordu — kullanıcı neden yükleyemediğini
+// anlamıyordu. Artık yüklemeden ÖNCE, net bir Türkçe uyarıyla engelleniyor.
+const MAX_VIDEO_SIZE_MB = 100;
+const ALLOWED_VIDEO_MIME_TYPES = ["video/mp4", "video/quicktime"];
+function validateVideoFile(file, t) {
+  if (!ALLOWED_VIDEO_MIME_TYPES.includes(file.type)) {
+    return t("common.videoUnsupportedFormat");
+  }
+  if (file.size > MAX_VIDEO_SIZE_MB * 1024 * 1024) {
+    return t("common.videoTooLarge", { max: MAX_VIDEO_SIZE_MB });
+  }
+  return null;
+}
+
 async function uploadProfileMediaFile(userId, file, prefix) {
   const ext = (file.name.split(".").pop() || "bin").toLowerCase();
   const path = `${userId}/${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
@@ -3153,6 +3170,8 @@ function ListingDetail({ listing, onBack, onContact, userReviews, onAddReview, o
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file || !currentUserId) return;
+    const validationError = validateVideoFile(file, t);
+    if (validationError) { setVideoError(validationError); return; }
     setVideoError("");
     setVideoUploading(true);
     try {
@@ -7298,6 +7317,8 @@ function CreateListingView({ onBack, onCreated, userId, onGoToProfile, onGoToPla
     e.target.value = "";
     const serviceId = activeServiceId;
     if (!file || !userId || !serviceId) return;
+    const validationError = validateVideoFile(file, t);
+    if (validationError) { setVideoError(validationError); return; }
     setVideoError("");
     setVideoUploading(true);
     try {
@@ -7322,6 +7343,10 @@ function CreateListingView({ onBack, onCreated, userId, onGoToProfile, onGoToPla
     try {
       for (const file of files) {
         const type = file.type.startsWith("video/") ? "video" : "image";
+        if (type === "video") {
+          const validationError = validateVideoFile(file, t);
+          if (validationError) throw new Error(validationError);
+        }
         const { publicUrl } = await uploadToProfileMedia(file, "portfolio");
         const { data: row, error } = await supabase
           .from("portfolio_items")
