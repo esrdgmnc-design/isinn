@@ -510,9 +510,10 @@ async function getCroppedFile(imageSrc, cropPixels, fileName) {
 // seçilmez doğrudan yüklemek yerine, önce bu modal açılıyor; kullanıcı
 // alanı/yakınlaştırmayı ayarlayıp onaylayınca gerçek yükleme (mevcut
 // upload fonksiyonları) kırpılmış File ile çağrılıyor. Kapak fotoğrafı
-// (kare, aspect=1) ve profil fotoğrafı (kare, cropShape="round") için
-// kullanılıyor — video/sertifika gibi kırpmanın anlamsız olduğu yüklemelere
-// bilerek dokunulmadı.
+// (geniş, aspect=16/9 — gerçekte her yerde w-full h-44/h-72 gibi geniş bir
+// banner olarak gösterildiği için kare değil) ve profil fotoğrafı (kare,
+// cropShape="round") için kullanılıyor — video/sertifika gibi kırpmanın
+// anlamsız olduğu yüklemelere bilerek dokunulmadı.
 function PhotoCropModal({ imageSrc, aspect = 1, shape = "rect", fileName, onCancel, onCropped }) {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
@@ -6553,7 +6554,7 @@ function ListingCoverPhotoField({ cover, hint }) {
       {cropSrc && (
         <PhotoCropModal
           imageSrc={cropSrc}
-          aspect={1}
+          aspect={16 / 9}
           fileName="kapak-fotografi.jpg"
           onCancel={() => setCropSrc(null)}
           onCropped={uploadPhoto}
