@@ -6,6 +6,7 @@
 // veritabanı seviyesinde reddedilir, sadece istemci tarafında "flagged"
 // göstermekle kalmaz.
 import { createClient } from "@supabase/supabase-js";
+import sharp from "sharp";
 import { getAuthedUser } from "../../../lib/serverAuth";
 import { checkRateLimit, getClientIp } from "../../../lib/rateLimit";
 
@@ -47,8 +48,16 @@ export async function POST(request) {
   try {
     const imgRes = await fetch(url);
     if (!imgRes.ok) throw new Error("Görsel indirilemedi.");
-    const buf = await imgRes.arrayBuffer();
-    const base64 = Buffer.from(buf).toString("base64");
+    const buf = Buffer.from(await imgRes.arrayBuffer());
+    // Telefonla çekilmiş yüksek çözünürlüklü fotoğraflar (ör. bir fuar
+    // fotoğrafı) birkaç MB'ı bulabiliyor — Anthropic'in görsel boyut
+    // sınırını aşınca API hatasıyla sessizce "manuel incelemeye alındı"
+    // fail-safe'ine düşüyordu, hiç gerçek bir içerik kararı verilmeden.
+    // En uzun kenarı 1568px'e indirip JPEG'e çeviriyoruz (Claude'un görsel
+    // API'si için zaten önerilen boyut) — hem bu sorunu çözüyor hem de
+    // isteği hızlandırıp ucuzlatıyor.
+    const resized = await sharp(buf).rotate().resize({ width: 1568, height: 1568, fit: "inside", withoutEnlargement: true }).jpeg({ quality: 85 }).toBuffer();
+    const base64 = resized.toString("base64");
 
     const aiRes = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -59,7 +68,7 @@ export async function POST(request) {
         messages: [{
           role: "user",
           content: [
-            { type: "image", source: { type: "base64", media_type: mimeType || "image/jpeg", data: base64 } },
+            { type: "image", source: { type: "base64", media_type: "image/jpeg", data: base64 } },
             { type: "text", text: `Bu görsel, bakıcı/temizlikçi/öğretmen'den yazılımcıya/muhasebeciye kadar çok geniş bir kategori yelpazesindeki hizmet sağlayıcı profillerinin bulunduğu bir pazaryerinde kapak fotoğrafı olarak kullanılacak.
 
 Şu kategorilerden herhangi birine GERÇEKTEN giriyorsa "approved: false" ver: çıplaklık veya cinsel içerik, GERÇEKTEN tehdit/şiddet/yaralanma içeren görüntü (birinin bir silahı tehdit ederek/saldırgan şekilde kullanması, kan, yaralanma), nefret sembolü ya da söylemi, ya da başka bir gerçek/ünlü kişiyi izinsiz kötüleyici/aşağılayıcı şekilde kullanan bir görsel.
@@ -77,8 +86,10 @@ SADECE şu JSON formatında yanıt ver: {"approved": true veya false, "reason": 
     const parsed = JSON.parse(clean);
     approved = !!parsed.approved;
     reason = parsed.reason || (approved ? "Onaylandı" : "Reddedildi");
-  } catch {
-    // fail-safe: kontrol başarısız olursa ONAYLAMA.
+  } catch (err) {
+    // fail-safe: kontrol başarısız olursa ONAYLAMA. Gerçek hatayı sunucu
+    // loguna yazıyoruz — istemciye hâlâ genel bir mesaj dönüyor.
+    console.error("listing-photo-check hatası:", err?.message || err);
     approved = false;
   }
 
