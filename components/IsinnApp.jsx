@@ -8120,6 +8120,38 @@ function SupportChatView({ onBack, onReport, currentUserId }) {
   const [reported, setReported] = useState(false);
   const [reportError, setReportError] = useState("");
 
+  // Asistan eskiden kiminle konuştuğunu hiç bilmiyordu — her mesaj kimliksiz
+  // bir metin olarak gidiyordu, o yüzden "üyeliğin ne zaman bitiyor" gibi
+  // hesaba özel bir soruya asla doğru cevap veremiyordu. Şimdi konuşma
+  // başlarken kullanıcının kendi (RLS ile sınırlı, sadece kendi) temel hesap
+  // bilgisini bir kere çekip sisteme ekliyoruz.
+  const [userContext, setUserContext] = useState("");
+  useEffect(() => {
+    if (!currentUserId) return;
+    let cancelled = false;
+    (async () => {
+      const [{ data: profile }, { data: phone }, { data: sub }] = await Promise.all([
+        supabase.from("profiles").select("full_name, business_name").eq("id", currentUserId).maybeSingle(),
+        supabase.from("profile_phone").select("verified").eq("profile_id", currentUserId).maybeSingle(),
+        supabase
+          .from("provider_subscriptions")
+          .select("status, current_period_end, subscription_plans(name)")
+          .eq("profile_id", currentUserId)
+          .in("status", ["active", "trialing"])
+          .order("current_period_end", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      ]);
+      if (cancelled) return;
+      const name = (profile?.business_name && profile.business_name.trim()) || profile?.full_name || "İsimsiz kullanıcı";
+      const planLine = sub
+        ? `Aktif plan: ${sub.subscription_plans?.name || "bilinmiyor"} (${sub.status === "trialing" ? "deneme" : "aktif"}, ${new Date(sub.current_period_end).toLocaleDateString("tr-TR")} tarihine kadar)`
+        : "Aktif bir ücretli üyeliği yok.";
+      setUserContext(`KULLANICI BİLGİSİ (bu konuştuğun gerçek kişi — cevaplarını buna göre kişiselleştir, ama bu bilgiyi kullanıcıya "sistemden okudum" diye tuhaf şekilde tekrar etme, doğal kullan):\nAd: ${name}\nTelefon doğrulaması: ${phone?.verified ? "yapılmış" : "yapılmamış"}\n${planLine}`);
+    })();
+    return () => { cancelled = true; };
+  }, [currentUserId]);
+
   const sendMessage = async () => {
     if (!input.trim() || sending) return;
     const userMsg = { sender: "me", text: input.trim() };
@@ -8152,7 +8184,9 @@ GERÇEK PLATFORM BİLGİLERİ (bunlarla çelişen hiçbir şey söyleme):
 
 3) "Doğrulandı" rozeti SADECE telefon numarasının SMS/OTP ile doğrulandığı anlamına gelir — kimlik doğrulaması, geçmiş kontrolü veya İşinn'in o kişiyi güvenilir bulduğu anlamına GELMEZ. Bunu asla "kimliği doğrulanmış" gibi abartma.
 
-Bu üç madde dışında bir konuda (özellikle para/hukuk ile ilgili) emin değilsen "bunu ekibe ileteceğim" de.`,
+Bu üç madde dışında bir konuda (özellikle para/hukuk ile ilgili) emin değilsen "bunu ekibe ileteceğim" de.
+
+${userContext}`,
           messages: apiMessages,
         }),
       });
