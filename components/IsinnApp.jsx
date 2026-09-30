@@ -11661,6 +11661,10 @@ export default function IsinnPrototype({ session, onRequireAuth, discoveryPopula
   const handleNav = (v) => {
     if (v === "auth") { onRequireAuth?.(); return; }
     if (!userId && GATED_VIEWS.has(v)) { onRequireAuth?.(); return; }
+    // Logo/"İşinn." zaten ana sayfadayken tıklanınca setView("home") bir şey
+    // değiştirmiyordu (aynı değer, re-render yok) — kullanıcı aşağı kaymışsa
+    // tıklama hiçbir şey yapmıyormuş gibi duruyordu. Sayfayı da en üste alıyoruz.
+    if (v === "home") window.scrollTo(0, 0);
     setView(v);
     setSelected(null);
     if (v !== "messages") setMessageContact(null);
