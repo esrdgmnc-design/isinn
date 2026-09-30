@@ -137,7 +137,7 @@ export default function AuthView({ onAuthenticated, onCancel }) {
 
   if (resetSent) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-5 relative" style={{ background: "#FFFFFF" }}>
+      <div className="min-h-[100dvh] flex items-center justify-center px-5 relative" style={{ background: "#FFFFFF" }}>
         {onCancel && (
           <button type="button" onClick={onCancel} className="absolute top-5 left-5 text-sm font-medium" style={{ color: "#6B7280" }}>
             {t("auth.backToNav")}
@@ -163,7 +163,7 @@ export default function AuthView({ onAuthenticated, onCancel }) {
 
   if (mode === "forgot") {
     return (
-      <div className="min-h-screen flex items-center justify-center px-5 relative" style={{ background: "#FFFFFF" }}>
+      <div className="min-h-[100dvh] flex items-center justify-center px-5 relative" style={{ background: "#FFFFFF" }}>
         {onCancel && (
           <button type="button" onClick={onCancel} className="absolute top-5 left-5 text-sm font-medium" style={{ color: "#6B7280" }}>
             {t("auth.backToNav")}
@@ -209,7 +209,7 @@ export default function AuthView({ onAuthenticated, onCancel }) {
 
   if (signupDone) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-5 relative" style={{ background: "#FFFFFF" }}>
+      <div className="min-h-[100dvh] flex items-center justify-center px-5 relative" style={{ background: "#FFFFFF" }}>
         {onCancel && (
           <button
             type="button"
@@ -231,7 +231,7 @@ export default function AuthView({ onAuthenticated, onCancel }) {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-5 relative" style={{ background: "#FFFFFF" }}>
+    <div className="min-h-[100dvh] flex items-center justify-center px-5 relative" style={{ background: "#FFFFFF" }}>
       {onCancel && (
         <button
           type="button"

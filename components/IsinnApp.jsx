@@ -532,12 +532,15 @@ function PhotoCropModal({ imageSrc, aspect = 1, shape = "rect", fileName, onCanc
   };
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4" style={{ background: "rgba(15,17,21,0.82)" }}>
-      <div className="w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl" style={{ background: "#FFFFFF" }}>
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 overflow-y-auto" style={{ background: "rgba(15,17,21,0.82)" }}>
+      <div className="w-full max-w-sm rounded-2xl shadow-2xl my-auto" style={{ background: "#FFFFFF", maxHeight: "92dvh", overflowY: "auto" }}>
         <div className="px-4 pt-4 pb-1">
           <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>Fotoğrafı Ayarla</p>
         </div>
-        <div className="relative" style={{ height: 320, background: "#111" }}>
+        {/* Sabit 320px yükseklik, yatay/kısa telefon ekranlarında (ör. döndürülmüş
+            veya küçük Android) "Kırp ve Kaydet" butonunu ekran dışına itip
+            ulaşılamaz kılıyordu — dvh'ye göre üst sınır koyuyoruz. */}
+        <div className="relative" style={{ height: "min(320px, 42dvh)", background: "#111" }}>
           <Cropper
             image={imageSrc}
             crop={crop}
@@ -1414,7 +1417,7 @@ const HomeListingCard = memo(function HomeListingCard({ l, isFavorite, onSelectL
           </div>
           <button
             onClick={(e) => { e.stopPropagation(); onToggleFavorite?.(l); }}
-            aria-label={t("favorites.toggle")} className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full bg-white/90 flex items-center justify-center hover:scale-110 transition-transform"
+            aria-label={t("favorites.toggle")} className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/90 flex items-center justify-center hover:scale-110 transition-transform"
           >
             <Heart size={13} style={{ color: "#EF4444" }} fill={isFavorite ? "#EF4444" : "none"} />
           </button>
@@ -1974,7 +1977,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
                   <img loading="lazy" decoding="async" src={l.img} alt={l.title} className="w-full h-full object-cover opacity-90 group-hover:scale-110 transition-transform duration-300" />
                   <button
                     onClick={(e) => { e.stopPropagation(); onToggleFavorite?.(l); }}
-                    aria-label={t("favorites.toggle")} className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full bg-white/90 flex items-center justify-center hover:scale-110 transition-transform"
+                    aria-label={t("favorites.toggle")} className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/90 flex items-center justify-center hover:scale-110 transition-transform"
                   >
                     <Heart size={13} style={{ color: "#EF4444" }} fill={favoriteIds?.has(l.dbId) ? "#EF4444" : "none"} />
                   </button>
@@ -2206,9 +2209,9 @@ function MediaLightbox({ media, index, onClose, onNav }) {
   const item = media[index];
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-6" style={{ background: "rgba(27,43,36,0.92)" }}>
-      <button onClick={onClose} className="absolute top-5 right-5 text-white" aria-label={t("common.closeAria")}><X size={24} /></button>
+      <button onClick={onClose} className="absolute top-3 right-3 text-white p-2.5" aria-label={t("common.closeAria")}><X size={24} /></button>
       {index > 0 && (
-        <button onClick={() => onNav(index - 1)} className="absolute left-5 text-white"><ChevronLeft size={28} /></button>
+        <button onClick={() => onNav(index - 1)} className="absolute left-2 text-white p-2.5"><ChevronLeft size={28} /></button>
       )}
       <div className="max-w-lg w-full rounded-xl overflow-hidden relative">
         {item.type === "video" ? (
@@ -2220,7 +2223,7 @@ function MediaLightbox({ media, index, onClose, onNav }) {
         )}
       </div>
       {index < media.length - 1 && (
-        <button onClick={() => onNav(index + 1)} className="absolute right-5 text-white"><ChevronRight size={28} /></button>
+        <button onClick={() => onNav(index + 1)} className="absolute right-2 text-white p-2.5"><ChevronRight size={28} /></button>
       )}
     </div>
   );
@@ -2479,7 +2482,7 @@ function DocViewerModal({ doc, onClose }) {
       >
         <div className="flex items-center justify-between px-4 py-3 border-b shrink-0" style={{ borderColor: "#F0F0F0" }}>
           <p className="text-sm font-medium truncate" style={{ color: "#1B2B24" }}>{doc.name}</p>
-          <button onClick={onClose} className="shrink-0 ml-3" aria-label={t("common.closeAria")}>
+          <button onClick={onClose} className="shrink-0 ml-3 p-2 -mr-2" aria-label={t("common.closeAria")}>
             <X size={18} style={{ color: "#5C5744" }} />
           </button>
         </div>
@@ -4019,9 +4022,9 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
                           tabIndex={0}
                           aria-label={t("common.remove")}
                           onClick={(e) => { e.stopPropagation(); setConfirmRemoveMediaId(item.id); }}
-                          className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 flex items-center justify-center cursor-pointer"
+                          className="absolute top-0.5 right-0.5 w-8 h-8 rounded-full bg-black/60 flex items-center justify-center cursor-pointer"
                         >
-                          <X size={12} className="text-white" />
+                          <X size={14} className="text-white" />
                         </span>
                       )
                     )}
@@ -4429,7 +4432,7 @@ function MapView({ onBack, onSelectProvider, onSelectJob, realListings, realJobs
             style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
           />
           {mapQuery && (
-            <button onClick={() => setMapQuery("")} className="absolute right-3.5 top-1/2 -translate-y-1/2" aria-label={t("common.clearSearchAria")}>
+            <button onClick={() => setMapQuery("")} className="absolute right-1.5 top-1/2 -translate-y-1/2 p-2" aria-label={t("common.clearSearchAria")}>
               <X size={14} style={{ color: "#6B6550" }} />
             </button>
           )}
@@ -6565,8 +6568,11 @@ function ListingCoverPhotoField({ cover, hint }) {
         {photo && (
           <label className="relative w-16 h-16 rounded-lg overflow-hidden cursor-pointer shrink-0 group">
             <img loading="lazy" decoding="async" src={photo.url} alt="" className="w-16 h-16 rounded-lg object-cover" />
-            <div className="absolute inset-0 rounded-lg flex items-center justify-center bg-black/0 group-hover:bg-black/40 transition-colors">
-              <Camera size={16} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+            {/* Hover'a bağlı görünürlük dokunmatik ekranda hiç görünmüyordu — telefonda
+                kullanıcı fotoğrafa dokununca değiştirebileceğini hiç fark edemiyordu.
+                Artık her zaman hafif görünür, hover'da belirginleşiyor. */}
+            <div className="absolute inset-0 rounded-lg flex items-center justify-center bg-black/25 group-hover:bg-black/40 transition-colors">
+              <Camera size={16} className="text-white opacity-80 group-hover:opacity-100 transition-opacity" />
             </div>
             <input type="file" accept="image/*" className="hidden" onChange={handlePhoto} disabled={photoUploading} />
           </label>
@@ -8687,7 +8693,7 @@ function AdminDashboardView({ onBack }) {
             <div ref={detailPanelRef} className="rounded-2xl border p-4 mb-4" style={{ borderColor: "#F0F0F0", background: "#FFFFFF" }}>
               <div className="flex items-center justify-between mb-3">
                 <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>{detailTitle}</p>
-                <button onClick={() => setSelectedDetail(null)} style={{ color: "#9CA3AF" }}><X size={16} /></button>
+                <button onClick={() => setSelectedDetail(null)} className="p-2 -mr-2" style={{ color: "#9CA3AF" }} aria-label="Kapat"><X size={16} /></button>
               </div>
               {detailRows.length === 0 ? (
                 <p className="text-sm text-center py-4" style={{ color: "#9CA3AF" }}>Bu grupta henüz kimse yok.</p>
@@ -9352,7 +9358,7 @@ function PaytrCheckoutModal({ token, onClose, onSuccess }) {
       <div className="rounded-2xl overflow-hidden w-full flex flex-col" style={{ maxWidth: 480, height: "min(85dvh, 720px)", background: "#fff" }}>
         <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: "#F0F0F0" }}>
           <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>Güvenli ödeme — PayTR</p>
-          <button onClick={onClose} style={{ color: "#9CA3AF" }}><X size={18} /></button>
+          <button onClick={onClose} className="p-2 -mr-2" style={{ color: "#9CA3AF" }} aria-label="Kapat"><X size={18} /></button>
         </div>
         <iframe
           ref={iframeRef}
@@ -10379,8 +10385,8 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
               {(profile?.full_name || "?").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
             </div>
           )}
-          <div className="absolute inset-0 rounded-full flex items-center justify-center bg-black/0 group-hover:bg-black/40 transition-colors">
-            {photoUploading ? <Loader2 size={16} className="text-white animate-spin" /> : <Camera size={16} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />}
+          <div className="absolute inset-0 rounded-full flex items-center justify-center bg-black/25 group-hover:bg-black/40 transition-colors">
+            {photoUploading ? <Loader2 size={16} className="text-white animate-spin" /> : <Camera size={16} className="text-white opacity-80 group-hover:opacity-100 transition-opacity" />}
           </div>
           <input type="file" accept="image/*" className="hidden" onChange={handlePhotoAdd} disabled={photoUploading} />
         </label>
@@ -10569,6 +10575,8 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
         ) : (
           <div className="flex items-center gap-2">
             <input
+              type="tel"
+              inputMode="tel"
               value={phoneInput}
               onChange={(e) => setPhoneInput(e.target.value)}
               placeholder={t("profile.phonePlaceholder")}
@@ -11699,7 +11707,7 @@ export default function IsinnPrototype({ session, onRequireAuth, discoveryPopula
             {t("trialBanner.continuesAs", { planName: trialBanner.planName, priceLabel: trialBanner.priceLabel })}
           </p>
           <button onClick={() => handleNav("pricing")} className="text-xs font-bold shrink-0" style={{ color: "#C2872B" }}>{t("header.plans")}</button>
-          <button onClick={() => setTrialBannerDismissed(true)} className="shrink-0" aria-label={t("common.closeAria")}>
+          <button onClick={() => setTrialBannerDismissed(true)} className="shrink-0 p-2 -mr-2" aria-label={t("common.closeAria")}>
             <X size={14} style={{ color: "#6B6550" }} />
           </button>
         </div>
