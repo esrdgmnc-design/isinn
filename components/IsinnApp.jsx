@@ -98,6 +98,11 @@ const CATEGORIES = [
   { id: "bocek-ilaclama", name: "Böcek İlaçlama (Haşere Kontrolü)", mode: "local", icon: Bug },
   { id: "veteriner", name: "Veteriner", mode: "local", icon: Stethoscope },
   { id: "avukat", name: "Avukat / Hukuki Danışmanlık", mode: "both", icon: Scale },
+  // Gerçek kullanıcı bildirimi (2026-09-30): direksiyon dersi vermek isteyen
+  // bir eğitmen, sabit listede uygun bir kategori bulamayıp vitrin açamamıştı
+  // ("Diğer" seçeneğini fark etmemiş) — bu, genel "Eğitmen" kategorisinin
+  // altında görünmeyecek kadar farklı/aranan bir hizmet, ayrı kategori açıldı.
+  { id: "direksiyon-egitmeni", name: "Direksiyon Dersi / Sürücü Kursu Eğitmeni", mode: "local", icon: Car },
 ];
 
 // Sabit listede olmayan bir kategori isteyen kullanıcı için — CATEGORIES'e
@@ -113,7 +118,7 @@ const PARENT_CATEGORIES = [
   { id: "ev-hizmetleri", name: "Ev Hizmetleri", icon: Home, categoryIds: ["temizlik", "nakliye", "tadilat", "cilingir", "terzi", "elektrikci", "su-tesisatcisi", "hali-yikama", "yemek", "boya-badana", "klima-beyaz-esya", "ic-mimarlik", "teknik-servis", "oto-tamir", "bocek-ilaclama"] },
   { id: "guzellik-bakim", name: "Güzellik & Bakım", icon: Wand2, categoryIds: ["tirnakci", "makyaj", "bakim", "kuafor-berber"] },
   { id: "saglik", name: "Sağlık", icon: HeartPulse, categoryIds: ["hasta-bakici", "hemsire", "fizyoterapist", "diyetisyen", "psikolog", "yoga-koc", "spor-egitmeni", "veteriner"] },
-  { id: "egitim-aile", name: "Eğitim & Aile", icon: GraduationCap, categoryIds: ["ogretmen", "egitmen", "bakici", "logusa-bakicisi", "emzirme-danismani", "etkinlik-organizatoru", "muzik-egitmeni", "oyun-ablasi"] },
+  { id: "egitim-aile", name: "Eğitim & Aile", icon: GraduationCap, categoryIds: ["ogretmen", "egitmen", "bakici", "logusa-bakicisi", "emzirme-danismani", "etkinlik-organizatoru", "muzik-egitmeni", "oyun-ablasi", "direksiyon-egitmeni"] },
   { id: "profesyonel", name: "Profesyonel Hizmetler", icon: Briefcase, categoryIds: ["tasarim", "yazilim", "dijital", "muhasebe", "ceviri", "icerik-yazarligi", "video-duzenleme", "seslendirme", "sanal-asistan", "moda-tekstil-tasarim", "avukat"] },
   { id: "diger", name: "Diğer", icon: MoreHorizontal, categoryIds: ["bahce-bakim", "muhendis", "sosyal-medya", "profesyonel-fotograf", "evcil-hayvan"] },
 ];
