@@ -8,7 +8,7 @@
 // hepsini de sitemap'e ekliyor.
 import { supabase } from "../lib/supabaseClient";
 import { SEO_CATEGORIES, SEO_CITIES, matchesCitySlug } from "../lib/seoTaxonomy";
-import { REHBER_POSTS } from "../lib/rehberContent";
+import { REHBER_POSTS, rehberMeta } from "../lib/rehberContent";
 import { isIndexableListing, MIN_CITY_LISTINGS, MIN_COMBO_LISTINGS } from "../lib/seoFormat";
 
 const BASE_URL = "https://www.isinn.com.tr";
@@ -21,6 +21,7 @@ export default async function sitemap() {
     "",
     "/rehber",
     "/yetenegini-farket",
+    "/hakkimizda",
     "/rozet",
     "/kvkk-aydinlatma-metni",
     "/gizlilik-politikasi",
@@ -28,16 +29,19 @@ export default async function sitemap() {
     "/mesafeli-satis-sozlesmesi",
     "/iptal-iade-kosullari",
   ];
+  // lastmod gerçek içerik değişikliğini yansıtır: bu sayfaların içeriği 2026-10-04'te
+  // değişti; yasal sayfalar ve rozet açıklaması değişmedi.
+  const CHANGED_ON_1004 = new Set(["", "/rehber", "/yetenegini-farket", "/hakkimizda"]);
   const staticEntries = staticPaths.map((path) => ({
     url: `${BASE_URL}${path}`,
-    lastModified: new Date("2026-09-21T00:00:00Z"),
+    lastModified: new Date(CHANGED_ON_1004.has(path) ? "2026-10-04T00:00:00Z" : "2026-09-21T00:00:00Z"),
     changeFrequency: path === "" ? "daily" : "monthly",
     priority: path === "" ? 1 : 0.3,
   }));
 
   const rehberEntries = REHBER_POSTS.map((post) => ({
     url: `${BASE_URL}/rehber/${post.slug}`,
-    lastModified: new Date("2026-09-21T00:00:00Z"),
+    lastModified: new Date(`${rehberMeta(post).updated}T00:00:00Z`),
     changeFrequency: "monthly",
     priority: 0.5,
   }));

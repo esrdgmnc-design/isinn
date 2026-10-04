@@ -1,4 +1,4 @@
-import { REHBER_POSTS } from "../../lib/rehberContent";
+import { REHBER_POSTS, rehberMeta } from "../../lib/rehberContent";
 import { faqJsonLd } from "../../lib/faqJsonLd";
 
 // public/llms.txt sadece bir sayfa/link dizini — AI arama motorları (ChatGPT,
@@ -28,7 +28,7 @@ export async function GET() {
   const lines = [];
   lines.push("# İşinn — Tam İçerik (AI Arama Motorları İçin)");
   lines.push("");
-  lines.push("> İşinn, Türkiye'de yerel ve uzaktan hizmet sağlayıcılarıyla (temizlikçi, usta, özel ders öğretmeni, bakıcı, tasarımcı, yazılımcı ve çok sayıda başka kategori) müşterileri buluşturan, sıfır komisyonlu bir hizmet pazaryeridir. Sağlayıcılar sabit abonelik öder, kazandıkları işten platforma ayrıca komisyon vermez. İşinn CODE G LTD (Code G Teknoloji ve Ticaret Limited Şirketi) markasıdır, İstanbul/Türkiye merkezlidir.");
+  lines.push("> İşinn, becerini fark edip hizmet vitrinine dönüştürmene ve Türkiye'de yerel ya da uzaktan hizmet sağlayıcıları (temizlikçi, usta, özel ders öğretmeni, bakıcı, tasarımcı, yazılımcı ve çok sayıda başka kategori) bulmana yardım eden, sıfır komisyonlu bir hizmet keşif platformudur. Hizmet verenler sabit abonelik öder (20 Aralık 2026'ya kadar ücretsiz), kazandıkları işten platforma ayrıca komisyon vermez. İşinn CODE G LTD (Code G Teknoloji ve Ticaret Limited Şirketi) markasıdır, İstanbul/Türkiye merkezlidir.");
   lines.push("");
   lines.push("Kategori sayfaları: " + BASE_URL + "/kategori/<slug>, şehir sayfaları: " + BASE_URL + "/sehir/<slug>, vitrin (ilan) sayfaları: " + BASE_URL + "/vitrin/<id>. Güncel liste için " + BASE_URL + "/sitemap.xml.");
   lines.push("");
@@ -45,7 +45,7 @@ export async function GET() {
   lines.push("");
   for (const post of REHBER_POSTS) {
     lines.push(`### ${post.title}`);
-    lines.push(`(${BASE_URL}/rehber/${post.slug})`);
+    lines.push(`(${BASE_URL}/rehber/${post.slug}) — Yayın: ${rehberMeta(post).published}, güncelleme: ${rehberMeta(post).updated}`);
     lines.push("");
     lines.push(post.description);
     lines.push("");

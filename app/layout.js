@@ -58,20 +58,19 @@ const websiteJsonLd = {
   alternateName: ["Isinn", "isinn.com.tr"],
   url: "https://www.isinn.com.tr",
   inLanguage: "tr",
+  publisher: { "@id": "https://www.isinn.com.tr/#org" },
 };
 
 const organizationJsonLd = {
   "@context": "https://schema.org",
   "@type": "Organization",
+  "@id": "https://www.isinn.com.tr/#org",
   name: "İşinn",
+  legalName: COMPANY.legalName,
   alternateName: ["Isinn", "isinn.com.tr"],
   url: "https://www.isinn.com.tr",
   logo: "https://www.isinn.com.tr/icons/icon-512.webp",
-  description: "İşinn, hizmet almak isteyenlerle hizmet vermek isteyenleri buluşturan, fayda ve güven odaklı bir platformdur. Sıfır komisyon ile çalışır.",
-  parentOrganization: {
-    "@type": "Organization",
-    name: "CODE G LTD (Code G Teknoloji ve Ticaret Limited Şirketi)",
-  },
+  description: "İşinn, becerini fark edip hizmet vitrinine dönüştürmene ve yakınındaki hizmetleri bulmana yardım eden bir hizmet keşif platformudur. Komisyon almaz, ödemeye aracılık etmez, ürün satmaz.",
   // Konum/hizmet alanı bilgisi eskiden hiç yoktu — AI arama motorlarının ve
   // Google'ın İşinn'i "Türkiye'de yerleşik, yerel" bir varlık olarak
   // çözümlemesini (Knowledge Panel'de adres/harita gösterimi dahil)

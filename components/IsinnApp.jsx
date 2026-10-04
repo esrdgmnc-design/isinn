@@ -2201,6 +2201,7 @@ function SiteFooter({ onNav }) {
             <div className="flex flex-col gap-2.5">
               {/* Bu sayfaların kendisi (app/kvkk-aydinlatma-metni vb.) hâlâ
                   sadece Türkçe — burada sadece link etiketi çevriliyor. */}
+              <a href="/hakkimizda" className="text-xs" style={{ color: "#9CA3AF" }}>{t("footer.about")}</a>
               <a href="/kvkk-aydinlatma-metni" target="_blank" rel="noopener noreferrer" className="text-xs" style={{ color: "#9CA3AF" }}>{t("footer.kvkk")}</a>
               <a href="/gizlilik-politikasi" target="_blank" rel="noopener noreferrer" className="text-xs" style={{ color: "#9CA3AF" }}>{t("footer.privacy")}</a>
               <a href="/kullanim-sartlari" target="_blank" rel="noopener noreferrer" className="text-xs" style={{ color: "#9CA3AF" }}>{t("footer.terms")}</a>
@@ -6750,7 +6751,7 @@ function TalentDiscoveryBanner({ onOpen }) {
         />
         <div className="flex-1 flex flex-col gap-4 w-full">
           <div className="text-center sm:text-left">
-            <p className="text-xl sm:text-3xl font-black leading-tight" style={{ color: "#FFFFFF" }}>{t("talentDiscovery.navCardTitle")}</p>
+            <h2 className="text-xl sm:text-3xl font-black leading-tight" style={{ color: "#FFFFFF" }}>{t("talentDiscovery.navCardTitle")}</h2>
             <p className="text-sm sm:text-lg mt-2" style={{ color: "#B8BCC4" }}>{t("talentDiscovery.navCardSubtitle")}</p>
           </div>
           {/* Ayrı bir sayfaya geçmeden başlayabilsin: ilk cümle burada yazılır,
@@ -6780,6 +6781,13 @@ function TalentDiscoveryBanner({ onOpen }) {
           <button type="button" onClick={() => go("")} className="text-sm font-bold text-center sm:text-left" style={{ color: "#E8B04A" }}>
             {t("talentDiscovery.homeBoxUnknown")}
           </button>
+          {/* Taranabilir iç bağlantılar: rehberler ana sayfadan da bulunur (yalnızca /rehber değil). */}
+          <p className="text-xs text-center sm:text-left" style={{ color: "#B8BCC4" }}>
+            {t("talentDiscovery.navGuidesLabel")}{" "}
+            <a href="/rehber/becerilerimi-nasil-degerlendirebilirim" className="underline">{t("talentDiscovery.navGuideEval")}</a>{" · "}
+            <a href="/rehber/ilk-vitrinini-nasil-hazirlarsin" className="underline">{t("talentDiscovery.navGuideFirst")}</a>{" · "}
+            <a href="/rehber/sirket-kurmadan-hizmet-sunmak" className="underline">{t("talentDiscovery.navGuideCompany")}</a>
+          </p>
         </div>
       </div>
     </section>

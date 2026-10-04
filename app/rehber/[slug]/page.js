@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { REHBER_POSTS, findRehberPost } from "../../../lib/rehberContent";
+import { REHBER_POSTS, findRehberPost, rehberMeta } from "../../../lib/rehberContent";
 
 const BASE_URL = "https://www.isinn.com.tr";
 
@@ -34,13 +34,22 @@ export default function RehberPostPage({ params }) {
   const others = REHBER_POSTS.filter((p) => p.slug !== post.slug && p.category !== post.category);
   const relatedPosts = [...sameCategory, ...others].slice(0, 3);
 
+  const meta = rehberMeta(post);
+  const fmtDate = (iso) => new Date(`${iso}T12:00:00Z`).toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" });
+  // Yazar: kurucunun adı onayıyla eklenene kadar kurum (Organization). Şema, sayfadaki
+  // görünür "Hazırlayan" satırıyla aynı bilgiyi taşır.
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Article",
     headline: post.title,
     description: post.description,
     url: `${BASE_URL}/rehber/${post.slug}`,
-    publisher: { "@type": "Organization", name: "İşinn", url: BASE_URL },
+    mainEntityOfPage: `${BASE_URL}/rehber/${post.slug}`,
+    inLanguage: "tr",
+    datePublished: meta.published,
+    dateModified: meta.updated,
+    author: { "@type": "Organization", name: "İşinn", url: BASE_URL },
+    publisher: { "@type": "Organization", name: "İşinn", url: BASE_URL, logo: { "@type": "ImageObject", url: `${BASE_URL}/icons/icon-512.webp` } },
   };
   const breadcrumbJsonLd = {
     "@context": "https://schema.org",
@@ -77,8 +86,18 @@ export default function RehberPostPage({ params }) {
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
       )}
       <div className="max-w-2xl mx-auto px-5 py-10">
-        <Link href="/rehber" className="text-sm font-bold" style={{ color: "#2563EB" }}>← Rehberler</Link>
-        <h1 className="font-sans text-2xl md:text-3xl font-black mt-4 mb-6" style={{ color: "#0F1115" }}>{post.title}</h1>
+        <nav aria-label="Sayfa yolu" className="text-xs" style={{ color: "#6B7280" }}>
+          <Link href="/" style={{ color: "#2563EB" }}>İşinn</Link> › <Link href="/rehber" style={{ color: "#2563EB" }}>Rehberler</Link> › <span>{post.title}</span>
+        </nav>
+        <h1 className="font-sans text-2xl md:text-3xl font-black mt-4 mb-2" style={{ color: "#0F1115" }}>{post.title}</h1>
+        <p className="text-xs mb-5" style={{ color: "#6B7280" }}>
+          Yayın: {fmtDate(meta.published)} · Güncelleme: {fmtDate(meta.updated)} · Hazırlayan: İşinn
+        </p>
+        {meta.shortAnswer && (
+          <p className="text-sm rounded-xl px-4 py-3 mb-6" style={{ background: "#EFF6FF", color: "#1E3A8A" }}>
+            <b>Kısa cevap:</b> {meta.shortAnswer}
+          </p>
+        )}
         <div
           className="text-sm leading-relaxed rehber-body"
           style={{ color: "#374151" }}
@@ -118,7 +137,7 @@ export default function RehberPostPage({ params }) {
             </div>
           </div>
         )}
-        <style>{`.rehber-body h2 { font-size: 18px; font-weight: 800; color: #0F1115; margin: 24px 0 8px; } .rehber-body p { margin: 0 0 12px; } .rehber-body ul { margin: 0 0 12px; padding-left: 20px; } .rehber-body li { margin-bottom: 6px; }`}</style>
+        <style>{`.rehber-body h2 { font-size: 18px; font-weight: 800; color: #0F1115; margin: 24px 0 8px; } .rehber-body p { margin: 0 0 12px; } .rehber-body ul { margin: 0 0 12px; padding-left: 20px; list-style: disc; } .rehber-body ol { margin: 0 0 12px; padding-left: 22px; list-style: decimal; } .rehber-body li { margin-bottom: 6px; } .rehber-body a { color: #2563EB; text-decoration: underline; }`}</style>
       </div>
     </>
   );

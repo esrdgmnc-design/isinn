@@ -1,18 +1,29 @@
-// Wildcard (userAgent: "*") zaten tüm botlara izin veriyordu, AI botları dahil
-// — ama bu, ileride dikkatsiz bir düzenlemeyle (ör. sadece "*" kuralını
-// daraltmak) AI botlarını da sessizce bloke etme riski taşıyordu. Her AI
-// crawler'ı ayrı, açık bir kuralla listelemek hem kendi kendini belgeliyor hem
-// de ileride kötü niyetli bir botu (ör. Bytespider) iyi olanlara dokunmadan
-// engellemeyi mümkün kılıyor.
+// Her özel kullanıcı ajanı grubunun KENDİ kuralları geçerlidir ve "*" grubunu yok sayar:
+// önceden GPTBot/ClaudeBot gibi gruplarda "/api/" engeli yoktu, yani bu botlar teoride
+// API yollarını da tarayabilirdi. Ortak kural listesi her gruba aynen uygulanıyor.
+// Yapay zekâ ARAMA ve kullanıcı botları (OAI-SearchBot, ChatGPT-User, Claude-SearchBot,
+// Claude-User, Perplexity-User) ile klasik arama botları açıkça izinli — eğitim
+// botlarından ayrıdırlar ve engellemek İşinn'in yapay zekâ aramalarında görünmesini keser.
+const BOTS = [
+  "Googlebot",
+  "Bingbot",
+  "GPTBot",
+  "OAI-SearchBot",
+  "ChatGPT-User",
+  "ClaudeBot",
+  "Claude-SearchBot",
+  "Claude-User",
+  "PerplexityBot",
+  "Perplexity-User",
+  "Google-Extended",
+  "Applebot-Extended",
+];
+
 export default function robots() {
   return {
     rules: [
       { userAgent: "*", allow: "/", disallow: ["/api/"] },
-      { userAgent: "GPTBot", allow: "/" },
-      { userAgent: "ClaudeBot", allow: "/" },
-      { userAgent: "PerplexityBot", allow: "/" },
-      { userAgent: "Google-Extended", allow: "/" },
-      { userAgent: "Applebot-Extended", allow: "/" },
+      ...BOTS.map((userAgent) => ({ userAgent, allow: "/", disallow: ["/api/"] })),
     ],
     sitemap: "https://www.isinn.com.tr/sitemap.xml",
   };

@@ -68,7 +68,8 @@ export default async function CategoryCityPage({ params }) {
   const categoryMeta = findCategory(params.slug);
   const cityMeta = findCity(params.city);
   if (!categoryMeta || !cityMeta) notFound();
-  const { services } = await getServices(params.slug, params.city);
+  const { services: allServices } = await getServices(params.slug, params.city);
+  const services = allServices.filter(isIndexableListing);
 
   const jsonLd = {
     "@context": "https://schema.org",

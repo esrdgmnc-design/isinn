@@ -43,7 +43,9 @@ export async function generateMetadata({ params }) {
   const { services } = await getServices(params.slug);
   const url = `${BASE_URL}/kategori/${params.slug}`;
   const title = `${categorySeoName(meta)} Hizmeti Bul — İşinn`;
-  const description = getCategoryIntro(meta.name, params.slug);
+  const realCount = services.filter(isIndexableListing).length;
+  const intro = getCategoryIntro(meta.name, params.slug);
+  const description = realCount > 0 ? `${intro} İşinn'de şu an ${realCount} aktif vitrin var.`.slice(0, 200) : intro;
   return {
     title,
     description,
@@ -62,7 +64,8 @@ export async function generateMetadata({ params }) {
 export default async function CategoryPage({ params }) {
   const meta = findCategory(params.slug);
   if (!meta) notFound();
-  const { services } = await getServices(params.slug);
+  const { services: allServices } = await getServices(params.slug);
+  const services = allServices.filter(isIndexableListing);
 
   const jsonLd = {
     "@context": "https://schema.org",

@@ -48,7 +48,8 @@ export async function generateMetadata({ params }) {
   const city = row.is_remote ? "Uzaktan" : (row.city || "Türkiye");
   // Başlık kullanıcının yazdığına bağlı ve çoğu zaman kategori/şehir içermiyor; arama
   // sonucunda anlamlı görünmesi için kategori ve şehir eklenir, sağlayıcı adı çıkarılır.
-  const catName = row.categories?.name || "";
+  // "Diğer" bir yakalama kutusu: başlıkta anlamsız ("... — Diğer · İstanbul"), eklenmez.
+  const catName = row.categories?.slug === "diger" ? "" : (row.categories?.name || "");
   const place = row.is_remote ? "Uzaktan" : (row.city || "").split(",").pop().trim();
   const title = `${row.title} — ${[catName, place].filter(Boolean).join(" · ")} | İşinn`.replace(" —  |", " |");
   const description = (row.description?.trim() || `${provider} tarafından ${city} bölgesinde sunulan "${row.title}" hizmeti — İşinn'de komisyonsuz keşfet.`).slice(0, 160);

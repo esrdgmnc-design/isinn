@@ -53,7 +53,7 @@ export async function generateMetadata({ params }) {
 export default async function CityPage({ params }) {
   const meta = findCity(params.city);
   if (!meta) notFound();
-  const services = await getServices(params.city);
+  const services = (await getServices(params.city)).filter(isIndexableListing);
 
   const jsonLd = {
     "@context": "https://schema.org",
