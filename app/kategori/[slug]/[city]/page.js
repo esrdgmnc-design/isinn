@@ -121,13 +121,13 @@ export default async function CategoryCityPage({ params }) {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {services.map((row) => {
+            {services.map((row, cardIdx) => {
               const provider = getProviderName(row);
               const img = (Array.isArray(row.images) && row.images[0]) || FALLBACK_IMG;
               return (
                 <Link key={row.id} href={`/vitrin/${row.id}`} className="rounded-2xl overflow-hidden block" style={{ border: "1px solid #F0F0F0" }}>
                   <div className="relative w-full h-40">
-                    <Image src={img} alt={row.title} fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
+                    <Image src={img} alt={row.title} fill priority={cardIdx < 2} sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
                   </div>
                   <div className="p-4">
                     <p className="text-sm font-bold mb-1 line-clamp-2" style={{ color: "#0F1115" }}>{row.title}</p>

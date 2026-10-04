@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useMemo, memo } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import Image from "next/image";
 import { supabase } from "../lib/supabaseClient";
 // Kırpma kütüphanesi sadece fotoğraf kırpma modalı açılınca yüklensin (ilk paket küçük kalsın).
 const Cropper = dynamic(() => import("react-easy-crop"), { ssr: false, loading: () => null });
@@ -1448,7 +1449,7 @@ const HomeListingCard = memo(function HomeListingCard({ l, isFavorite, onSelectL
   );
 });
 
-function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApplyJob, onOpenJob, realListings, listingsLoading, realJobs, favoriteIds, onToggleFavorite, onToggleJobFavorite, platformStats, discoveryPopularCategories, discoveryRecentListings }) {
+function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApplyJob, onOpenJob, realListings, listingsLoading, realJobs, favoriteIds, onToggleFavorite, onToggleJobFavorite, discoveryPopularCategories, discoveryRecentListings }) {
   const { t } = useLanguage();
   const rotatingWords = t("rotatingWords");
   const [heroQ, setHeroQ] = useState("");
@@ -1535,7 +1536,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
                 kelimenin 2 satıra sardığı en kötü durumu karşılayacak sabit
                 bir min-height veriyoruz — hangi kelime gelirse gelsin yükseklik
                 sabit kalıyor. */}
-            <span className="block min-h-[92px] sm:min-h-[112px] md:min-h-[168px]">
+            <span className="block min-h-[100px] sm:min-h-[120px] md:min-h-[176px]">
               <span className="inline-block relative">
                 <span
                   key={wordIndex}
@@ -2136,7 +2137,9 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
                   const img = (Array.isArray(row.images) && row.images[0]) || "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=1200";
                   return (
                     <Link key={row.id} href={`/vitrin/${row.id}`} className="rounded-2xl overflow-hidden block" style={{ border: "1px solid #F0F0F0" }}>
-                      <img src={img} alt={row.title} className="w-full h-32 object-cover" />
+                      <div className="relative w-full h-32">
+                        <Image src={img} alt={row.title} fill sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 25vw" className="object-cover" />
+                      </div>
                       <div className="p-3">
                         {row.categories?.name && (
                           <p className="text-[11px] font-bold uppercase tracking-wide mb-1" style={{ color: "#2563EB" }}>{row.categories.name}</p>
@@ -6742,7 +6745,9 @@ function TalentDiscoveryBanner({ onOpen }) {
             (2026-09-28): bu alan İşinn'in gerçek farkı, o yüzden küçük bir
             simge değil, sayfanın odak noktalarından biri olmalı. */}
         <video
-          src="/videos/yetenek-ilham.mp4"
+          src="/videos/yetenek-ilham-sm.mp4"
+          poster="/videos/yetenek-ilham-poster.jpg"
+          preload="metadata"
           autoPlay
           loop
           muted
@@ -11636,7 +11641,6 @@ export default function IsinnPrototype({ session, onRequireAuth, discoveryPopula
   // sahte sayılardı — platformda o kadar gerçek kullanıcı yokken bu yanıltıcı
   // bir sosyal kanıt iddiasıydı. Artık gerçek sayılara bağlı (küçük olsalar
   // bile dürüst).
-  const [platformStats, setPlatformStats] = useState({ providers: 0, completedJobs: 0, avgRating: null });
   const [adminReports, setAdminReports] = useState([]);
   const [userReviews, setUserReviews] = useState([]);
   const [pendingMediaApprovals, setPendingMediaApprovals] = useState([]); // sağlayıcının kendi kimlik onayı kuyruğu
@@ -11962,20 +11966,6 @@ export default function IsinnPrototype({ session, onRequireAuth, discoveryPopula
     };
   }, []);
 
-  useEffect(() => {
-    (async () => {
-      const [{ data: providerRows }, { count: completedCount }, { data: ratingsData }] = await Promise.all([
-        supabase.from("services").select("provider_id").eq("active", true),
-        supabase.from("jobs").select("id", { count: "exact", head: true }).eq("state", "delivered"),
-        supabase.from("ratings").select("value"),
-      ]);
-      const distinctProviders = new Set((providerRows || []).map((r) => r.provider_id)).size;
-      const ratings = ratingsData || [];
-      const avgRating = ratings.length > 0 ? Number((ratings.reduce((s, r) => s + r.value, 0) / ratings.length).toFixed(1)) : null;
-      setPlatformStats({ providers: distinctProviders, completedJobs: completedCount || 0, avgRating });
-    })();
-  }, []);
-
   const fetchJobs = async () => {
     // KRİTİK HATA (kullanıcı fark etti, canlıda doğrulandı): "İletişime Geç"
     // her tıklandığında find_or_create_job RPC'si arka planda gerçek bir
@@ -12231,7 +12221,6 @@ export default function IsinnPrototype({ session, onRequireAuth, discoveryPopula
           favoriteIds={favoriteIds}
           onToggleFavorite={toggleFavorite}
           onToggleJobFavorite={(job) => toggleFavorite(job, "job")}
-          platformStats={platformStats}
           discoveryPopularCategories={discoveryPopularCategories}
           discoveryRecentListings={discoveryRecentListings}
         />

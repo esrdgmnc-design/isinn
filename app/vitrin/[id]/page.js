@@ -39,6 +39,14 @@ async function getRatingStats(serviceId) {
 // yeniden sorgulamak yerine saatte bir tazeleniyor, hem hızlı hem güncel.
 export const revalidate = 3600;
 
+// generateStaticParams olmadan bu sayfa canlıda her istekte dinamik (Cache-Control: no-store,
+// X-Vercel-Cache: MISS) render ediliyordu; boş liste, sayfayı ilk istekte üretilip saatlik
+// yeniden doğrulanan ISR yoluna sokar (yeni vitrinler yine anında açılır: dynamicParams).
+export const dynamicParams = true;
+export async function generateStaticParams() {
+  return [];
+}
+
 export async function generateMetadata({ params }) {
   const row = await getListing(params.id);
   if (!row) {

@@ -46,10 +46,19 @@ export default async function sitemap() {
     priority: 0.5,
   }));
 
-  const { data: services } = await supabase
-    .from("services")
-    .select("id, updated_at, created_at, city, is_remote, category_id, description, categories(slug)")
-    .eq("active", true);
+  // PostgREST varsayılan olarak 1000 satırda sessizce keser; sayfalayarak tüm aktif vitrinleri al.
+  const services = [];
+  for (let from = 0; ; from += 1000) {
+    const { data: page } = await supabase
+      .from("services")
+      .select("id, updated_at, created_at, city, is_remote, category_id, description, categories(slug)")
+      .eq("active", true)
+      .order("created_at", { ascending: true })
+      .range(from, from + 999);
+    if (!page || page.length === 0) break;
+    services.push(...page);
+    if (page.length < 1000) break;
+  }
 
   // DEMO ve içeriği çok ince vitrinler sitemap'e girmez (sayfaları da noindex) —
   // aynı filtre artık kategori/şehir sayfalarında da kullanılıyor (lib/seoFormat.js).
