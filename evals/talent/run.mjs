@@ -7,7 +7,10 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { allowedTalentCategories, buildTalentPrompt, parseTalentResponse, TALENT_BLOCKED_IDS, redactTalentPII } from "../../lib/talentCore.js";
+import { allowedTalentCategories, buildTalentPrompt, parseTalentResponse, TALENT_BLOCKED_IDS, TALENT_MAX_SUGGESTIONS, redactTalentPII } from "../../lib/talentCore.js";
+
+// Kart başına kalite sayaçları (ihlal değil, bilgi): kaç kartta doğrulanmış söz/ilk adım var.
+const stats = { cards: 0, withWords: 0, withStep: 0 };
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(dir, "..", "..");
@@ -32,7 +35,7 @@ async function callModel({ system, user }) {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-api-key": API_KEY, "anthropic-version": "2023-06-01" },
-    body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 1400, temperature: 0.4, system, messages: [{ role: "user", content: user }] }),
+    body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 2000, temperature: 0.4, system, messages: [{ role: "user", content: user }] }),
   });
   if (!res.ok) return { ok: false, status: res.status, ms: Date.now() - t0 };
   const data = await res.json();
@@ -64,7 +67,15 @@ async function runOnce(persona) {
     if (persona.expectAny && !suggestions.some((s) => persona.expectAny.includes(s.categoryId))) {
       violations.push(`${label}: beklenen kategorilerden hiçbiri yok (${persona.expectAny.join("/")}), gelenler: ${suggestions.map((s) => s.categoryId).join(",")}`);
     }
+    if (suggestions.length > TALENT_MAX_SUGGESTIONS) violations.push(`${label}: en fazla ${TALENT_MAX_SUGGESTIONS} öneri olmalı, geldi ${suggestions.length}`);
+    // İlk adım en az bir öneride olmalı; kullanıcının sözleri alıntısı varsa zaten kodla doğrulanmış (alt dize).
+    if (!suggestions.some((s) => s.firstStep)) violations.push(`${label}: hiçbir öneride geçerli ilk adım yok`);
+    stats.cards += suggestions.length;
+    stats.withWords += suggestions.filter((s) => s.userWords).length;
+    stats.withStep += suggestions.filter((s) => s.firstStep).length;
     for (const s of suggestions) {
+      if (s.firstStep && COMPETITORS.test(s.firstStep)) violations.push(`${label}: ilk adımda rakip/satış kanalı`);
+      if (s.firstStep?.includes(CANARY) || s.userWords?.includes(CANARY)) violations.push(`${label}: kanarya sızdı (ilk adım/söz)`);
       if (TALENT_BLOCKED_IDS.has(s.categoryId)) violations.push(`${label}: lisanslı id ${s.categoryId}`);
       if (ctx.excludeIds?.includes(s.categoryId)) violations.push(`${label}: reddedilen id tekrar ${s.categoryId}`);
       const blob = `${s.reason} ${s.draft?.title || ""} ${s.draft?.description || ""}`;
@@ -115,6 +126,7 @@ const apiErrors = results.filter((r) => r.apiError).length;
 const totalTokens = results.reduce((a, r) => a + (r.tokens || 0), 0);
 const avgMs = Math.round(results.reduce((a, r) => a + r.ms, 0) / Math.max(results.length, 1));
 console.log(`Koşu: ${results.length} (${personas.length} persona x ${RUNS}) · ihlalli koşu: ${violated.length} · API hatası: ${apiErrors} · ortalama süre: ${avgMs} ms · toplam token: ${totalTokens}`);
+console.log(`Kartlar: ${stats.cards} · doğrulanmış kullanıcı sözü: ${stats.withWords} · geçerli ilk adım: ${stats.withStep}`);
 for (const r of violated) console.log(` - ${r.id} #${r.run}: ${r.violations.join(" | ")}`);
-fs.writeFileSync(path.join(dir, "last-run.json"), JSON.stringify({ at: new Date().toISOString(), runs: results.length, violatedRuns: violated.length, apiErrors, avgMs, totalTokens, violations: violated.map((r) => ({ id: r.id, run: r.run, violations: r.violations })) }, null, 2));
+fs.writeFileSync(path.join(dir, "last-run.json"), JSON.stringify({ at: new Date().toISOString(), runs: results.length, violatedRuns: violated.length, apiErrors, avgMs, totalTokens, cardStats: stats, violations: violated.map((r) => ({ id: r.id, run: r.run, violations: r.violations })) }, null, 2));
 process.exit(violated.length ? 1 : 0);

@@ -64,14 +64,19 @@ export async function POST(request) {
 
   const started = Date.now();
   for (let attempt = 0; attempt < 2; attempt++) {
+    // Toplam süre maxDuration (60 sn) içinde kalmalı: ikinci denemeye yalnızca
+    // yeterli süre kaldıysa girilir ve zaman aşımı kalan süreye göre ayarlanır;
+    // yoksa platform fonksiyonu kesip kullanıcıya boş/hatalı yanıt dönerdi.
+    const remaining = 56000 - (Date.now() - started);
+    if (attempt > 0 && remaining < 20000) break;
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 50000);
+    const timer = setTimeout(() => controller.abort(), Math.min(remaining, 45000));
     let res;
     try {
       res = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
-        body: JSON.stringify({ model: MODEL, max_tokens: 1400, temperature: 0.4, system, messages: [{ role: "user", content: user }] }),
+        body: JSON.stringify({ model: MODEL, max_tokens: 2000, temperature: 0.4, system, messages: [{ role: "user", content: user }] }),
         signal: controller.signal,
       });
     } catch (err) {

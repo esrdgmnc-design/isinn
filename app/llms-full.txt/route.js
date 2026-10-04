@@ -32,7 +32,7 @@ export async function GET() {
   lines.push("");
   lines.push("Kategori sayfaları: " + BASE_URL + "/kategori/<slug>, şehir sayfaları: " + BASE_URL + "/sehir/<slug>, vitrin (ilan) sayfaları: " + BASE_URL + "/vitrin/<id>. Güncel liste için " + BASE_URL + "/sitemap.xml.");
   lines.push("");
-  lines.push("Önemli: İşinn kullanıcılar arasındaki ödemeye aracılık etmez, emanet (escrow) veya sonuç garantisi sunmaz. Hizmetlerin keşfini kolaylaştıran bir platformdur: ürün satışı yapılmaz ve ürün satışına yönlendirme yapılmaz (mağaza, sepet, kargo yoktur). 'Doğrulandı' rozeti yalnızca telefon doğrulaması anlamına gelir. Yeteneğini Farket (" + BASE_URL + "/yetenegini-farket), ne sunacağını bilmeyenlere 2-3 hizmet fikri öneren yapay zekâ destekli bir araçtır; öneriler garanti değildir.");
+  lines.push("Önemli: İşinn kullanıcılar arasındaki ödemeye aracılık etmez, emanet (escrow) veya sonuç garantisi sunmaz. Hizmetlerin keşfini kolaylaştıran bir platformdur: ürün satışı yapılmaz ve ürün satışına yönlendirme yapılmaz (mağaza, sepet, kargo yoktur). 'Doğrulandı' rozeti yalnızca telefon doğrulaması anlamına gelir. Yeteneğini Farket (" + BASE_URL + "/yetenegini-farket), ne sunacağını bilmeyenlere 1-2 hizmet fikri öneren yapay zekâ destekli bir araçtır; öneriler garanti değildir.");
   lines.push("");
   lines.push("## Sıkça Sorulan Sorular");
   lines.push("");

@@ -1,9 +1,14 @@
 {
-  "at": "2026-10-04T19:37:38.270Z",
-  "runs": 81,
+  "at": "2026-10-04T19:56:32.189Z",
+  "runs": 27,
   "violatedRuns": 0,
   "apiErrors": 0,
-  "avgMs": 14122,
-  "totalTokens": 304458,
+  "avgMs": 13465,
+  "totalTokens": 108738,
+  "cardStats": {
+    "cards": 51,
+    "withWords": 45,
+    "withStep": 51
+  },
   "violations": []
 }

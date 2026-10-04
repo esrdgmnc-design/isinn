@@ -8,7 +8,7 @@ import Link from "next/link";
 const BASE_URL = "https://www.isinn.com.tr";
 const URL = `${BASE_URL}/yetenegini-farket`;
 const TITLE = "Yeteneğini Farket: Hangi Becerinle Gelir Elde Edebilirsin? | İşinn";
-const DESCRIPTION = "Ne sunabileceğini bilmiyorsan, birkaç dokunuşla becerilerinden 2-3 hizmet fikri ve hazır bir vitrin taslağı al. Aracı denemek için üyelik gerekmez; İşinn komisyon almaz.";
+const DESCRIPTION = "Ne sunabileceğini bilmiyorsan, birkaç dokunuşla becerilerinden 1-2 hizmet fikri ve hazır bir vitrin taslağı al. Aracı denemek için üyelik gerekmez; İşinn komisyon almaz.";
 
 export const metadata = {
   title: TITLE,
@@ -21,7 +21,7 @@ export const metadata = {
 const FAQ = [
   {
     q: "Yeteneğini Farket nedir?",
-    a: "Ne sunabileceğini bilmeyenlere, anlattığı becerilerden yola çıkarak 2-3 hizmet fikri ve her biri için hazır bir vitrin taslağı öneren, yapay zekâ destekli bir araçtır. Öneriler kesin bir kazanç ya da iş garantisi değil, başlangıç noktasıdır.",
+    a: "Ne sunabileceğini bilmeyenlere, anlattığı becerilerden yola çıkarak 1-2 hizmet fikri ve her biri için hazır bir vitrin taslağı öneren, yapay zekâ destekli bir araçtır. Öneriler kesin bir kazanç ya da iş garantisi değil, başlangıç noktasıdır.",
   },
   {
     q: "Aracı kullanmak ücretli mi?",
@@ -91,7 +91,7 @@ export default function YeteneginiFarketPage() {
           Yeteneğini Farket: Becerilerinden Hizmet Fikirleri Al
         </h1>
         <p className="text-base mb-6" style={{ color: "#374151" }}>
-          Ne sunabileceğini bilmiyor musun? Gündelik yaptığın şeylerden birkaçına dokun ya da kendi cümlenle yaz; İşinn sana 2-3 hizmet fikri ve her biri için düzenleyebileceğin hazır bir vitrin taslağı önersin. Aracı denemek için üyelik gerekmez.
+          Ne sunabileceğini bilmiyor musun? Gündelik yaptığın şeylerden birkaçına dokun ya da kendi cümlenle yaz; İşinn sana 1-2 hizmet fikri ve her biri için düzenleyebileceğin hazır bir vitrin taslağı önersin. Aracı denemek için üyelik gerekmez.
         </p>
         <Link
           href="/?view=talentDiscovery"
@@ -104,7 +104,7 @@ export default function YeteneginiFarketPage() {
         <h2 className="font-sans text-xl font-black mb-3" style={{ color: "#0F1115" }}>Nasıl çalışır?</h2>
         <ol className="list-decimal pl-5 space-y-2 mb-10 text-sm" style={{ color: "#374151" }}>
           <li><b>Becerilerini anlat.</b> Hazır seçeneklere dokun ya da kendi cümlenle yaz. İstersen haftalık süreni, bütçeni ve nasıl çalışmak istediğini de belirt.</li>
-          <li><b>2-3 fikri incele.</b> Her fikirde neden sana uygun olabileceğini anlatan bir cümle ve ilk teklifin olabilecek bir başlık gelir. Uygun değilse nedenini seç, yeni fikirler iste.</li>
+          <li><b>1-2 fikri incele.</b> Her fikirde neden sana uygun olabileceğini anlatan bir cümle ve ilk teklifin olabilecek bir başlık gelir. Uygun değilse nedenini seç, yeni fikirler iste.</li>
           <li><b>Taslağı düzenleyip yayınla.</b> Seçtiğin fikir için başlık ve açıklama hazır gelir; sana ait olmayan her şeyi düzeltip vitrinini yayına alırsın. Yayın otomatik değildir, karar senindir.</li>
         </ol>
 

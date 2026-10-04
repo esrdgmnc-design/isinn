@@ -7176,7 +7176,9 @@ function TalentDiscoveryView({ onBack, onCreateListing, userId }) {
                     <p className="text-sm font-black" style={{ color: "#0F1115" }}>{cat.name}</p>
                   </div>
                   {s.draft && <p className="text-sm font-bold mb-1.5" style={{ color: "#16321F" }}>{t("talentDiscovery.firstOfferLabel")} {s.draft.title}</p>}
-                  <p className="text-xs mb-3" style={{ color: "#6B7280" }}>{s.reason}</p>
+                  {s.userWords && <p className="text-xs mb-1.5 italic" style={{ color: "#374151" }}>{t("talentDiscovery.userWordsLabel")} “{s.userWords}”</p>}
+                  <p className="text-xs mb-2" style={{ color: "#6B7280" }}>{s.reason}</p>
+                  {s.firstStep && <p className="text-xs mb-3 rounded-xl px-3 py-2" style={{ background: "#F0FDF4", color: "#166534" }}><b>{t("talentDiscovery.firstStepLabel")}</b> {s.firstStep}</p>}
                   <button
                     onClick={() => { trackEvent("talent_create_click", { category: cat.id, has_draft: !!s.draft }, null); onCreateListing(cat.id, skills.trim(), s.draft); }}
                     className="text-xs font-bold px-4 py-2 rounded-full text-white"
@@ -7184,7 +7186,6 @@ function TalentDiscoveryView({ onBack, onCreateListing, userId }) {
                   >
                     {t("talentDiscovery.createListingButton")}
                   </button>
-                  {s.draft && <p className="text-[11px] mt-2" style={{ color: "#9CA3AF" }}>{t("talentDiscovery.draftReadyNote")}</p>}
                   </div>
                 </div>
               );

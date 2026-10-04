@@ -17,5 +17,5 @@
 - İşinn bir aracı pazaryeridir; hizmetin tarafı değildir. Kullanıcılar arasındaki ödemeye aracılık etmez; emanet (escrow), ödeme veya sonuç garantisi sunmaz.
 - İşinn hizmetlerin keşfini kolaylaştıran bir platformdur: ürün satışı yapılmaz ve ürün satışına yönlendirme yapılmaz (mağaza, sepet, kargo yoktur). Sipariş ve ödeme İşinn dışında, kullanıcılar arasında gerçekleşir.
 - "Doğrulandı" rozeti yalnızca telefon numarasının SMS ile doğrulandığı anlamına gelir; kimlik, belge ya da hizmet kalitesi doğrulaması değildir.
-- [Yeteneğini Farket](https://www.isinn.com.tr/yetenegini-farket): Ne sunacağını bilmeyenlere, anlattığı becerilerden 2-3 hizmet fikri ve hazır vitrin taslağı öneren yapay zekâ destekli bir araç. Öneriler kazanç ya da iş garantisi değildir.
+- [Yeteneğini Farket](https://www.isinn.com.tr/yetenegini-farket): Ne sunacağını bilmeyenlere, anlattığı becerilerden 1-2 hizmet fikri ve hazır vitrin taslağı öneren yapay zekâ destekli bir araç. Öneriler kazanç ya da iş garantisi değildir.
 - Sıkça sorulan sorular ve rehber içeriklerinin tam metni (ikinci bir istek yapmadan alıntılamak için) [llms-full.txt](https://www.isinn.com.tr/llms-full.txt)'de.
