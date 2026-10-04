@@ -1,0 +1,9 @@
+{
+  "at": "2026-10-04T17:16:05.750Z",
+  "runs": 75,
+  "violatedRuns": 0,
+  "apiErrors": 0,
+  "avgMs": 13432,
+  "totalTokens": 257595,
+  "violations": []
+}
