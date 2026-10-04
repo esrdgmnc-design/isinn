@@ -8121,15 +8121,34 @@ function CreateListingView({ onBack, onCreated, userId, onGoToProfile, onGoToPla
 // kütüphanesi eklemek yerine, Claude'un burada gerçekte ürettiği dar
 // kalıpları (kalın, başlık, madde/numaralı liste, yatay çizgi) satır satır
 // ayrıştırıp gerçek React elemanlarına çeviriyoruz.
-function renderInlineBold(line, keyPrefix) {
-  const parts = line.split(/(\*\*[^*]+\*\*)/g);
-  return parts.map((part, i) =>
-    part.startsWith("**") && part.endsWith("**")
-      ? <strong key={`${keyPrefix}-${i}`}>{part.slice(2, -2)}</strong>
-      : <span key={`${keyPrefix}-${i}`}>{part}</span>
-  );
+// Asistan yanıtındaki [Etiket](view:pricing) / [Etiket](page:iptal-iade-kosullari)
+// kalıpları tıklanabilir gerçek bağlantıya dönüşür. Hedefler AÇIK BİR BEYAZ
+// LİSTEDEN gelir — model rastgele URL üretemez; tanımsız hedef düz metin kalır
+// (eskiden asistan var olmayan isinn.com.tr/planlar adresini veriyordu, 404).
+const CHAT_LINK_VIEWS = new Set(["pricing", "createListing", "post", "profile", "messages", "favorites", "map", "support"]);
+const CHAT_LINK_PAGES = new Set(["iptal-iade-kosullari", "gizlilik-politikasi", "kullanim-sartlari", "kvkk-aydinlatma-metni", "mesafeli-satis-sozlesmesi"]);
+function renderInlineBold(line, keyPrefix, onNav) {
+  const parts = line.split(/(\*\*[^*]+\*\*|\[[^\]]+\]\((?:view|page):[A-Za-z-]+\))/g);
+  return parts.map((part, i) => {
+    const key = `${keyPrefix}-${i}`;
+    if (part.startsWith("**") && part.endsWith("**")) return <strong key={key}>{part.slice(2, -2)}</strong>;
+    const m = part.match(/^\[([^\]]+)\]\((view|page):([A-Za-z-]+)\)$/);
+    if (m) {
+      const [, label, kind, target] = m;
+      const btnStyle = { background: "#2563EB", color: "white" };
+      const btnCls = "inline-block px-2.5 py-1 rounded-full text-xs font-bold mx-0.5 no-underline";
+      if (kind === "view" && CHAT_LINK_VIEWS.has(target) && onNav) {
+        return <button key={key} type="button" onClick={() => onNav(target)} className={btnCls} style={btnStyle}>{label}</button>;
+      }
+      if (kind === "page" && CHAT_LINK_PAGES.has(target)) {
+        return <a key={key} href={`/${target}`} target="_blank" rel="noopener noreferrer" className={btnCls} style={btnStyle}>{label}</a>;
+      }
+      return <span key={key}>{label}</span>;
+    }
+    return <span key={key}>{part}</span>;
+  });
 }
-function renderChatMarkdown(text) {
+function renderChatMarkdown(text, onNav) {
   const lines = (text || "").split("\n");
   const blocks = [];
   let listBuffer = [];
@@ -8137,7 +8156,7 @@ function renderChatMarkdown(text) {
     if (listBuffer.length) {
       blocks.push(
         <ul key={`ul-${blocks.length}`} className="list-disc pl-4 space-y-0.5">
-          {listBuffer.map((item, i) => <li key={i}>{renderInlineBold(item, `li-${blocks.length}-${i}`)}</li>)}
+          {listBuffer.map((item, i) => <li key={i}>{renderInlineBold(item, `li-${blocks.length}-${i}`, onNav)}</li>)}
         </ul>
       );
       listBuffer = [];
@@ -8151,7 +8170,7 @@ function renderChatMarkdown(text) {
     } else if (/^#{1,4}\s+/.test(trimmed)) {
       flushList();
       const headingText = trimmed.replace(/^#{1,4}\s+/, "");
-      blocks.push(<p key={`h-${idx}`} className="font-bold">{renderInlineBold(headingText, `h-${idx}`)}</p>);
+      blocks.push(<p key={`h-${idx}`} className="font-bold">{renderInlineBold(headingText, `h-${idx}`, onNav)}</p>);
     } else if (/^[-•]\s+/.test(trimmed) || /^\d+\.\s+/.test(trimmed)) {
       listBuffer.push(trimmed.replace(/^([-•]|\d+\.)\s+/, ""));
     } else {
@@ -8159,7 +8178,7 @@ function renderChatMarkdown(text) {
       if (trimmed.length === 0) {
         blocks.push(<div key={`sp-${idx}`} className="h-1.5" />);
       } else {
-        blocks.push(<p key={`p-${idx}`}>{renderInlineBold(line, `p-${idx}`)}</p>);
+        blocks.push(<p key={`p-${idx}`}>{renderInlineBold(line, `p-${idx}`, onNav)}</p>);
       }
     }
   });
@@ -8174,7 +8193,7 @@ const SUPPORT_CATEGORY_META = {
   "diğer": { label: "Diğer", color: "#6B7280" },
 };
 
-function SupportChatView({ onBack, onReport, currentUserId }) {
+function SupportChatView({ onBack, onReport, currentUserId, onNav }) {
   const { t } = useLanguage();
   const [messages, setMessages] = useState([
     { sender: "ai", text: t("supportChat.greeting") },
@@ -8240,12 +8259,30 @@ function SupportChatView({ onBack, onReport, currentUserId }) {
     return () => { cancelled = true; };
   }, [currentUserId]);
 
-  const sendMessage = async () => {
-    if (!input.trim() || sending) return;
-    const userMsg = { sender: "me", text: input.trim() };
+  // Planlar/kampanya bilgisi sabit metin olarak prompt'a gömülürse (ör. "Üyelik
+  // planını seç") ekrandaki güncel kampanyayla çelişiyordu — fiyat/vitrin
+  // hakkı DB'deki aktif planlardan, ücretsiz dönem de lib/freePeriod.js'ten
+  // canlı okunuyor, prompt her mesajda bunlardan kuruluyor.
+  const [plansInfo, setPlansInfo] = useState("");
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase.from("subscription_plans").select("name, price_monthly, max_active_listings").eq("active", true).order("price_monthly");
+      if (cancelled || !data?.length) return;
+      setPlansInfo(data.map((p) => `${p.name}: ${p.price_monthly}₺/ay, ${p.max_active_listings ?? "sınırsız"} vitrin hakkı`).join("; "));
+    })();
+    return () => { cancelled = true; };
+  }, []);
+  const [solved, setSolved] = useState(false);
+
+  const sendMessage = async (override) => {
+    const text = (typeof override === "string" ? override : input).trim();
+    if (!text || sending) return;
+    const userMsg = { sender: "me", text };
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
     setInput("");
+    setSolved(false);
     setSending(true);
     try {
       const apiMessages = newMessages
@@ -8272,7 +8309,21 @@ GERÇEK PLATFORM BİLGİLERİ (bunlarla çelişen hiçbir şey söyleme):
 
 3) "Doğrulandı" rozeti SADECE telefon numarasının SMS/OTP ile doğrulandığı anlamına gelir — kimlik doğrulaması, geçmiş kontrolü veya İşinn'in o kişiyi güvenilir bulduğu anlamına GELMEZ. Bunu asla "kimliği doğrulanmış" gibi abartma.
 
-Bu üç madde dışında bir konuda (özellikle para/hukuk ile ilgili) emin değilsen "bunu ekibe ileteceğim" de.
+4) GERÇEK EKRAN ADIMLARI (yönlendirirken SADECE bunları kullan, olmayan bir buton/seçenek/adres UYDURMA):
+- Kayıt: sağ üstteki "Giriş Yap" → altta "Hesabın yok mu? Kayıt ol" → Ad Soyad, e-posta, şifre (en az 6 karakter), KVKK/Gizlilik/Kullanım Şartları onay kutusu → "Kayıt Ol". Alternatif: "Google ile devam et". E-postana gelen onay linkine tıklayıp giriş yapılır. Kayıtta "hizmet sağlayıcı / müşteri" diye bir seçenek YOKTUR — aynı hesapla hem hizmet alınır hem verilir.
+- Vitrin (hizmet sunan sayfa) açmak: giriş yaptıktan sonra üst menüdeki (telefonda ☰ menüsündeki) "Hizmet Ekle" → [Hizmet Ekle](view:createListing). İş ilanı vermek (hizmet ARAYAN için): "İlan Ver" → [İlan Ver](view:post).
+- Planlar ekranı: üst menüde "Planlar" → [Planlar](view:pricing).
+- Diğer ekranlar: [Mesajlar](view:messages), [Profilim](view:profile), [Favorilerim](view:favorites), [Haritada Gör](view:map).
+
+BİÇİM KURALI: Sadece **kalın**, "- " madde işareti ve aşağıdaki bağlantı sözdizimini kullan. *İtalik*, tablo, kod bloğu, parantez içinde yıldız KULLANMA (ekranda ham işaret olarak görünür).
+
+BAĞLANTI KURALI: Kullanıcıyı bir ekrana yönlendirirken SADECE şu sözdizimini kullan: [Etiket](view:pricing) — view değerleri yalnızca pricing, createListing, post, profile, messages, favorites, map, support. Yasal sayfalar için [Etiket](page:iptal-iade-kosullari) — page değerleri yalnızca iptal-iade-kosullari, gizlilik-politikasi, kullanim-sartlari, kvkk-aydinlatma-metni, mesafeli-satis-sozlesmesi. ASLA isinn.com.tr/planlar gibi kendi uydurduğun bir URL/adres yazma (böyle sayfalar yok, 404 verir).
+
+5) GÜNCEL KAMPANYA VE PLANLAR (canlı veri, Planlar ekranıyla aynı — bunlarla çelişme):
+${isFreePeriod() ? `Şu an "90 gün herkese ücretsiz" kampanyası var: ${new Date(FREE_PERIOD_UNTIL_ISO).toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" })} tarihine kadar tüm özellikler ücretsiz, bu süre içinde plan satın almak GEREKMİYOR. Kullanıcıya "üyelik planı seç/satın al" DEME; vitrin açmak için doğrudan "Hizmet Ekle" yeterli. Kampanya sonrası için kullanıcıya önceden haber verilecek.` : "Ücretsiz dönem bitti; vitrin açmak için aktif bir üyelik gerekir."}
+${plansInfo ? `Planlar (dönem sonrası geçerli fiyat/hak): ${plansInfo}. Fiyatı sorulursa SADECE bu rakamları söyle.` : "Plan fiyatları şu an okunamadı; rakam söyleme, Planlar ekranına yönlendir."}
+
+Bu beş madde dışında bir konuda (özellikle para/hukuk ile ilgili) emin değilsen "bunu ekibe ileteceğim" de.
 
 ${userContext}`,
           messages: apiMessages,
@@ -8353,7 +8404,7 @@ ${convoText}`;
                 ? { background: "#2563EB", color: "white", borderBottomRightRadius: 4 }
                 : { background: "#F7F7F8", color: "#0F1115", borderBottomLeftRadius: 4 }}
             >
-              {m.sender === "ai" ? renderChatMarkdown(m.text) : m.text}
+              {m.sender === "ai" ? renderChatMarkdown(m.text, onNav) : m.text}
             </div>
           </div>
         ))}
@@ -8368,6 +8419,21 @@ ${convoText}`;
 
       {!reported ? (
         <>
+          {messages.length === 1 && (
+            <div className="flex flex-wrap gap-2 pt-3 mt-2 border-t shrink-0" style={{ borderColor: "#F0F0F0" }}>
+              {["quickVitrin", "quickJob", "quickMessages", "quickPlans"].map((k) => (
+                <button
+                  key={k}
+                  onClick={() => sendMessage(t(`supportChat.${k}`))}
+                  disabled={sending}
+                  className="px-3 py-2 rounded-full text-xs font-medium border"
+                  style={{ borderColor: "#BFDBFE", background: "#EFF6FF", color: "#1D4ED8" }}
+                >
+                  {t(`supportChat.${k}`)}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="flex items-center gap-2 pt-3 mt-2 border-t shrink-0" style={{ borderColor: "#F0F0F0" }}>
             <input
               value={input}
@@ -8382,16 +8448,31 @@ ${convoText}`;
               <Send size={16} />
             </button>
           </div>
-          {messages.length > 1 && (
-            <button
-              onClick={reportToManagement}
-              disabled={sending}
-              className="w-full mt-3 py-2.5 rounded-full text-xs font-bold flex items-center justify-center gap-1.5"
-              style={{ background: "#FEF3C7", color: "#92400E" }}
-            >
-              <AlertCircle size={13} /> {t("supportChat.reportButton")}
-            </button>
+          {/* Normal bir bilgi sorusunun ardından bile "yönetime bildir" çıkıyordu —
+              önce "çözüldü mü?" soruluyor, bildirim sadece çözülmediyse öneriliyor. */}
+          {messages.length > 1 && messages[messages.length - 1].sender === "ai" && !sending && !solved && (
+            <div className="mt-3 rounded-2xl px-3.5 py-2.5" style={{ background: "#F7F7F8" }}>
+              <p className="text-xs font-medium mb-2" style={{ color: "#5C5744" }}>{t("supportChat.resolvedQuestion")}</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setSolved(true)}
+                  className="flex-1 py-2 rounded-full text-xs font-bold flex items-center justify-center gap-1.5"
+                  style={{ background: "#D1FAE5", color: "#065F46" }}
+                >
+                  <Check size={13} /> {t("supportChat.resolvedYes")}
+                </button>
+                <button
+                  onClick={reportToManagement}
+                  disabled={sending}
+                  className="flex-1 py-2 rounded-full text-xs font-bold flex items-center justify-center gap-1.5"
+                  style={{ background: "#FEF3C7", color: "#92400E" }}
+                >
+                  <AlertCircle size={13} /> {t("supportChat.resolvedNoReport")}
+                </button>
+              </div>
+            </div>
           )}
+          {solved && <p className="text-xs mt-3 text-center" style={{ color: "#059669" }}>{t("supportChat.resolvedThanks")}</p>}
           {reportError && <p className="text-xs mt-2 text-center" style={{ color: "#EF4444" }}>{reportError}</p>}
         </>
       ) : (
@@ -11893,6 +11974,7 @@ export default function IsinnPrototype({ session, onRequireAuth, discoveryPopula
           onBack={() => goBack()}
           onReport={(report) => setAdminReports((prev) => [report, ...prev])}
           currentUserId={userId}
+          onNav={handleNav}
         />
       )}
       {view === "adminReports" && <AdminReportsView onBack={() => goBack()} reports={adminReports} userId={userId} isAdmin={isAdmin} />}
