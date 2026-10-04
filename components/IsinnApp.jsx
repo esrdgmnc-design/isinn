@@ -13,6 +13,7 @@ import { trackEvent, captureAttribution } from "../lib/analytics";
 import { useLanguage } from "../lib/i18n/LanguageContext";
 import { TALENT_BLOCKED_IDS, redactTalentPII, sanitizeTalentDraft, buildTalentFallback } from "../lib/talentCore";
 import { extractJsonValue } from "../lib/jsonExtract";
+import { faqJsonLd } from "../lib/faqJsonLd";
 import {
   Search, MapPin, Star, Heart, PlayCircle, ChevronLeft, ChevronRight,
   Wrench, Truck, Monitor, Paintbrush, Code2, Sparkles, ThumbsUp,
@@ -2080,6 +2081,21 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
         )}
       </section>
 
+      {/* Ana sayfadaki FAQPage JSON-LD'si görünür bir SSS olmadan duruyordu (Google
+          yapılandırılmış veri politikası: işaretlenen içerik sayfada görünmeli). Aynı
+          veri (lib/faqJsonLd.js) burada da görünür olarak basılıyor. */}
+      <section className="max-w-3xl mx-auto px-5 mt-12 mb-10">
+        <h2 className="font-sans text-xl font-black mb-4" style={{ color: "#0F1115" }}>Sıkça Sorulan Sorular</h2>
+        <div className="space-y-2">
+          {faqJsonLd.mainEntity.map((f) => (
+            <details key={f.name} className="rounded-xl border px-4 py-3" style={{ borderColor: "#F0F0F0" }}>
+              <summary className="text-sm font-bold cursor-pointer" style={{ color: "#0F1115" }}>{f.name}</summary>
+              <p className="text-sm mt-2" style={{ color: "#4B5563" }}>{f.acceptedAnswer.text}</p>
+            </details>
+          ))}
+        </div>
+      </section>
+
       <SiteFooter onNav={onNav} />
 
       {/* SEO denetimi (2026-09-28): bu blok önceden app/page.js'te <HomeClient/>'ın
@@ -2177,6 +2193,7 @@ function SiteFooter({ onNav }) {
                   diğerleri gibi SPA view'ı değil, iç link değeri için. Sayfanın
                   kendisi hâlâ Türkçe (bkz. app/rehber) — sadece link etiketi çevrildi. */}
               <a href="/rehber" className="text-xs text-left" style={{ color: "#9CA3AF" }}>{t("footer.guides")}</a>
+              <a href="/yetenegini-farket" className="text-xs text-left" style={{ color: "#9CA3AF" }}>{t("talentDiscovery.heroTitle")}</a>
             </div>
           </div>
           <div>
