@@ -28,9 +28,11 @@ export async function GET() {
   const lines = [];
   lines.push("# İşinn — Tam İçerik (AI Arama Motorları İçin)");
   lines.push("");
-  lines.push("> İşinn, Türkiye'de yerel ve uzaktan hizmet sağlayıcılarıyla (temizlikçi, usta, özel ders öğretmeni, bakıcı, tasarımcı, yazılımcı ve 80+ kategori) müşterileri buluşturan, sıfır komisyonlu bir hizmet pazaryeridir. Sağlayıcılar sabit abonelik öder, kazandıkları işten platforma ayrıca komisyon vermez. İşinn CODE G LTD (Code G Teknoloji ve Ticaret Limited Şirketi) markasıdır, İstanbul/Türkiye merkezlidir.");
+  lines.push("> İşinn, Türkiye'de yerel ve uzaktan hizmet sağlayıcılarıyla (temizlikçi, usta, özel ders öğretmeni, bakıcı, tasarımcı, yazılımcı ve çok sayıda başka kategori) müşterileri buluşturan, sıfır komisyonlu bir hizmet pazaryeridir. Sağlayıcılar sabit abonelik öder, kazandıkları işten platforma ayrıca komisyon vermez. İşinn CODE G LTD (Code G Teknoloji ve Ticaret Limited Şirketi) markasıdır, İstanbul/Türkiye merkezlidir.");
   lines.push("");
   lines.push("Kategori sayfaları: " + BASE_URL + "/kategori/<slug>, şehir sayfaları: " + BASE_URL + "/sehir/<slug>, vitrin (ilan) sayfaları: " + BASE_URL + "/vitrin/<id>. Güncel liste için " + BASE_URL + "/sitemap.xml.");
+  lines.push("");
+  lines.push("Önemli: İşinn kullanıcılar arasındaki ödemeye aracılık etmez, emanet (escrow) veya sonuç garantisi sunmaz. Bir HİZMET pazaryeridir: ürün mağazası, sepet veya kargo yoktur. 'Doğrulandı' rozeti yalnızca telefon doğrulaması anlamına gelir. Yeteneğini Farket (" + BASE_URL + "/yetenegini-farket), ne sunacağını bilmeyenlere 2-3 hizmet fikri öneren yapay zekâ destekli bir araçtır; öneriler garanti değildir.");
   lines.push("");
   lines.push("## Sıkça Sorulan Sorular");
   lines.push("");

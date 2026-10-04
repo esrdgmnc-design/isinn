@@ -9,13 +9,18 @@
 import { supabase } from "../lib/supabaseClient";
 import { SEO_CATEGORIES, SEO_CITIES, matchesCitySlug } from "../lib/seoTaxonomy";
 import { REHBER_POSTS } from "../lib/rehberContent";
+import { isIndexableListing, MIN_CITY_LISTINGS, MIN_COMBO_LISTINGS } from "../lib/seoFormat";
 
 const BASE_URL = "https://www.isinn.com.tr";
+
+// Sitemap build anında dondurulmasın: yeni/kaldırılan vitrinler en geç 1 saat içinde yansır.
+export const revalidate = 3600;
 
 export default async function sitemap() {
   const staticPaths = [
     "",
     "/rehber",
+    "/yetenegini-farket",
     "/rozet",
     "/kvkk-aydinlatma-metni",
     "/gizlilik-politikasi",
@@ -42,66 +47,72 @@ export default async function sitemap() {
     .select("id, updated_at, created_at, city, is_remote, category_id, description, categories(slug)")
     .eq("active", true);
 
-  // DEMO ve içeriği çok ince vitrinler sitemap'e girmez (sayfaları da noindex).
-  const indexable = (services || []).filter((row) => {
-    const d = (row.description || "").trim();
-    return !d.startsWith("DEMO VİTRİN") && d.length >= 40;
-  });
+  // DEMO ve içeriği çok ince vitrinler sitemap'e girmez (sayfaları da noindex) —
+  // aynı filtre artık kategori/şehir sayfalarında da kullanılıyor (lib/seoFormat.js).
+  const indexable = (services || []).filter(isIndexableListing);
+  const rowDate = (row) => new Date(row.updated_at || row.created_at || Date.now());
   const vitrinEntries = indexable.map((row) => ({
     url: `${BASE_URL}/vitrin/${row.id}`,
-    lastModified: new Date(row.updated_at || row.created_at || Date.now()),
+    lastModified: rowDate(row),
     changeFrequency: "weekly",
     priority: 0.7,
   }));
 
-  // Kategori/şehir landing sayfaları sadece gerçekten aktif vitrini olan
-  // kombinasyonlar için sitemap'e eklenir — boş sayfaları Google'a "ince
-  // içerik" olarak göndermemek için (bkz. SEO stratejisi dokümanı, madde 3).
-  // Sayfaların kendisi her kombinasyon için çalışır (istek anında SSR), bu
-  // filtre sadece hangilerinin Google'a "buraya bak" denildiğini belirliyor.
-  // Yalnızca lib/seoTaxonomy.js'nin bildiği slug'lar sayfa üretir (o dosya
-  // IsinnApp.jsx'teki listenin elle tutulan bir kopyası) — DB'de var olup bu
-  // listede henüz olmayan bir kategori slug'ı (ör. ileride eklenen yeni bir
-  // kategori) sitemap'e sızıp 404 veren bir URL üretmesin diye.
+  // Kategori/şehir landing sayfaları sadece gerçekten yeterli aktif vitrini olan
+  // kombinasyonlar için sitemap'e eklenir — ince sayfaları Google'a "buraya bak"
+  // diye göndermemek için. Sayfaların kendisi aynı eşiklerle noindex olur
+  // (MIN_CITY_LISTINGS / MIN_COMBO_LISTINGS), kategori için en az 1 gerçek vitrin.
+  // "diger" bir yakalama kutusu (arama niyeti yok), asla sitemap'e girmez.
+  // lastModified artık sabit bir tarih değil, o sayfadaki en yeni vitrin güncellemesi
+  // (Google güvenilmez lastmod değerlerini yok sayar).
+  // Yalnızca lib/seoTaxonomy.js'nin bildiği slug'lar sayfa üretir — DB'de var olup bu
+  // listede henüz olmayan bir kategori slug'ı sitemap'e sızıp 404 veren bir URL üretmesin.
   const knownCategorySlugs = new Set(SEO_CATEGORIES.map((c) => c.slug));
-  const categorySlugsWithContent = new Set();
-  const citySlugsWithContent = new Set();
-  const comboKeysWithContent = new Set();
+  const categoryStats = new Map(); // slug -> { n, last }
+  const cityStats = new Map();
+  const comboStats = new Map();
+  const bump = (map, key, date) => {
+    const cur = map.get(key) || { n: 0, last: date };
+    cur.n += 1;
+    if (date > cur.last) cur.last = date;
+    map.set(key, cur);
+  };
 
   for (const row of indexable) {
+    const date = rowDate(row);
     const categorySlug = row.categories?.slug;
-    const knownCategory = categorySlug && knownCategorySlugs.has(categorySlug) ? categorySlug : null;
-    if (knownCategory) categorySlugsWithContent.add(knownCategory);
+    const knownCategory = categorySlug && categorySlug !== "diger" && knownCategorySlugs.has(categorySlug) ? categorySlug : null;
+    if (knownCategory) bump(categoryStats, knownCategory, date);
     if (row.is_remote) continue;
     for (const city of SEO_CITIES) {
       if (matchesCitySlug(row.city, city.slug)) {
-        citySlugsWithContent.add(city.slug);
-        if (knownCategory) comboKeysWithContent.add(`${knownCategory}|${city.slug}`);
+        bump(cityStats, city.slug, date);
+        if (knownCategory) bump(comboStats, `${knownCategory}|${city.slug}`, date);
         break;
       }
     }
   }
 
-  const categoryEntries = SEO_CATEGORIES.filter((c) => categorySlugsWithContent.has(c.slug)).map((c) => ({
+  const categoryEntries = SEO_CATEGORIES.filter((c) => (categoryStats.get(c.slug)?.n || 0) >= 1).map((c) => ({
     url: `${BASE_URL}/kategori/${c.slug}`,
-    lastModified: new Date("2026-09-21T00:00:00Z"),
-    changeFrequency: "daily",
+    lastModified: categoryStats.get(c.slug).last,
+    changeFrequency: "weekly",
     priority: 0.6,
   }));
 
-  const cityEntries = [...citySlugsWithContent].map((slug) => ({
+  const cityEntries = [...cityStats.entries()].filter(([, s]) => s.n >= MIN_CITY_LISTINGS).map(([slug, s]) => ({
     url: `${BASE_URL}/sehir/${slug}`,
-    lastModified: new Date("2026-09-21T00:00:00Z"),
-    changeFrequency: "daily",
+    lastModified: s.last,
+    changeFrequency: "weekly",
     priority: 0.6,
   }));
 
-  const comboEntries = [...comboKeysWithContent].map((key) => {
+  const comboEntries = [...comboStats.entries()].filter(([, s]) => s.n >= MIN_COMBO_LISTINGS).map(([key, s]) => {
     const [categorySlug, citySlug] = key.split("|");
     return {
       url: `${BASE_URL}/kategori/${categorySlug}/${citySlug}`,
-      lastModified: new Date("2026-09-21T00:00:00Z"),
-      changeFrequency: "daily",
+      lastModified: s.last,
+      changeFrequency: "weekly",
       priority: 0.8,
     };
   });

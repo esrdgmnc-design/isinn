@@ -12,6 +12,7 @@ import { isFreePeriod, FREE_PERIOD_UNTIL_ISO } from "../lib/freePeriod";
 import { trackEvent, captureAttribution } from "../lib/analytics";
 import { useLanguage } from "../lib/i18n/LanguageContext";
 import { TALENT_BLOCKED_IDS, redactTalentPII, sanitizeTalentDraft, buildTalentFallback } from "../lib/talentCore";
+import { extractJsonValue } from "../lib/jsonExtract";
 import {
   Search, MapPin, Star, Heart, PlayCircle, ChevronLeft, ChevronRight,
   Wrench, Truck, Monitor, Paintbrush, Code2, Sparkles, ThumbsUp,
@@ -6647,7 +6648,8 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
   if (!response.ok) throw new Error("ai copy request failed");
   const data = await response.json();
   const text = (data.content || []).map((b) => b.text || "").join("\n");
-  const parsed = JSON.parse(text.replace(/```json|```/g, "").trim());
+  const parsed = extractJsonValue(text);
+  if (!parsed) throw new Error("ai copy parse failed");
   const safe = sanitizeTalentDraft({ title: parsed.title, description: parsed.desc }, userInput);
   if (!safe) throw new Error("ai copy failed safety check");
   return { title: safe.title, desc: safe.description };
@@ -8709,7 +8711,9 @@ ${plansInfo ? `Planlar (dönem sonrası geçerli fiyat/hak): ${plansInfo}. Fiyat
 
 7) TELEFON NUMARASI GİZLİLİĞİ (gerçek durum): Kullanıcının telefon numarası varsayılan olarak GİZLİDİR; sadece o kişi profilindeki "Profilimde göster" ayarını kendisi açarsa görünür hale gelir. İşinn "anlaştığın kişiler numaranı görür" gibi otomatik bir paylaşım YAPMAZ. Numaranın kimler tarafından görülebildiği başka bir şekilde sorulursa bunu söyle, daha fazla ayrıntı uydurma.
 
-Bu yedi madde dışında bir konuda (özellikle para/hukuk ile ilgili) emin değilsen yukarıdaki 6. maddedeki gibi **Hayır, yönetime bildir** butonunu öner.
+8) FİZİKSEL ÜRÜN SATMAK İSTEYENLER (gerçek durum): İşinn bir HİZMET pazaryeridir; ürün mağazası, sepet, kargo ya da stok yönetimi YOKTUR. El emeği/fiziksel ürün (örgü, takı, kek vb.) yapan biri vitrinini şöyle kullanabilir: yaptığı işleri fotoğraflarla sergileyip "sipariş üzerine yapım" gibi bir hizmet olarak tanımlamak. Sipariş, teslimat ve ödeme İşinn dışında, kullanıcılar arasında gerçekleşir; İşinn aracılık etmez. Hazır ürünlerin geniş çapta satışı için ayrıca bir satış kanalı (örn. Etsy, Trendyol) kullanılabilir, İşinn vitrini bunun için tanıtım/portföy görevi görür. Şartlarda fiziksel ürün satışına dair ayrı bir hüküm olup olmadığından emin değilsen "net bilgi için ekibe bildir" de. ÖNEMLİ: Kullanıcı bir hedef ya da tercih söylediğinde (örn. "fiziki ürün satmak istiyorum", "evden çalışmak istiyorum", "param yok") önceki önerini ona göre HEMEN güncelle; önceki öneride ısrar etme, söylediğini kabul ettiğini göstererek yeni yönü anlat.
+
+Bu sekiz madde dışında bir konuda (özellikle para/hukuk ile ilgili) emin değilsen yukarıdaki 6. maddedeki gibi **Hayır, yönetime bildir** butonunu öner.
 
 ${userContext}`,
           messages: apiMessages,

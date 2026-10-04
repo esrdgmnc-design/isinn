@@ -46,7 +46,11 @@ export async function generateMetadata({ params }) {
   }
   const provider = getProviderName(row);
   const city = row.is_remote ? "Uzaktan" : (row.city || "Türkiye");
-  const title = `${row.title} — ${provider} | İşinn`;
+  // Başlık kullanıcının yazdığına bağlı ve çoğu zaman kategori/şehir içermiyor; arama
+  // sonucunda anlamlı görünmesi için kategori ve şehir eklenir, sağlayıcı adı çıkarılır.
+  const catName = row.categories?.name || "";
+  const place = row.is_remote ? "Uzaktan" : (row.city || "").split(",").pop().trim();
+  const title = `${row.title} — ${[catName, place].filter(Boolean).join(" · ")} | İşinn`.replace(" —  |", " |");
   const description = (row.description?.trim() || `${provider} tarafından ${city} bölgesinde sunulan "${row.title}" hizmeti — İşinn'de komisyonsuz keşfet.`).slice(0, 160);
   // DEMO (örnek) ve içeriği çok ince vitrinler arama motoruna açılmaz.
   const isDemo = (row.description || "").trim().startsWith("DEMO VİTRİN");
@@ -111,7 +115,9 @@ export default async function VitrinPage({ params }) {
     areaServed: city,
     ...(category ? { serviceType: category } : {}),
     provider: {
-      "@type": row.is_remote ? "Organization" : "LocalBusiness",
+      // Bireysel bir sağlayıcıyı "LocalBusiness" diye işaretlemek yanıltıcı olabilir:
+      // işletme adı varsa Organization, yoksa Person.
+      "@type": (row.display_name || row.profiles?.business_name) ? "Organization" : "Person",
       name: provider,
       ...(row.is_remote ? {} : { address: { "@type": "PostalAddress", addressLocality: city.split(",")[0]?.trim() || city, addressCountry: "TR" } }),
     },
@@ -150,6 +156,10 @@ export default async function VitrinPage({ params }) {
             <p className="text-xs font-bold uppercase tracking-wide mb-1" style={{ color: "#2563EB" }}>{category}</p>
             <h1 className="font-sans text-2xl font-black mb-2" style={{ color: "#0F1115" }}>{row.title}</h1>
             <p className="text-sm mb-1" style={{ color: "#6B7280" }}>{provider} · {city}</p>
+            {/* JSON-LD'deki aggregateRating sayfada görünür olmalı (Google yapılandırılmış veri politikası). */}
+            {ratingStats && (
+              <p className="text-sm mb-1" style={{ color: "#6B7280" }}>★ {ratingStats.ratingValue.toLocaleString("tr-TR")} · {ratingStats.reviewCount} değerlendirme</p>
+            )}
             <p className="text-sm font-black mb-4" style={{ color: "#0F1115" }}>{price}</p>
             {description && <p className="text-sm leading-relaxed mb-6" style={{ color: "#374151" }}>{description}</p>}
             <div className="flex flex-wrap items-center gap-3">

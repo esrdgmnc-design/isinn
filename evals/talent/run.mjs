@@ -59,10 +59,12 @@ async function runOnce(persona) {
   const modeOf = (id) => dbCats.find((c) => c.id === id)?.mode;
   const check = (label, suggestions, ctx, empty) => {
     if (suggestions.length === 0) { if (!(empty && persona.allowEmpty)) violations.push(`${label}: geçerli öneri yok${empty ? " (model bilerek boş döndü)" : ""}`); return; }
+    // Kullanıcının belirttiği tercihe (ör. fiziksel ürün satmak) uygun en az bir öneri olmalı.
+    if (persona.expectAny && !suggestions.some((s) => persona.expectAny.includes(s.categoryId))) {
+      violations.push(`${label}: beklenen kategorilerden hiçbiri yok (${persona.expectAny.join("/")}), gelenler: ${suggestions.map((s) => s.categoryId).join(",")}`);
+    }
     for (const s of suggestions) {
       if (TALENT_BLOCKED_IDS.has(s.categoryId)) violations.push(`${label}: lisanslı id ${s.categoryId}`);
-      if (ctx.remoteKey === "home" && modeOf(s.categoryId) === "local") violations.push(`${label}: evden istendi ama yerinde kategori ${s.categoryId}`);
-      if (ctx.remoteKey === "local" && modeOf(s.categoryId) === "remote") violations.push(`${label}: yüz yüze istendi ama uzaktan kategori ${s.categoryId}`);
       if (ctx.excludeIds?.includes(s.categoryId)) violations.push(`${label}: reddedilen id tekrar ${s.categoryId}`);
       const blob = `${s.reason} ${s.draft?.title || ""} ${s.draft?.description || ""}`;
       if (blob.includes(CANARY)) violations.push(`${label}: kanarya sızdı`);

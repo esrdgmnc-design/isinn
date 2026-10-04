@@ -2,8 +2,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { supabase } from "../../../lib/supabaseClient";
-import { SEO_CATEGORIES } from "../../../lib/seoTaxonomy";
-import { formatPrice, getProviderName, getCategoryIntro } from "../../../lib/seoFormat";
+import { SEO_CATEGORIES, SEO_CITIES, matchesCitySlug, categorySeoName } from "../../../lib/seoTaxonomy";
+import { formatPrice, getProviderName, getCategoryIntro, isIndexableListing, MIN_COMBO_LISTINGS } from "../../../lib/seoFormat";
 import { getCategoryFaq } from "../../../lib/categoryFaq";
 
 // SEO için eklendi: kategoriler eskiden sadece ana sayfadaki bir istemci
@@ -42,7 +42,7 @@ export async function generateMetadata({ params }) {
   if (!meta) return { title: "Kategori bulunamadı — İşinn" };
   const { services } = await getServices(params.slug);
   const url = `${BASE_URL}/kategori/${params.slug}`;
-  const title = `${meta.name} Hizmeti Bul — İşinn`;
+  const title = `${categorySeoName(meta)} Hizmeti Bul — İşinn`;
   const description = getCategoryIntro(meta.name, params.slug);
   return {
     title,
@@ -51,7 +51,9 @@ export async function generateMetadata({ params }) {
     // Az sayıda (veya sıfır) sonuç olan sayfalar ince içerik sayılıp
     // cezalandırılmasın diye indekslemeden çıkarılıyor — vitrin sayısı
     // arttıkça otomatik olarak indekslenebilir hâle gelir.
-    robots: services.length === 0 ? { index: false, follow: true } : undefined,
+    // "Diğer" bir yakalama kutusu (arama niyeti yok); gerçek (demo/ince olmayan) vitrini
+    // olmayan sayfalar da indekslenmez.
+    robots: params.slug === "diger" || services.filter(isIndexableListing).length === 0 ? { index: false, follow: true } : undefined,
     openGraph: { title, description, url, siteName: "İşinn", locale: "tr_TR", type: "website" },
     twitter: { card: "summary_large_image", title, description },
   };
@@ -66,7 +68,7 @@ export default async function CategoryPage({ params }) {
     "@context": "https://schema.org",
     "@type": "ItemList",
     name: `${meta.name} — İşinn`,
-    itemListElement: services.map((row, i) => ({
+    itemListElement: services.filter(isIndexableListing).map((row, i) => ({
       "@type": "ListItem",
       position: i + 1,
       url: `${BASE_URL}/vitrin/${row.id}`,
@@ -97,7 +99,7 @@ export default async function CategoryPage({ params }) {
     <>
       {/* eslint-disable-next-line react/no-danger */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
-      {services.length > 0 && (
+      {services.some(isIndexableListing) && (
         // eslint-disable-next-line react/no-danger
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       )}
@@ -108,7 +110,7 @@ export default async function CategoryPage({ params }) {
       <div className="max-w-5xl mx-auto px-5 py-10">
         <Link href="/" className="text-sm font-bold" style={{ color: "#2563EB" }}>← İşinn</Link>
         <h1 className="font-sans text-2xl md:text-3xl font-black mt-4 mb-2" style={{ color: "#0F1115" }}>
-          {meta.name} Hizmeti Bul
+          {categorySeoName(meta)} Hizmeti Bul
         </h1>
         <p className="text-sm mb-8" style={{ color: "#6B7280" }}>
           {getCategoryIntro(meta.name, params.slug)}
@@ -142,6 +144,23 @@ export default async function CategoryPage({ params }) {
             })}
           </div>
         )}
+
+        {(() => {
+          // Yalnızca indekslenecek kadar dolu kategori+şehir sayfalarına bağlanır.
+          const real = services.filter(isIndexableListing).filter((r) => !r.is_remote);
+          const cities = SEO_CITIES.map((c) => ({ ...c, n: real.filter((r) => matchesCitySlug(r.city, c.slug)).length })).filter((c) => c.n >= MIN_COMBO_LISTINGS);
+          if (cities.length === 0) return null;
+          return (
+            <div className="mt-10 pt-8 border-t" style={{ borderColor: "#F0F0F0" }}>
+              <h2 className="font-sans text-lg font-black mb-3" style={{ color: "#0F1115" }}>Şehre göre {categorySeoName(meta).toLocaleLowerCase("tr-TR")}</h2>
+              <div className="flex flex-wrap gap-2">
+                {cities.map((c) => (
+                  <Link key={c.slug} href={`/kategori/${params.slug}/${c.slug}`} className="text-sm font-bold px-4 py-2 rounded-full" style={{ background: "#EFF6FF", color: "#1D4ED8" }}>{c.name}</Link>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
 
         {categoryFaq && (
           <div className="mt-10 pt-8 border-t" style={{ borderColor: "#F0F0F0" }}>

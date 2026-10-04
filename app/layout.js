@@ -24,7 +24,7 @@ export const metadata = {
   // gerek yok.
   openGraph: {
     title: "İşinn — Güvendiğin Ellere",
-    description: "İhtiyacın olan hizmeti bulduğun ya da kendi hizmetini sunduğun güvenilir yerel pazar yeri. Sıfır komisyon.",
+    description: "İhtiyacın olan hizmeti bulduğun ya da kendi hizmetini sunduğun komisyonsuz yerel hizmet pazaryeri.",
     url: "https://www.isinn.com.tr",
     siteName: "İşinn",
     locale: "tr_TR",
@@ -33,7 +33,7 @@ export const metadata = {
   twitter: {
     card: "summary_large_image",
     title: "İşinn — Güvendiğin Ellere",
-    description: "İhtiyacın olan hizmeti bulduğun ya da kendi hizmetini sunduğun güvenilir yerel pazar yeri.",
+    description: "İhtiyacın olan hizmeti bulduğun ya da kendi hizmetini sunduğun komisyonsuz yerel hizmet pazaryeri.",
   },
 };
 
@@ -51,10 +51,20 @@ export const viewport = {
 // bir Knowledge Panel oluşturma ihtimalini artırır, sosyal hesaplar
 // (sameAs) eklendiğinde bunları da aynı varlığa bağlar. TikTok/Instagram
 // hesapları açıldığında buradaki sameAs dizisine eklenmeli.
+const websiteJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: "İşinn",
+  alternateName: ["Isinn", "isinn.com.tr"],
+  url: "https://www.isinn.com.tr",
+  inLanguage: "tr",
+};
+
 const organizationJsonLd = {
   "@context": "https://schema.org",
   "@type": "Organization",
   name: "İşinn",
+  alternateName: ["Isinn", "isinn.com.tr"],
   url: "https://www.isinn.com.tr",
   logo: "https://www.isinn.com.tr/icons/icon-512.webp",
   description: "İşinn, hizmet almak isteyenlerle hizmet vermek isteyenleri buluşturan, fayda ve güven odaklı bir platformdur. Sıfır komisyon ile çalışır.",
@@ -94,6 +104,8 @@ export default function RootLayout({ children }) {
       <body>
         {/* eslint-disable-next-line react/no-danger */}
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }} />
+        {/* eslint-disable-next-line react/no-danger */}
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }} />
         {children}
         <ServiceWorkerRegister />
         {/* Ziyaretçi/sayfa görüntüleme sayısı hiç tutulmuyordu ("kaç kişi

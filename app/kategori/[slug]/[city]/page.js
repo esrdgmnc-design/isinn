@@ -2,8 +2,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { supabase } from "../../../../lib/supabaseClient";
-import { SEO_CATEGORIES, SEO_CITIES, matchesCitySlug } from "../../../../lib/seoTaxonomy";
-import { formatPrice, getProviderName, getCategoryCityIntro } from "../../../../lib/seoFormat";
+import { SEO_CATEGORIES, SEO_CITIES, matchesCitySlug, categorySeoName } from "../../../../lib/seoTaxonomy";
+import { formatPrice, getProviderName, getCategoryCityIntro, isIndexableListing, MIN_COMBO_LISTINGS } from "../../../../lib/seoFormat";
 import { getCategoryFaq } from "../../../../lib/categoryFaq";
 
 // SEO'nun en değerli sayfası: "istanbul temizlikçi", "ankara özel ders" gibi
@@ -51,13 +51,14 @@ export async function generateMetadata({ params }) {
   if (!categoryMeta || !cityMeta) return { title: "Sayfa bulunamadı — İşinn" };
   const { services } = await getServices(params.slug, params.city);
   const url = `${BASE_URL}/kategori/${params.slug}/${params.city}`;
-  const title = `${cityMeta.name} ${categoryMeta.name} — Güvenilir ${categoryMeta.name} Bul | İşinn`;
+  const title = `${cityMeta.name} ${categorySeoName(categoryMeta)} Hizmeti | İşinn`;
   const description = getCategoryCityIntro(categoryMeta.name, cityMeta.name, `${params.slug}-${params.city}`);
   return {
     title,
     description,
     alternates: { canonical: url },
-    robots: services.length === 0 ? { index: false, follow: true } : undefined,
+    // Çok az gerçek (demo/ince olmayan) vitrini olan kombinasyonlar ince içerik sayılmasın.
+    robots: params.slug === "diger" || services.filter(isIndexableListing).length < MIN_COMBO_LISTINGS ? { index: false, follow: true } : undefined,
     openGraph: { title, description, url, siteName: "İşinn", locale: "tr_TR", type: "website" },
     twitter: { card: "summary_large_image", title, description },
   };

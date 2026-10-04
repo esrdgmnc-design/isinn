@@ -68,6 +68,9 @@ async function getDiscoveryData() {
   return { popularCategories, recentListings, initialListings };
 }
 
+// Ana sayfa build anında dondurulmasın: yeni vitrinler en geç 1 saat içinde yansır.
+export const revalidate = 3600;
+
 export default async function Page() {
   const { popularCategories, recentListings, initialListings } = await getDiscoveryData();
 
