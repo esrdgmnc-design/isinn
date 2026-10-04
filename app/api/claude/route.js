@@ -13,6 +13,10 @@
 // tek bir isteğin/istemcinin maliyeti sınırsız büyütmesini engelliyor.
 import { checkRateLimit, getClientIp } from "../../../lib/rateLimit";
 
+// Vitrin taslağı da üreten Yeteneğini Farket yanıtı ~15-25 sn sürebiliyor; Vercel'in
+// varsayılan fonksiyon süresi (Hobby'de 10 sn) bunu üretimde 504 ile keserdi.
+export const maxDuration = 60;
+
 const ALLOWED_MODELS = new Set(["claude-sonnet-4-6"]);
 const MAX_TOKENS_CAP = 1200; // uygulamadaki en yüksek gerçek kullanım 1000 (bkz. IsinnApp.jsx)
 const MAX_PROMPT_CHARS = 12000;
@@ -28,7 +32,11 @@ export async function POST(request) {
   }
 
   const ip = getClientIp(request);
-  if (!checkRateLimit(`claude:${ip}`, { limit: 30, windowMs: 5 * 60 * 1000 })) {
+  // Varsayılan 30/5 dk. Salonda herkes aynı Wi-Fi'de (aynı IP) olacağı bir
+  // etkinlik günü için Vercel'de CLAUDE_RATE_LIMIT ortam değişkeniyle geçici
+  // olarak yükseltilebilir (kod değiştirmeden) — etkinlikten sonra sil.
+  const limit = Math.min(Math.max(parseInt(process.env.CLAUDE_RATE_LIMIT || "30", 10) || 30, 5), 500);
+  if (!checkRateLimit(`claude:${ip}`, { limit, windowMs: 5 * 60 * 1000 })) {
     return Response.json({ error: "Çok fazla istek gönderildi. Birkaç dakika sonra tekrar dene." }, { status: 429 });
   }
 
