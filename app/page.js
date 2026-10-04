@@ -7,7 +7,8 @@ import { mapServiceRowToListing } from "../lib/mapServiceRowToListing";
 // Ana sayfa artık sunucu bileşeni: kanonik adres "/" (parametreli ?vitrin=… gibi URL'ler
 // ayrı sayfa sayılmasın) ve SSS şeması yalnızca burada.
 export const metadata = {
-  title: "İşinn — Usta, Temizlikçi Bul; Yeteneğini Gelire Dönüştür",
+  title: "Ne İş Yapabilirim? Becerinden Hizmet Vitrini | İşinn",
+  description: "Becerilerini yaz, yapay zekâ 1-2 hizmet fikri ve hazır vitrin taslağı önersin. Denemek için üyelik gerekmez, komisyon yok. Hizmet bulmak da burada.",
   alternates: { canonical: "/" },
 };
 

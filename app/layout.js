@@ -5,8 +5,8 @@ import ServiceWorkerRegister from "../components/ServiceWorkerRegister";
 
 export const metadata = {
   metadataBase: new URL("https://www.isinn.com.tr"),
-  title: "İşinn — Usta, Temizlikçi Bul; Yeteneğini Gelire Dönüştür",
-  description: "Temizlikçiden özel ders öğretmenine, ustadan danışmana — ihtiyacın olan hizmeti bul. Bir yeteneğin mi var? İşinn'de fark et, sıfır komisyonla gelire dönüştür.",
+  title: "Ne İş Yapabilirim? Becerinden Hizmet Vitrini | İşinn",
+  description: "Becerilerini yaz, yapay zekâ 1-2 hizmet fikri ve hazır vitrin taslağı önersin. Denemek için üyelik gerekmez, komisyon yok. Hizmet bulmak da burada.",
   // Mobil uygulama çalışmasının (bkz. docs/mobile-app.md) yan ürünü — site
   // artık gerçek bir PWA da (telefon tarayıcısından "Ana ekrana ekle").
   // Asıl mağaza dağıtımı Capacitor/Codemagic üzerinden, bu sadece bonus.
@@ -23,8 +23,8 @@ export const metadata = {
   // (özel dosya kuralı) otomatik bağlanıyor, burada ayrıca belirtmeye
   // gerek yok.
   openGraph: {
-    title: "İşinn — Güvendiğin Ellere",
-    description: "İhtiyacın olan hizmeti bulduğun ya da kendi hizmetini sunduğun komisyonsuz yerel hizmet pazaryeri.",
+    title: "İşinn — Yeteneğini Farket, Hizmet Vitrinini Aç",
+    description: "Becerilerinden hizmet fikirleri ve hazır vitrin taslağı al; yakınındaki hizmetleri bul. Komisyonsuz yerel hizmet platformu.",
     url: "https://www.isinn.com.tr",
     siteName: "İşinn",
     locale: "tr_TR",
@@ -32,8 +32,8 @@ export const metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "İşinn — Güvendiğin Ellere",
-    description: "İhtiyacın olan hizmeti bulduğun ya da kendi hizmetini sunduğun komisyonsuz yerel hizmet pazaryeri.",
+    title: "İşinn — Yeteneğini Farket, Hizmet Vitrinini Aç",
+    description: "Becerilerinden hizmet fikirleri ve hazır vitrin taslağı al; yakınındaki hizmetleri bul. Komisyonsuz yerel hizmet platformu.",
   },
 };
 

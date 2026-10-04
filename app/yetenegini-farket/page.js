@@ -7,8 +7,20 @@ import Link from "next/link";
 // metin FAQPage şemasına da konur (görünmeyen içerik şemaya konmaz).
 const BASE_URL = "https://www.isinn.com.tr";
 const URL = `${BASE_URL}/yetenegini-farket`;
-const TITLE = "Yeteneğini Farket: Hangi Becerinle Gelir Elde Edebilirsin? | İşinn";
-const DESCRIPTION = "Ne sunabileceğini bilmiyorsan, birkaç dokunuşla becerilerinden 1-2 hizmet fikri ve hazır bir vitrin taslağı al. Aracı denemek için üyelik gerekmez; İşinn komisyon almaz.";
+const TITLE = "Becerilerimi Nasıl Değerlendirebilirim? Yeteneğini Farket | İşinn";
+const DESCRIPTION = "Ne iş yapabileceğini bilmiyorsan becerilerini yaz: yapay zekâ 1-2 hizmet fikri ve hazır vitrin taslağı önersin. Denemek için üyelik gerekmez, komisyon yok.";
+
+// Beceriden hizmete somut örnekler. Hepsi gerçek İşinn kategorilerine bağlanır;
+// kazanç ya da talep iddiası içermez, "örnek" olduğu açıktır.
+const EXAMPLES = [
+  { skill: "Yemek yapmayı seviyorum", ideas: [["Ev yemeği ve ikram hazırlama", "yemek"], ["Küçük davetler için organizasyon", "etkinlik-organizatoru"]] },
+  { skill: "Çocuklarla vakit geçirmeyi seviyorum", ideas: [["Oyun ve etkinlik desteği", "oyun-ablasi"], ["Belirli saatlerde çocuk bakımı", "bakici"]] },
+  { skill: "Dikiş ve örgü yapıyorum", ideas: [["Onarım ve düzeltme hizmeti", "terzi"], ["Kişiye özel dikiş çalışması", "moda-tekstil-tasarim"], ["Küçük grup atölyesi", "egitmen"]] },
+  { skill: "Düzenli ve planlıyım", ideas: [["Uzaktan takvim ve randevu düzeni", "sanal-asistan"], ["Doğum günü ve küçük etkinlik planlama", "etkinlik-organizatoru"]] },
+  { skill: "Telefonla fotoğraf ve video çekiyorum", ideas: [["İşletmeler için fotoğraf çekimi", "profesyonel-fotograf"], ["Kısa video düzenleme", "video-duzenleme"]] },
+  { skill: "Bir şeyi anlatmayı seviyorum", ideas: [["Bire bir özel ders", "ogretmen"], ["Hobi ve beceri dersi", "egitmen"]] },
+  { skill: "Yazı yazıyor, yabancı dil biliyorum", ideas: [["İçerik yazarlığı", "icerik-yazarligi"], ["Çeviri", "ceviri"]] },
+];
 
 export const metadata = {
   title: TITLE,
@@ -19,6 +31,14 @@ export const metadata = {
 };
 
 const FAQ = [
+  {
+    q: "Ne iş yapabilirim?",
+    a: "Gündelik yaptığın şeylerden başlayabilirsin: yemek yapmak, çocuklarla ilgilenmek, düzenli olmak, dikiş-örgü, telefonla fotoğraf-video çekmek gibi. Becerini, ayırabileceğin zamanı ve çalışma tercihini yazdığında araç 1-2 hizmet fikri (ders, atölye, organizasyon, uzaktan destek gibi) ve her biri için hazır bir vitrin taslağı önerir. Öneriler garanti değil, başlangıç noktasıdır.",
+  },
+  {
+    q: "Becerilerimi nasıl değerlendirebilirim?",
+    a: "Üç soruya cevap ver: Bunu kim ister? Nerede ve ne kadar sürede yaparım? İlk örneğimi nasıl gösteririm? Yeteneğini Farket bu soruları senin yazdıklarından düzenler, ilk vitrin başlığını ve açıklamasını önerir; sana ait olmayan bir bilgiyi taslağa eklemez.",
+  },
   {
     q: "Yeteneğini Farket nedir?",
     a: "Ne sunabileceğini bilmeyenlere, anlattığı becerilerden yola çıkarak 1-2 hizmet fikri ve her biri için hazır bir vitrin taslağı öneren, yapay zekâ destekli bir araçtır. Öneriler kesin bir kazanç ya da iş garantisi değil, başlangıç noktasıdır.",
@@ -101,6 +121,34 @@ export default function YeteneginiFarketPage() {
           İlham Al
         </Link>
 
+        <h2 className="font-sans text-xl font-black mb-3" style={{ color: "#0F1115" }}>Ne iş yapabilirim? Beceriden hizmete örnekler</h2>
+        <p className="text-sm mb-4" style={{ color: "#374151" }}>
+          Çoğumuz gündelik yaptığımız şeyleri beceri olarak görmüyoruz. Aşağıdakiler, bir beceriyi hizmete çevirmenin örnekleridir; garanti ya da kazanç vaadi değil, düşünmeye başlamak için bir listedir. Kendi cümlenle yazdığında araç sana özel örnekler çıkarır.
+        </p>
+        <div className="space-y-3 mb-10">
+          {EXAMPLES.map((e) => (
+            <div key={e.skill} className="rounded-2xl p-4" style={{ background: "#F7F7F8" }}>
+              <p className="text-sm font-bold mb-1.5" style={{ color: "#0F1115" }}>“{e.skill}” diyorsan:</p>
+              <ul className="list-disc pl-5 text-sm space-y-1" style={{ color: "#374151" }}>
+                {e.ideas.map(([label, slug]) => (
+                  <li key={label}><Link href={`/kategori/${slug}`} style={{ color: "#2563EB" }}>{label}</Link></li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+
+        <h2 className="font-sans text-xl font-black mb-3" style={{ color: "#0F1115" }}>Becerilerimi nasıl değerlendirebilirim?</h2>
+        <p className="text-sm mb-3" style={{ color: "#374151" }}>Bir beceriyi hizmete çevirip çeviremeyeceğini anlamak için kendine şu üç soruyu sor:</p>
+        <ol className="list-decimal pl-5 space-y-2 mb-4 text-sm" style={{ color: "#374151" }}>
+          <li><b>Bunu kim ister?</b> Çevrende bu işe ihtiyaç duyan biri var mı (komşu, veli, küçük bir işletme)? Somut bir kişi düşünebiliyorsan başlangıç iyidir.</li>
+          <li><b>Nerede, ne kadar sürede yaparım?</b> Haftada kaç saat ayırabileceğini ve evden mi, yüz yüze mi çalışmak istediğini baştan netleştir.</li>
+          <li><b>İlk örneğimi nasıl gösteririm?</b> Daha önce yaptığın bir iş, fotoğraf ya da kısa bir anlatım vitrinin ilk kanıtı olur.</li>
+        </ol>
+        <p className="text-sm mb-10" style={{ color: "#374151" }}>
+          Detaylı anlatım için <Link href="/rehber/becerilerimi-nasil-degerlendirebilirim" style={{ color: "#2563EB" }}>becerini değerlendirme rehberine</Link> ve ilk vitrinini yazmak için <Link href="/rehber/ilk-vitrinini-nasil-hazirlarsin" style={{ color: "#2563EB" }}>ilk vitrin hazırlama rehberine</Link> bakabilirsin.
+        </p>
+
         <h2 className="font-sans text-xl font-black mb-3" style={{ color: "#0F1115" }}>Nasıl çalışır?</h2>
         <ol className="list-decimal pl-5 space-y-2 mb-10 text-sm" style={{ color: "#374151" }}>
           <li><b>Becerilerini anlat.</b> Hazır seçeneklere dokun ya da kendi cümlenle yaz. İstersen haftalık süreni, bütçeni ve nasıl çalışmak istediğini de belirt.</li>
@@ -128,6 +176,9 @@ export default function YeteneginiFarketPage() {
 
         <div className="flex flex-wrap gap-4 text-sm font-bold" style={{ color: "#2563EB" }}>
           <Link href="/rehber">Rehberler</Link>
+          <Link href="/rehber/evden-ders-ve-atolye-vermek">Evden ders ve atölye</Link>
+          <Link href="/rehber/calisan-anneler-icin-esnek-hizmet-fikirleri">Çalışan anneler için fikirler</Link>
+          <Link href="/rehber/gencler-icin-teknolojik-hizmet-fikirleri">Gençler için fikirler</Link>
           <Link href="/gizlilik-politikasi">Gizlilik Politikası</Link>
           <Link href="/kvkk-aydinlatma-metni">KVKK Aydınlatma Metni</Link>
         </div>
