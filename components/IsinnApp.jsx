@@ -6632,13 +6632,14 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
 // halüsinasyonla var olmayan bir kategori uydurmasın diye prompt'a tüm gerçek
 // kategori id+isim listesi veriliyor, dönen her id ayrıca client-side de
 // CATEGORIES'e karşı doğrulanıyor (bkz. TalentDiscoveryView).
-async function requestTalentSuggestions({ skills, hours, experience, district }) {
+async function requestTalentSuggestions({ skills, hours, budget, experience, district }) {
   const categoryList = CATEGORIES.map((c) => `${c.id}: ${c.name}`).join("\n");
   const prompt = `Bir hizmet pazaryeri uygulamasında, kullanıcının anlattığı becerilerden hangi hizmet kategorisini sunabileceğini öner.
 
 Kullanıcının anlattıkları:
 - Ne yapmayı seviyor/neye yatkın: "${skills}"
 - Haftada ayırabileceği zaman: "${hours || "belirtmedi"}"
+- Başlangıç için ayırabileceği bütçe: "${budget || "belirtmedi"}"
 - Bundan önce para kazanmış mı: "${experience || "belirtmedi"}"
 - Bölge: "${district || "belirtmedi"}"
 
@@ -6653,6 +6654,9 @@ ${categoryList}
 5. Kullanıcı "bilgisayarla uğraşmayı seviyorum" gibi teknoloji ilgisi belirtirse, gerekçede somut ve güncel araç isimleri geçir: örneğin Claude gibi bir yapay zeka asistanıyla küçük işletmelere web sitesi metni/kodu yazabileceğini, ya da Buzzy gibi bir araçla tanıtım videosu üretebileceğini net bir örnekle anlat — soyut "teknolojiyle ilgileniyorsun" demek yerine, tam olarak hangi araçla hangi işi yapabileceğini göster.
 6. Kullanıcı "ders vermeyi/öğretmeyi seviyorum" gibi bir şey söylerse, HER ZAMAN önce "özel ders" (ya da doğrudan karşılığı olan danışmanlık/koçluk) kategorisinde bir vitrin açmasını öner — çünkü İşinn'de bunu gerçekten arayan var. Kayıtlı bir ürünü (video ders seti, PDF rehber, hazır içerik paketi gibi) ASLA kendi başına, bağımsız bir vitrin açma gerekçesi olarak sunma — bunun hiçbir arayanı olmaz, sadece "boşuna vitrin açtım" hissi yaratır. Bunun yerine bunu özel ders vitrininin bir EK GELİR KATMANI olarak çerçevele: gerekçede "önce özel ders ilanını aç, sana ulaşan öğrenciye/veliye derse ek olarak bu PDF rehberi/video paketini de sun, aynı emeği tekrar tekrar satarsın" mantığını somut anlat.
 7. Gerekçe soyut kalmasın, somut bir örnek içersin — ama ASLA İşinn'e rakip bir hizmet/serbest-çalışma ya da eğitim-içerik pazaryeri (Bionluk, Fiverr, Upwork, Armut, gigbi, Udemy gibi) önerme; bunlar tam da İşinn'in kendisinin sunabileceği şeyi (tasarım, yazılım, danışmanlık, ders, video kurs/PDF rehber satışı, temizlik gibi) sunuyor ve kullanıcıyı oraya yönlendirmek İşinn'in kendi rakibine müşteri kazandırmak anlamına gelir. Teslimatı mesaj/dosya/link ile yapılabilen HER ŞEY (hizmetler, danışmanlık, video ders, PDF rehber, dijital içerik) için tek adres İşinn'in kendi vitrini olsun, başka hiçbir platform adı geçmesin. Sadece kargo/elden teslim gerektiren somut FİZİKSEL ÜRÜN söz konusu olduğunda (el yapımı ürün, kendi ürettiği dekor/takı/kek gibi ürünler) örnek bir satış kanalı adı geçebilir (örn. Etsy, Trendyol) — ve bu durumda bile önce İşinn vitrininde tanıtım/portföy olarak sergilemesi önerilsin, dış platform sadece "üretimi nerede satışa sunabileceğine" dair ek bir fikir olarak geçsin.
+
+8. ZAMAN VE BÜTÇE SINIRINA KESİNLİKLE UY: Kullanıcı haftalık zaman ya da bütçe belirttiyse, HER gerekçe bu sınıra sığan somut bir ilk adım içermeli (örn. "haftada 5 saatle ilk ay sadece 2-3 küçük sipariş al"). Bütçeyi aşan bir gider (ekipman, reklam, stok vb.) ya da ayrılan süreye sığmayacak bir iş yükü ÖNERME. Bütçe/zaman "belirtmedi" ise bunlardan hiç bahsetme.
+9. KAYNAĞI OLMAYAN İDDİA UYDURMA: Rakam ya da olgu içeren hiçbir piyasa/talep iddiası yazma — "İstanbul'da her hafta onlarca etkinlik var", "ayda X TL kazanırsın", "yüzlerce kişi arıyor", "bu alana talep çok yüksek" gibi doğrulayamayacağın cümleler YASAK. Kazanç tutarı, talep/etkinlik/müşteri sayısı verme. Bölgeyi sadece kullanıcının yazdığı yer olarak an, o bölgedeki talep hakkında olgu iddia etme. Sadece kullanıcının kendi anlattıklarından çıkan mantığı ve yapabileceği somut ilk adımı yaz.
 
 En uygun 2-3 kategoriyi seç, her biri için yukarıdaki kurallara uygun, kişiselleştirilmiş, tek cümlelik bir gerekçe yaz. SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
 {"suggestions": [{"categoryId": "yukarıdaki listeden bir id", "reason": "tek cümlelik kişiselleştirilmiş gerekçe"}]}`;
@@ -6745,9 +6749,34 @@ function TalentDiscoveryView({ onBack, onCreateListing }) {
   // fark ettirme anı. Açık uçlu, düşündüren bir soru daha samimi/derin.
   const [strength, setStrength] = useState("");
   const [district, setDistrict] = useState("");
+  const [budget, setBudget] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [suggestions, setSuggestions] = useState(null);
+
+  // "Vitrin oluştur"a basınca giriş yapmamış kullanıcı AuthView'a gidiyor ve
+  // uygulama tamamen kaldırılıyor (Google girişinde sayfa da yeniden yükleniyor)
+  // — dönünce tüm cevaplar ve öneriler kayboluyordu. Sekme oturumu boyunca
+  // sessionStorage'da tutuyoruz (sekme kapanınca kendiliğinden silinir).
+  const [restored, setRestored] = useState(false);
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem("isinn_talent_discovery_v1");
+      if (raw) {
+        const d = JSON.parse(raw);
+        setSkills(d.skills || ""); setHours(d.hours || ""); setBudget(d.budget || "");
+        setStrength(d.strength || ""); setDistrict(d.district || "");
+        setSuggestions(Array.isArray(d.suggestions) && d.suggestions.length ? d.suggestions : null);
+      }
+    } catch {}
+    setRestored(true);
+  }, []);
+  useEffect(() => {
+    if (!restored) return;
+    try {
+      sessionStorage.setItem("isinn_talent_discovery_v1", JSON.stringify({ skills, hours, budget, strength, district, suggestions }));
+    } catch {}
+  }, [restored, skills, hours, budget, strength, district, suggestions]);
 
   const handleSubmit = async () => {
     if (!skills.trim()) { setError(t("talentDiscovery.errMissingSkills")); return; }
@@ -6755,7 +6784,7 @@ function TalentDiscoveryView({ onBack, onCreateListing }) {
     setLoading(true);
     setSuggestions(null);
     try {
-      const result = await requestTalentSuggestions({ skills: skills.trim(), hours: hours.trim(), experience: strength.trim(), district: district.trim() });
+      const result = await requestTalentSuggestions({ skills: skills.trim(), hours: hours.trim(), budget: budget.trim(), experience: strength.trim(), district: district.trim() });
       setSuggestions(result);
     } catch (err) {
       setError(t("talentDiscovery.errFailed"));
@@ -6798,6 +6827,17 @@ function TalentDiscoveryView({ onBack, onCreateListing }) {
               value={hours}
               onChange={(e) => setHours(e.target.value)}
               placeholder={t("talentDiscovery.qHoursPlaceholder")}
+              className="w-full rounded-xl p-3 text-sm"
+              style={{ border: "1px solid #E5E7EB" }}
+            />
+          </div>
+          <div>
+            <label className="text-sm font-bold block mb-2" style={{ color: "#0F1115" }}>{t("talentDiscovery.qBudgetLabel")}</label>
+            <input
+              type="text"
+              value={budget}
+              onChange={(e) => setBudget(e.target.value)}
+              placeholder={t("talentDiscovery.qBudgetPlaceholder")}
               className="w-full rounded-xl p-3 text-sm"
               style={{ border: "1px solid #E5E7EB" }}
             />
