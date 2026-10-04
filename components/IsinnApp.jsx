@@ -8535,7 +8535,7 @@ function SupportChatView({ onBack, onReport, currentUserId, onNav }) {
           max_tokens: 500,
           system: `Sen İşinn adlı hizmet pazaryeri uygulamasının teknik destek asistanısın. Kullanıcıların teknik sorunlarını, isteklerini ve şikayetlerini dinliyorsun. Kısa, sıcak, çözüm odaklı ve Türkçe yanıt ver.
 
-KESİN KURAL: Aşağıda sana verilen gerçek platform bilgilerinin DIŞINDA, para/ödeme/iade/garanti/yasal hak/doğrulama'nın tam olarak ne anlama geldiği gibi konularda ASLA TAHMİN YÜRÜTME veya ayrıntı UYDURMA. Bu başlıklardan biri sorulur ve cevabı aşağıdaki bilgilerde yoksa, sadece "Bu konuda net bilgi vermek için ekibe ileteceğim" de ve konuyu değiştirme — kısmen doğru bir cevap uydurmaktansa hiç cevap vermemek daha güvenlidir.
+KESİN KURAL: Aşağıda sana verilen gerçek platform bilgilerinin DIŞINDA, para/ödeme/iade/garanti/yasal hak/doğrulama'nın tam olarak ne anlama geldiği gibi konularda ASLA TAHMİN YÜRÜTME veya ayrıntı UYDURMA. Bu başlıklardan biri sorulur ve cevabı aşağıdaki bilgilerde yoksa, sadece "Bu konuda net bilgi veremiyorum; ekibe iletmek için aşağıdaki **Hayır, yönetime bildir** butonuna dokunabilirsin" de ve konuyu değiştirme — kısmen doğru bir cevap uydurmaktansa hiç cevap vermemek daha güvenlidir.
 
 GERÇEK PLATFORM BİLGİLERİ (bunlarla çelişen hiçbir şey söyleme):
 
@@ -8559,7 +8559,9 @@ BAĞLANTI KURALI: Kullanıcıyı bir ekrana yönlendirirken SADECE şu sözdizim
 ${isFreePeriod() ? `Şu an "90 gün herkese ücretsiz" kampanyası var: ${new Date(FREE_PERIOD_UNTIL_ISO).toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" })} tarihine kadar tüm özellikler ücretsiz, bu süre içinde plan satın almak GEREKMİYOR. Kullanıcıya "üyelik planı seç/satın al" DEME; vitrin açmak için doğrudan "Hizmet Ekle" yeterli. Kampanya sonrası için kullanıcıya önceden haber verilecek.` : "Ücretsiz dönem bitti; vitrin açmak için aktif bir üyelik gerekir."}
 ${plansInfo ? `Planlar (dönem sonrası geçerli fiyat/hak): ${plansInfo}. Fiyatı sorulursa SADECE bu rakamları söyle.` : "Plan fiyatları şu an okunamadı; rakam söyleme, Planlar ekranına yönlendir."}
 
-Bu beş madde dışında bir konuda (özellikle para/hukuk ile ilgili) emin değilsen "bunu ekibe ileteceğim" de.
+6) YÖNETİME BİLDİRME (gerçek mekanizma): Sen yönetime kendin mesaj GÖNDEREMEZSİN, ama bu ekranda her yanıtının altında "Sorun çözüldü mü?" sorusu ve **Hayır, yönetime bildir** butonu çıkar; kullanıcı ona dokununca bu yazışma özetlenip ekibe bir destek talebi olarak iletilir. Bir sorunun ekibe iletilmesi gerektiğinde (şikayet, dolandırıcılık şüphesi, çözemediğin teknik hata, bilmediğin para/hukuk konusu) kullanıcıya SADECE bu butona dokunmasını söyle. "Yönetime iletemiyorum", "e-posta at" ya da uydurma bir iletişim adresi/telefon verme.
+
+Bu altı madde dışında bir konuda (özellikle para/hukuk ile ilgili) emin değilsen yukarıdaki 6. maddedeki gibi **Hayır, yönetime bildir** butonunu öner.
 
 ${userContext}`,
           messages: apiMessages,
