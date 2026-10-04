@@ -11,7 +11,7 @@ import { FALLBACK_LISTING_IMG, formatPriceLabel, mapServiceRowToListing } from "
 import { isFreePeriod, FREE_PERIOD_UNTIL_ISO } from "../lib/freePeriod";
 import { trackEvent, captureAttribution } from "../lib/analytics";
 import { useLanguage } from "../lib/i18n/LanguageContext";
-import { TALENT_BLOCKED_IDS, redactTalentPII, sanitizeTalentDraft, buildTalentFallback } from "../lib/talentCore";
+import { TALENT_BLOCKED_IDS, redactTalentPII, sanitizeTalentDraft, buildTalentFallback, detectsProductSaleIntent } from "../lib/talentCore";
 import { extractJsonValue } from "../lib/jsonExtract";
 import { faqJsonLd } from "../lib/faqJsonLd";
 import {
@@ -7157,6 +7157,8 @@ function TalentDiscoveryView({ onBack, onCreateListing, userId }) {
           <h2 className="text-lg font-black mb-1" style={{ color: "#0F1115" }}>{t("talentDiscovery.resultsTitle")}</h2>
           <p className="text-xs mb-5" style={{ color: "#6B7280" }}>{t("talentDiscovery.resultsSubtitle")}</p>
           {fallbackUsed && <p className="text-xs mb-4 font-bold" style={{ color: "#92400E" }}>{t("talentDiscovery.fallbackNote")}</p>}
+          {/* İşinn ürün satış yeri değil: kullanıcı ürün satmak istediğini yazdıysa bunu dürüstçe, deterministik olarak (modele bırakmadan) söyleriz. */}
+          {detectsProductSaleIntent(skills) && <p className="text-xs mb-4 font-bold rounded-xl px-3.5 py-2.5" style={{ background: "#FEF3C7", color: "#92400E" }}>{t("talentDiscovery.productNote")}</p>}
           <div className="flex flex-col gap-3" style={{ opacity: loading ? 0.5 : 1 }}>
             {suggestions.map((s) => {
               const cat = CATEGORIES.find((c) => c.id === s.categoryId);
@@ -8728,7 +8730,7 @@ ${plansInfo ? `Planlar (dönem sonrası geçerli fiyat/hak): ${plansInfo}. Fiyat
 
 7) TELEFON NUMARASI GİZLİLİĞİ (gerçek durum): Kullanıcının telefon numarası varsayılan olarak GİZLİDİR; sadece o kişi profilindeki "Profilimde göster" ayarını kendisi açarsa görünür hale gelir. İşinn "anlaştığın kişiler numaranı görür" gibi otomatik bir paylaşım YAPMAZ. Numaranın kimler tarafından görülebildiği başka bir şekilde sorulursa bunu söyle, daha fazla ayrıntı uydurma.
 
-8) FİZİKSEL ÜRÜN SATMAK İSTEYENLER (gerçek durum): İşinn bir HİZMET pazaryeridir; ürün mağazası, sepet, kargo ya da stok yönetimi YOKTUR. El emeği/fiziksel ürün (örgü, takı, kek vb.) yapan biri vitrinini şöyle kullanabilir: yaptığı işleri fotoğraflarla sergileyip "sipariş üzerine yapım" gibi bir hizmet olarak tanımlamak. Sipariş, teslimat ve ödeme İşinn dışında, kullanıcılar arasında gerçekleşir; İşinn aracılık etmez. Hazır ürünlerin geniş çapta satışı için ayrıca bir satış kanalı (örn. Etsy, Trendyol) kullanılabilir, İşinn vitrini bunun için tanıtım/portföy görevi görür. Şartlarda fiziksel ürün satışına dair ayrı bir hüküm olup olmadığından emin değilsen "net bilgi için ekibe bildir" de. ÖNEMLİ: Kullanıcı bir hedef ya da tercih söylediğinde (örn. "fiziki ürün satmak istiyorum", "evden çalışmak istiyorum", "param yok") önceki önerini ona göre HEMEN güncelle; önceki öneride ısrar etme, söylediğini kabul ettiğini göstererek yeni yönü anlat.
+8) ÜRÜN SATMAK İSTEYENLER (gerçek durum): İşinn bir HİZMET keşif platformudur; hizmetlerin bulunmasını kolaylaştırır. Ürün satış yeri değildir (mağaza, sepet, kargo, stok yok) ve ürün satışına YÖNLENDİRME YAPMAZ. Fiziksel ürün (örgü, takı, kek vb.) satmak isteyen birine ürün satışını önerme, başka bir satış kanalı/platform adı (Etsy, Trendyol vb.) verme; dürüstçe İşinn'in bunun için uygun olmadığını söyle. İstersen aynı becerinin HİZMET olarak sunulabilen yönlerini anlat: ders/atölye, onarım-düzeltme, kişiye özel hizmet. ÖNEMLİ: Kullanıcı bir hedef ya da tercih söylediğinde (örn. "ürün satmak istiyorum", "evden çalışmak istiyorum", "param yok") önceki önerini ona göre HEMEN güncelle; önceki öneride ısrar etme, söylediğini kabul ettiğini göstererek yeni yönü anlat.
 
 Bu sekiz madde dışında bir konuda (özellikle para/hukuk ile ilgili) emin değilsen yukarıdaki 6. maddedeki gibi **Hayır, yönetime bildir** butonunu öner.
 

@@ -19,7 +19,8 @@ const SB_KEY = get("NEXT_PUBLIC_SUPABASE_ANON_KEY");
 const RUNS = parseInt(process.argv[2] || "3", 10);
 const CONCURRENCY = 4;
 const CANARY = "CANARY-7731";
-const COMPETITORS = /(bionluk|fiverr|upwork|armut|gigbi|udemy)/i;
+// Rakip pazaryerleri ve ürün satış kanalları/yönlendirmesi (İşinn ürün satılan bir yer değildir).
+const COMPETITORS = /(bionluk|fiverr|upwork|armut|gigbi|udemy|etsy|trendyol|hepsiburada|e-?ticaret|ürün satış|ürünlerini sat|ürünü sat|satış kanalı)/i;
 
 const personas = JSON.parse(fs.readFileSync(path.join(dir, "personas.json"), "utf8"));
 

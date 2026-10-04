@@ -1,6 +1,6 @@
 // Saf fonksiyonlar için hızlı birim testleri (ağ yok): node evals/talent/unit.mjs
 import assert from "node:assert/strict";
-import { talentTextIsSafe, sanitizeTalentDraft, redactTalentPII, parseTalentResponse, allowedTalentCategories, buildTalentFallback, TALENT_BLOCKED_IDS } from "../../lib/talentCore.js";
+import { detectsProductSaleIntent, talentTextIsSafe, sanitizeTalentDraft, redactTalentPII, parseTalentResponse, allowedTalentCategories, buildTalentFallback, TALENT_BLOCKED_IDS } from "../../lib/talentCore.js";
 import { pickTopMatches } from "../../lib/jobMatchCore.js";
 import { extractJsonValue } from "../../lib/jsonExtract.js";
 
@@ -62,4 +62,9 @@ assert.deepEqual(extractJsonValue('Cevap: {"s": [{"r": "süslü } parantez içer
 assert.deepEqual(extractJsonValue('[{"idx": 1, "matchScore": 90}] açıklama'), [{ idx: 1, matchScore: 90 }]);
 assert.equal(extractJsonValue("hiç json yok"), null);
 assert.equal(extractJsonValue('{"a": '), null);
+assert.equal(detectsProductSaleIntent("örgü örüyorum, el yapımı ürünler satmak istiyorum"), true);
+assert.equal(detectsProductSaleIntent("fiziki ürün satmak istiyorum"), true);
+assert.equal(detectsProductSaleIntent("Etsy'de dükkan açmak istiyorum"), true);
+assert.equal(detectsProductSaleIntent("yemek yapmayı ve çocuklarla ilgilenmeyi seviyorum"), false);
+assert.equal(detectsProductSaleIntent("satış danışmanı olarak çalıştım, ders vermek istiyorum"), false);
 console.log("tüm birim testleri geçti");

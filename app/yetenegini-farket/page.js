@@ -33,15 +33,15 @@ const FAQ = [
   },
   {
     q: "Evden ne iş yapabilirim?",
-    a: "Çalışma tercihini (evden/uzaktan, yüz yüze ya da fark etmez) araca söyleyebilirsin. Yazı yazma, çeviri, tasarım gibi uzaktan yapılabilen hizmetler ya da evde üretilip sipariş üzerine yapılan el işleri gibi seçenekler, yazdıklarına göre öne çıkabilir. Öneriler garanti değildir.",
+    a: "Çalışma tercihini (evden/uzaktan, yüz yüze ya da fark etmez) araca söyleyebilirsin. Yazı yazma, çeviri, tasarım gibi uzaktan yapılabilen hizmetler ya da evden verilebilen ders ve danışmanlık gibi seçenekler, yazdıklarına göre öne çıkabilir. Öneriler garanti değildir.",
   },
   {
     q: "Örgü ile para kazanılır mı?",
-    a: "Bunun garantisini veremeyiz. Ama örgü gibi el emeği işlerini İşinn'de fotoğraflı portföy ve \"sipariş üzerine yapım\" hizmeti olarak sergileyebilirsin. İşinn bir ürün mağazası değildir; sipariş, teslimat ve ödeme İşinn dışında, seninle müşteri arasında gerçekleşir.",
+    a: "Bunun garantisini veremeyiz. İşinn ürün satılan bir yer değil, hizmetlerin keşfini kolaylaştıran bir platformdur; bu yüzden ürün satışı yapılmaz. Ama örgü gibi bir beceriyi hizmet olarak sunabilirsin: ders ya da atölye, onarım-düzeltme, kişiye özel çalışma gibi.",
   },
   {
     q: "İşinn'de ürün satabilir miyim?",
-    a: "İşinn bir hizmet pazaryeridir; ürün mağazası, sepet ya da kargo yoktur. El emeği ürünlerini tanıtmak ve sipariş üzerine yapım hizmeti sunmak için vitrin açabilirsin; hazır ürünlerin geniş çapta satışı için ayrıca bir satış kanalı kullanman gerekebilir.",
+    a: "Hayır. İşinn hizmetlerin keşfini kolaylaştıran bir platformdur; ürün satışı yapılmaz ve ürün satışına yönlendirme yapılmaz (mağaza, sepet ya da kargo yoktur). Becerini hizmet olarak sunmak istersen vitrin açabilirsin.",
   },
   {
     q: "Şirketim yok, hizmet sunabilir miyim?",
