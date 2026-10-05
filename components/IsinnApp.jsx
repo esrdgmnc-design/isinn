@@ -27,7 +27,8 @@ import {
   UploadCloud, FileText, Trash2, Pencil, Phone, Lock, Bell,
   PaintBucket, AirVent, PawPrint, Music2, Calculator, Languages,
   PenTool, Video, Mic, ClipboardList, TrendingUp, BarChart3, Wallet, CalendarClock, Puzzle, PencilRuler, Layers,
-  MonitorSmartphone, Car, Bug, Stethoscope, Scale
+  MonitorSmartphone, Car, Bug, Stethoscope, Scale,
+  Shapes, Flame, Brush, Cpu, PersonStanding, Crown, Table2, Sofa, Footprints
 } from "lucide-react";
 
 // ---------------------------------------------------------------
@@ -107,6 +108,22 @@ const CATEGORIES = [
   // ("Diğer" seçeneğini fark etmemiş) — bu, genel "Eğitmen" kategorisinin
   // altında görünmeyecek kadar farklı/aranan bir hizmet, ayrı kategori açıldı.
   { id: "direksiyon-egitmeni", name: "Direksiyon Dersi / Sürücü Kursu Eğitmeni", mode: "local", icon: Car },
+  // 2026-10-05: atölye / kurs / el sanatı eğitimi kategorileri (hizmet formunda: atölye, ders, onarım).
+  // DB'ye eklendi (bkz. supabase/categories_seed_v8.sql), SEO listesi lib/seoTaxonomy.js, çeviriler lib/i18n.
+  { id: "el-sanatlari-atolyesi", name: "El Sanatları Atölyesi", mode: "both", icon: Shapes },
+  { id: "seramik-atolyesi", name: "Seramik ve Çömlek Atölyesi", mode: "local", icon: Flame },
+  { id: "dikis-orgu-atolyesi", name: "Dikiş ve Örgü Atölyesi", mode: "both", icon: Scissors },
+  { id: "resim-sanat-atolyesi", name: "Resim ve Sanat Atölyesi", mode: "both", icon: Brush },
+  { id: "mutfak-atolyesi", name: "Mutfak Atölyesi ve Yemek Kursu", mode: "local", icon: ChefHat },
+  { id: "cocuk-atolyesi", name: "Çocuk Atölyesi", mode: "local", icon: Puzzle },
+  { id: "geleneksel-sanatlar-atolyesi", name: "Geleneksel Sanatlar Atölyesi", mode: "both", icon: Palette },
+  { id: "kodlama-egitmeni", name: "Kodlama ve Robotik Eğitmeni", mode: "both", icon: Cpu },
+  { id: "dans-egitmeni", name: "Dans Eğitmeni", mode: "both", icon: PersonStanding },
+  { id: "satranc-egitmeni", name: "Satranç ve Zeka Oyunları Eğitmeni", mode: "both", icon: Crown },
+  { id: "diksiyon-hitabet-egitmeni", name: "Diksiyon ve Hitabet Eğitmeni", mode: "both", icon: Mic },
+  { id: "ofis-programlari-egitmeni", name: "Excel ve Ofis Programları Eğitmeni", mode: "both", icon: Table2 },
+  { id: "mobilya-yenileme", name: "Mobilya Yenileme ve Restorasyon", mode: "local", icon: Sofa },
+  { id: "ayakkabi-canta-tamiri", name: "Ayakkabı ve Çanta Tamiri", mode: "local", icon: Footprints },
 ];
 
 // Sabit listede olmayan bir kategori isteyen kullanıcı için — CATEGORIES'e
@@ -119,10 +136,11 @@ const CATEGORIES = [
 const CUSTOM_CATEGORY_ID = "diger-ozel";
 
 const PARENT_CATEGORIES = [
-  { id: "ev-hizmetleri", name: "Ev Hizmetleri", icon: Home, categoryIds: ["temizlik", "nakliye", "tadilat", "cilingir", "terzi", "elektrikci", "su-tesisatcisi", "hali-yikama", "yemek", "boya-badana", "klima-beyaz-esya", "ic-mimarlik", "teknik-servis", "oto-tamir", "bocek-ilaclama"] },
+  { id: "ev-hizmetleri", name: "Ev Hizmetleri", icon: Home, categoryIds: ["temizlik", "nakliye", "tadilat", "cilingir", "terzi", "elektrikci", "su-tesisatcisi", "hali-yikama", "yemek", "boya-badana", "klima-beyaz-esya", "ic-mimarlik", "teknik-servis", "oto-tamir", "bocek-ilaclama", "mobilya-yenileme", "ayakkabi-canta-tamiri"] },
   { id: "guzellik-bakim", name: "Güzellik & Bakım", icon: Wand2, categoryIds: ["tirnakci", "makyaj", "bakim", "kuafor-berber"] },
   { id: "saglik", name: "Sağlık", icon: HeartPulse, categoryIds: ["hasta-bakici", "hemsire", "fizyoterapist", "diyetisyen", "psikolog", "yoga-koc", "spor-egitmeni", "veteriner"] },
   { id: "egitim-aile", name: "Eğitim & Aile", icon: GraduationCap, categoryIds: ["ogretmen", "egitmen", "bakici", "logusa-bakicisi", "emzirme-danismani", "etkinlik-organizatoru", "muzik-egitmeni", "oyun-ablasi", "direksiyon-egitmeni"] },
+  { id: "atolye-kurs", name: "Atölye & Kurslar", icon: Brush, categoryIds: ["el-sanatlari-atolyesi", "seramik-atolyesi", "dikis-orgu-atolyesi", "resim-sanat-atolyesi", "mutfak-atolyesi", "cocuk-atolyesi", "geleneksel-sanatlar-atolyesi", "kodlama-egitmeni", "dans-egitmeni", "satranc-egitmeni", "diksiyon-hitabet-egitmeni", "ofis-programlari-egitmeni"] },
   { id: "profesyonel", name: "Profesyonel Hizmetler", icon: Briefcase, categoryIds: ["tasarim", "yazilim", "dijital", "muhasebe", "ceviri", "icerik-yazarligi", "video-duzenleme", "seslendirme", "sanal-asistan", "moda-tekstil-tasarim", "avukat"] },
   { id: "diger", name: "Diğer", icon: MoreHorizontal, categoryIds: ["bahce-bakim", "muhendis", "sosyal-medya", "profesyonel-fotograf", "evcil-hayvan"] },
 ];
@@ -1284,6 +1302,7 @@ const CATEGORY_EMOJI = {
   "boya-badana": "🪣", "klima-beyaz-esya": "❄️", "kuafor-berber": "💇",
   "evcil-hayvan": "🐾", "muzik-egitmeni": "🎵", muhasebe: "🧮", ceviri: "🌐",
   "icerik-yazarligi": "✍️", "video-duzenleme": "🎬", seslendirme: "🎙️", "sanal-asistan": "🗂️",
+  "el-sanatlari-atolyesi": "🧵", "seramik-atolyesi": "🏺", "dikis-orgu-atolyesi": "🧶", "resim-sanat-atolyesi": "🎨", "mutfak-atolyesi": "🍰", "cocuk-atolyesi": "🎈", "geleneksel-sanatlar-atolyesi": "🖌️", "kodlama-egitmeni": "💻", "dans-egitmeni": "💃", "satranc-egitmeni": "♟️", "diksiyon-hitabet-egitmeni": "🎤", "ofis-programlari-egitmeni": "📊", "mobilya-yenileme": "🛋️", "ayakkabi-canta-tamiri": "👞",
 };
 
 // Sayfanın en altındaki "Aradığını bulamadın mı?" kategori kartları. Üç deneme
@@ -4372,6 +4391,7 @@ function MapView({ onBack, onSelectProvider, onSelectJob, realListings, realJobs
     "evcil-hayvan": "#C68642", "muzik-egitmeni": "#8A5FBF", "muhasebe": "#4A6572", "ceviri": "#5FA8A0",
     "oyun-ablasi": "#E0A458", "ic-mimarlik": "#7C6A9C", "moda-tekstil-tasarim": "#C15B5B",
     "teknik-servis": "#3B6EA5", "oto-tamir": "#4A4A4A", "bocek-ilaclama": "#6B8C3F", "veteriner": "#3F9C6E", "avukat": "#8C6A3F",
+    "el-sanatlari-atolyesi": "#C98B5B", "seramik-atolyesi": "#B5704F", "dikis-orgu-atolyesi": "#9B6FA8", "resim-sanat-atolyesi": "#D9774B", "mutfak-atolyesi": "#C99A3F", "cocuk-atolyesi": "#E08FA0", "geleneksel-sanatlar-atolyesi": "#4F7F86", "kodlama-egitmeni": "#3F7FBF", "dans-egitmeni": "#C0508C", "satranc-egitmeni": "#5A5A7A", "diksiyon-hitabet-egitmeni": "#7A5CA0", "ofis-programlari-egitmeni": "#3F8F6E", "mobilya-yenileme": "#A0714F", "ayakkabi-canta-tamiri": "#6F5B4A",
   };
 
   const useMyLocation = () => {
