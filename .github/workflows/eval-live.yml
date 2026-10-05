@@ -1,0 +1,32 @@
+name: Yeteneğini Farket canlı değerlendirme
+
+# Gerçek modele karşı değerlendirme (ücretli, ~235 bin token / 2 koşuluk tam tur). Elle ya da haftalık çalışır.
+# GitHub > Settings > Secrets and variables > Actions altında şu gizli değerler tanımlı olmalı:
+#   ANTHROPIC_API_KEY, NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY
+on:
+  workflow_dispatch:
+    inputs:
+      runs:
+        description: "Persona başına koşu sayısı"
+        default: "2"
+  schedule:
+    - cron: "0 6 * * 1"
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node evals/talent/run.mjs ${{ github.event.inputs.runs || '2' }}
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: talent-eval-last-run
+          path: evals/talent/last-run.json

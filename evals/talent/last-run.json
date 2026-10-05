@@ -1,22 +1,16 @@
 {
-  "at": "2026-10-05T08:57:41.325Z",
-  "runs": 54,
-  "violatedRuns": 1,
+  "at": "2026-10-05T13:15:28.330Z",
+  "runs": 10,
+  "violatedRuns": 0,
   "apiErrors": 0,
-  "avgMs": 13658,
-  "totalTokens": 235507,
+  "avgMs": 14525,
+  "totalTokens": 43672,
   "cardStats": {
-    "cards": 99,
-    "withWords": 87,
-    "withStep": 97
+    "cards": 20,
+    "withWords": 20,
+    "withStep": 20
   },
-  "violations": [
-    {
-      "id": "anne-2",
-      "run": 2,
-      "violations": [
-        "istisna: fetch failed"
-      ]
-    }
-  ]
+  "infraErrors": 0,
+  "biasPairs": [],
+  "violations": []
 }

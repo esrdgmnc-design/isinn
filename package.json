@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "node evals/talent/unit.mjs && node evals/unit-more.mjs",
+    "eval:talent": "node evals/talent/run.mjs 2"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.2",

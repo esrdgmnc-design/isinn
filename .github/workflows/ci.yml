@@ -1,0 +1,18 @@
+name: Birim testleri
+
+# Her push ve çekme isteğinde ağsız, ücretsiz birim testleri çalışır: yapay zekâ çıktı doğrulaması,
+# çalışma bağlantısı doğrulaması, JSON-LD kaçışı. Canlı yapay zekâ değerlendirmesi için eval-live.yml.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm test
