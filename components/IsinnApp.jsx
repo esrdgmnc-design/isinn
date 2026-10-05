@@ -13,6 +13,8 @@ import { isFreePeriod, FREE_PERIOD_UNTIL_ISO } from "../lib/freePeriod";
 import { trackEvent, captureAttribution } from "../lib/analytics";
 import { useLanguage } from "../lib/i18n/LanguageContext";
 import { TALENT_BLOCKED_IDS, redactTalentPII, sanitizeTalentDraft, buildTalentFallback, detectsProductSaleIntent } from "../lib/talentCore";
+import WorkLinkEditor from "./WorkLinkEditor";
+import { safeWorkLink } from "../lib/workLink";
 import { extractJsonValue } from "../lib/jsonExtract";
 import { faqJsonLd } from "../lib/faqJsonLd";
 import {
@@ -28,7 +30,7 @@ import {
   PaintBucket, AirVent, PawPrint, Music2, Calculator, Languages,
   PenTool, Video, Mic, ClipboardList, TrendingUp, BarChart3, Wallet, CalendarClock, Puzzle, PencilRuler, Layers,
   MonitorSmartphone, Car, Bug, Stethoscope, Scale,
-  Shapes, Flame, Brush, Cpu, PersonStanding, Crown, Table2, Sofa, Footprints
+  Shapes, Flame, Brush, Cpu, PersonStanding, Crown, Table2, Sofa, Footprints, ExternalLink
 } from "lucide-react";
 
 // ---------------------------------------------------------------
@@ -3213,6 +3215,7 @@ function ListingDetail({ listing, onBack, onContact, userReviews, onAddReview, o
   const [providerPortfolio, setProviderPortfolio] = useState([]);
   const [providerShowcaseLoading, setProviderShowcaseLoading] = useState(false);
   const [showcaseLightbox, setShowcaseLightbox] = useState(null); // { media, index }
+  const [workLinkUrl, setWorkLinkUrl] = useState(null);
   const ownerPortfolio = useVitrinPortfolioActions({
     userId: currentUserId,
     serviceId: listing.dbId,
@@ -3263,6 +3266,10 @@ function ListingDetail({ listing, onBack, onContact, userReviews, onAddReview, o
     // yükleniyor; video da yoksa (nadir — doğrudan bir bağlantıyla geldiyse)
     // eski gecikme göstergesi devrede kalıyor.
     setProviderShowcaseLoading(!listing.videoIntroUrl);
+    // Ölçüm paydası: vitrin detayı görüntülendi (tıklama oranı için).
+    trackEvent("listing_view", { category: listing.category || null }, currentUserId || null);
+    // work_link_url AYRI sorgu: migration henüz çalışmadıysa (kolon yok) yalnızca bu istek hata verir, video/galeri etkilenmez.
+    supabase.from("services").select("work_link_url").eq("id", listing.dbId).maybeSingle().then(({ data, error }) => { if (!cancelled && !error) setWorkLinkUrl(data?.work_link_url || null); }, () => {});
     (async () => {
       const [{ data: serviceData }, { data: portfolioData }] = await Promise.all([
         supabase.from("services").select("video_intro_url, video_intro_name").eq("id", listing.dbId).maybeSingle(),
@@ -4107,6 +4114,43 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
               </div>
             </div>
           )}
+          {/* "Çalışmalarımı gör": galerinin tamamlayıcısı, ikincil bir bağlantı. Ziyaretçiye yalnızca vitrinde galeri (en az 3 çalışma)
+              ya da video varsa gösterilir — önce çalışmalar İşinn'de sergilenir. Kart/arama/harita/SEO sayfasında YOK (sızıntıyı azaltır). */}
+          {(() => {
+            const wl = safeWorkLink(workLinkUrl);
+            const enoughShowcase = providerPortfolio.length >= 3 || !!providerShowcase?.video_intro_url;
+            if (ownerMode) {
+              return (
+                <WorkLinkEditor
+                  serviceId={listing.dbId}
+                  initialUrl={wl?.url || ""}
+                  userId={currentUserId || null}
+                  source="detail"
+                  onSaved={(u) => setWorkLinkUrl(u)}
+                />
+              );
+            }
+            if (!wl || !enoughShowcase) return null;
+            const label = wl.host + new URL(wl.url).pathname.replace(/\/$/, "");
+            return (
+              <div className="mt-5 pt-4 border-t" style={{ borderColor: "#EAE3CE" }}>
+                <p className="text-[11px] mb-2" style={{ color: "#6B6550" }}>{t("listingDetail.workLinkLead")}</p>
+                <a
+                  href={wl.url}
+                  target="_blank"
+                  rel="noopener noreferrer nofollow ugc"
+                  onClick={() => trackEvent("portfolio_link_click", { platform: wl.platform, has_video: !!providerShowcase?.video_intro_url, gallery_count: providerPortfolio.length }, currentUserId || null)}
+                  className="inline-flex items-center justify-center gap-2 w-full sm:w-auto min-h-[44px] px-5 rounded-full border text-sm font-medium"
+                  style={{ borderColor: "#D9D0BA", color: "#1B2B24", background: "#FFFFFF" }}
+                >
+                  <ExternalLink size={14} />
+                  {t("listingDetail.workLinkButton")}
+                  <span className="text-xs" style={{ color: "#6B6550" }}>{label}</span>
+                </a>
+                <p className="text-[10px] mt-1.5" style={{ color: "#8A8470" }}>{t("listingDetail.workLinkNote")}</p>
+              </div>
+            );
+          })()}
         </div>
       )}
 
@@ -4421,7 +4465,10 @@ function MapView({ onBack, onSelectProvider, onSelectJob, realListings, realJobs
     const q = mapQuery.trim().toLocaleLowerCase("tr-TR");
     list = list.filter((p) => {
       const catName = CATEGORIES.find((c) => c.id === p.category)?.name || "";
-      return p.name.toLocaleLowerCase("tr-TR").includes(q) || catName.toLocaleLowerCase("tr-TR").includes(q);
+      // Vitrin başlığı ve açıklaması da aranır: "mum" yazınca "Mum Yapım Atölyesi" bulunur
+      // (eskiden yalnızca sağlayıcı adı ve kategori adı eşleşiyordu).
+      const extra = `${p.listing?.title || ""} ${p.listing?.desc || ""}`;
+      return p.name.toLocaleLowerCase("tr-TR").includes(q) || catName.toLocaleLowerCase("tr-TR").includes(q) || extra.toLocaleLowerCase("tr-TR").includes(q);
     });
   }
   if (homeOnly) list = list.filter((p) => p.homeService === "evde" || p.homeService === "esnek");
@@ -8309,6 +8356,11 @@ function CreateListingView({ onBack, onCreated, userId, onGoToProfile, onGoToPla
             gibi hissettiriyordu — kapak fotoğrafı zaten formdaydı ama gerisi
             değildi. Artık hepsi burada, aynı yerde, sayfa değiştirmeden. */}
         {mediaUploadSection}
+        {created?.dbId && (
+          <div className="text-left rounded-2xl border p-5 mb-6" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
+            <WorkLinkEditor bare serviceId={created.dbId} initialUrl="" userId={userId} source="create_success" />
+          </div>
+        )}
 
         {created?.dbId && (() => {
           const shareUrl = `https://www.isinn.com.tr/vitrin/${created.dbId}`;
