@@ -3,6 +3,7 @@ import { faqJsonLd } from "../lib/faqJsonLd";
 import { supabase } from "../lib/supabaseClient";
 import { SEO_CATEGORIES } from "../lib/seoTaxonomy";
 import { mapServiceRowToListing } from "../lib/mapServiceRowToListing";
+import { jsonLdString } from "../lib/jsonLd";
 
 // Ana sayfa artık sunucu bileşeni: kanonik adres "/" (parametreli ?vitrin=… gibi URL'ler
 // ayrı sayfa sayılmasın) ve SSS şeması yalnızca burada.
@@ -78,7 +79,7 @@ export default async function Page() {
   return (
     <>
       {/* eslint-disable-next-line react/no-danger */}
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdString(faqJsonLd) }} />
       <HomeClient
         discoveryPopularCategories={popularCategories}
         discoveryRecentListings={recentListings}

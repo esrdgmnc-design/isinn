@@ -5,6 +5,7 @@ import { supabase } from "../../../../lib/supabaseClient";
 import { SEO_CATEGORIES, SEO_CITIES, matchesCitySlug, categorySeoName } from "../../../../lib/seoTaxonomy";
 import { formatPrice, getProviderName, getCategoryCityIntro, isIndexableListing, MIN_COMBO_LISTINGS } from "../../../../lib/seoFormat";
 import { getCategoryFaq } from "../../../../lib/categoryFaq";
+import { jsonLdString } from "../../../../lib/jsonLd";
 
 // SEO'nun en değerli sayfası: "istanbul temizlikçi", "ankara özel ders" gibi
 // uzun kuyruk aramaların doğrudan hedefi — bkz. SEO stratejisi dokümanı,
@@ -95,10 +96,10 @@ export default async function CategoryCityPage({ params }) {
   return (
     <>
       {/* eslint-disable-next-line react/no-danger */}
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdString(jsonLd) }} />
       {faqJsonLd && (
         // eslint-disable-next-line react/no-danger
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdString(faqJsonLd) }} />
       )}
       <div className="max-w-5xl mx-auto px-5 py-10">
         <Link href="/" className="text-sm font-bold" style={{ color: "#2563EB" }}>← İşinn</Link>

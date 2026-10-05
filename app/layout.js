@@ -2,6 +2,7 @@ import "./globals.css";
 import { Analytics } from "@vercel/analytics/react";
 import { COMPANY } from "../lib/companyInfo";
 import ServiceWorkerRegister from "../components/ServiceWorkerRegister";
+import { jsonLdString } from "../lib/jsonLd";
 
 export const metadata = {
   metadataBase: new URL("https://www.isinn.com.tr"),
@@ -102,9 +103,9 @@ export default function RootLayout({ children }) {
     <html lang="tr">
       <body>
         {/* eslint-disable-next-line react/no-danger */}
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdString(organizationJsonLd) }} />
         {/* eslint-disable-next-line react/no-danger */}
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdString(websiteJsonLd) }} />
         {children}
         <ServiceWorkerRegister />
         {/* Ziyaretçi/sayfa görüntüleme sayısı hiç tutulmuyordu ("kaç kişi

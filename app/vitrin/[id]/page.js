@@ -5,6 +5,7 @@ import { supabase } from "../../../lib/supabaseClient";
 import ShareButton from "../../../components/ShareButton";
 import { formatPrice, getProviderName } from "../../../lib/seoFormat";
 import { SEO_CITIES, matchesCitySlug } from "../../../lib/seoTaxonomy";
+import { jsonLdString } from "../../../lib/jsonLd";
 
 // SEO için eklendi (2026-09-16): İşinn'in tamamı eskiden tek bir "/" sayfası
 // üzerinde, istemci tarafı görünüm durumuyla çalışıyordu — her vitrin kendi
@@ -137,9 +138,9 @@ export default async function VitrinPage({ params }) {
   return (
     <>
       {/* eslint-disable-next-line react/no-danger */}
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdString(breadcrumbJsonLd) }} />
       {/* eslint-disable-next-line react/no-danger */}
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdString(jsonLd) }} />
       <div className="max-w-2xl mx-auto px-5 py-10">
         <nav className="flex flex-wrap items-center gap-1 text-sm" style={{ color: "#6B7280" }}>
           <Link href="/" className="font-bold" style={{ color: "#2563EB" }}>İşinn</Link>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { COMPANY } from "../../lib/companyInfo";
+import { jsonLdString } from "../../lib/jsonLd";
 
 // İşinn nedir sorusuna (marka aramaları, yapay zekâ özetleri) tek, tutarlı ve doğrulanabilir
 // cevap. Her cümle platformun gerçek durumuna dayanır: komisyon yok, ödemeye aracılık yok,
@@ -69,7 +70,7 @@ export default function HakkimizdaPage() {
   return (
     <>
       {/* eslint-disable-next-line react/no-danger */}
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdString(jsonLd) }} />
       <div className="max-w-2xl mx-auto px-5 py-10">
         <nav aria-label="Sayfa yolu" className="text-xs mb-4" style={{ color: "#6B7280" }}>
           <Link href="/" style={{ color: "#2563EB" }}>İşinn</Link> › Hakkımızda

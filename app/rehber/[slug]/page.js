@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { REHBER_POSTS, findRehberPost, rehberMeta } from "../../../lib/rehberContent";
+import { jsonLdString } from "../../../lib/jsonLd";
 
 const BASE_URL = "https://www.isinn.com.tr";
 
@@ -78,12 +79,12 @@ export default function RehberPostPage({ params }) {
   return (
     <>
       {/* eslint-disable-next-line react/no-danger */}
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdString(jsonLd) }} />
       {/* eslint-disable-next-line react/no-danger */}
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdString(breadcrumbJsonLd) }} />
       {faqJsonLd && (
         // eslint-disable-next-line react/no-danger
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdString(faqJsonLd) }} />
       )}
       <div className="max-w-2xl mx-auto px-5 py-10">
         <nav aria-label="Sayfa yolu" className="text-xs" style={{ color: "#6B7280" }}>

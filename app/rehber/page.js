@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { REHBER_POSTS } from "../../lib/rehberContent";
+import { jsonLdString } from "../../lib/jsonLd";
 
 const BASE_URL = "https://www.isinn.com.tr";
 
@@ -59,7 +60,7 @@ export default function RehberIndexPage() {
   return (
     <div className="max-w-3xl mx-auto px-5 py-10">
       {/* eslint-disable-next-line react/no-danger */}
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdString(jsonLd) }} />
       <Link href="/" className="text-sm font-bold" style={{ color: "#2563EB" }}>← İşinn</Link>
       <h1 className="font-sans text-2xl md:text-3xl font-black mt-4 mb-2" style={{ color: "#0F1115" }}>Rehberler</h1>
       <p className="text-sm mb-8" style={{ color: "#6B7280" }}>

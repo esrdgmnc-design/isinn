@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { jsonLdString } from "../../lib/jsonLd";
 
 // Yeteneğini Farket artık Google'ın tarayabileceği gerçek bir sayfaya sahip (eskiden
 // yalnızca uygulama içinde, ?view=talentDiscovery ile açılıyordu). Sayfadaki her
@@ -103,7 +104,7 @@ export default function YeteneginiFarketPage() {
   return (
     <>
       {/* eslint-disable-next-line react/no-danger */}
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdString(jsonLd) }} />
       <div className="max-w-2xl mx-auto px-5 py-10">
         <Link href="/" className="text-sm font-bold" style={{ color: "#2563EB" }}>← İşinn</Link>
 

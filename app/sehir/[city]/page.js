@@ -5,6 +5,7 @@ import { supabase } from "../../../lib/supabaseClient";
 import { SEO_CITIES, SEO_CATEGORIES, matchesCitySlug, categorySeoName } from "../../../lib/seoTaxonomy";
 import { formatPrice, getProviderName, getCityIntro, isIndexableListing, MIN_CITY_LISTINGS, MIN_COMBO_LISTINGS } from "../../../lib/seoFormat";
 import { getCityFaq } from "../../../lib/categoryFaq";
+import { jsonLdString } from "../../../lib/jsonLd";
 
 // SEO için eklendi — bkz. app/kategori/[slug]/page.js'teki aynı gerekçe.
 // services.city serbest metin olduğu için (bkz. lib/seoTaxonomy.js) şehir
@@ -90,14 +91,14 @@ export default async function CityPage({ params }) {
   return (
     <>
       {/* eslint-disable-next-line react/no-danger */}
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdString(breadcrumbJsonLd) }} />
       {services.some(isIndexableListing) && (
         // eslint-disable-next-line react/no-danger
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdString(jsonLd) }} />
       )}
       {faqJsonLd && (
         // eslint-disable-next-line react/no-danger
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdString(faqJsonLd) }} />
       )}
       <div className="max-w-5xl mx-auto px-5 py-10">
         <Link href="/" className="text-sm font-bold" style={{ color: "#2563EB" }}>← İşinn</Link>
