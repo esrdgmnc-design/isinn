@@ -2365,7 +2365,7 @@ function ReviewCard({ review, onOpenMedia, isReal, currentUserId, providerId }) 
           </div>
           <div>
             <p className="text-sm font-medium" style={{ color: "#1B2B24" }}>{review.name}</p>
-            <p className="text-[11px]" style={{ color: "#6B6550" }}>{review.verified ? "Hizmeti aldığını beyan etti" : "Yorum"} · {review.time}</p>
+            <p className="text-[11px]" style={{ color: "#6B6550" }}>{review.bothConfirmed ? "İki taraf da işi onayladı" : review.verified ? "Hizmeti aldığını beyan etti" : "Yorum"} · {review.time}</p>
           </div>
         </div>
         <Stars value={review.value} />
@@ -3369,6 +3369,7 @@ function ListingDetail({ listing, onBack, onContact, userReviews, onAddReview, o
         initials: name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase() || "??",
         value: r.value,
         verified: true,
+        bothConfirmed: !!r.both_confirmed,
         time: formatRelativeTr(r.created_at),
         comment: r.comment || "",
         helpful: r.helpful_count || 0,
@@ -6051,8 +6052,9 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
     if (!activeId || active?.demo || !currentUserId) { setActiveJob(null); return; }
     let cancelled = false;
     (async () => {
-      const { data } = await supabase.from("jobs").select("client_id, state, service_id, services(provider_id)").eq("id", activeId).maybeSingle();
-      if (!cancelled) setActiveJob(data ? { clientId: data.client_id, state: data.state, serviceId: data.service_id, providerId: data.services?.provider_id || null } : null);
+      let { data, error } = await supabase.from("jobs").select("client_id, state, service_id, client_delivered_at, provider_delivered_at, services(provider_id)").eq("id", activeId).maybeSingle();
+      if (error) ({ data } = await supabase.from("jobs").select("client_id, state, service_id, services(provider_id)").eq("id", activeId).maybeSingle());
+      if (!cancelled) setActiveJob(data ? { clientId: data.client_id, state: data.state, serviceId: data.service_id, providerId: data.services?.provider_id || null, clientConfirmed: !!data.client_delivered_at, providerConfirmed: !!data.provider_delivered_at } : null);
     })();
     setDeliveredError("");
     return () => { cancelled = true; };
@@ -6068,10 +6070,15 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
     if (!window.confirm(t("messages.confirmMarkDelivered"))) return;
     setDeliveredError("");
     setMarkingDelivered(true);
-    const { data: updated, error } = await supabase.from("jobs").update({ state: "delivered" }).eq("id", activeId).eq("client_id", currentUserId).select("id");
+    let { error } = await supabase.rpc("confirm_job_delivery", { p_job_id: activeId });
+    // SQL (supabase/two_sided_confirmation_2026_10_05.sql) henüz çalışmadıysa eski tek taraflı yola düş
+    if (error?.code === "PGRST202") {
+      const { data: updated, error: e2 } = await supabase.from("jobs").update({ state: "delivered" }).eq("id", activeId).eq("client_id", currentUserId).select("id");
+      error = e2 || (updated?.length ? null : { message: t("common.errNoPermission") });
+    }
     setMarkingDelivered(false);
-    if (error || !updated?.length) { setDeliveredError(t("messages.errMarkFailed", { message: error?.message || t("common.errNoPermission") })); return; }
-    setActiveJob((j) => (j ? { ...j, state: "delivered" } : j));
+    if (error) { setDeliveredError(t("messages.errMarkFailed", { message: error.message || t("common.errNoPermission") })); return; }
+    setActiveJob((j) => (j ? { ...j, state: "delivered", clientConfirmed: true } : j));
   };
 
   // Adil olsun diye eklendi: eskiden SADECE müşteri "Hizmeti Aldım"
@@ -6085,10 +6092,14 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
     if (!window.confirm(t("messages.confirmMarkProviderDelivered"))) return;
     setDeliveredError("");
     setMarkingDelivered(true);
-    const { data: updated, error } = await supabase.from("jobs").update({ state: "delivered", provider_delivered_at: new Date().toISOString() }).eq("id", activeId).select("id");
+    let { error } = await supabase.rpc("confirm_job_delivery", { p_job_id: activeId });
+    if (error?.code === "PGRST202") {
+      const { data: updated, error: e2 } = await supabase.from("jobs").update({ state: "delivered", provider_delivered_at: new Date().toISOString() }).eq("id", activeId).select("id");
+      error = e2 || (updated?.length ? null : { message: t("common.errNoPermission") });
+    }
     setMarkingDelivered(false);
-    if (error || !updated?.length) { setDeliveredError(t("messages.errMarkFailed", { message: error?.message || t("common.errNoPermission") })); return; }
-    setActiveJob((j) => (j ? { ...j, state: "delivered" } : j));
+    if (error) { setDeliveredError(t("messages.errMarkFailed", { message: error.message || t("common.errNoPermission") })); return; }
+    setActiveJob((j) => (j ? { ...j, state: "delivered", providerConfirmed: true } : j));
   };
 
   // "Değerlendirme Yaz" mesajlaşma ekranından doğrudan vitrine gitsin diye —
@@ -6344,12 +6355,27 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
             <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-xs mb-3 shrink-0" style={{ background: "rgba(63,125,92,0.1)", color: "#3F7D5C" }}>
               <span className="flex items-center gap-2">
                 <Check size={13} className="shrink-0" />
-                {activeJob.clientId === currentUserId
-                  ? t("messages.deliveredClientNote")
+                {activeJob.clientConfirmed && activeJob.providerConfirmed
+                  ? t("messages.deliveredBothNote")
+                  : !activeJob.clientConfirmed && !activeJob.providerConfirmed
+                  ? t("messages.deliveredGenericNote")
+                  : activeJob.clientId === currentUserId
+                  ? t(activeJob.clientConfirmed ? "messages.deliveredClientNote" : "messages.deliveredClientPendingNote")
                   : activeJob.providerId === currentUserId
-                  ? t("messages.deliveredProviderNote")
+                  ? t(activeJob.providerConfirmed ? "messages.deliveredProviderNote" : "messages.deliveredProviderPendingNote")
                   : t("messages.deliveredGenericNote")}
               </span>
+              {(activeJob.clientId === currentUserId ? !activeJob.clientConfirmed : activeJob.providerId === currentUserId ? !activeJob.providerConfirmed : false) && (
+                <button
+                  onClick={activeJob.clientId === currentUserId ? markDelivered : markProviderDelivered}
+                  disabled={markingDelivered}
+                  className="font-bold shrink-0 flex items-center gap-1"
+                  style={{ color: "#3F7D5C" }}
+                >
+                  {markingDelivered && <Loader2 size={11} className="animate-spin" />}
+                  {activeJob.clientId === currentUserId ? t("messages.confirmAsClient") : t("messages.confirmAsProvider")}
+                </button>
+              )}
               {activeJob.clientId === currentUserId && activeJob.serviceId && (
                 <button onClick={goToReview} disabled={openingReview} className="font-bold shrink-0 flex items-center gap-1" style={{ color: "#2563EB" }}>
                   {openingReview && <Loader2 size={11} className="animate-spin" />}
