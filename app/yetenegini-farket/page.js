@@ -1,4 +1,5 @@
 import Link from "next/link";
+import TalentTryBox from "../../components/TalentTryBox";
 import { jsonLdString } from "../../lib/jsonLd";
 
 // Yeteneğini Farket artık Google'ın tarayabileceği gerçek bir sayfaya sahip (eskiden
@@ -114,13 +115,28 @@ export default function YeteneginiFarketPage() {
         <p className="text-base mb-6" style={{ color: "#374151" }}>
           Ne sunabileceğini bilmiyor musun? Gündelik yaptığın şeylerden birkaçına dokun ya da kendi cümlenle yaz; İşinn sana 1-2 hizmet fikri ve her biri için düzenleyebileceğin hazır bir vitrin taslağı önersin. Aracı denemek için üyelik gerekmez.
         </p>
-        <Link
-          href="/?view=talentDiscovery"
-          className="inline-block text-sm font-bold px-6 py-3 rounded-full text-white mb-10"
-          style={{ background: "#2563EB" }}
-        >
-          İlham Al
-        </Link>
+        <TalentTryBox />
+
+        <h2 className="font-sans text-xl font-black mb-3" style={{ color: "#0F1115" }}>Örnek bir sonuç nasıl görünür?</h2>
+        <p className="text-xs mb-3" style={{ color: "#6B7280" }}>Aşağıdaki, aracın gerçek bir denemede verdiği sonuçtur. Sen farklı yazarsan farklı fikirler çıkar; öneriler bir başlangıç noktasıdır.</p>
+        <div className="rounded-2xl p-4 mb-4" style={{ background: "#F7F7F8" }}>
+          <p className="text-sm font-bold mb-1" style={{ color: "#0F1115" }}>Yazılan: “Telefonla fotoğraf çekmeyi ve video düzenlemeyi seviyorum”</p>
+          <p className="text-xs" style={{ color: "#6B7280" }}>Haftada 8 saat · evden/uzaktan</p>
+        </div>
+        <div className="space-y-3 mb-10">
+          {[
+            { cat: "Video Düzenleme", offer: "Telefon Çekimlerinden Kısa Video Kurgusu", words: "video düzenlemeyi seviyorum", reason: "Telefon videolarını düzenleyebildiğini söylediğin için, bir esnafın tanıtım klibini ya da bir etkinlik anısını kurgulamak gibi somut işlerle vitrini açtığında sana ulaşmak isteyen biri olabilir.", step: "Daha önce düzenlediğin bir videoyu vitrin açıklamasının yanına örnek olarak ekle." },
+            { cat: "Profesyonel Fotoğraf", offer: "Telefon ile Yaratıcı Fotoğraf Çekimi", words: "", reason: "Telefon fotoğrafçılığını sevdiğini belirttiğin için, çektiğin yemek, mekân ya da portre fotoğraflarından birkaçını vitrine koyarsan bu konuda fotoğrafçı arayan biri sana ulaşabilir.", step: "Telefonunla çektiğin en iyi birkaç fotoğrafı seçip vitrin taslağına yükle." },
+          ].map((c) => (
+            <div key={c.cat} className="rounded-2xl p-4" style={{ border: "1px solid #F0F0F0" }}>
+              <p className="text-sm font-black mb-1" style={{ color: "#0F1115" }}>{c.cat}</p>
+              <p className="text-sm font-bold mb-1.5" style={{ color: "#16321F" }}>İlk teklifin: {c.offer}</p>
+              {c.words && <p className="text-xs mb-1.5 italic" style={{ color: "#374151" }}>Senin sözlerin: “{c.words}”</p>}
+              <p className="text-xs mb-2" style={{ color: "#6B7280" }}>{c.reason}</p>
+              <p className="text-xs rounded-xl px-3 py-2" style={{ background: "#F0FDF4", color: "#166534" }}><b>Bu hafta ilk adım:</b> {c.step}</p>
+            </div>
+          ))}
+        </div>
 
         <h2 className="font-sans text-xl font-black mb-3" style={{ color: "#0F1115" }}>Ne iş yapabilirim? Beceriden hizmete örnekler</h2>
         <p className="text-sm mb-4" style={{ color: "#374151" }}>

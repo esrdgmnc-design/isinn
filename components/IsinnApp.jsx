@@ -1471,7 +1471,7 @@ const HomeListingCard = memo(function HomeListingCard({ l, isFavorite, onSelectL
 });
 
 function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApplyJob, onOpenJob, realListings, listingsLoading, realJobs, favoriteIds, onToggleFavorite, onToggleJobFavorite, discoveryPopularCategories, discoveryRecentListings }) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const rotatingWords = t("rotatingWords");
   const [heroQ, setHeroQ] = useState("");
   const [heroCity, setHeroCity] = useState("");
@@ -1636,6 +1636,20 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
             <span style={{ color: "#FFFFFF" }}>{t("home.taglinePrefix")}</span>
             <span style={{ color: "#9CA3AF" }}>{t("home.taglineSuffix")}</span>
           </p>
+          {/* Güven şeridi: en güçlü somut maddeler ilk ekranda (eskiden yalnızca SSS/Hakkımızda'daydı) + hizmet verenler için ikinci yol.
+              Ücretsiz bilgisi yalnızca ücretsiz dönemde ve gerçek bitiş tarihiyle (lib/freePeriod.js) gösterilir. */}
+          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs" style={{ color: "#B8BCC4" }}>
+            <span>✓ {t("home.trustNoCommission")}</span>
+            {isFreePeriod() && <span>✓ {t("home.trustFree", { date: new Date(FREE_PERIOD_UNTIL_ISO).toLocaleDateString(language === "en" ? "en-GB" : "tr-TR", { day: "numeric", month: "long", year: "numeric" }) })}</span>}
+            <span>✓ {t("home.trustPhonePrivate")}</span>
+          </div>
+          <button
+            onClick={() => onNav("createListing")}
+            className="mt-3 text-sm font-bold underline underline-offset-4 text-left"
+            style={{ color: "#F59E0B" }}
+          >
+            {t("home.providerCta")}
+          </button>
         </div>
 
         {/* Hero'nun sağ tarafı (metnin simetriği) boş kalıyordu — gerçek
@@ -3843,6 +3857,18 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
             </>
           )}
 
+          <p className="text-[10px] mt-2 text-center" style={{ color: "#8A8470" }}>{t("listingDetail.verifiedNote")}</p>
+          {["bakici", "hasta-bakici", "logusa-bakicisi", "oyun-ablasi", "cocuk-atolyesi"].includes(listing.category) && (
+            <details className="mt-3 rounded-xl border px-3 py-2 text-xs" style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}>
+              <summary className="cursor-pointer font-medium">{t("listingDetail.safetyTitle")}</summary>
+              <ul className="list-disc pl-4 mt-2 space-y-1" style={{ color: "#5C5744" }}>
+                <li>{t("listingDetail.safetyItem1")}</li>
+<li>{t("listingDetail.safetyItem2")}</li>
+<li>{t("listingDetail.safetyItem3")}</li>
+<li>{t("listingDetail.safetyItem4")}</li>
+              </ul>
+            </details>
+          )}
           {listing.isReal && listing.dbId && (
             <button
               onClick={shareThisListing}
