@@ -16,7 +16,7 @@ import { TALENT_BLOCKED_IDS, redactTalentPII, sanitizeTalentDraft, buildTalentFa
 import { extractJsonValue } from "../lib/jsonExtract";
 import { faqJsonLd } from "../lib/faqJsonLd";
 import {
-  Search, MapPin, Star, Heart, PlayCircle, ChevronLeft, ChevronRight,
+  Search, MapPin, Star, Heart, Share2, PlayCircle, ChevronLeft, ChevronRight,
   Wrench, Truck, Monitor, Paintbrush, Code2, Sparkles, ThumbsUp,
   X, Send, Menu, Map as MapIcon, Check, MessageCircle, Clock, Key,
   GraduationCap, Baby, Megaphone, HardHat, Palette, Users, User, Grid3x3,
@@ -3085,6 +3085,15 @@ function ListingDetail({ listing, onBack, onContact, userReviews, onAddReview, o
   // bildirebilme özelliğinden — bkz. supabase/sahibinden_features.sql.
   const canReportListing = isRealListing && currentUserId && currentUserId !== listing.providerId;
   const [showListingReportForm, setShowListingReportForm] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
+  // Vitrini paylaş: telefonda sistem paylaşım menüsü (WhatsApp/Instagram...), olmayan ortamda bağlantıyı kopyalar.
+  // Bağlantı herkese açık vitrin sayfası (başlık + kapak önizlemesi); "İşinn'de görüntüle" ile uygulamaya geçilir.
+  const shareThisListing = async () => {
+    const url = `https://www.isinn.com.tr/vitrin/${listing.dbId}`;
+    trackEvent("vitrin_shared", { via: "detail" }, currentUserId || null);
+    if (navigator.share) { try { await navigator.share({ title: listing.title, url }); } catch {} return; }
+    try { await navigator.clipboard.writeText(url); setShareCopied(true); setTimeout(() => setShareCopied(false), 2000); } catch {}
+  };
   const [listingReportReason, setListingReportReason] = useState("yanlis_kategori");
   const [listingReportDetail, setListingReportDetail] = useState("");
   const [listingReportSubmitting, setListingReportSubmitting] = useState(false);
@@ -3806,6 +3815,17 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
                 {isFavorited ? t("listingDetail.removeFavorite") : t("listingDetail.addFavorite")}
               </button>
             </>
+          )}
+
+          {listing.isReal && listing.dbId && (
+            <button
+              onClick={shareThisListing}
+              className="w-full py-2.5 mt-2 rounded-full text-sm font-medium border flex items-center justify-center gap-1.5"
+              style={{ borderColor: "#D9D0BA", color: "#1B2B24" }}
+            >
+              <Share2 size={14} />
+              {shareCopied ? t("listingDetail.shareCopied") : t("listingDetail.shareButton")}
+            </button>
           )}
 
           {canReportListing && !listingReportSubmitted && (
