@@ -6790,8 +6790,7 @@ function TalentDiscoveryBanner({ onOpen }) {
           <p className="text-xs text-center sm:text-left" style={{ color: "#B8BCC4" }}>
             {t("talentDiscovery.navGuidesLabel")}{" "}
             <a href="/rehber/becerilerimi-nasil-degerlendirebilirim" className="underline">{t("talentDiscovery.navGuideEval")}</a>{" · "}
-            <a href="/rehber/ilk-vitrinini-nasil-hazirlarsin" className="underline">{t("talentDiscovery.navGuideFirst")}</a>{" · "}
-            <a href="/rehber/sirket-kurmadan-hizmet-sunmak" className="underline">{t("talentDiscovery.navGuideCompany")}</a>
+            <a href="/rehber/ilk-vitrinini-nasil-hazirlarsin" className="underline">{t("talentDiscovery.navGuideFirst")}</a>
           </p>
         </div>
       </div>
