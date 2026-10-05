@@ -2673,11 +2673,18 @@ function OwnerVitrinPanelBody({ userId, serviceId, onListingsChanged, onReviewSe
 
   // Vitrin performansı — gerçek, ölçülebilen sinyallerle: kaç görüşme
   // başladı, kaçı tamamlandı, ortalama puan, kaç kişi favoriledi. "Kaç kişi
-  // baktı" gibi bir görüntülenme sayısı YOK burada — hiçbir yerde
-  // izlenmiyor, var olmayan bir veriyi uydurmamak için o metrik hiç
-  // gösterilmiyor.
+  // baktı" sayısı ise aşağıdaki huni kartında (provider_vitrin_funnel): listing_view
+  // olayına vitrin kimliği eklendiği tarihten beri ölçülür; öncesi uydurulmaz.
   const [stats, setStats] = useState(null);
   const [statsLoading, setStatsLoading] = useState(true);
+  // Son 30 günün huni özeti (supabase/provider_funnel_2026_10_05.sql). SQL çalışmadıysa panel hiç görünmez.
+  const [funnel, setFunnel] = useState(null);
+  useEffect(() => {
+    if (!serviceId) return;
+    let cancelled = false;
+    supabase.rpc("provider_vitrin_funnel", { p_service_id: serviceId, p_days: 30 }).then(({ data, error }) => { if (!cancelled && !error && data) setFunnel(data); }, () => {});
+    return () => { cancelled = true; };
+  }, [serviceId]);
 
   useEffect(() => {
     if (!userId || !serviceId) { setLoading(false); return; }
@@ -2890,6 +2897,41 @@ function OwnerVitrinPanelBody({ userId, serviceId, onListingsChanged, onReviewSe
           </div>
         )}
       </div>
+
+      {funnel && (
+        <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
+          <div className="flex items-center gap-2 mb-1">
+            <TrendingUp size={16} style={{ color: "#3F7D5C" }} />
+            <h3 className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("vitrinMedia.funnelHeading", { days: funnel.days })}</h3>
+          </div>
+          <p className="text-[11px] mb-3" style={{ color: "#6B6550" }}>
+            {funnel.measured_since
+              ? t("vitrinMedia.funnelMeasuredSince", { date: new Date(funnel.measured_since).toLocaleDateString("tr-TR") })
+              : t("vitrinMedia.funnelNotMeasuredYet")}
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {[
+              ["views", t("vitrinMedia.funnelViews")],
+              ["link_clicks", t("vitrinMedia.funnelLinkClicks")],
+              ["shares", t("vitrinMedia.funnelShares")],
+              ["conversations", t("vitrinMedia.funnelConversations")],
+              ["replied", t("vitrinMedia.funnelReplied")],
+              ["confirmed_both", t("vitrinMedia.funnelConfirmedBoth")],
+            ].map(([k, label]) => (
+              <div key={k}>
+                <p className="font-serif text-2xl" style={{ color: "#1B2B24" }}>{funnel[k] ?? 0}</p>
+                <p className="text-[11px]" style={{ color: "#6B6550" }}>{label}</p>
+              </div>
+            ))}
+          </div>
+          {funnel.conversations > funnel.replied && (
+            <p className="text-[11px] mt-3 leading-relaxed" style={{ color: "#8A5A00" }}>
+              {t("vitrinMedia.funnelReplyTip", { count: funnel.conversations - funnel.replied })}
+            </p>
+          )}
+          <p className="text-[10px] mt-2" style={{ color: "#8A8470" }}>{t("vitrinMedia.funnelNote")}</p>
+        </div>
+      )}
 
       <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
         <div className="flex items-center justify-between gap-3">
@@ -3126,7 +3168,7 @@ function ListingDetail({ listing, onBack, onContact, userReviews, onAddReview, o
   // Bağlantı herkese açık vitrin sayfası (başlık + kapak önizlemesi); "İşinn'de görüntüle" ile uygulamaya geçilir.
   const shareThisListing = async () => {
     const url = `https://www.isinn.com.tr/vitrin/${listing.dbId}`;
-    trackEvent("vitrin_shared", { via: "detail" }, currentUserId || null);
+    trackEvent("vitrin_shared", { via: "detail", listing_id: listing.dbId || null }, currentUserId || null);
     if (navigator.share) { try { await navigator.share({ title: listing.title, url }); } catch {} return; }
     try { await navigator.clipboard.writeText(url); setShareCopied(true); setTimeout(() => setShareCopied(false), 2000); } catch {}
   };
@@ -3282,7 +3324,7 @@ function ListingDetail({ listing, onBack, onContact, userReviews, onAddReview, o
     // eski gecikme göstergesi devrede kalıyor.
     setProviderShowcaseLoading(!listing.videoIntroUrl);
     // Ölçüm paydası: vitrin detayı görüntülendi (tıklama oranı için).
-    trackEvent("listing_view", { category: listing.category || null }, currentUserId || null);
+    trackEvent("listing_view", { category: listing.category || null, listing_id: listing.isReal ? listing.dbId : null }, currentUserId || null);
     // work_link_url AYRI sorgu: migration henüz çalışmadıysa (kolon yok) yalnızca bu istek hata verir, video/galeri etkilenmez.
     supabase.from("services").select("work_link_url").eq("id", listing.dbId).maybeSingle().then(({ data, error }) => { if (!cancelled && !error) setWorkLinkUrl(data?.work_link_url || null); }, () => {});
     (async () => {
@@ -4169,7 +4211,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
                   href={wl.url}
                   target="_blank"
                   rel="noopener noreferrer nofollow ugc"
-                  onClick={() => trackEvent("portfolio_link_click", { platform: wl.platform, has_video: !!providerShowcase?.video_intro_url, gallery_count: providerPortfolio.length }, currentUserId || null)}
+                  onClick={() => trackEvent("portfolio_link_click", { listing_id: listing.dbId || null, platform: wl.platform, has_video: !!providerShowcase?.video_intro_url, gallery_count: providerPortfolio.length }, currentUserId || null)}
                   className="inline-flex items-center justify-center gap-2 w-full sm:w-auto min-h-[44px] px-5 rounded-full border text-sm font-medium"
                   style={{ borderColor: "#D9D0BA", color: "#1B2B24", background: "#FFFFFF" }}
                 >
