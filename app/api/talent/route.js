@@ -5,6 +5,10 @@
 // burada. Kullanıcının yazdığı metin loglanmaz — yalnızca token sayıları.
 import { checkRateLimit, getClientIp } from "../../../lib/rateLimit";
 import { allowedTalentCategories, buildTalentPrompt, parseTalentResponse } from "../../../lib/talentCore";
+import { logAiCall } from "../../../lib/aiLog";
+
+// İstem/doğrulama davranışı değişince artır: ai_calls günlüğünde hangi sürümün ne ürettiği görülür.
+const PROMPT_VERSION = "talent-v3";
 
 // Taslaklı yanıt ~15-25 sn sürüyor; Vercel'in varsayılan fonksiyon süresi bunu keserdi.
 export const maxDuration = 60;
@@ -63,6 +67,8 @@ export async function POST(request) {
   const { system, user, userText } = buildTalentPrompt({ input, allowed, excludeIds, objection });
 
   const started = Date.now();
+  // Her yanıta bir kimlik: istemci gösterim/kabul/ret olaylarını bu kimlikle ilişkilendirir (içerik değil, yalnızca kimlik).
+  const requestId = crypto.randomUUID();
   for (let attempt = 0; attempt < 2; attempt++) {
     // Toplam süre maxDuration (60 sn) içinde kalmalı: ikinci denemeye yalnızca
     // yeterli süre kaldıysa girilir ve zaman aşımı kalan süreye göre ayarlanır;
@@ -81,21 +87,28 @@ export async function POST(request) {
       });
     } catch (err) {
       clearTimeout(timer);
+      await logAiCall({ feature: "talent", model: MODEL, promptVersion: PROMPT_VERSION, latencyMs: Date.now() - started, status: err?.name === "AbortError" ? "timeout" : "network_error", meta: { attempt } });
       return Response.json({ error: err?.name === "AbortError" ? "timeout" : "api" }, { status: err?.name === "AbortError" ? 504 : 502 });
     }
     clearTimeout(timer);
     if (!res.ok) {
       console.error("talent upstream", res.status);
+      await logAiCall({ feature: "talent", model: MODEL, promptVersion: PROMPT_VERSION, latencyMs: Date.now() - started, status: "upstream_" + res.status, meta: { attempt } });
       return Response.json({ error: "api" }, { status: 502 });
     }
     const data = await res.json().catch(() => null);
     const text = (data?.content || []).map((b) => b.text || "").join("\n");
     const { suggestions, empty } = parseTalentResponse(text, { allowed, userText });
-    console.log(JSON.stringify({ event: "talent", ok: suggestions.length > 0, empty, attempt, ms: Date.now() - started, in: data?.usage?.input_tokens, out: data?.usage?.output_tokens }));
+    await logAiCall({
+      feature: "talent", model: MODEL, promptVersion: PROMPT_VERSION,
+      inputTokens: data?.usage?.input_tokens, outputTokens: data?.usage?.output_tokens, latencyMs: Date.now() - started,
+      status: empty ? "empty" : suggestions.length > 0 ? "ok" : "invalid_output",
+      meta: { attempt, cards: suggestions.length, with_words: suggestions.filter((x) => x.userWords).length, with_step: suggestions.filter((x) => x.firstStep).length },
+    });
     // Model gerçek bir beceri bulamayıp bilerek boş döndüyse ("asdf" gibi) tekrar
     // denemek boşa para: kullanıcıdan daha fazla bilgi iste.
-    if (empty) return Response.json({ suggestions: [], needMore: true });
-    if (suggestions.length > 0) return Response.json({ suggestions });
+    if (empty) return Response.json({ suggestions: [], needMore: true, requestId });
+    if (suggestions.length > 0) return Response.json({ suggestions, requestId });
   }
   return Response.json({ error: "invalid" }, { status: 422 });
 }

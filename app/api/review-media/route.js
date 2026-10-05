@@ -92,9 +92,11 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
     const clean = text.replace(/```json|```/g, "").trim();
     const parsed = JSON.parse(clean);
     verdict = {
-      appropriate: parsed.appropriate !== false,
+      // Eksik/bozuk alan "uygun" sayılmaz (eskiden !== false idi: model alanı atlarsa kapı açık kalıyordu).
+      appropriate: parsed.appropriate === true,
       showsIdentifiableAdult: !!parsed.showsIdentifiableAdult,
-      showsIdentifiableChild: !!parsed.showsIdentifiableChild,
+      // Çocuk alanı yoksa güvenli tarafta kal.
+      showsIdentifiableChild: parsed.showsIdentifiableChild !== false,
     };
   } catch (err) {
     // fail-safe: kontrol başarısız olursa YAYINLAMA, incelemeye düş.

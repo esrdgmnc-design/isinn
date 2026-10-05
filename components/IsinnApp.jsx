@@ -409,6 +409,7 @@ async function checkAndFlagContent(contentType, contentId, text, profileId) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        feature: "content_flag",
         model: "claude-sonnet-4-6",
         max_tokens: 150,
         messages: [{
@@ -3416,6 +3417,7 @@ function ListingDetail({ listing, onBack, onContact, userReviews, onAddReview, o
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            feature: "review_summary",
             model: "claude-sonnet-4-6",
             max_tokens: 200,
             messages: [{ role: "user", content: `Aşağıda bir hizmet sağlayıcı için bırakılmış müşteri değerlendirmeleri var. Bunları okuyup, öne çıkan ortak temaları (olumlu ve varsa olumsuz) tek, akıcı bir Türkçe cümleyle (en fazla 25 kelime) özetle. Yorumlardan alıntı yapma, sadece genel izlenimi yaz.\n\n${commentsList}\n\nSADECE özet cümleyi yaz, başka hiçbir şey ekleme.` }],
@@ -3447,6 +3449,7 @@ function ListingDetail({ listing, onBack, onContact, userReviews, onAddReview, o
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          feature: "review_media_client",
           model: "claude-sonnet-4-6",
           max_tokens: 200,
           messages: [{
@@ -4906,6 +4909,7 @@ function SearchResultsView({ query, cityFilter, onBack, onSelectListing, realLis
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            feature: "search_expand",
             model: "claude-sonnet-4-6",
             max_tokens: 200,
             messages: [{ role: "user", content: `Bir hizmet pazaryerinde kullanıcı şunu aradı: "${query}". Kategori listesi (slug: isim): ${catList}. Kullanıcının kastettiği en olası 1-2 kategori slug'ını ve aramaya eklenebilecek 3-5 ilgili Türkçe anahtar kelimeyi bul.\n\nSADECE şu JSON formatında yanıt ver: {"categorySlugs": ["..."], "keywords": ["..."]}` }],
@@ -5240,7 +5244,7 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
       const response = await fetch("/api/claude", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 400, messages: [{ role: "user", content: prompt }] }),
+        body: JSON.stringify({ feature: "listing_write", model: "claude-sonnet-4-6", max_tokens: 400, messages: [{ role: "user", content: prompt }] }),
       });
       const data = await response.json();
       const text = (data.content || []).map((b) => b.text || "").join("\n");
@@ -5695,6 +5699,7 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            feature: "ai_match_client",
             model: "claude-sonnet-4-6",
             max_tokens: 1000,
             messages: [{ role: "user", content: prompt }],
@@ -6112,6 +6117,7 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          feature: "opening_message",
           model: "claude-sonnet-4-6",
           max_tokens: 150,
           messages: [{ role: "user", content: `Bir hizmet pazaryerinde bir müşteri "${active.name}" adlı sağlayıcıyla "${active.listingTitle || "bir hizmet"}" konusunda ilk kez iletişime geçiyor. Onun yerine, nazik, net ve kısa (en fazla 3 cümle) bir açılış mesajı yaz — ihtiyacını kısaca belirtsin ve müsaitlik/fiyat sorsun. Türkçe, samimi ama profesyonel bir dille.\n\nSADECE mesaj metnini yaz, tırnak işareti veya başka hiçbir şey ekleme.` }],
@@ -6777,7 +6783,7 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
   const response = await fetch("/api/claude", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 400, temperature: 0.4, messages: [{ role: "user", content: prompt }] }),
+    body: JSON.stringify({ feature: "listing_copy", model: "claude-sonnet-4-6", max_tokens: 400, temperature: 0.4, messages: [{ role: "user", content: prompt }] }),
   });
   if (!response.ok) throw new Error("ai copy request failed");
   const data = await response.json();
@@ -6828,6 +6834,8 @@ async function requestTalentSuggestions({ skills, hours, budget, remote, remoteK
   const validIds = new Set(CATEGORIES.map((c) => c.id));
   const suggestions = (Array.isArray(data?.suggestions) ? data.suggestions : []).filter((s) => validIds.has(s.categoryId));
   if (suggestions.length === 0) throw new TalentApiError("invalid");
+  // Öneri kimliği (içerik değil): gösterim/kabul/ret olayları bununla ilişkilendirilir.
+  suggestions.requestId = typeof data?.requestId === "string" ? data.requestId : null;
   return suggestions;
 }
 
@@ -6956,6 +6964,7 @@ function TalentDiscoveryView({ onBack, onCreateListing, userId }) {
   const [suggestions, setSuggestions] = useState(null);
   const [shownIds, setShownIds] = useState([]);
   const [regenCount, setRegenCount] = useState(0);
+  const reqIdRef = useRef(null); // son öneri yanıtının kimliği (geri bildirim olaylarını ilişkilendirir)
   const [notFitOpen, setNotFitOpen] = useState(false);
   const [notFitReason, setNotFitReason] = useState("");
   const [notFitText, setNotFitText] = useState("");
@@ -7081,7 +7090,8 @@ function TalentDiscoveryView({ onBack, onCreateListing, userId }) {
       setSuggestions(result);
       setShownIds(result.map((s) => s.categoryId));
       setRegenCount(0);
-      trackEvent("talent_results", { count: result.length, drafts: result.filter((s) => s.draft).length }, null);
+      reqIdRef.current = result.requestId || null;
+      trackEvent("talent_results", { count: result.length, drafts: result.filter((s) => s.draft).length, request_id: reqIdRef.current, shown: result.map((s) => s.categoryId), with_words: result.filter((s) => s.userWords).length, with_step: result.filter((s) => s.firstStep).length }, null);
     } catch (err) {
       // API çökerse/limit dolarsa boş ekran yerine, seçtiği çiplere karşılık
       // gelen elle yazılmış öneriler (yapay zekâ kullanılmadığı belirtilerek).
@@ -7106,9 +7116,12 @@ function TalentDiscoveryView({ onBack, onCreateListing, userId }) {
     const prevIds = [...new Set([...shownIds, ...(suggestions || []).map((s) => s.categoryId)])];
     setError("");
     setLoading(true);
-    trackEvent("talent_not_fit", { regen: regenCount + 1 }, null);
+    const reasonKey = TALENT_NOT_FIT_REASONS.find((k) => t(`talentDiscovery.${k}`) === notFitReason) || "other";
+    trackEvent("talent_not_fit", { regen: regenCount + 1, request_id: reqIdRef.current, reason_key: reasonKey, rejected: (suggestions || []).map((s) => s.categoryId), has_text: !!notFitText.trim() }, null);
     try {
       const result = await requestTalentSuggestions({ ...baseInput(), excludeIds: prevIds, objection });
+      reqIdRef.current = result.requestId || reqIdRef.current;
+      trackEvent("talent_regen_results", { regen: regenCount + 1, request_id: result.requestId || null, shown: result.map((s) => s.categoryId) }, null);
       setSuggestions(result);
       setShownIds([...new Set([...prevIds, ...result.map((s) => s.categoryId)])]);
       setRegenCount((c) => c + 1);
@@ -7285,7 +7298,7 @@ function TalentDiscoveryView({ onBack, onCreateListing, userId }) {
           {/* İşinn ürün satış yeri değil: kullanıcı ürün satmak istediğini yazdıysa bunu dürüstçe, deterministik olarak (modele bırakmadan) söyleriz. */}
           {detectsProductSaleIntent(skills) && <p className="text-xs mb-4 font-bold rounded-xl px-3.5 py-2.5" style={{ background: "#FEF3C7", color: "#92400E" }}>{t("talentDiscovery.productNote")}</p>}
           <div className="flex flex-col gap-3" style={{ opacity: loading ? 0.5 : 1 }}>
-            {suggestions.map((s) => {
+            {suggestions.map((s, sIdx) => {
               const cat = CATEGORIES.find((c) => c.id === s.categoryId);
               if (!cat) return null;
               const Icon = cat.icon;
@@ -7305,7 +7318,7 @@ function TalentDiscoveryView({ onBack, onCreateListing, userId }) {
                   <p className="text-xs mb-2" style={{ color: "#6B7280" }}>{s.reason}</p>
                   {s.firstStep && <p className="text-xs mb-3 rounded-xl px-3 py-2" style={{ background: "#F0FDF4", color: "#166534" }}><b>{t("talentDiscovery.firstStepLabel")}</b> {s.firstStep}</p>}
                   <button
-                    onClick={() => { trackEvent("talent_create_click", { category: cat.id, has_draft: !!s.draft }, null); onCreateListing(cat.id, skills.trim(), s.draft); }}
+                    onClick={() => { trackEvent("talent_create_click", { category: cat.id, has_draft: !!s.draft, request_id: reqIdRef.current, rank: sIdx + 1, regen: regenCount }, null); onCreateListing(cat.id, skills.trim(), s.draft); }}
                     className="text-xs font-bold px-4 py-2 rounded-full text-white"
                     style={{ background: "#2563EB" }}
                   >
@@ -8107,7 +8120,7 @@ function CreateListingView({ onBack, onCreated, userId, onGoToProfile, onGoToPla
       const response = await fetch("/api/claude", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 300, messages: [{ role: "user", content: prompt }] }),
+        body: JSON.stringify({ feature: "product_recommendation", model: "claude-sonnet-4-6", max_tokens: 300, messages: [{ role: "user", content: prompt }] }),
       });
       const data = await response.json();
       const text = (data.content || []).map((b) => b.text || "").join("\n");
@@ -8829,6 +8842,7 @@ function SupportChatView({ onBack, onReport, currentUserId, onNav }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          feature: "support_chat",
           model: "claude-sonnet-4-6",
           max_tokens: 500,
           system: `Sen İşinn adlı hizmet pazaryeri uygulamasının teknik destek asistanısın. Kullanıcıların teknik sorunlarını, isteklerini ve şikayetlerini dinliyorsun. Kısa, sıcak, çözüm odaklı ve Türkçe yanıt ver.
@@ -8892,7 +8906,7 @@ ${convoText}`;
       const response = await fetch("/api/claude", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 400, messages: [{ role: "user", content: prompt }] }),
+        body: JSON.stringify({ feature: "report_summary", model: "claude-sonnet-4-6", max_tokens: 400, messages: [{ role: "user", content: prompt }] }),
       });
       const data = await response.json();
       const text = (data.content || []).map((b) => b.text || "").join("\n");
