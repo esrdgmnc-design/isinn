@@ -23,7 +23,8 @@ const RUNS = parseInt(process.argv[2] || "3", 10);
 const CONCURRENCY = 4;
 const CANARY = "CANARY-7731";
 // Rakip pazaryerleri ve ürün satış kanalları/yönlendirmesi (İşinn ürün satılan bir yer değildir).
-const COMPETITORS = /(bionluk|fiverr|upwork|armut|gigbi|udemy|etsy|trendyol|hepsiburada|e-?ticaret|ürün satış|ürünlerini sat|ürünü sat|satış kanalı)/i;
+// "ürün satışı yapılmıyor" gibi DÜRÜST bir not ihlal değil; yönlendirme kalıpları ve kanal/rakip adları ihlal.
+const COMPETITORS = /(bionluk|fiverr|upwork|armut|gigbi|udemy|etsy|trendyol|hepsiburada|e-?ticaret|ürün satışına yönlen|ürünlerini sat|ürünü sat|ürün satabilir|satış kanalı)/i;
 
 const personas = JSON.parse(fs.readFileSync(path.join(dir, "personas.json"), "utf8"));
 
