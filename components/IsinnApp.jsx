@@ -515,6 +515,34 @@ function seededDailyShuffle(arr) {
 // PhotoCropModal'ın onCropComplete'i) — bunu gerçek, yüklenebilir bir File'a
 // çeviren canvas adımı. Kalite 0.92 JPEG'e sabit — orijinal formattan
 // bağımsız, öngörülebilir dosya boyutu için.
+// Telefon fotoğrafları 12-48 megapiksel olabiliyor: olduğu gibi kırpma ekranına verilince tarayıcı donuyor, "Kırp ve
+// Kaydet" çalışmıyor ve yüklemeler çok yavaşlıyordu. Çözümleme createImageBitmap ile (ana iş parçacığını kilitlemeden),
+// uzun kenar maxSide'a indirilip JPEG'e çevrilir. strict=true: okunamayan dosya (örn. HEIC) null döner (kırpma
+// ekranı boş açılmasın); strict=false: sorun olursa özgün dosya aynen döner.
+async function downscaleImageFile(file, { maxSide = 1920, quality = 0.85, strict = false } = {}) {
+  try {
+    if (!file || !file.type || !file.type.startsWith("image/") || file.type === "image/gif" || file.type === "image/svg+xml") return file;
+    if (typeof createImageBitmap !== "function") return file;
+    const bmp = await createImageBitmap(file);
+    const scale = Math.min(1, maxSide / Math.max(bmp.width, bmp.height));
+    if (scale === 1 && file.size <= 1.5 * 1024 * 1024 && file.type === "image/jpeg") { bmp.close?.(); return file; }
+    const w = Math.max(1, Math.round(bmp.width * scale));
+    const h = Math.max(1, Math.round(bmp.height * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#FFFFFF"; ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(bmp, 0, 0, w, h);
+    bmp.close?.();
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", quality));
+    if (!blob) return strict ? null : file;
+    if (blob.size >= file.size && scale === 1) return file;
+    return new File([blob], (file.name || "foto").replace(/\.[^.]+$/, "") + ".jpg", { type: "image/jpeg" });
+  } catch {
+    return strict ? null : file;
+  }
+}
+
 async function getCroppedFile(imageSrc, cropPixels, fileName) {
   const image = await new Promise((resolve, reject) => {
     const img = new Image();
@@ -522,16 +550,19 @@ async function getCroppedFile(imageSrc, cropPixels, fileName) {
     img.onerror = reject;
     img.src = imageSrc;
   });
+  // çıktının uzun kenarı en fazla 1920 px: dosya hem küçük hem hızlı yüklenir
+  const outScale = Math.min(1, 1920 / Math.max(cropPixels.width, cropPixels.height));
   const canvas = document.createElement("canvas");
-  canvas.width = Math.round(cropPixels.width);
-  canvas.height = Math.round(cropPixels.height);
+  canvas.width = Math.max(1, Math.round(cropPixels.width * outScale));
+  canvas.height = Math.max(1, Math.round(cropPixels.height * outScale));
   const ctx = canvas.getContext("2d");
   ctx.drawImage(
     image,
     cropPixels.x, cropPixels.y, cropPixels.width, cropPixels.height,
-    0, 0, cropPixels.width, cropPixels.height
+    0, 0, canvas.width, canvas.height
   );
-  const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.92));
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.9));
+  if (!blob) throw new Error("toBlob");
   return new File([blob], fileName, { type: "image/jpeg" });
 }
 
@@ -549,13 +580,17 @@ function PhotoCropModal({ imageSrc, aspect = 1, shape = "rect", fileName, onCanc
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   const handleSave = async () => {
     if (!croppedAreaPixels) return;
     setSaving(true);
+    setSaveError("");
     try {
       const file = await getCroppedFile(imageSrc, croppedAreaPixels, fileName);
       onCropped(file);
+    } catch {
+      setSaveError("Fotoğraf kaydedilemedi. Vazgeç'e basıp başka bir fotoğraf deneyebilirsin.");
     } finally {
       setSaving(false);
     }
@@ -606,13 +641,14 @@ function PhotoCropModal({ imageSrc, aspect = 1, shape = "rect", fileName, onCanc
             </button>
             <button
               onClick={handleSave}
-              disabled={saving}
+              disabled={saving || !croppedAreaPixels}
               className="flex-1 py-2.5 rounded-lg text-sm font-bold text-white"
-              style={{ background: "#2FBF71", opacity: saving ? 0.7 : 1 }}
+              style={{ background: "#2FBF71", opacity: saving || !croppedAreaPixels ? 0.6 : 1 }}
             >
-              {saving ? "Kaydediliyor..." : "Kırp ve Kaydet"}
+              {saving ? "Kaydediliyor..." : !croppedAreaPixels ? "Fotoğraf hazırlanıyor..." : "Kırp ve Kaydet"}
             </button>
           </div>
+          {saveError && <p role="alert" className="text-xs" style={{ color: "#9C4A3C" }}>{saveError}</p>}
         </div>
       </div>
     </div>
@@ -3522,9 +3558,11 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
     }
   };
 
-  const handleReviewMedia = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleReviewMedia = async (e) => {
+    const picked = e.target.files?.[0];
+    e.target.value = "";
+    if (!picked) return;
+    const file = picked.type.startsWith("image/") ? await downscaleImageFile(picked) : picked;
     const url = URL.createObjectURL(file);
     const type = file.type.startsWith("video/") ? "video" : "image";
     const reader = new FileReader();
@@ -6742,11 +6780,14 @@ function useListingCoverPhoto({ userId, initialUrl }) {
     setModeration({ status: approved ? "approved" : "flagged", reason: reason || t("createListing.moderationFailSafe") });
   };
 
-  const handlePhoto = (e) => {
+  const handlePhoto = async (e) => {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
-    setCropSrc(URL.createObjectURL(file));
+    setPhotoError("");
+    const small = await downscaleImageFile(file, { maxSide: 2400, strict: true });
+    if (!small) { setPhotoError(t("common.errPhotoUnreadable")); return; }
+    setCropSrc(URL.createObjectURL(small));
   };
 
   const uploadPhoto = async (file) => {
@@ -7998,8 +8039,9 @@ function CreateListingView({ onBack, onCreated, userId, onGoToProfile, onGoToPla
     setPortfolioError("");
     setPortfolioUploading(true);
     try {
-      for (const file of files) {
-        const type = file.type.startsWith("video/") ? "video" : "image";
+      for (const rawFile of files) {
+        const type = rawFile.type.startsWith("video/") ? "video" : "image";
+        const file = type === "image" ? await downscaleImageFile(rawFile) : rawFile;
         if (type === "video") {
           const validationError = validateVideoFile(file, t);
           if (validationError) throw new Error(validationError);
@@ -11028,11 +11070,14 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
   // Profil fotoğrafı yuvarlak gösteriliyor (bkz. aşağıdaki rounded-full img) —
   // kırpma modalı da cropShape="round" ile aynı önizlemeyi veriyor.
   const [cropSrc, setCropSrc] = useState(null);
-  const handlePhotoAdd = (e) => {
+  const handlePhotoAdd = async (e) => {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
-    setCropSrc(URL.createObjectURL(file));
+    setPhotoError("");
+    const small = await downscaleImageFile(file, { maxSide: 2400, strict: true });
+    if (!small) { setPhotoError(t("common.errPhotoUnreadable")); return; }
+    setCropSrc(URL.createObjectURL(small));
   };
 
   const uploadPhoto = async (file) => {
