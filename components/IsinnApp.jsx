@@ -12356,9 +12356,18 @@ export default function IsinnPrototype({ session, onRequireAuth, discoveryPopula
   // (bkz. app/page.js'deki onRequireAuth). "auth" değeri Header'daki "Giriş
   // Yap" butonundan geliyor.
   const GATED_VIEWS = new Set(["createListing", "post", "messages", "profile", "favorites"]);
-  const handleNav = (v) => {
-    if (v === "auth") { onRequireAuth?.(); return; }
-    if (!userId && GATED_VIEWS.has(v)) { onRequireAuth?.(); return; }
+  // Giriş yapmamış biri kilitli bir ekrana (örn. "Bu fikirle vitrinimi hazırla") basınca giriş ekranı uygulamayı
+  // kaldırıyor (Google girişinde sayfa da yeniden yükleniyor) — dönünce ana sayfada kalıyor, kullanıcı
+  // "nereye gidiyordum" diye şaşırıyordu. Gitmek istediği ekran + varsa vitrin taslağı sekme oturumunda saklanır,
+  // giriş tamamlanınca kaldığı yerden devam eder (15 dakika geçerli, bir kez kullanılır).
+  const PENDING_NAV_KEY = "isinn_pending_nav";
+  const handleNav = (v, extra) => {
+    if (v === "auth") { try { sessionStorage.removeItem(PENDING_NAV_KEY); } catch {} onRequireAuth?.(); return; }
+    if (!userId && GATED_VIEWS.has(v)) {
+      try { sessionStorage.setItem(PENDING_NAV_KEY, JSON.stringify({ view: v, prefill: extra || null, ts: Date.now() })); } catch {}
+      onRequireAuth?.();
+      return;
+    }
     // Logo/"İşinn." zaten ana sayfadayken tıklanınca setView("home") bir şey
     // değiştirmiyordu (aynı değer, re-render yok) — kullanıcı aşağı kaymışsa
     // tıklama hiçbir şey yapmıyormuş gibi duruyordu. Sayfayı da en üste alıyoruz.
@@ -12376,6 +12385,22 @@ export default function IsinnPrototype({ session, onRequireAuth, discoveryPopula
       setView("home");
       onRequireAuth?.();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
+
+  // Giriş tamamlandı: kaydedilmiş "gitmek istediği ekran" varsa oraya devam et (bkz. handleNav).
+  useEffect(() => {
+    if (!userId) return;
+    let raw = null;
+    try { raw = sessionStorage.getItem(PENDING_NAV_KEY); if (raw) sessionStorage.removeItem(PENDING_NAV_KEY); } catch {}
+    if (!raw) return;
+    try {
+      const p = JSON.parse(raw);
+      if (!p || Date.now() - (p.ts || 0) > 15 * 60 * 1000 || !GATED_VIEWS.has(p.view)) return;
+      if (p.prefill) setTalentPrefill(p.prefill);
+      setSelected(null);
+      setView(p.view);
+    } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
@@ -12449,7 +12474,7 @@ export default function IsinnPrototype({ session, onRequireAuth, discoveryPopula
         <TalentDiscoveryView
           onBack={() => goBack()}
           userId={userId}
-          onCreateListing={(categoryId, note, draft) => { setTalentPrefill({ categoryId, note, title: draft?.title, desc: draft?.description }); handleNav("createListing"); }}
+          onCreateListing={(categoryId, note, draft) => { const prefill = { categoryId, note, title: draft?.title, desc: draft?.description }; setTalentPrefill(prefill); handleNav("createListing", prefill); }}
         />
       )}
       {view === "detail" && selected && (
