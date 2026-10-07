@@ -6264,14 +6264,31 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
     if (!active) return;
     setDraftingMessage(true);
     try {
+      // Bu görüşmede mesajı yazan kişi iş ilanı SAHİBİ değilse (yani bir iş ilanına "Teklif Ver" ile gelen hizmet veren),
+      // müşteri-sağlayıcı metni yazılmamalı: ilan veren gibi konuşuyordu. Burada kendi vitrinlerinden ve ilan metninden
+      // gerçek bilgi alıp TEKLİF mesajı istenir.
+      const isOffer = !!(activeJob && currentUserId && activeJob.clientId !== currentUserId);
+      let offerPrompt = null;
+      if (isOffer) {
+        const [{ data: own }, { data: jobRow }] = await Promise.all([
+          supabase.from("services").select("title, categories(name)").eq("provider_id", currentUserId).eq("active", true).limit(3),
+          supabase.from("jobs").select("title, description").eq("id", activeId).maybeSingle(),
+        ]);
+        const ownLine = (own || []).length
+          ? `Teklif verenin kendi vitrinleri (yalnızca bunlar gerçek): ${own.map((o) => `"${o.title}" (${o.categories?.name || "kategori yok"})`).join(", ")}.`
+          : "Teklif verenin henüz yayında vitrini yok.";
+        const jobTitle = jobRow?.title || active.listingTitle || "bir iş";
+        const jobDesc = (jobRow?.description || "").slice(0, 400);
+        offerPrompt = `Bir hizmet pazaryerinde bir HİZMET VEREN, "${active.name}" adlı kişinin yayınladığı "${jobTitle}" iş ilanına TEKLİF vermek için ilk mesajını yazıyor. İlan açıklaması: "${jobDesc || "(açıklama yok)"}". ${ownLine}\n\nOnun yerine kısa (en fazla 3 cümle), nazik ve net bir teklif mesajı yaz: ilana neden yazdığını söylesin, ilanın ayrıntılarıyla ilgili somut bir soru sorsun ve müsaitlik ile ayrıntıları konuşmayı önersin. KURALLAR: Yalnızca yukarıda verilen gerçek bilgilere dayan; verilmeyen deneyim, sertifika, fiyat ya da süre uydurma. Kendi vitrinleri ilanla ilgili DEĞİLSE ilgili gibi davranma, vitrinden bahsetme. Mesajı yazan iş ilanını VERMİYOR, ilan sahibine yazıyor: kendini ilan veren ya da iş arayan biri gibi tanıtma, "ilanımı yayınladım" gibi cümleler kurma. Türkçe, samimi ama profesyonel bir dille.\n\nSADECE mesaj metnini yaz, tırnak işareti veya başka hiçbir şey ekleme.`;
+      }
       const response = await fetch("/api/claude", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          feature: "opening_message",
+          feature: isOffer ? "opening_message_offer" : "opening_message",
           model: "claude-sonnet-4-6",
-          max_tokens: 150,
-          messages: [{ role: "user", content: `Bir hizmet pazaryerinde bir müşteri "${active.name}" adlı sağlayıcıyla "${active.listingTitle || "bir hizmet"}" konusunda ilk kez iletişime geçiyor. Onun yerine, nazik, net ve kısa (en fazla 3 cümle) bir açılış mesajı yaz — ihtiyacını kısaca belirtsin ve müsaitlik/fiyat sorsun. Türkçe, samimi ama profesyonel bir dille.\n\nSADECE mesaj metnini yaz, tırnak işareti veya başka hiçbir şey ekleme.` }],
+          max_tokens: 200,
+          messages: [{ role: "user", content: offerPrompt || `Bir hizmet pazaryerinde bir müşteri "${active.name}" adlı sağlayıcıyla "${active.listingTitle || "bir hizmet"}" konusunda ilk kez iletişime geçiyor. Onun yerine, nazik, net ve kısa (en fazla 3 cümle) bir açılış mesajı yaz — ihtiyacını kısaca belirtsin ve müsaitlik/fiyat sorsun. Türkçe, samimi ama profesyonel bir dille.\n\nSADECE mesaj metnini yaz, tırnak işareti veya başka hiçbir şey ekleme.` }],
         }),
       });
       const data = await response.json();
