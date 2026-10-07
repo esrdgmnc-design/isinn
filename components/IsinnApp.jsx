@@ -1754,21 +1754,6 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
       </section>
       <div className="h-12" style={{ background: "linear-gradient(180deg, #0F1115 0%, #FFFFFF 100%)" }} />
 
-      <section className="max-w-6xl mx-auto px-5 -mt-8 relative">
-        <div className="rounded-2xl p-1.5 flex gap-1 w-full sm:w-fit shadow-lg" style={{ background: "#FFFFFF", border: "1px solid #F0F0F0" }}>
-          {[["all", t("home.filterAll")], ["home", t("home.filterHome")], ["local", t("home.filterLocal")], ["remote", t("home.filterRemote")]].map(([key, label]) => (
-            <button
-              key={key}
-              onClick={() => setFilter(key)}
-              className="flex-1 sm:flex-none text-[13px] sm:text-sm px-2 sm:px-4 py-2 rounded-xl font-bold transition-all whitespace-nowrap"
-              style={filter === key ? { background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)", color: "#FFFFFF" } : { color: "#6B7280" }}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </section>
-
       {/* "Uygulamayı Telefonuna Kur" — 2026-09-15, PWA desteği (bkz.
           public/manifest.webmanifest) eklendikten sonra kullanıcının kendi
           telefonunda deneyip "çok mutlu" olmasıyla eklendi. Mağaza
@@ -1855,6 +1840,18 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
               {t("home.listingsCountBadge", { count: filtered.length })}
             </span>
           )}
+        </div>
+        <div className="rounded-2xl p-1.5 flex gap-1 w-full sm:w-fit mb-5" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB" }}>
+          {[["all", t("home.filterAll")], ["home", t("home.filterHome")], ["local", t("home.filterLocal")], ["remote", t("home.filterRemote")]].map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setFilter(key)}
+              className="flex-1 sm:flex-none text-[13px] sm:text-sm px-2 sm:px-4 py-2 rounded-xl font-bold transition-all whitespace-nowrap"
+              style={filter === key ? { background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)", color: "#FFFFFF" } : { color: "#6B7280" }}
+            >
+              {label}
+            </button>
+          ))}
         </div>
         {listingsLoading ? (
           <div className="flex items-center gap-2 py-16 justify-center">
