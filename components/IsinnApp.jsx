@@ -5618,18 +5618,7 @@ Aciliyet: ${urgencyLabel}${mode === "local" ? ` · Hizmet yeri: ${prefLabel}` : 
         </div>
 
         <div>
-          <div className="flex items-center justify-between mb-1.5">
-            <label className="text-xs font-medium" style={{ color: "#5C5744" }}>{t("postJob.titleLabel")}</label>
-            <button
-              onClick={writeWithAI}
-              disabled={aiWriting}
-              className="text-[11px] font-bold flex items-center gap-1 px-2.5 py-1 rounded-full"
-              style={{ background: "#EFF6FF", color: "#2563EB" }}
-            >
-              {aiWriting ? <Loader2 size={11} className="animate-spin" /> : <Sparkles size={11} />}
-              {aiWriting ? t("common.aiWriting") : t("common.aiWrite")}
-            </button>
-          </div>
+          <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("postJob.titleLabel")}</label>
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -5683,7 +5672,18 @@ Aciliyet: ${urgencyLabel}${mode === "local" ? ` · Hizmet yeri: ${prefLabel}` : 
         )}
 
         <div>
-          <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("postJob.descLabel")}</label>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="text-xs font-medium" style={{ color: "#5C5744" }}>{t("postJob.descLabel")}</label>
+            <button
+              onClick={writeWithAI}
+              disabled={aiWriting}
+              className="text-[11px] font-bold flex items-center gap-1 px-2.5 py-1 rounded-full"
+              style={{ background: "#EFF6FF", color: "#2563EB" }}
+            >
+              {aiWriting ? <Loader2 size={11} className="animate-spin" /> : <Sparkles size={11} />}
+              {aiWriting ? t("common.aiWriting") : t("common.aiWrite")}
+            </button>
+          </div>
           <textarea
             value={desc}
             onChange={(e) => setDesc(e.target.value)}
