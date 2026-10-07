@@ -870,8 +870,23 @@ async function checkProfileGate(userId) {
   const { count: vitrinCount } = await supabase.from("services").select("id", { count: "exact", head: true }).eq("provider_id", userId);
   if (!vitrinCount) return { ok: true };
   const { data: prof } = await supabase.from("profiles").select("avatar_url, city").eq("id", userId).maybeSingle();
-  if (!prof?.avatar_url || !prof?.city) {
-    return { ok: false, reason: "Devam etmeden önce profiline bir fotoğraf ve şehir eklemen gerekiyor." };
+  let city = prof?.city;
+  // İlk vitrin bu kilit olmadan yayınlanabiliyor; ikinci vitrinde "şehir eksik" diye durdurmak kafa karıştırıyordu
+  // ("ilk vitrinim yayında oysa"). Kullanıcının kendi yerel vitrininde zaten yazdığı şehir varsa profile de onu yazarız.
+  if (!city) {
+    const { data: own } = await supabase.from("services").select("city").eq("provider_id", userId).not("city", "is", null).limit(1);
+    const cityId = deriveCityIdFromLabel(own?.[0]?.city);
+    const cityName = cityId ? CITIES.find((c) => c.id === cityId)?.name : null;
+    if (cityName) {
+      const { error: upErr } = await supabase.from("profiles").update({ city: cityName }).eq("id", userId);
+      if (!upErr) city = cityName;
+    }
+  }
+  const missing = [];
+  if (!prof?.avatar_url) missing.push("profil fotoğrafı");
+  if (!city) missing.push("şehir");
+  if (missing.length) {
+    return { ok: false, reason: `İlk vitrinin yayında, teşekkürler. Yeni bir vitrin ya da ilan açmadan önce profiline şunu eklemen gerekiyor: ${missing.join(" ve ")}. Profil sayfasında ekleyip kaydettikten sonra buraya dönebilirsin.` };
   }
   return { ok: true };
 }
