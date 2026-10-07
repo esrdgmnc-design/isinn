@@ -544,25 +544,47 @@ async function downscaleImageFile(file, { maxSide = 1920, quality = 0.85, strict
 }
 
 async function getCroppedFile(imageSrc, cropPixels, fileName) {
-  const image = await new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = reject;
-    img.src = imageSrc;
-  });
+  // Görseli önce fetch + createImageBitmap ile (tablet/eski tarayıcılarda <img> yüklemesi sorun çıkarabiliyor), olmazsa Image ile yükle
+  let image = null;
+  try {
+    const srcBlob = await (await fetch(imageSrc)).blob();
+    if (typeof createImageBitmap === "function") image = await createImageBitmap(srcBlob);
+  } catch {}
+  if (!image) {
+    image = await new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error("image_load"));
+      img.src = imageSrc;
+    });
+  }
   // çıktının uzun kenarı en fazla 1920 px: dosya hem küçük hem hızlı yüklenir
   const outScale = Math.min(1, 1920 / Math.max(cropPixels.width, cropPixels.height));
   const canvas = document.createElement("canvas");
   canvas.width = Math.max(1, Math.round(cropPixels.width * outScale));
   canvas.height = Math.max(1, Math.round(cropPixels.height * outScale));
   const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("no_canvas");
+  ctx.fillStyle = "#FFFFFF";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.drawImage(
     image,
     cropPixels.x, cropPixels.y, cropPixels.width, cropPixels.height,
     0, 0, canvas.width, canvas.height
   );
-  const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.9));
-  if (!blob) throw new Error("toBlob");
+  image.close?.();
+  let blob = await new Promise((resolve) => {
+    try { canvas.toBlob(resolve, "image/jpeg", 0.9); } catch { resolve(null); }
+  });
+  if (!blob) {
+    // toBlob bazı tarayıcılarda null dönüyor: toDataURL ile dene
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
+    const bin = atob(dataUrl.split(",")[1] || "");
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    blob = new Blob([bytes], { type: "image/jpeg" });
+  }
+  if (!blob || !blob.size) throw new Error("toBlob");
   return new File([blob], fileName, { type: "image/jpeg" });
 }
 
@@ -581,6 +603,21 @@ function PhotoCropModal({ imageSrc, aspect = 1, shape = "rect", fileName, onCanc
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [showSkipCrop, setShowSkipCrop] = useState(false);
+  // Kırpma yapılamazsa fotoğrafı olduğu gibi (zaten küçültülmüş haliyle) kullan
+  const useWithoutCrop = async () => {
+    setSaving(true);
+    setSaveError("");
+    try {
+      const blob = await (await fetch(imageSrc)).blob();
+      onCropped(new File([blob], fileName, { type: blob.type || "image/jpeg" }));
+    } catch (err) {
+      trackEvent("photo_issue", { stage: "skip_crop", err: String(err?.message || err).slice(0, 60) }, null);
+      setSaveError("Fotoğraf okunamadı. Vazgeç'e basıp başka bir fotoğraf seç.");
+    } finally {
+      setSaving(false);
+    }
+  };
   // Fotoğraf 8 sn içinde ekranda hazır olmazsa sessizce bekletmeyiz: kullanıcıya söyler, olay kaydederiz.
   useEffect(() => {
     if (croppedAreaPixels) return;
@@ -599,8 +636,10 @@ function PhotoCropModal({ imageSrc, aspect = 1, shape = "rect", fileName, onCanc
       const file = await getCroppedFile(imageSrc, croppedAreaPixels, fileName);
       onCropped(file);
     } catch (err) {
-      trackEvent("photo_issue", { stage: "crop_save", err: String(err?.message || err).slice(0, 120) }, null);
-      setSaveError("Fotoğraf kaydedilemedi. Vazgeç'e basıp başka bir fotoğraf deneyebilirsin.");
+      const why = String(err?.message || err).slice(0, 60);
+      trackEvent("photo_issue", { stage: "crop_save", err: why }, null);
+      setSaveError(`Fotoğraf kırpılamadı (${why}). "Kırpmadan kullan"ı deneyebilir ya da Vazgeç'e basıp başka bir fotoğraf seçebilirsin.`);
+      setShowSkipCrop(true);
     } finally {
       setSaving(false);
     }
@@ -608,14 +647,16 @@ function PhotoCropModal({ imageSrc, aspect = 1, shape = "rect", fileName, onCanc
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 overflow-y-auto" style={{ background: "rgba(15,17,21,0.82)" }}>
-      <div className="w-full max-w-sm rounded-2xl shadow-2xl my-auto" style={{ background: "#FFFFFF", maxHeight: "92dvh", overflowY: "auto" }}>
+      <div className="w-full max-w-sm rounded-2xl shadow-2xl my-auto" style={{ background: "#FFFFFF", maxHeight: "92vh", overflowY: "auto" }}>
         <div className="px-4 pt-4 pb-1">
           <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>Fotoğrafı Ayarla</p>
         </div>
+        {/* NOT: dvh birimi eski tablet/telefon tarayıcılarında (Safari 15.3 ve öncesi, eski Android Chrome) yok sayılıyor ve
+            yükseklik 0 çıkıp kırpma alanı hiç oluşmuyordu ("Kırp ve Kaydet" sessizce çalışmıyordu) — vh kullanıyoruz.
         {/* Sabit 320px yükseklik, yatay/kısa telefon ekranlarında (ör. döndürülmüş
             veya küçük Android) "Kırp ve Kaydet" butonunu ekran dışına itip
             ulaşılamaz kılıyordu — dvh'ye göre üst sınır koyuyoruz. */}
-        <div className="relative" style={{ height: "min(320px, 42dvh)", background: "#111" }}>
+        <div className="relative" style={{ height: "min(320px, 42vh)", background: "#111" }}>
           <Cropper
             image={imageSrc}
             crop={crop}
@@ -659,6 +700,17 @@ function PhotoCropModal({ imageSrc, aspect = 1, shape = "rect", fileName, onCanc
             </button>
           </div>
           {saveError && <p role="alert" className="text-xs" style={{ color: "#9C4A3C" }}>{saveError}</p>}
+          {(showSkipCrop || (!croppedAreaPixels && saveError)) && (
+            <button
+              type="button"
+              onClick={useWithoutCrop}
+              disabled={saving}
+              className="w-full py-2.5 rounded-lg text-sm font-bold border"
+              style={{ borderColor: "#2FBF71", color: "#1B7A47", background: "#FFFFFF" }}
+            >
+              Kırpmadan kullan
+            </button>
+          )}
         </div>
       </div>
     </div>
