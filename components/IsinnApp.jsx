@@ -6814,7 +6814,7 @@ function useListingCoverPhoto({ userId, initialUrl }) {
     }
   };
 
-  return { photo, photoUploading, photoError, moderation, cropSrc, setCropSrc, handlePhoto, uploadPhoto };
+  return { photo, photoUploading, photoError, moderation, cropSrc, setCropSrc, handlePhoto, uploadPhoto, setPhoto, setModeration };
 }
 
 function ListingCoverPhotoField({ cover, hint }) {
@@ -7975,6 +7975,44 @@ function CreateListingView({ onBack, onCreated, userId, onGoToProfile, onGoToPla
   const [recommendation, setRecommendation] = useState(null); // { product, pitch }
   const [recLoading, setRecLoading] = useState(false);
 
+  // Sayfa yenilenince (ya da tarayıcı/tablet sayfayı yeniden yüklediğinde) doldurulan form ve "Yeteneğini Farket"ten
+  // gelen taslak kayboluyordu. Form alanları bu cihazın tarayıcısında 7 gün saklanır, yayınlanınca silinir.
+  // Yeteneğini Farket'ten taze bir taslakla gelindiyse (initial*) eski taslak geri yüklenmez, onun yerine yazılır.
+  const LISTING_DRAFT_KEY = "isinn_listing_draft_v1";
+  const [draftReady, setDraftReady] = useState(false);
+  const [draftRestored, setDraftRestored] = useState(false);
+  useEffect(() => {
+    try {
+      const fresh = !!(initialCategoryId || initialTitle || initialDesc || initialNote);
+      const raw = !fresh && userId ? localStorage.getItem(LISTING_DRAFT_KEY) : null;
+      if (raw) {
+        const d = JSON.parse(raw);
+        if (d && d.userId === userId && Date.now() - (d.ts || 0) < 7 * 24 * 3600 * 1000 && d.f) {
+          const f = d.f;
+          if (f.mode === "local" || f.mode === "remote") setMode(f.mode);
+          setProviderName(f.providerName || ""); setCategoryId(f.categoryId || ""); setCustomCategoryLabel(f.customCategoryLabel || "");
+          setTitle(f.title || ""); setDesc(f.desc || ""); setCityId(f.cityId || "istanbul"); setDistrict(f.district || "");
+          setPrice(f.price || ""); setHomeServiceVal(f.homeServiceVal || "evde");
+          if (d.photo?.url) { cover.setPhoto({ url: d.photo.url, name: d.photo.name || "kapak" }); cover.setModeration({ status: "approved" }); }
+          if (f.title || f.desc || f.categoryId || d.photo?.url) setDraftRestored(true);
+        }
+      }
+    } catch {}
+    setDraftReady(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    if (!draftReady || !userId || step !== "form") return;
+    try {
+      localStorage.setItem(LISTING_DRAFT_KEY, JSON.stringify({
+        userId, ts: Date.now(),
+        f: { mode, providerName, categoryId, customCategoryLabel, title, desc, cityId, district, price, homeServiceVal },
+        photo: photo?.url && moderation?.status === "approved" ? { url: photo.url, name: photo.name } : null,
+      }));
+    } catch {}
+  }, [draftReady, userId, step, mode, providerName, categoryId, customCategoryLabel, title, desc, cityId, district, price, homeServiceVal, photo, moderation]);
+  const clearListingDraft = () => { try { localStorage.removeItem(LISTING_DRAFT_KEY); } catch {} };
+
   // Kullanıcı geri bildirimi (2026-09-16): kapak fotoğrafı dışındaki her şey
   // (sertifika, CV, iş başında portföy, tanıtım videosu) ayrı bir ekrana
   // (eski medya yönetim ekranı) gitmeyi gerektiriyordu — "Fotoğraf, Video, Sertifika
@@ -8333,6 +8371,7 @@ function CreateListingView({ onBack, onCreated, userId, onGoToProfile, onGoToPla
     setSubmitting(false);
     setCreated(listing);
     onCreated();
+    clearListingDraft();
     setStep("success");
     getRecommendation(listing);
   };
@@ -8689,6 +8728,23 @@ function CreateListingView({ onBack, onCreated, userId, onGoToProfile, onGoToPla
         )}
         {initialTitle && (
           <p className="text-xs rounded-xl px-3.5 py-2.5" style={{ background: "#EFF6FF", color: "#1D4ED8" }}>{t("talentDiscovery.draftBanner")}</p>
+        )}
+        {draftRestored && (
+          <p className="text-xs rounded-xl px-3.5 py-2.5 flex items-center justify-between gap-3" style={{ background: "#F0FDF4", color: "#166534" }}>
+            <span>{t("createListing.draftRestored")}</span>
+            <button
+              type="button"
+              className="font-bold shrink-0 underline"
+              onClick={() => {
+                clearListingDraft();
+                setDraftRestored(false);
+                setProviderName(""); setCategoryId(""); setCustomCategoryLabel(""); setTitle(""); setDesc(""); setDistrict(""); setPrice("");
+                cover.setPhoto(null); cover.setModeration(null);
+              }}
+            >
+              {t("createListing.draftClear")}
+            </button>
+          </p>
         )}
 
         <div>
