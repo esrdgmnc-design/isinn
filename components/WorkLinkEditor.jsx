@@ -20,7 +20,7 @@ export default function WorkLinkEditor({ serviceId, initialUrl, userId, source, 
   const [error, setError] = useState("");
 
   const parsed = normalizeWorkLink(value, platform);
-  const handleOnly = parsed.ok && parsed.needsPlatform;
+  const handleOnly = !!parsed.needsPlatform;
 
   const save = async () => {
     setError(""); setStatus("");

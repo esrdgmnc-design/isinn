@@ -39,6 +39,18 @@ ok("https://www.instagram.com/ilayda_mum/?igsh=abc", "https://www.instagram.com/
 ok("http://instagram.com/ilayda", "https://www.instagram.com/ilayda/");
 ok("tiktok.com/@ilayda", "https://www.tiktok.com/@ilayda");
 ok("youtube.com/@ilaydamum", "https://www.youtube.com/@ilaydamum");
+ok("linkedin.com/in/esra-gunes", "https://www.linkedin.com/in/esra-gunes/");
+ok("https://tr.linkedin.com/in/esra-gunes-123?trk=abc", "https://www.linkedin.com/in/esra-gunes-123/");
+ok("https://www.linkedin.com/company/isinn/", "https://www.linkedin.com/company/isinn/");
+bad("linkedin.com/posts/esra_abc-123", "post");
+bad("linkedin.com/feed/", "post");
+bad("linkedin.com/jobs/view/123", "post");
+bad("linkedin.com/in/ab", "format");
+bad("https://evil.com/linkedin.com/in/esra-gunes", "platform");
+bad("https://linkedin.com.evil.com/in/esra-gunes", "platform");
+{ const r = normalizeWorkLink("esra-gunes", "linkedin"); assert.equal(r.ok, true); assert.equal(r.url, "https://www.linkedin.com/in/esra-gunes/"); }
+{ const r = normalizeWorkLink("esra-gunes", "instagram"); assert.equal(r.ok, false); assert.equal(r.needsPlatform, true); }
+assert.equal(safeWorkLink("https://www.linkedin.com/in/esra-gunes/").platform, "linkedin");
 bad("instagram.com/p/XYZ/", "post");
 bad("tiktok.com/video/123", "post");
 bad("youtube.com/watch?v=abc", "post");
