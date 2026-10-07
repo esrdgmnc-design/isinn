@@ -6745,6 +6745,7 @@ function useCategoryIdBySlug() {
 async function checkPhotoModeration(url, mimeType) {
   try {
     const { data: { session } } = await supabase.auth.getSession();
+    // 40 sn içinde cevap gelmezse bekleme biter (yavaş bağlantıda ekran sonsuza dek "kontrol ediliyor" kalmasın).
     const response = await fetch("/api/listing-photo-check", {
       method: "POST",
       headers: {
@@ -6752,6 +6753,7 @@ async function checkPhotoModeration(url, mimeType) {
         ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
       },
       body: JSON.stringify({ url, mimeType }),
+      signal: AbortSignal.timeout ? AbortSignal.timeout(40000) : undefined,
     });
     const data = await response.json();
     if (data.error) throw new Error(data.error);

@@ -10,6 +10,9 @@ import sharp from "sharp";
 import { getAuthedUser } from "../../../lib/serverAuth";
 import { checkRateLimit, getClientIp } from "../../../lib/rateLimit";
 
+// Görsel indirme + küçültme + yapay zekâ kontrolü varsayılan süreyi aşabiliyordu (istemci sonsuza dek "kontrol ediliyor" görüyordu).
+export const maxDuration = 30;
+
 export async function POST(request) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
