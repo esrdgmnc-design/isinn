@@ -1454,7 +1454,9 @@ function InstallAppBanner() {
       const alreadyDismissed = localStorage.getItem("isinn_install_banner_dismissed") === "1";
       if (isStandalone || alreadyDismissed) return; // dismissed=true kalır, hiç gösterilmez
       const ua = window.navigator.userAgent || "";
-      if (/iphone|ipad|ipod/i.test(ua)) setPlatform("ios");
+      // iPadOS 13+ Safari kendini "Macintosh" olarak tanıtıyor (masaüstü sitesi): dokunmatik ekran + Macintosh = iPad.
+      const isIpadOs = /macintosh/i.test(ua) && (window.navigator.maxTouchPoints || 0) > 1;
+      if (/iphone|ipad|ipod/i.test(ua) || isIpadOs) setPlatform("ios");
       else if (/android/i.test(ua)) setPlatform("android");
       else setPlatform("desktop");
       setDismissed(false);
