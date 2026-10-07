@@ -42,8 +42,10 @@ export default function RehberIndexPage() {
   const bySlug = new Map(REHBER_POSTS.map((p) => [p.slug, p]));
   const used = new Set(GROUPS.flatMap((g) => g.slugs));
   const groups = GROUPS.map((g) => ({ title: g.title, posts: g.slugs.map((s) => bySlug.get(s)).filter(Boolean) }));
-  const rest = REHBER_POSTS.filter((p) => !used.has(p.slug));
+  const rest = REHBER_POSTS.filter((p) => !used.has(p.slug) && p.lang !== "en");
   if (rest.length) groups.push({ title: "Diğer rehberler", posts: rest });
+  const english = REHBER_POSTS.filter((p) => p.lang === "en");
+  if (english.length) groups.push({ title: "Guides in English: finding freelance work", posts: english, lang: "en" });
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -67,7 +69,7 @@ export default function RehberIndexPage() {
         Ne yapabileceğini bilmiyorsan <Link href="/yetenegini-farket" style={{ color: "#2563EB" }}>Yeteneğini Farket</Link> aracını deneyebilirsin.
       </p>
       {groups.map((g) => (
-        <section key={g.title} className="mb-10">
+        <section key={g.title} className="mb-10" lang={g.lang}>
           <h2 className="font-sans text-lg font-black mb-3" style={{ color: "#0F1115" }}>{g.title}</h2>
           <div className="flex flex-col gap-4">
             {g.posts.map((post) => (

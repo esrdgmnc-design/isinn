@@ -17,7 +17,7 @@ export function generateMetadata({ params }) {
     title: `${post.title} — İşinn`,
     description: post.description,
     alternates: { canonical: url },
-    openGraph: { title: post.title, description: post.description, url, siteName: "İşinn", locale: "tr_TR", type: "article" },
+    openGraph: { title: post.title, description: post.description, url, siteName: "İşinn", locale: post.lang === "en" ? "en_US" : "tr_TR", type: "article" },
     twitter: { card: "summary_large_image", title: post.title, description: post.description },
   };
 }
@@ -31,12 +31,18 @@ export default function RehberPostPage({ params }) {
   // başlayıp gerekirse diğerleriyle 3'e tamamlayan basit bir "ilgili rehber"
   // listesi, hem kullanıcıyı sitede tutuyor hem de rehber sayfalarının
   // birbirine PageRank/keşif değeri aktarmasını sağlıyor.
-  const sameCategory = REHBER_POSTS.filter((p) => p.slug !== post.slug && p.category === post.category);
-  const others = REHBER_POSTS.filter((p) => p.slug !== post.slug && p.category !== post.category);
+  // Aynı dildeki yazılar önce gelir (İngilizce yazının "ilgili rehber"i İngilizce olsun).
+  const sameLang = REHBER_POSTS.filter((p) => (p.lang || "tr") === (post.lang || "tr"));
+  const sameCategory = sameLang.filter((p) => p.slug !== post.slug && p.category === post.category);
+  const others = sameLang.filter((p) => p.slug !== post.slug && p.category !== post.category);
   const relatedPosts = [...sameCategory, ...others].slice(0, 3);
 
   const meta = rehberMeta(post);
-  const fmtDate = (iso) => new Date(`${iso}T12:00:00Z`).toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" });
+  const isEn = post.lang === "en";
+  const L = isEn
+    ? { path: "Page path", guides: "Guides", published: "Published", updated: "Updated", by: "Prepared by", short: "Short answer:", faq: "Frequently asked questions", related: "You may also like", locale: "en-US" }
+    : { path: "Sayfa yolu", guides: "Rehberler", published: "Yayın", updated: "Güncelleme", by: "Hazırlayan", short: "Kısa cevap:", faq: "Sıkça Sorulan Sorular", related: "İlgini Çekebilir", locale: "tr-TR" };
+  const fmtDate = (iso) => new Date(`${iso}T12:00:00Z`).toLocaleDateString(L.locale, { day: "numeric", month: "long", year: "numeric" });
   // Yazar: kurucunun adı onayıyla eklenene kadar kurum (Organization). Şema, sayfadaki
   // görünür "Hazırlayan" satırıyla aynı bilgiyi taşır.
   const jsonLd = {
@@ -46,7 +52,7 @@ export default function RehberPostPage({ params }) {
     description: post.description,
     url: `${BASE_URL}/rehber/${post.slug}`,
     mainEntityOfPage: `${BASE_URL}/rehber/${post.slug}`,
-    inLanguage: "tr",
+    inLanguage: isEn ? "en" : "tr",
     datePublished: meta.published,
     dateModified: meta.updated,
     author: { "@type": "Organization", name: "İşinn", url: BASE_URL },
@@ -57,7 +63,7 @@ export default function RehberPostPage({ params }) {
     "@type": "BreadcrumbList",
     itemListElement: [
       { "@type": "ListItem", position: 1, name: "İşinn", item: BASE_URL },
-      { "@type": "ListItem", position: 2, name: "Rehberler", item: `${BASE_URL}/rehber` },
+      { "@type": "ListItem", position: 2, name: L.guides, item: `${BASE_URL}/rehber` },
       { "@type": "ListItem", position: 3, name: post.title, item: `${BASE_URL}/rehber/${post.slug}` },
     ],
   };
@@ -86,17 +92,17 @@ export default function RehberPostPage({ params }) {
         // eslint-disable-next-line react/no-danger
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdString(faqJsonLd) }} />
       )}
-      <div className="max-w-2xl mx-auto px-5 py-10">
-        <nav aria-label="Sayfa yolu" className="text-xs" style={{ color: "#6B7280" }}>
-          <Link href="/" style={{ color: "#2563EB" }}>İşinn</Link> › <Link href="/rehber" style={{ color: "#2563EB" }}>Rehberler</Link> › <span>{post.title}</span>
+      <div className="max-w-2xl mx-auto px-5 py-10" lang={isEn ? "en" : undefined}>
+        <nav aria-label={L.path} className="text-xs" style={{ color: "#6B7280" }}>
+          <Link href="/" style={{ color: "#2563EB" }}>İşinn</Link> › <Link href="/rehber" style={{ color: "#2563EB" }}>{L.guides}</Link> › <span>{post.title}</span>
         </nav>
         <h1 className="font-sans text-2xl md:text-3xl font-black mt-4 mb-2" style={{ color: "#0F1115" }}>{post.title}</h1>
         <p className="text-xs mb-5" style={{ color: "#6B7280" }}>
-          Yayın: {fmtDate(meta.published)} · Güncelleme: {fmtDate(meta.updated)} · Hazırlayan: İşinn
+          {L.published}: {fmtDate(meta.published)} · {L.updated}: {fmtDate(meta.updated)} · {L.by}: İşinn
         </p>
         {meta.shortAnswer && (
           <p className="text-sm rounded-xl px-4 py-3 mb-6" style={{ background: "#EFF6FF", color: "#1E3A8A" }}>
-            <b>Kısa cevap:</b> {meta.shortAnswer}
+            <b>{L.short}</b> {meta.shortAnswer}
           </p>
         )}
         <div
@@ -107,7 +113,7 @@ export default function RehberPostPage({ params }) {
         />
         {post.faq && post.faq.length > 0 && (
           <div className="mt-8 pt-6 border-t" style={{ borderColor: "#E5E7EB" }}>
-            <h2 className="font-sans text-lg font-black mb-4" style={{ color: "#0F1115" }}>Sıkça Sorulan Sorular</h2>
+            <h2 className="font-sans text-lg font-black mb-4" style={{ color: "#0F1115" }}>{L.faq}</h2>
             <div className="space-y-4">
               {post.faq.map((f, i) => (
                 <div key={i}>
@@ -128,7 +134,7 @@ export default function RehberPostPage({ params }) {
 
         {relatedPosts.length > 0 && (
           <div className="mt-10 pt-6 border-t" style={{ borderColor: "#E5E7EB" }}>
-            <h2 className="font-sans text-lg font-black mb-4" style={{ color: "#0F1115" }}>İlgini Çekebilir</h2>
+            <h2 className="font-sans text-lg font-black mb-4" style={{ color: "#0F1115" }}>{L.related}</h2>
             <div className="space-y-3">
               {relatedPosts.map((p) => (
                 <Link key={p.slug} href={`/rehber/${p.slug}`} className="block text-sm font-bold" style={{ color: "#2563EB" }}>
