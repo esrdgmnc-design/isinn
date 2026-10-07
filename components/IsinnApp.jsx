@@ -581,6 +581,15 @@ function PhotoCropModal({ imageSrc, aspect = 1, shape = "rect", fileName, onCanc
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
+  // Fotoğraf 8 sn içinde ekranda hazır olmazsa sessizce bekletmeyiz: kullanıcıya söyler, olay kaydederiz.
+  useEffect(() => {
+    if (croppedAreaPixels) return;
+    const id = setTimeout(() => {
+      trackEvent("photo_issue", { stage: "crop_not_ready" }, null);
+      setSaveError("Fotoğraf ekranda açılamadı. Vazgeç'e basıp başka bir fotoğraf dene (JPG ya da PNG olması en iyisi).");
+    }, 8000);
+    return () => clearTimeout(id);
+  }, [croppedAreaPixels]);
 
   const handleSave = async () => {
     if (!croppedAreaPixels) return;
@@ -589,7 +598,8 @@ function PhotoCropModal({ imageSrc, aspect = 1, shape = "rect", fileName, onCanc
     try {
       const file = await getCroppedFile(imageSrc, croppedAreaPixels, fileName);
       onCropped(file);
-    } catch {
+    } catch (err) {
+      trackEvent("photo_issue", { stage: "crop_save", err: String(err?.message || err).slice(0, 120) }, null);
       setSaveError("Fotoğraf kaydedilemedi. Vazgeç'e basıp başka bir fotoğraf deneyebilirsin.");
     } finally {
       setSaving(false);
@@ -6757,9 +6767,11 @@ async function checkPhotoModeration(url, mimeType) {
     });
     const data = await response.json();
     if (data.error) throw new Error(data.error);
+    if (!data.approved) trackEvent("photo_issue", { stage: "moderation_flagged", reason: String(data.reason || "").slice(0, 80) }, null);
     return { approved: !!data.approved, reason: data.reason };
-  } catch {
+  } catch (err) {
     // Fail-safe: kontrol başarısız olursa ONAYLAMA.
+    trackEvent("photo_issue", { stage: "moderation_error", err: String(err?.message || err).slice(0, 120) }, null);
     return { approved: false, reason: null };
   }
 }
@@ -6787,8 +6799,10 @@ function useListingCoverPhoto({ userId, initialUrl }) {
     e.target.value = "";
     if (!file) return;
     setPhotoError("");
+    // Teşhis (içerik yok): hangi tür/boyutta dosya geliyor, hangi adımda takılıyor — Yönetim > olaylar.
+    trackEvent("photo_pick", { mime: file.type || "", kb: Math.round(file.size / 1024) }, null);
     const small = await downscaleImageFile(file, { maxSide: 2400, strict: true });
-    if (!small) { setPhotoError(t("common.errPhotoUnreadable")); return; }
+    if (!small) { trackEvent("photo_issue", { stage: "decode", mime: file.type || "", kb: Math.round(file.size / 1024) }, null); setPhotoError(t("common.errPhotoUnreadable")); return; }
     setCropSrc(URL.createObjectURL(small));
   };
 
@@ -6808,6 +6822,7 @@ function useListingCoverPhoto({ userId, initialUrl }) {
       setPhoto({ url: data.publicUrl, name: file.name });
       checkPhotoContent(data.publicUrl, file.type);
     } catch (err) {
+      trackEvent("photo_issue", { stage: "upload", err: String(err?.message || err).slice(0, 120) }, null);
       setPhotoError(t("createListing.errPhotoUploadFailed", { message: err.message }));
     } finally {
       setPhotoUploading(false);
@@ -11133,8 +11148,10 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
     e.target.value = "";
     if (!file) return;
     setPhotoError("");
+    // Teşhis (içerik yok): hangi tür/boyutta dosya geliyor, hangi adımda takılıyor — Yönetim > olaylar.
+    trackEvent("photo_pick", { mime: file.type || "", kb: Math.round(file.size / 1024) }, null);
     const small = await downscaleImageFile(file, { maxSide: 2400, strict: true });
-    if (!small) { setPhotoError(t("common.errPhotoUnreadable")); return; }
+    if (!small) { trackEvent("photo_issue", { stage: "decode", mime: file.type || "", kb: Math.round(file.size / 1024) }, null); setPhotoError(t("common.errPhotoUnreadable")); return; }
     setCropSrc(URL.createObjectURL(small));
   };
 
@@ -11163,6 +11180,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
       setProfilePhoto({ url: publicUrl });
       setProfile((p) => (p ? { ...p, avatar_url: publicUrl } : p));
     } catch (err) {
+      trackEvent("photo_issue", { stage: "upload", err: String(err?.message || err).slice(0, 120) }, null);
       setPhotoError(t("profile.errPhotoUploadFailed", { message: err.message }));
     } finally {
       setPhotoUploading(false);
