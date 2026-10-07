@@ -858,36 +858,22 @@ async function checkPhoneGate(userId, { allowFirstMessage = false } = {}) {
   return { ok: true };
 }
 
-// Temel profil kilidi — telefon gibi yumuşak değil, doğrudan sert: fotoğrafsız
-// ve şehirsiz, gerçek anlamda "ciddi" bir profil oluşturmadan biri ne mesaj
-// atabilsin ne vitrin/iş ilanı verebilsin ("ciddi bir profil oluşturmadım,
-// yapamasın" — kullanıcının kararı). Netgsm gibi dış bir servise bağlı değil,
-// bu yüzden ertelenecek bir sebep yok — baştan itibaren gerçek bir kilit.
+// Profil kilidi KALDIRILDI (kullanıcı kararı, 2026-10-07): "profil bilgisi kısmında sürtünme yaratmayalım, tekrar
+// yönlendirme yapmasın". Eskiden vitrini olan biri yeni vitrin/ilan/mesaj açarken profilinde fotoğraf ve şehir olmadıkça
+// durduruluyor, profil sayfasına yönlendiriliyordu. Artık hiçbir şey engellenmez; yalnızca şehir boşsa kullanıcının kendi
+// yerel vitrininden sessizce profile yazılır (en iyi çaba, hata olursa yok sayılır). Fotoğraf/şehir isteği profil
+// sayfasındaki ve vitrin sayfasındaki yumuşak ipuçlarında kalır.
 async function checkProfileGate(userId) {
   if (!userId) return { ok: false, reason: "Giriş yapmış olmalısın." };
-  // Fotoğraf ve şehir şartı yalnızca vitrin sahibi (sağlayıcı) için; müşteri bunları
-  // doldurmadan mesaj/ilan verebilir (alıcı tarafındaki kapılar azaltıldı).
-  const { count: vitrinCount } = await supabase.from("services").select("id", { count: "exact", head: true }).eq("provider_id", userId);
-  if (!vitrinCount) return { ok: true };
-  const { data: prof } = await supabase.from("profiles").select("avatar_url, city").eq("id", userId).maybeSingle();
-  let city = prof?.city;
-  // İlk vitrin bu kilit olmadan yayınlanabiliyor; ikinci vitrinde "şehir eksik" diye durdurmak kafa karıştırıyordu
-  // ("ilk vitrinim yayında oysa"). Kullanıcının kendi yerel vitrininde zaten yazdığı şehir varsa profile de onu yazarız.
-  if (!city) {
-    const { data: own } = await supabase.from("services").select("city").eq("provider_id", userId).not("city", "is", null).limit(1);
-    const cityId = deriveCityIdFromLabel(own?.[0]?.city);
-    const cityName = cityId ? CITIES.find((c) => c.id === cityId)?.name : null;
-    if (cityName) {
-      const { error: upErr } = await supabase.from("profiles").update({ city: cityName }).eq("id", userId);
-      if (!upErr) city = cityName;
+  try {
+    const { data: prof } = await supabase.from("profiles").select("city").eq("id", userId).maybeSingle();
+    if (prof && !prof.city) {
+      const { data: own } = await supabase.from("services").select("city").eq("provider_id", userId).not("city", "is", null).limit(1);
+      const cityId = deriveCityIdFromLabel(own?.[0]?.city);
+      const cityName = cityId ? CITIES.find((c) => c.id === cityId)?.name : null;
+      if (cityName) await supabase.from("profiles").update({ city: cityName }).eq("id", userId);
     }
-  }
-  const missing = [];
-  if (!prof?.avatar_url) missing.push("profil fotoğrafı");
-  if (!city) missing.push("şehir");
-  if (missing.length) {
-    return { ok: false, reason: `İlk vitrinin yayında, teşekkürler. Yeni bir vitrin ya da ilan açmadan önce profiline şunu eklemen gerekiyor: ${missing.join(" ve ")}. Profil sayfasında ekleyip kaydettikten sonra buraya dönebilirsin.` };
-  }
+  } catch {}
   return { ok: true };
 }
 
