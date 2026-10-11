@@ -3187,6 +3187,32 @@ function OwnerVitrinPanelBody({ userId, serviceId, onListingsChanged, onReviewSe
   );
 }
 
+// Sağlayıcı geçmişte çalıştığı birine gönderebilsin: bağlantı vitrini açar, giriş sonrası doğrudan "işi onayla" ekranına götürür.
+function PastWorkInvite({ serviceId, userId }) {
+  const { t } = useLanguage();
+  const [copied, setCopied] = useState(false);
+  const url = "https://www.isinn.com.tr/?vitrin=" + serviceId + "&gecmis=1";
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      trackEvent("past_work_link_copied", { listing_id: serviceId }, userId || null);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      try { window.prompt(t("listingDetail.pastWorkCopyManual"), url); } catch {}
+    }
+  };
+  return (
+    <div className="mt-5 pt-4 border-t" style={{ borderColor: "#EAE3CE" }}>
+      <p className="text-xs font-bold mb-1" style={{ color: "#5C5744" }}>{t("listingDetail.pastWorkInviteTitle")}</p>
+      <p className="text-[11px] mb-2" style={{ color: "#6B6550" }}>{t("listingDetail.pastWorkInviteHelp")}</p>
+      <button type="button" onClick={copy} className="px-4 py-2 rounded-full text-xs font-bold border" style={{ borderColor: "#D9D0BA", color: "#1B2B24", background: "#FFFFFF" }}>
+        {copied ? t("listingDetail.pastWorkCopied") : t("listingDetail.pastWorkCopy")}
+      </button>
+    </div>
+  );
+}
+
 function ListingDetail({ listing, onBack, onContact, userReviews, onAddReview, onSubmitPendingMedia, onSubmitStaffReview, currentUserId, favoriteIds, onToggleFavorite, onListingsChanged, onListingPatched, onGoToPlans }) {
   const { t } = useLanguage();
   const isRealListing = !!(listing.isReal && listing.providerId);
@@ -4038,6 +4064,16 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
               <button onClick={onContact} className="w-full py-2.5 rounded-full text-sm font-medium text-white mb-2" style={{ background: "#C2872B" }}>
                 {t("listingDetail.contactButton")}
               </button>
+              {listing.dbId && !listing.isDemo && (
+                <button
+                  type="button"
+                  onClick={() => { trackEvent("past_work_started", { listing_id: listing.dbId }, currentUserId || null); onContact({ pastWork: true }); }}
+                  className="w-full text-xs font-bold mb-2.5 underline decoration-dotted"
+                  style={{ color: "#2563EB" }}
+                >
+                  {t("listingDetail.pastWorkButton")}
+                </button>
+              )}
               <button
                 onClick={() => onToggleFavorite?.(listing)}
                 className="w-full py-2.5 rounded-full text-sm font-medium border flex items-center justify-center gap-1.5"
@@ -4339,13 +4375,16 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
             const enoughShowcase = providerPortfolio.length >= 3 || !!providerShowcase?.video_intro_url;
             if (ownerMode) {
               return (
-                <WorkLinkEditor
-                  serviceId={listing.dbId}
-                  initialUrl={wl?.url || ""}
-                  userId={currentUserId || null}
-                  source="detail"
-                  onSaved={(u) => setWorkLinkUrl(u)}
-                />
+                <>
+                  {listing.dbId && !listing.isDemo && <PastWorkInvite serviceId={listing.dbId} userId={currentUserId || null} />}
+                  <WorkLinkEditor
+                    serviceId={listing.dbId}
+                    initialUrl={wl?.url || ""}
+                    userId={currentUserId || null}
+                    source="detail"
+                    onSaved={(u) => setWorkLinkUrl(u)}
+                  />
+                </>
               );
             }
             if (!wl || !enoughShowcase) return null;
@@ -6269,6 +6308,7 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
     setMarkingDelivered(false);
     if (error) { setDeliveredError(t("messages.errMarkFailed", { message: error.message || t("common.errNoPermission") })); return; }
     setActiveJob((j) => (j ? { ...j, state: "delivered", clientConfirmed: true } : j));
+    if (initialContact?.pastWork) trackEvent("past_work_confirmed", { listing_id: activeJob?.serviceId || null }, currentUserId || null);
   };
 
   // Adil olsun diye eklendi: eskiden SADECE müşteri "Hizmeti Aldım"
@@ -6557,7 +6597,7 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
             karşı taraf gerçekten bir kez yanıt verene kadar (activeMessages
             içinde "them" yoksa) bu isteği hiç göstermiyoruz; zaten "delivered"
             durumuna zaten geçmiş bir iş için bu şart aranmaz. */}
-        {!active.demo && activeJob && (activeJob.state === "delivered" || activeMessages.some((m) => m.sender === "them")) && (
+        {!active.demo && activeJob && (activeJob.state === "delivered" || activeMessages.some((m) => m.sender === "them") || (initialContact?.pastWork && activeJob.clientId === currentUserId)) && (
           activeJob.state === "delivered" ? (
             <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-xs mb-3 shrink-0" style={{ background: "rgba(63,125,92,0.1)", color: "#3F7D5C" }}>
               <span className="flex items-center gap-2">
@@ -6592,7 +6632,7 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
             </div>
           ) : activeJob.clientId === currentUserId ? (
             <div className="rounded-lg p-2.5 mb-3 shrink-0" style={{ background: "#F8F4E9", border: "1px solid #D9D0BA" }}>
-              <p className="text-xs mb-1.5" style={{ color: "#5C5744" }}>{t("messages.pendingClientNote")}</p>
+              <p className="text-xs mb-1.5" style={{ color: "#5C5744" }}>{t(initialContact?.pastWork ? "messages.pendingPastNote" : "messages.pendingClientNote")}</p>
               {deliveredError && <p className="text-xs mb-1.5" style={{ color: "#9C4A3C" }}>{deliveredError}</p>}
               <button
                 onClick={markDelivered}
@@ -12126,14 +12166,23 @@ export default function IsinnPrototype({ session, onRequireAuth, discoveryPopula
   // kullanıcı anasayfada karta tıklamış gibi. URL'i de temizliyoruz ki
   // geri tuşu anasayfaya değil, gerçekten bir önceki adıma dönsün.
   useEffect(() => {
-    const vitrinId = new URLSearchParams(window.location.search).get("vitrin");
+    const sp = new URLSearchParams(window.location.search);
+    const vitrinId = sp.get("vitrin");
     if (!vitrinId) return;
+    const pastWorkLink = sp.get("gecmis") === "1";
     let cancelled = false;
     supabase.from("services").select("*, profiles(*), categories(*)").eq("id", vitrinId).eq("active", true).maybeSingle().then(({ data }) => {
       if (cancelled || !data) return;
       const base = mapServiceRowToListing(data);
       setSelected(base);
       setView("detail");
+      if (pastWorkLink) {
+        try { localStorage.setItem("isinn_pending_detail", JSON.stringify({ id: vitrinId, pastWork: true, ts: Date.now() })); } catch {}
+        setTimeout(() => {
+          if (userIdRef.current) window.dispatchEvent(new Event("isinn-pending-detail"));
+          else onRequireAuth?.();
+        }, 1500);
+      }
       supabase.from("ratings").select("value, rated_profile_id, service_id").eq("rated_profile_id", data.provider_id).then(({ data: rs }) => {
         if (cancelled || !rs) return;
         const vals = (base.shareProfileReviews ? rs : rs.filter((r) => r.service_id === base.dbId)).map((r) => r.value);
@@ -12141,27 +12190,40 @@ export default function IsinnPrototype({ session, onRequireAuth, discoveryPopula
       }, () => {});
       const url = new URL(window.location.href);
       url.searchParams.delete("vitrin");
+      url.searchParams.delete("gecmis");
       window.history.replaceState({}, "", url);
     });
     return () => { cancelled = true; };
   }, []);
 
   // Girişsiz "İletişime Geç"e basan ziyaretçi giriş yaptıktan sonra baktığı vitrine dönsün (15 dk içinde).
+  const userIdRef = useRef(userId);
+  userIdRef.current = userId;
   useEffect(() => {
-    if (!userId) return;
-    let raw = null;
-    try { raw = localStorage.getItem("isinn_pending_detail"); if (raw) localStorage.removeItem("isinn_pending_detail"); } catch {}
-    if (!raw) return;
-    let p = null;
-    try { p = JSON.parse(raw); } catch {}
-    if (!p?.id || Date.now() - (p.ts || 0) > 15 * 60 * 1000) return;
     let cancelled = false;
-    supabase.from("services").select("*, profiles(*), categories(*)").eq("id", p.id).eq("active", true).maybeSingle().then(({ data }) => {
-      if (cancelled || !data) return;
-      setSelected(mapServiceRowToListing(data));
-      setView("detail");
-    }, () => {});
-    return () => { cancelled = true; };
+    const resume = () => {
+      if (!userIdRef.current) return;
+      let raw = null;
+      try { raw = localStorage.getItem("isinn_pending_detail"); if (raw) localStorage.removeItem("isinn_pending_detail"); } catch {}
+      if (!raw) return;
+      let p = null;
+      try { p = JSON.parse(raw); } catch {}
+      if (!p?.id || Date.now() - (p.ts || 0) > 15 * 60 * 1000) return;
+      supabase.from("services").select("*, profiles(*), categories(*)").eq("id", p.id).eq("active", true).maybeSingle().then(({ data }) => {
+        if (cancelled || !data) return;
+        const m = mapServiceRowToListing(data);
+        setSelected(m);
+        if (p.pastWork && m.providerId && m.providerId !== userIdRef.current) {
+          setMessageContact({ name: m.provider, listingTitle: m.title, providerId: m.providerId, categoryId: m.categoryDbId, listingId: m.dbId, pastWork: true });
+          setView("messages");
+        } else {
+          setView("detail");
+        }
+      }, () => {});
+    };
+    resume();
+    window.addEventListener("isinn-pending-detail", resume);
+    return () => { cancelled = true; window.removeEventListener("isinn-pending-detail", resume); };
   }, [userId]);
 
   // Gerçek bir admin rolü — bkz. supabase/admin_role.sql. Tam bir rol/izin
@@ -12781,9 +12843,10 @@ export default function IsinnPrototype({ session, onRequireAuth, discoveryPopula
         <ListingDetail
           listing={selected}
           onBack={() => goBack()}
-          onContact={() => {
+          onContact={(opts) => {
+            const past = !!(opts && opts.pastWork === true);
             if (!userId) {
-              try { if (selected.dbId) localStorage.setItem("isinn_pending_detail", JSON.stringify({ id: selected.dbId, ts: Date.now() })); } catch {}
+              try { if (selected.dbId) localStorage.setItem("isinn_pending_detail", JSON.stringify({ id: selected.dbId, pastWork: past, ts: Date.now() })); } catch {}
               onRequireAuth?.();
               return;
             }
@@ -12793,6 +12856,7 @@ export default function IsinnPrototype({ session, onRequireAuth, discoveryPopula
               providerId: selected.providerId,
               categoryId: selected.categoryDbId,
               listingId: selected.dbId,
+              pastWork: past,
             });
             setView("messages");
           }}
