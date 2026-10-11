@@ -49,6 +49,22 @@ console.log(`  arama sonucu olayı: ${sr.length} (0 sonuç: ${b("0")}, 1-2: ${b(
 console.log(`  vitrin görüntüleme (tekil oturum): ${sess(["listing_view"])}, mesaj gönderimi: ${count("message_sent")}, iş ilanı: ${count("job_posted")}`);
 console.log(`  vitrin paylaşımı: ${count("vitrin_shared")}, çalışma bağlantısı tıklaması: ${count("portfolio_link_click")}`);
 
+// --- kaynak grupları (yönlendiren site / utm). Not: bazı yapay zekâ asistanları yönlendiren bilgisi göndermez, o trafik "doğrudan"
+// görünür; Google AI Özetleri tıklamaları ise Search Console'da normal Google trafiğine karışır, burada ayrıştırılamaz.
+const groupOf = (e) => {
+  const v = String(e.props?.utm_source || e.props?.ref || e.props?.src || "").toLowerCase();
+  if (!v) return "doğrudan";
+  if (/chatgpt|openai|perplexity|gemini|copilot|claude|bing\.com\/chat/.test(v)) return "yapay_zeka";
+  if (/google\./.test(v) && !/(ads|gclid)/.test(v)) return "google";
+  if (/facebook|instagram|^ig$|tiktok|youtube|whatsapp|^wa$|twitter|^x\.com|linkedin/.test(v)) return "sosyal";
+  if (/bing|yandex|duckduckgo|petalsearch|ecosia/.test(v)) return "diğer_arama";
+  if (/isinn\.com\.tr/.test(v)) return "kendi_sitemiz";
+  return "diğer";
+};
+const groups = {};
+for (const e of ext.filter((x) => x.name === "app_open")) (groups[groupOf(e)] ||= new Set()).add(e.session_id);
+console.log("\nKaynak grupları (tekil oturum): " + (Object.entries(groups).sort((x, y) => y[1].size - x[1].size).map(([k, v]) => `${k}=${v.size}`).join(", ") || "-"));
+
 // --- kaynak kırılımı (utm / src)
 const bySrc = {};
 for (const e of ext.filter((x) => x.name === "app_open")) {
