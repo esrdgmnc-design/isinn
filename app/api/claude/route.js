@@ -12,7 +12,7 @@
 // (1) IP başına rate limit, (2) model/max_tokens için makul bir tavan —
 // tek bir isteğin/istemcinin maliyeti sınırsız büyütmesini engelliyor.
 import { checkRateLimit, getClientIp } from "../../../lib/rateLimit";
-import { logAiCall } from "../../../lib/aiLog";
+import { logAiCall, aiCapReached } from "../../../lib/aiLog";
 
 // Vitrin taslağı da üreten Yeteneğini Farket yanıtı ~15-25 sn sürebiliyor; Vercel'in
 // varsayılan fonksiyon süresi (Hobby'de 10 sn) bunu üretimde 504 ile keserdi.
@@ -41,6 +41,11 @@ export async function POST(request) {
   const limit = Math.min(Math.max(parseInt(process.env.CLAUDE_RATE_LIMIT || "30", 10) || 30, 5), 500);
   if (!checkRateLimit(`claude:${ip}`, { limit, windowMs: 5 * 60 * 1000 })) {
     return Response.json({ error: "Çok fazla istek gönderildi. Birkaç dakika sonra tekrar dene." }, { status: 429 });
+  }
+
+  // Günlük toplam tavan (bkz. lib/aiLog.js aiCapReached): aşılınca yapay zekâ özellikleri geçici olarak kapanır.
+  if (await aiCapReached({ cap: parseInt(process.env.AI_DAILY_CAP_TOTAL || "3000", 10) || 3000 })) {
+    return Response.json({ error: "Bugünlük yapay zekâ kullanım sınırına ulaşıldı. Yarın tekrar dene." }, { status: 503 });
   }
 
   let body;

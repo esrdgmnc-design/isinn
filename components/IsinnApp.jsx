@@ -7024,6 +7024,7 @@ async function requestTalentSuggestions({ skills, hours, budget, remote, remoteK
   // 429'da aynı isteği tekrar atmak sınırdan bir hak daha yerdi — tekrar yok.
   if (response.status === 429) throw new TalentApiError("rate");
   if (response.status === 504) throw new TalentApiError("timeout");
+  if (response.status === 503) throw new TalentApiError("daily_cap");
   if (response.status === 422) throw new TalentApiError("invalid");
   if (!response.ok) throw new TalentApiError("api");
   const data = await response.json().catch(() => null);
@@ -7269,6 +7270,7 @@ function TalentDiscoveryView({ onBack, onCreateListing, userId }) {
   const selectedChipKeys = () => TALENT_SKILL_CHIPS.filter((k) => skillParts().includes(chipLabel(k)));
   const errorMessage = (err) => {
     if (err?.kind === "rate") return t("talentDiscovery.errRateLimited");
+    if (err?.kind === "daily_cap") return t("talentDiscovery.errDailyCap");
     if (err?.kind === "timeout") return t("talentDiscovery.errTimeout");
     if (err?.kind === "need_more") return t("talentDiscovery.errNeedMore");
     return t("talentDiscovery.errFailed");

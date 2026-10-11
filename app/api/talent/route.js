@@ -5,7 +5,7 @@
 // burada. Kullanıcının yazdığı metin loglanmaz — yalnızca token sayıları.
 import { checkRateLimit, getClientIp } from "../../../lib/rateLimit";
 import { allowedTalentCategories, buildTalentPrompt, parseTalentResponse } from "../../../lib/talentCore";
-import { logAiCall } from "../../../lib/aiLog";
+import { logAiCall, aiCapReached } from "../../../lib/aiLog";
 
 // İstem/doğrulama davranışı değişince artır: ai_calls günlüğünde hangi sürümün ne ürettiği görülür.
 const PROMPT_VERSION = "talent-v3";
@@ -40,6 +40,13 @@ export async function POST(request) {
   const limit = Math.min(Math.max(parseInt(process.env.TALENT_RATE_LIMIT || "20", 10) || 20, 5), 500);
   if (!checkRateLimit(`talent:${getClientIp(request)}`, { limit, windowMs: 5 * 60 * 1000 })) {
     return Response.json({ error: "rate" }, { status: 429 });
+  }
+
+  // Günlük tavan (tüm yapay zekâ çağrıları ve yalnızca bu özellik); aşılırsa kullanıcıya "bugünlük doldu" denir.
+  const talentCap = parseInt(process.env.TALENT_DAILY_CAP || "600", 10) || 600;
+  const totalCap = parseInt(process.env.AI_DAILY_CAP_TOTAL || "3000", 10) || 3000;
+  if ((await aiCapReached({ feature: "talent", cap: talentCap })) || (await aiCapReached({ cap: totalCap }))) {
+    return Response.json({ error: "daily_cap" }, { status: 503 });
   }
 
   let body;
