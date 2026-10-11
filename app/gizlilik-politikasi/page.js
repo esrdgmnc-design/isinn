@@ -1,6 +1,12 @@
 import LegalPageLayout from "../../components/LegalPageLayout";
 import { COMPANY } from "../../lib/companyInfo";
 
+export const metadata = {
+  title: "Gizlilik Politikası — İşinn",
+  description: "İşinn gizlilik politikası: hangi verileri neden işlediğimiz, saklama süreleri ve haklarınız.",
+  alternates: { canonical: "https://www.isinn.com.tr/gizlilik-politikasi" },
+};
+
 const h2 = { fontWeight: 800, fontSize: "1.05rem", color: "#0F1115", marginTop: "1.75rem", marginBottom: "0.5rem" };
 const p = { marginBottom: "0.75rem" };
 const li = { marginBottom: "0.35rem" };

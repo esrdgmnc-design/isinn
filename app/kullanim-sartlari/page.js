@@ -1,6 +1,12 @@
 import LegalPageLayout from "../../components/LegalPageLayout";
 import { COMPANY } from "../../lib/companyInfo";
 
+export const metadata = {
+  title: "Kullanım Şartları — İşinn",
+  description: "İşinn kullanım şartları: platformun niteliği, kullanıcı yükümlülükleri, ödeme ve sorumluluk sınırları.",
+  alternates: { canonical: "https://www.isinn.com.tr/kullanim-sartlari" },
+};
+
 const h2 = { fontWeight: 800, fontSize: "1.05rem", color: "#0F1115", marginTop: "1.75rem", marginBottom: "0.5rem" };
 const p = { marginBottom: "0.75rem" };
 const li = { marginBottom: "0.35rem" };

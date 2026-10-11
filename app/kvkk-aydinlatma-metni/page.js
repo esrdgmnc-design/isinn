@@ -1,6 +1,12 @@
 import LegalPageLayout from "../../components/LegalPageLayout";
 import { COMPANY } from "../../lib/companyInfo";
 
+export const metadata = {
+  title: "KVKK Aydınlatma Metni — İşinn",
+  description: "İşinn KVKK aydınlatma metni: kişisel verilerin işlenme amaçları, hukuki sebepler ve başvuru yolları.",
+  alternates: { canonical: "https://www.isinn.com.tr/kvkk-aydinlatma-metni" },
+};
+
 const h2 = { fontWeight: 800, fontSize: "1.05rem", color: "#0F1115", marginTop: "1.75rem", marginBottom: "0.5rem" };
 const h3 = { fontWeight: 700, fontSize: "0.9rem", color: "#0F1115", marginTop: "1.1rem", marginBottom: "0.35rem" };
 const p = { marginBottom: "0.75rem" };

@@ -1,6 +1,12 @@
 import LegalPageLayout from "../../components/LegalPageLayout";
 import { COMPANY } from "../../lib/companyInfo";
 
+export const metadata = {
+  title: "İptal, İade ve Geri Ödeme Koşulları — İşinn",
+  description: "İşinn üyeliği için iptal, iade ve geri ödeme koşulları.",
+  alternates: { canonical: "https://www.isinn.com.tr/iptal-iade-kosullari" },
+};
+
 const h2 = { fontWeight: 800, fontSize: "1.05rem", color: "#0F1115", marginTop: "1.75rem", marginBottom: "0.5rem" };
 const p = { marginBottom: "0.75rem" };
 const li = { marginBottom: "0.35rem" };

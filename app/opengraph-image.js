@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
-export const alt = "İşinn — Güvendiğin Ellere";
+export const alt = "İşinn: Becerinden Hizmet Vitrini";
 
 // Link paylaşıldığında (WhatsApp, Instagram, Twitter/X, LinkedIn) çıkan
 // önizleme kartı. Next.js bunu otomatik olarak <meta property="og:image">
@@ -29,7 +29,7 @@ export default function OpengraphImage() {
           <span style={{ color: "#2563EB", fontSize: 72, fontWeight: 800 }}>.</span>
         </div>
         <div style={{ color: "#D1D5DB", fontSize: 34, fontWeight: 500, maxWidth: 820, lineHeight: 1.35 }}>
-          İhtiyacın olan hizmeti bulduğun ya da kendi hizmetini sunduğun güvenilir yerel pazar yeri.
+          Becerinden hizmet vitrini: ihtiyacın olan hizmeti bul ya da kendi hizmetini sun.
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 44 }}>
           <div style={{ background: "#2563EB", color: "#fff", fontSize: 22, fontWeight: 700, padding: "12px 26px", borderRadius: 999 }}>
