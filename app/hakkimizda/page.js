@@ -138,6 +138,7 @@ export default function HakkimizdaPage() {
         </ul>
 
         <div className="flex flex-wrap gap-4 text-sm font-bold" style={{ color: "#2563EB" }}>
+          <a href="https://www.linkedin.com/company/145299576/" rel="me noopener" target="_blank">LinkedIn</a>
           <a href="https://www.instagram.com/isinn.com.tr/" rel="me noopener" target="_blank">Instagram</a>
           <a href="https://www.tiktok.com/@isinn.com.tr" rel="me noopener" target="_blank">TikTok</a>
           <Link href="/rehber">Rehberler</Link>
