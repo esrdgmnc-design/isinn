@@ -130,5 +130,8 @@ export default async function sitemap() {
     };
   });
 
+  const newestListing = indexable.reduce((max, row) => { const d = rowDate(row); return d > max ? d : max; }, new Date("2026-10-11T00:00:00Z"));
+  const home = staticEntries.find((e) => e.url === BASE_URL);
+  if (home) home.lastModified = newestListing;
   return [...staticEntries, ...rehberEntries, ...vitrinEntries, ...categoryEntries, ...cityEntries, ...comboEntries];
 }
