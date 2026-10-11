@@ -52,8 +52,8 @@ export const viewport = {
 
 // Marka/kuruluş yapılandırılmış verisi — Google'ın "İşinn" marka aramalarında
 // bir Knowledge Panel oluşturma ihtimalini artırır, sosyal hesaplar
-// (sameAs) eklendiğinde bunları da aynı varlığa bağlar. TikTok/Instagram
-// hesapları açıldığında buradaki sameAs dizisine eklenmeli.
+// (sameAs) eklendiğinde bunları da aynı varlığa bağlar. TikTok ve Instagram
+// hesapları buradaki sameAs dizisinde; yeni resmî hesap açılırsa buraya eklenmeli.
 const websiteJsonLd = {
   "@context": "https://schema.org",
   "@type": "WebSite",
@@ -99,6 +99,7 @@ const organizationJsonLd = {
   },
   sameAs: [
     "https://www.tiktok.com/@isinn.com.tr",
+    "https://www.instagram.com/isinn.com.tr/",
   ],
 };
 
