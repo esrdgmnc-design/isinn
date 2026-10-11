@@ -4,6 +4,7 @@ import { supabase } from "../lib/supabaseClient";
 import { SEO_CATEGORIES } from "../lib/seoTaxonomy";
 import { mapServiceRowToListing } from "../lib/mapServiceRowToListing";
 import { jsonLdString } from "../lib/jsonLd";
+import { MIN_CATEGORY_LISTINGS } from "../lib/seoFormat";
 
 // Ana sayfa artık sunucu bileşeni: kanonik adres "/" (parametreli ?vitrin=… gibi URL'ler
 // ayrı sayfa sayılmasın) ve SSS şeması yalnızca burada.
@@ -50,7 +51,8 @@ async function getDiscoveryData() {
   }
   const popularCategories = SEO_CATEGORIES
     .map((c) => ({ ...c, count: countByCategorySlug[c.slug] || 0 }))
-    .filter((c) => c.count > 0)
+    // "diger" bir yakalama kutusu (noindex): ana sayfadan giriş bağlantısı almasın; eşik, kategori sayfasının indekslenme eşiğiyle aynı.
+    .filter((c) => c.slug !== "diger" && c.count >= MIN_CATEGORY_LISTINGS)
     .sort((a, b) => b.count - a.count)
     .slice(0, 12);
 

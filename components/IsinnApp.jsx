@@ -1522,19 +1522,25 @@ function InstallAppBanner() {
 
 // Ana sayfa vitrin kartı — memo: üstteki zamanlayıcılar HomeView'ı yeniden render etse de
 // prop'ları değişmeyen kartlar tekrar çizilmiyor.
+// Gerçek (DEMO olmayan) vitrin kartları için gerçek bir /vitrin/<id> bağlantısı: arama motorları ve "yeni sekmede aç" için.
+// Sıradan tıklama yine tek sayfa uygulamasında detayı açar (sayfa yenilenmez). Tüm kartı kaplayan "stretched link" tekniği.
+const isOptimizableImg = (src) => typeof src === "string" && (src.startsWith("/") || /^https:\/\/(images\.unsplash\.com|images\.pexels\.com|[a-z0-9-]+\.supabase\.co)\//.test(src));
 const HomeListingCard = memo(function HomeListingCard({ l, isFavorite, onSelectListing, onToggleFavorite }) {
   const { t } = useLanguage();
+  const href = l.isReal && l.dbId && !l.isDemo ? `/vitrin/${l.dbId}` : null;
   return (
       <div
-        role="button"
-        tabIndex={0}
+        {...(href ? {} : { role: "button", tabIndex: 0, onKeyDown: (e) => { if (e.key === "Enter" || e.key === " ") onSelectListing(l); } })}
         onClick={() => onSelectListing(l)}
-        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onSelectListing(l); }}
-        className="text-left rounded-2xl overflow-hidden hover:-translate-y-1.5 transition-all group shadow-sm hover:shadow-xl cursor-pointer"
+        className={`text-left rounded-2xl overflow-hidden hover:-translate-y-1.5 transition-all group shadow-sm hover:shadow-xl cursor-pointer${href ? " relative" : ""}`}
         style={{ border: "1px solid #F0F0F0", background: "#FFFFFF", transform: "translateZ(0)", WebkitTransform: "translateZ(0)", willChange: "transform" }}
       >
         <div className="relative h-44 overflow-hidden">
-          <img loading="lazy" decoding="async" src={l.img} alt={l.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
+          {isOptimizableImg(l.img) ? (
+            <Image src={l.img} alt={l.title} fill sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw" className="object-cover group-hover:scale-110 transition-transform duration-300" />
+          ) : (
+            <img loading="lazy" decoding="async" src={l.img} alt={l.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
+          )}
           <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
             <ModeTag mode={l.mode} />
             {l.isDemo && (
@@ -1549,7 +1555,7 @@ const HomeListingCard = memo(function HomeListingCard({ l, isFavorite, onSelectL
           </div>
           <button
             onClick={(e) => { e.stopPropagation(); onToggleFavorite?.(l); }}
-            aria-label={t("favorites.toggle")} className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/90 flex items-center justify-center hover:scale-110 transition-transform"
+            aria-label={t("favorites.toggle")} className="absolute top-2 right-2 z-10 w-8 h-8 rounded-full bg-white/90 flex items-center justify-center hover:scale-110 transition-transform"
           >
             <Heart size={13} style={{ color: "#EF4444" }} fill={isFavorite ? "#EF4444" : "none"} />
           </button>
@@ -1561,7 +1567,15 @@ const HomeListingCard = memo(function HomeListingCard({ l, isFavorite, onSelectL
           </div>
         </div>
         <div className="p-3.5">
-          <p className="text-sm font-bold leading-snug line-clamp-2 min-h-[2.5em]" style={{ color: "#0F1115" }}>{l.title}</p>
+          <p className="text-sm font-bold leading-snug line-clamp-2 min-h-[2.5em]" style={{ color: "#0F1115" }}>
+            {href ? (
+              <a
+                href={href}
+                className="after:absolute after:inset-0 after:content-['']"
+                onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button) return; e.preventDefault(); e.stopPropagation(); onSelectListing(l); }}
+              >{l.title}</a>
+            ) : l.title}
+          </p>
           <p className="text-xs mt-1 truncate" style={{ color: "#9CA3AF" }}>{l.provider} · {l.city}</p>
           <div className="flex items-center gap-1 mt-2">
             <Stars value={l.rating} size={12} />
