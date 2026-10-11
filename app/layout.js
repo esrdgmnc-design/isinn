@@ -7,8 +7,8 @@ import { jsonLdString } from "../lib/jsonLd";
 
 export const metadata = {
   metadataBase: new URL("https://www.isinn.com.tr"),
-  title: "Ne İş Yapabilirim? Becerinden Hizmet Vitrini | İşinn",
-  description: "Becerilerini yaz, yapay zekâ 1-2 hizmet fikri ve hazır vitrin taslağı önersin. Denemek için üyelik gerekmez, komisyon yok. Hizmet bulmak da burada.",
+  title: "İşinn | Yerel Hizmet Keşif Platformu, Komisyonsuz Vitrin",
+  description: "Yakınındaki hizmet verenleri keşfet, becerinden hizmet vitrini aç. İşinn komisyon almaz, ürün satmaz; hizmet verenler için 20 Aralık 2026'ya kadar ücretsiz.",
   // Mobil uygulama çalışmasının (bkz. docs/mobile-app.md) yan ürünü — site
   // artık gerçek bir PWA da (telefon tarayıcısından "Ana ekrana ekle").
   // Asıl mağaza dağıtımı Capacitor/Codemagic üzerinden, bu sadece bonus.

@@ -9,8 +9,8 @@ import { jsonLdString } from "../../lib/jsonLd";
 // metin FAQPage şemasına da konur (görünmeyen içerik şemaya konmaz).
 const BASE_URL = "https://www.isinn.com.tr";
 const URL = `${BASE_URL}/yetenegini-farket`;
-const TITLE = "Becerilerimi Nasıl Değerlendirebilirim? Yeteneğini Farket | İşinn";
-const DESCRIPTION = "Ne iş yapabileceğini bilmiyorsan becerilerini yaz: yapay zekâ 1-2 hizmet fikri ve hazır vitrin taslağı önersin. Denemek için üyelik gerekmez, komisyon yok.";
+const TITLE = "Ne İş Yapabilirim? Becerinden Hizmet Fikri Bul | İşinn";
+const DESCRIPTION = "Ne iş yapabileceğini bilmiyorsan becerilerini yaz: yapay zekâ 1-2 hizmet fikri ve hazır vitrin taslağı önersin. Üyelik gerekmez, komisyon yok. Kazanç garantisi değildir.";
 
 // Beceriden hizmete somut örnekler. Hepsi gerçek İşinn kategorilerine bağlanır;
 // kazanç ya da talep iddiası içermez, "örnek" olduğu açıktır.
@@ -38,7 +38,7 @@ const FAQ = [
     a: "Gündelik yaptığın şeylerden başlayabilirsin: yemek yapmak, çocuklarla ilgilenmek, düzenli olmak, dikiş-örgü, telefonla fotoğraf-video çekmek gibi. Becerini, ayırabileceğin zamanı ve çalışma tercihini yazdığında araç 1-2 hizmet fikri (ders, atölye, organizasyon, uzaktan destek gibi) ve her biri için hazır bir vitrin taslağı önerir. Öneriler garanti değil, başlangıç noktasıdır.",
   },
   {
-    q: "Becerilerimi nasıl değerlendirebilirim?",
+    q: "Becerimi hizmete çevirip çeviremeyeceğimi nasıl anlarım?",
     a: "Üç soruya cevap ver: Bunu kim ister? Nerede ve ne kadar sürede yaparım? İlk örneğimi nasıl gösteririm? Yeteneğini Farket bu soruları senin yazdıklarından düzenler, ilk vitrin başlığını ve açıklamasını önerir; sana ait olmayan bir bilgiyi taslağa eklemez.",
   },
   {
@@ -54,8 +54,8 @@ const FAQ = [
     a: "Çoğu insan gündelik yaptığı şeyleri beceri olarak görmez. Araç, yemek yapmak, çocuklarla ilgilenmek, düzenli olmak, dikiş-örgü gibi gündelik işlerden tek dokunuşla seçim yapmana izin verir; yazdıklarından anlamlı bir fikir çıkmazsa sana bunu söyler ve biraz daha anlatmanı ister.",
   },
   {
-    q: "Evden ne iş yapabilirim?",
-    a: "Çalışma tercihini (evden/uzaktan, yüz yüze ya da fark etmez) araca söyleyebilirsin. Yazı yazma, çeviri, tasarım gibi uzaktan yapılabilen hizmetler ya da evden verilebilen ders ve danışmanlık gibi seçenekler, yazdıklarına göre öne çıkabilir. Öneriler garanti değildir.",
+    q: "Evden yapılabilecek hizmetler var mı?",
+    a: "Çalışma tercihini (evden/uzaktan, yüz yüze ya da fark etmez) araca söyleyebilirsin; uzaktan ya da evden sunulabilen hizmetler yazdıklarına göre öne çıkabilir. Öneriler garanti değildir.",
   },
   {
     q: "Örgü ile para kazanılır mı?",
@@ -110,7 +110,7 @@ export default function YeteneginiFarketPage() {
         <Link href="/" className="text-sm font-bold" style={{ color: "#2563EB" }}>← İşinn</Link>
 
         <h1 className="font-sans text-3xl font-black mt-4 mb-3" style={{ color: "#0F1115" }}>
-          Yeteneğini Farket: Becerilerinden Hizmet Fikirleri Al
+          Ne İş Yapabilirim? Becerini Yaz, Hizmet Fikirleri Al
         </h1>
         <p className="text-base mb-6" style={{ color: "#374151" }}>
           Ne sunabileceğini bilmiyor musun? Gündelik yaptığın şeylerden birkaçına dokun ya da kendi cümlenle yaz; İşinn sana 1-2 hizmet fikri ve her biri için düzenleyebileceğin hazır bir vitrin taslağı önersin. Aracı denemek için üyelik gerekmez.
@@ -155,7 +155,7 @@ export default function YeteneginiFarketPage() {
           ))}
         </div>
 
-        <h2 className="font-sans text-xl font-black mb-3" style={{ color: "#0F1115" }}>Becerilerimi nasıl değerlendirebilirim?</h2>
+        <h2 className="font-sans text-xl font-black mb-3" style={{ color: "#0F1115" }}>Becerini hizmete çevirmenin 3 sorusu</h2>
         <p className="text-sm mb-3" style={{ color: "#374151" }}>Bir beceriyi hizmete çevirip çeviremeyeceğini anlamak için kendine şu üç soruyu sor:</p>
         <ol className="list-decimal pl-5 space-y-2 mb-4 text-sm" style={{ color: "#374151" }}>
           <li><b>Bunu kim ister?</b> Çevrende bu işe ihtiyaç duyan biri var mı (komşu, veli, küçük bir işletme)? Somut bir kişi düşünebiliyorsan başlangıç iyidir.</li>

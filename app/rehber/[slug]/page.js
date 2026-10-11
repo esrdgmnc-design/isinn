@@ -132,6 +132,12 @@ export default function RehberPostPage({ params }) {
           {post.ctaText}
         </Link>
 
+        {!isEn && (
+          <p className="text-sm mt-6" style={{ color: "#374151" }}>
+            Ne sunabileceğini bilmiyor musun? <Link href="/yetenegini-farket" style={{ color: "#2563EB", fontWeight: 700 }}>Becerinden hizmet fikri al</Link>: üyelik gerekmez.
+          </p>
+        )}
+
         {relatedPosts.length > 0 && (
           <div className="mt-10 pt-6 border-t" style={{ borderColor: "#E5E7EB" }}>
             <h2 className="font-sans text-lg font-black mb-4" style={{ color: "#0F1115" }}>{L.related}</h2>

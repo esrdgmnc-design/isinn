@@ -132,6 +132,7 @@ export default function HakkimizdaPage() {
         </ul>
 
         <div className="flex flex-wrap gap-4 text-sm font-bold" style={{ color: "#2563EB" }}>
+          <a href="https://www.tiktok.com/@isinn.com.tr" rel="me noopener" target="_blank">TikTok</a>
           <Link href="/rehber">Rehberler</Link>
           <Link href="/yetenegini-farket">Yeteneğini Farket</Link>
           <Link href="/gizlilik-politikasi">Gizlilik Politikası</Link>

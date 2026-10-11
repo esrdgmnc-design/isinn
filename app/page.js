@@ -8,8 +8,8 @@ import { jsonLdString } from "../lib/jsonLd";
 // Ana sayfa artık sunucu bileşeni: kanonik adres "/" (parametreli ?vitrin=… gibi URL'ler
 // ayrı sayfa sayılmasın) ve SSS şeması yalnızca burada.
 export const metadata = {
-  title: "Ne İş Yapabilirim? Becerinden Hizmet Vitrini | İşinn",
-  description: "Becerilerini yaz, yapay zekâ 1-2 hizmet fikri ve hazır vitrin taslağı önersin. Denemek için üyelik gerekmez, komisyon yok. Hizmet bulmak da burada.",
+  title: "İşinn | Yerel Hizmet Keşif Platformu, Komisyonsuz Vitrin",
+  description: "Yakınındaki hizmet verenleri keşfet, becerinden hizmet vitrini aç. İşinn komisyon almaz, ürün satmaz; hizmet verenler için 20 Aralık 2026'ya kadar ücretsiz.",
   alternates: { canonical: "/" },
 };
 
