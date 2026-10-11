@@ -1,6 +1,7 @@
 import Link from "next/link";
 import TalentTryBox from "../../components/TalentTryBox";
 import { jsonLdString } from "../../lib/jsonLd";
+import { socialMeta } from "../../lib/seoMeta";
 
 // Yeteneğini Farket artık Google'ın tarayabileceği gerçek bir sayfaya sahip (eskiden
 // yalnızca uygulama içinde, ?view=talentDiscovery ile açılıyordu). Sayfadaki her
@@ -28,8 +29,7 @@ export const metadata = {
   title: TITLE,
   description: DESCRIPTION,
   alternates: { canonical: URL },
-  openGraph: { title: TITLE, description: DESCRIPTION, url: URL, siteName: "İşinn", locale: "tr_TR", type: "website" },
-  twitter: { card: "summary_large_image", title: TITLE, description: DESCRIPTION },
+  ...socialMeta({ title: TITLE, description: DESCRIPTION, url: URL }),
 };
 
 const FAQ = [

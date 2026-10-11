@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { COMPANY } from "../../lib/companyInfo";
 import { jsonLdString } from "../../lib/jsonLd";
+import { socialMeta } from "../../lib/seoMeta";
 
 // İşinn nedir sorusuna (marka aramaları, yapay zekâ özetleri) tek, tutarlı ve doğrulanabilir
 // cevap. Her cümle platformun gerçek durumuna dayanır: komisyon yok, ödemeye aracılık yok,
@@ -16,8 +17,7 @@ export const metadata = {
   title: TITLE,
   description: DESCRIPTION,
   alternates: { canonical: URL },
-  openGraph: { title: TITLE, description: DESCRIPTION, url: URL, siteName: "İşinn", locale: "tr_TR", type: "website" },
-  twitter: { card: "summary_large_image", title: TITLE, description: DESCRIPTION },
+  ...socialMeta({ title: TITLE, description: DESCRIPTION, url: URL }),
 };
 
 const DOES = [

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { REHBER_POSTS, findRehberPost, rehberMeta } from "../../../lib/rehberContent";
 import { jsonLdString } from "../../../lib/jsonLd";
+import { socialMeta } from "../../../lib/seoMeta";
 
 const BASE_URL = "https://www.isinn.com.tr";
 
@@ -17,8 +18,7 @@ export function generateMetadata({ params }) {
     title: `${post.title} — İşinn`,
     description: post.description,
     alternates: { canonical: url },
-    openGraph: { title: post.title, description: post.description, url, siteName: "İşinn", locale: post.lang === "en" ? "en_US" : "tr_TR", type: "article" },
-    twitter: { card: "summary_large_image", title: post.title, description: post.description },
+    ...socialMeta({ title: post.title, description: post.description, url, locale: post.lang === "en" ? "en_US" : "tr_TR", type: "article" }),
   };
 }
 

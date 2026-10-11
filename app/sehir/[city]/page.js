@@ -6,6 +6,7 @@ import { SEO_CITIES, SEO_CATEGORIES, matchesCitySlug, categorySeoName } from "..
 import { formatPrice, getProviderName, getCityIntro, isIndexableListing, MIN_CITY_LISTINGS, MIN_COMBO_LISTINGS } from "../../../lib/seoFormat";
 import { getCityFaq } from "../../../lib/categoryFaq";
 import { jsonLdString } from "../../../lib/jsonLd";
+import { socialMeta } from "../../../lib/seoMeta";
 
 // SEO için eklendi — bkz. app/kategori/[slug]/page.js'teki aynı gerekçe.
 // services.city serbest metin olduğu için (bkz. lib/seoTaxonomy.js) şehir
@@ -46,8 +47,7 @@ export async function generateMetadata({ params }) {
     description,
     alternates: { canonical: url },
     robots: services.filter(isIndexableListing).length < MIN_CITY_LISTINGS ? { index: false, follow: true } : undefined,
-    openGraph: { title, description, url, siteName: "İşinn", locale: "tr_TR", type: "website" },
-    twitter: { card: "summary_large_image", title, description },
+    ...socialMeta({ title, description, url }),
   };
 }
 

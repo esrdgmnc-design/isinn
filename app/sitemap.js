@@ -22,7 +22,6 @@ export default async function sitemap() {
     "/rehber",
     "/yetenegini-farket",
     "/hakkimizda",
-    "/rozet",
     "/kvkk-aydinlatma-metni",
     "/gizlilik-politikasi",
     "/kullanim-sartlari",

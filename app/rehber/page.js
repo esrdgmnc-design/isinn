@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { REHBER_POSTS, rehberMeta } from "../../lib/rehberContent";
 import { jsonLdString } from "../../lib/jsonLd";
+import { socialMeta } from "../../lib/seoMeta";
 
 const BASE_URL = "https://www.isinn.com.tr";
 
@@ -8,6 +9,11 @@ export const metadata = {
   title: "Rehberler: Beceriden Hizmete, Hizmet Seçerken | İşinn",
   description: "Becerini hizmete çevirmek, ilk vitrinini hazırlamak ve hizmet alırken doğru seçim yapmak için pratik rehberler. Kazanç vaadi içermez.",
   alternates: { canonical: `${BASE_URL}/rehber` },
+  ...socialMeta({
+    title: "Rehberler: Beceriden Hizmete, Hizmet Seçerken | İşinn",
+    description: "Becerini hizmete çevirmek, ilk vitrinini hazırlamak ve hizmet alırken doğru seçim yapmak için pratik rehberler. Kazanç vaadi içermez.",
+    url: `${BASE_URL}/rehber`,
+  }),
 };
 
 // Rehberler üç konu kümesinde gösterilir. Bir slug burada yoksa "Diğer rehberler"e düşer

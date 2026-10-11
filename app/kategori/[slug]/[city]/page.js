@@ -6,6 +6,7 @@ import { SEO_CATEGORIES, SEO_CITIES, matchesCitySlug, categorySeoName } from "..
 import { formatPrice, getProviderName, getCategoryCityIntro, isIndexableListing, MIN_COMBO_LISTINGS } from "../../../../lib/seoFormat";
 import { getCategoryFaq } from "../../../../lib/categoryFaq";
 import { jsonLdString } from "../../../../lib/jsonLd";
+import { socialMeta } from "../../../../lib/seoMeta";
 
 // SEO'nun en değerli sayfası: "istanbul temizlikçi", "ankara özel ders" gibi
 // uzun kuyruk aramaların doğrudan hedefi — bkz. SEO stratejisi dokümanı,
@@ -60,8 +61,7 @@ export async function generateMetadata({ params }) {
     alternates: { canonical: url },
     // Çok az gerçek (demo/ince olmayan) vitrini olan kombinasyonlar ince içerik sayılmasın.
     robots: params.slug === "diger" || services.filter(isIndexableListing).length < MIN_COMBO_LISTINGS ? { index: false, follow: true } : undefined,
-    openGraph: { title, description, url, siteName: "İşinn", locale: "tr_TR", type: "website" },
-    twitter: { card: "summary_large_image", title, description },
+    ...socialMeta({ title, description, url }),
   };
 }
 

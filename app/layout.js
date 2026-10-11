@@ -7,6 +7,7 @@ import { jsonLdString } from "../lib/jsonLd";
 
 export const metadata = {
   metadataBase: new URL("https://www.isinn.com.tr"),
+  robots: { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1, "max-video-preview": -1 } },
   title: "İşinn | Yerel Hizmet Keşif Platformu, Komisyonsuz Vitrin",
   description: "Yakınındaki hizmet verenleri keşfet, becerinden hizmet vitrini aç. İşinn komisyon almaz, ürün satmaz; hizmet verenler için 20 Aralık 2026'ya kadar ücretsiz.",
   // Mobil uygulama çalışmasının (bkz. docs/mobile-app.md) yan ürünü — site

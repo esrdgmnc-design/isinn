@@ -6,6 +6,7 @@ import { SEO_CATEGORIES, SEO_CITIES, matchesCitySlug, categorySeoName } from "..
 import { formatPrice, getProviderName, getCategoryIntro, isIndexableListing, MIN_COMBO_LISTINGS } from "../../../lib/seoFormat";
 import { getCategoryFaq } from "../../../lib/categoryFaq";
 import { jsonLdString } from "../../../lib/jsonLd";
+import { socialMeta } from "../../../lib/seoMeta";
 
 // SEO için eklendi: kategoriler eskiden sadece ana sayfadaki bir istemci
 // tarafı filtreydi, kendi URL'leri yoktu — Google "istanbul temizlikçi" gibi
@@ -57,8 +58,7 @@ export async function generateMetadata({ params }) {
     // "Diğer" bir yakalama kutusu (arama niyeti yok); gerçek (demo/ince olmayan) vitrini
     // olmayan sayfalar da indekslenmez.
     robots: params.slug === "diger" || services.filter(isIndexableListing).length === 0 ? { index: false, follow: true } : undefined,
-    openGraph: { title, description, url, siteName: "İşinn", locale: "tr_TR", type: "website" },
-    twitter: { card: "summary_large_image", title, description },
+    ...socialMeta({ title, description, url }),
   };
 }
 

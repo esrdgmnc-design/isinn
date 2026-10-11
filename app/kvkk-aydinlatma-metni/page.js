@@ -1,10 +1,12 @@
 import LegalPageLayout from "../../components/LegalPageLayout";
 import { COMPANY } from "../../lib/companyInfo";
+import { socialMeta } from "../../lib/seoMeta";
 
 export const metadata = {
   title: "KVKK Aydınlatma Metni — İşinn",
   description: "İşinn KVKK aydınlatma metni: kişisel verilerin işlenme amaçları, hukuki sebepler ve başvuru yolları.",
   alternates: { canonical: "https://www.isinn.com.tr/kvkk-aydinlatma-metni" },
+  ...socialMeta({ title: "KVKK Aydınlatma Metni — İşinn", description: "İşinn KVKK aydınlatma metni: kişisel verilerin işlenme amaçları, hukuki sebepler ve başvuru yolları.", url: "https://www.isinn.com.tr/kvkk-aydinlatma-metni" }),
 };
 
 const h2 = { fontWeight: 800, fontSize: "1.05rem", color: "#0F1115", marginTop: "1.75rem", marginBottom: "0.5rem" };

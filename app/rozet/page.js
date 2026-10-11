@@ -7,6 +7,7 @@ export const metadata = {
   title: "Sağlayıcı Rozeti — İşinn",
   description: "İşinn'de vitrin sahibi sağlayıcılar için kendi web sitelerine ya da profillerine ekleyebilecekleri rozet ve gömme kodu.",
   alternates: { canonical: `${BASE_URL}/rozet` },
+  robots: { index: false, follow: true },
 };
 
 export default function RozetPage() {
