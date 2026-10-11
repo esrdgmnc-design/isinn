@@ -8035,6 +8035,60 @@ function OwnerVisibilityCard({ row, busy, error, onToggle, onGoToPlans }) {
   );
 }
 
+// Yayın sonrası paylaşım: kitleye göre hazır, abartısız metinler (kazanç/garanti iddiası yok) ve her bağlantıya kaynak etiketi
+// (utm_source=<kitle>), böylece hangi paylaşımın ziyaretçi getirdiği ölçülür. Metin düzenlenebilir.
+function ShareAfterPublish({ listingId, listingTitle, userId }) {
+  const [kind, setKind] = useState("mahalle");
+  const [copied, setCopied] = useState(false);
+  const url = (k) => `https://www.isinn.com.tr/vitrin/${listingId}?utm_source=${k}&utm_medium=vitrin_paylas&utm_campaign=yeni_vitrin`;
+  const textFor = (k) => {
+    const u = url(k);
+    if (k === "instagram") return `Vitrinim İşinn'de yayında: ${listingTitle}. Çalışmalarım ve ulaşmak için: ${u}`;
+    if (k === "aile") return `Yeni bir şey başlattım: İşinn'de hizmet vitrinim yayında (${listingTitle}). Bir göz atar mısın? Tanıdığın birine uygunsa iletirsen çok sevinirim: ${u}`;
+    return `Merhaba, İşinn'de "${listingTitle}" hizmetim için vitrin açtım. Yaptığım işleri ve nasıl çalıştığımı vitrinimde görebilirsiniz: ${u} Mesajla ulaşabilirsiniz.`;
+  };
+  const [text, setText] = useState(() => textFor("mahalle"));
+  const pick = (k) => { setKind(k); setText(textFor(k)); setCopied(false); };
+  return (
+    <div className="rounded-2xl border p-5 mb-6 text-left" style={{ borderColor: "#D9D0BA", background: "#FFFDF8" }}>
+      <p className="text-sm font-bold mb-1" style={{ color: "#1B2B24" }}>Vitrinini paylaş</p>
+      <p className="text-xs mb-3" style={{ color: "#5C5744" }}>Tanıdıklarına gönder; ilk müşterilerin en çok senin çevrenden gelir. Kime göndereceğini seç, metni istediğin gibi düzenle.</p>
+      <div className="flex gap-2 flex-wrap mb-3" role="radiogroup" aria-label="Paylaşım kitlesi">
+        {[["mahalle", "Mahalle / anne grubu"], ["instagram", "Instagram"], ["aile", "Aile ve arkadaş"]].map(([k, label]) => (
+          <button
+            key={k}
+            type="button"
+            role="radio"
+            aria-checked={kind === k}
+            onClick={() => pick(k)}
+            className="px-3 py-1.5 rounded-full text-xs font-medium border"
+            style={kind === k ? { background: "#1B2B24", borderColor: "#1B2B24", color: "#FFFFFF" } : { background: "#FFFFFF", borderColor: "#D9D0BA", color: "#1B2B24" }}
+          >{label}</button>
+        ))}
+      </div>
+      <textarea
+        value={text}
+        onChange={(e) => { setText(e.target.value); setCopied(false); }}
+        rows={4}
+        className="w-full px-3 py-2.5 rounded-lg border text-xs outline-none resize-none mb-3"
+        style={{ borderColor: "#D9D0BA", background: "#FFFFFF", color: "#1B2B24" }}
+      />
+      <div className="flex gap-2 flex-wrap">
+        <a
+          href={`https://wa.me/?text=${encodeURIComponent(text)}`}
+          target="_blank" rel="noopener noreferrer"
+          onClick={() => trackEvent("vitrin_shared", { via: "whatsapp", audience: kind, listing_id: listingId, source: "after_publish" }, userId)}
+          className="px-4 py-2 rounded-full text-xs font-bold text-white" style={{ background: "#16A34A" }}
+        >WhatsApp'ta paylaş</a>
+        <button
+          onClick={async () => { try { await navigator.clipboard.writeText(text); setCopied(true); trackEvent("vitrin_shared", { via: "copy", audience: kind, listing_id: listingId, source: "after_publish" }, userId); } catch {} }}
+          className="px-4 py-2 rounded-full text-xs font-bold border" style={{ borderColor: "#D9D0BA", color: "#1B2B24" }}
+        >{copied ? "Kopyalandı" : "Metni kopyala"}</button>
+      </div>
+    </div>
+  );
+}
+
 function CreateListingView({ onBack, onCreated, userId, onGoToProfile, onGoToPlans, onOpenTalentDiscovery, initialCategoryId, initialNote, initialTitle, initialDesc }) {
   const { t } = useLanguage();
   const [mode, setMode] = useState("local");
@@ -8640,28 +8694,7 @@ function CreateListingView({ onBack, onCreated, userId, onGoToProfile, onGoToPla
           </div>
         )}
 
-        {created?.dbId && (() => {
-          const shareUrl = `https://www.isinn.com.tr/vitrin/${created.dbId}`;
-          const shareText = `İşinn'de vitrinim yayında: ${created.title}`;
-          return (
-            <div className="rounded-2xl border p-5 mb-6 text-left" style={{ borderColor: "#D9D0BA", background: "#FFFDF8" }}>
-              <p className="text-sm font-bold mb-1" style={{ color: "#1B2B24" }}>Vitrinini paylaş</p>
-              <p className="text-xs mb-3" style={{ color: "#5C5744" }}>Tanıdıklarına ve sosyal medya hesaplarına gönder; ilk müşterilerin en çok senin çevrenden gelir.</p>
-              <div className="flex gap-2 flex-wrap">
-                <a
-                  href={`https://wa.me/?text=${encodeURIComponent(shareText + " " + shareUrl)}`}
-                  target="_blank" rel="noopener noreferrer"
-                  onClick={() => trackEvent("vitrin_shared", { via: "whatsapp" }, userId)}
-                  className="px-4 py-2 rounded-full text-xs font-bold text-white" style={{ background: "#16A34A" }}
-                >WhatsApp'ta paylaş</a>
-                <button
-                  onClick={async () => { try { await navigator.clipboard.writeText(shareUrl); trackEvent("vitrin_shared", { via: "copy" }, userId); } catch {} }}
-                  className="px-4 py-2 rounded-full text-xs font-bold border" style={{ borderColor: "#D9D0BA", color: "#1B2B24" }}
-                >Bağlantıyı kopyala</button>
-              </div>
-            </div>
-          );
-        })()}
+        {created?.dbId && <ShareAfterPublish listingId={created.dbId} listingTitle={created.title} userId={userId} />}
 
         <div className="flex gap-2 justify-center">
           <button onClick={onBack} className="px-5 py-2.5 rounded-full text-sm font-medium text-white" style={{ background: "#C2872B" }}>{t("common.backToHome")}</button>

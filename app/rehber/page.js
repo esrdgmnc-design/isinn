@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { REHBER_POSTS } from "../../lib/rehberContent";
+import { REHBER_POSTS, rehberMeta } from "../../lib/rehberContent";
 import { jsonLdString } from "../../lib/jsonLd";
 
 const BASE_URL = "https://www.isinn.com.tr";
@@ -76,6 +76,9 @@ export default function RehberIndexPage() {
               <Link key={post.slug} href={`/rehber/${post.slug}`} className="block rounded-2xl p-5" style={{ border: "1px solid #F0F0F0" }}>
                 <h3 className="text-lg font-bold mb-1" style={{ color: "#0F1115" }}>{post.title}</h3>
                 <p className="text-sm" style={{ color: "#6B7280" }}>{post.description}</p>
+                <p className="text-xs mt-2" style={{ color: "#9CA3AF" }}>
+                  {post.lang === "en" ? "Updated" : "Güncelleme"}: {new Date(`${rehberMeta(post).updated}T12:00:00Z`).toLocaleDateString(post.lang === "en" ? "en-US" : "tr-TR", { day: "numeric", month: "long", year: "numeric" })}
+                </p>
               </Link>
             ))}
           </div>

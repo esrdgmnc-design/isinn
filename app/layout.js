@@ -1,3 +1,4 @@
+import AttributionCapture from "../components/AttributionCapture";
 import "./globals.css";
 import { Analytics } from "@vercel/analytics/react";
 import { COMPANY } from "../lib/companyInfo";
@@ -108,6 +109,7 @@ export default function RootLayout({ children }) {
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdString(websiteJsonLd) }} />
         {children}
         <ServiceWorkerRegister />
+        <AttributionCapture />
         {/* Ziyaretçi/sayfa görüntüleme sayısı hiç tutulmuyordu ("kaç kişi
             tıklamış siteyi" — cevap yoktu). Vercel Web Analytics çerezsiz
             çalışır (gizlilik politikasındaki "takip çerezi kullanmıyoruz"

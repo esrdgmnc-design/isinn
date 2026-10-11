@@ -10,7 +10,7 @@ const BASE_URL = "https://www.isinn.com.tr";
 const URL = `${BASE_URL}/hakkimizda`;
 const TITLE = "İşinn Nedir? Ne Yapar, Ne Yapmaz | Hakkımızda";
 const DESCRIPTION = "İşinn, becerini fark edip hizmet vitrinine dönüştürmene ve yakınındaki hizmetleri bulmana yardım eden bir hizmet keşif platformudur. Komisyon almaz, ödemeye aracılık etmez, ürün satmaz.";
-const UPDATED = "2026-10-04";
+const UPDATED = "2026-10-11";
 
 export const metadata = {
   title: TITLE,
@@ -79,7 +79,7 @@ export default function HakkimizdaPage() {
         <p className="text-base mb-3" style={{ color: "#374151" }}>
           <b>Kısa cevap:</b> İşinn, becerini fark edip hizmet vitrinine dönüştürmene ve yakınındaki hizmetleri bulmana yardım eden bir hizmet keşif platformudur. Komisyon almaz, ödemeye aracılık etmez, ürün satmaz.
         </p>
-        <p className="text-xs mb-8" style={{ color: "#6B7280" }}>Son güncelleme: 4 Ekim 2026</p>
+        <p className="text-xs mb-8" style={{ color: "#6B7280" }}>Son güncelleme: 11 Ekim 2026</p>
 
         <h2 className="font-sans text-xl font-black mb-3" style={{ color: "#0F1115" }}>Kimler için?</h2>
         <p className="text-sm mb-8" style={{ color: "#374151" }}>
@@ -113,6 +113,15 @@ export default function HakkimizdaPage() {
             </div>
           ))}
         </div>
+
+        <h2 className="font-sans text-xl font-black mb-3" style={{ color: "#0F1115" }}>Rehberleri nasıl hazırlıyoruz?</h2>
+        <ul className="list-disc pl-5 space-y-2 mb-3 text-sm" style={{ color: "#374151" }}>
+          <li>Kazanç ya da iş vaadi vermeyiz. Sayılar ölçüm ya da kaynaklı veri değil de tahminse, yazıda “tahmin” diye belirtiriz.</li>
+          <li>Vergi, hukuk ve sağlık gibi konularda kesin hüküm vermeyiz; ilgili resmî kuruma ya da bir uzmana yönlendiririz.</li>
+          <li>Her yazıda yayın ve güncelleme tarihi görünür; içeriği değiştirdiğimizde güncelleme tarihi de değişir.</li>
+          <li>Rehberlerin hazırlanmasında yapay zekâ araçlarından yardım alınır.</li>
+        </ul>
+        <p className="text-sm mb-8" style={{ color: "#374151" }}>Bir yazıda yanlış ya da eksik bir bilgi görürsen <a href={`mailto:${COMPANY.email}`} style={{ color: "#2563EB" }}>{COMPANY.email}</a> adresine yaz, düzeltelim.</p>
 
         <h2 className="font-sans text-xl font-black mb-3" style={{ color: "#0F1115" }}>Şirket bilgileri</h2>
         <p className="text-sm mb-2" style={{ color: "#374151" }}>İşinn, {COMPANY.legalName} markasıdır.</p>
