@@ -3385,6 +3385,17 @@ function ListingDetail({ listing, onBack, onContact, userReviews, onAddReview, o
   const [providerShowcaseLoading, setProviderShowcaseLoading] = useState(false);
   const [showcaseLightbox, setShowcaseLightbox] = useState(null); // { media, index }
   const [workLinkUrl, setWorkLinkUrl] = useState(null);
+  const [descEdit, setDescEdit] = useState(null); // { description_prev, description_edited_at } — vitrin metni İşinn tarafından düzenlendiyse
+  const [descBusy, setDescBusy] = useState(false);
+  const [descMsg, setDescMsg] = useState("");
+  const resolveDescEdit = async (restore) => {
+    setDescBusy(true); setDescMsg("");
+    const { error } = await supabase.rpc("resolve_listing_description", { p_service_id: listing.dbId, p_restore: !!restore });
+    setDescBusy(false);
+    if (error) { setDescMsg(t("listingDetail.descError")); return; }
+    setDescEdit(null);
+    if (restore) { setDescMsg(t("listingDetail.descRestored")); setTimeout(() => { try { window.location.reload(); } catch {} }, 900); }
+  };
   const ownerPortfolio = useVitrinPortfolioActions({
     userId: currentUserId,
     serviceId: listing.dbId,
@@ -3439,6 +3450,7 @@ function ListingDetail({ listing, onBack, onContact, userReviews, onAddReview, o
     trackEvent("listing_view", { category: listing.category || null, listing_id: listing.isReal ? listing.dbId : null }, currentUserId || null);
     // work_link_url AYRI sorgu: migration henüz çalışmadıysa (kolon yok) yalnızca bu istek hata verir, video/galeri etkilenmez.
     supabase.from("services").select("work_link_url").eq("id", listing.dbId).maybeSingle().then(({ data, error }) => { if (!cancelled && !error) setWorkLinkUrl(data?.work_link_url || null); }, () => {});
+    supabase.from("services").select("description_prev, description_edited_at").eq("id", listing.dbId).maybeSingle().then(({ data, error }) => { if (!cancelled && !error) setDescEdit(data || null); }, () => {});
     (async () => {
       const [{ data: serviceData }, { data: portfolioData }] = await Promise.all([
         supabase.from("services").select("video_intro_url, video_intro_name").eq("id", listing.dbId).maybeSingle(),
@@ -3962,9 +3974,29 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
           <h1 className="font-serif text-2xl mt-2.5 mb-2" style={{ color: "#1B2B24" }}>{listing.title}</h1>
           <div className="flex items-center gap-3 text-sm mb-4" style={{ color: "#5C5744" }}>
             <span className="flex items-center gap-1"><MapPin size={14} />{listing.city}</span>
-            <span className="flex items-center gap-1"><Stars value={listing.rating} size={13} />{listing.rating} {t("listingDetail.reviewCount", { count: listing.reviewCount })}</span>
+            {listing.reviewCount > 0 ? (
+              <span className="flex items-center gap-1"><Stars value={listing.rating} size={13} />{listing.rating} {t("listingDetail.reviewCount", { count: listing.reviewCount })}</span>
+            ) : (
+              <span className="flex items-center gap-1">{t("searchResults.newListingLabel")}</span>
+            )}
           </div>
-          <p className="text-sm leading-relaxed" style={{ color: "#3D3B30" }}>{listing.desc}</p>
+          <p className="text-sm leading-relaxed whitespace-pre-line" style={{ color: "#3D3B30" }}>{listing.desc}</p>
+          {descEdit?.description_prev && (
+            <div className="mt-3 text-[11px] rounded-lg px-3 py-2" style={{ background: "#F3EEDD", color: "#5C5744" }}>
+              {ownerMode ? (
+                <>
+                  <p className="mb-2">{t("listingDetail.descEditedOwner")}</p>
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" disabled={descBusy} onClick={() => resolveDescEdit(true)} className="px-3 py-1.5 rounded-full text-xs font-bold border" style={{ borderColor: "#D9D0BA", background: "#FFFFFF", color: "#1B2B24" }}>{t("listingDetail.descRestore")}</button>
+                    <button type="button" disabled={descBusy} onClick={() => resolveDescEdit(false)} className="px-3 py-1.5 rounded-full text-xs font-bold border" style={{ borderColor: "#D9D0BA", background: "#FFFFFF", color: "#1B2B24" }}>{t("listingDetail.descKeep")}</button>
+                  </div>
+                  {descMsg && <p className="mt-2">{descMsg}</p>}
+                </>
+              ) : (
+                <p>{t("listingDetail.descEditedPublic")}</p>
+              )}
+            </div>
+          )}
         </div>
         )}
 
@@ -4186,7 +4218,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
                 <p className="text-xs mb-2 px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{videoError}</p>
               )}
               {providerShowcase?.video_intro_url ? (
-                <video controls playsInline className="w-full rounded-xl bg-black" style={{ maxHeight: "320px" }}>
+                <video controls playsInline preload="metadata" poster={listing.img || undefined} className="w-full rounded-xl bg-black" style={{ maxHeight: "320px" }}>
                   <source src={providerShowcase.video_intro_url} />
                 </video>
               ) : (
@@ -12099,14 +12131,38 @@ export default function IsinnPrototype({ session, onRequireAuth, discoveryPopula
     let cancelled = false;
     supabase.from("services").select("*, profiles(*), categories(*)").eq("id", vitrinId).eq("active", true).maybeSingle().then(({ data }) => {
       if (cancelled || !data) return;
-      setSelected(mapServiceRowToListing(data));
+      const base = mapServiceRowToListing(data);
+      setSelected(base);
       setView("detail");
+      supabase.from("ratings").select("value, rated_profile_id, service_id").eq("rated_profile_id", data.provider_id).then(({ data: rs }) => {
+        if (cancelled || !rs) return;
+        const vals = (base.shareProfileReviews ? rs : rs.filter((r) => r.service_id === base.dbId)).map((r) => r.value);
+        if (vals.length > 0) setSelected((cur) => (cur && cur.dbId === base.dbId ? { ...cur, rating: Number((vals.reduce((s, v) => s + v, 0) / vals.length).toFixed(1)), reviewCount: vals.length } : cur));
+      }, () => {});
       const url = new URL(window.location.href);
       url.searchParams.delete("vitrin");
       window.history.replaceState({}, "", url);
     });
     return () => { cancelled = true; };
   }, []);
+
+  // Girişsiz "İletişime Geç"e basan ziyaretçi giriş yaptıktan sonra baktığı vitrine dönsün (15 dk içinde).
+  useEffect(() => {
+    if (!userId) return;
+    let raw = null;
+    try { raw = localStorage.getItem("isinn_pending_detail"); if (raw) localStorage.removeItem("isinn_pending_detail"); } catch {}
+    if (!raw) return;
+    let p = null;
+    try { p = JSON.parse(raw); } catch {}
+    if (!p?.id || Date.now() - (p.ts || 0) > 15 * 60 * 1000) return;
+    let cancelled = false;
+    supabase.from("services").select("*, profiles(*), categories(*)").eq("id", p.id).eq("active", true).maybeSingle().then(({ data }) => {
+      if (cancelled || !data) return;
+      setSelected(mapServiceRowToListing(data));
+      setView("detail");
+    }, () => {});
+    return () => { cancelled = true; };
+  }, [userId]);
 
   // Gerçek bir admin rolü — bkz. supabase/admin_role.sql. Tam bir rol/izin
   // sistemi değil, tek bir bayrak: kullanıcının kendi hesabını (profiles.
@@ -12575,7 +12631,7 @@ export default function IsinnPrototype({ session, onRequireAuth, discoveryPopula
       const { data: jobRow } = await supabase.from("jobs").select("*, profiles(*), categories(*)").eq("id", n.related_job_id).maybeSingle();
       if (jobRow) { setSelectedJob(mapJobRowToPosting(jobRow)); setView("jobDetail"); return; }
     }
-    if ((n.type === "media_approved" || n.type === "media_rejected" || n.type === "saved_search_match" || n.type === "service_favorited" || n.type === "ai_match_top3") && n.related_service_id) {
+    if ((n.type === "media_approved" || n.type === "media_rejected" || n.type === "saved_search_match" || n.type === "service_favorited" || n.type === "ai_match_top3" || n.type === "listing_text_edited") && n.related_service_id) {
       const { data } = await supabase.from("services").select("*, profiles(*), categories(*)").eq("id", n.related_service_id).maybeSingle();
       if (data) { setSelected(mapServiceRowToListing(data)); setView("detail"); return; }
     }
@@ -12726,7 +12782,11 @@ export default function IsinnPrototype({ session, onRequireAuth, discoveryPopula
           listing={selected}
           onBack={() => goBack()}
           onContact={() => {
-            if (!userId) { onRequireAuth?.(); return; }
+            if (!userId) {
+              try { if (selected.dbId) localStorage.setItem("isinn_pending_detail", JSON.stringify({ id: selected.dbId, ts: Date.now() })); } catch {}
+              onRequireAuth?.();
+              return;
+            }
             setMessageContact({
               name: selected.provider,
               listingTitle: selected.title,
