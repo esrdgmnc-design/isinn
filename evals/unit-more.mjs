@@ -46,8 +46,9 @@ bad("linkedin.com/posts/esra_abc-123", "post");
 bad("linkedin.com/feed/", "post");
 bad("linkedin.com/jobs/view/123", "post");
 bad("linkedin.com/in/ab", "format");
-bad("https://evil.com/linkedin.com/in/esra-gunes", "platform");
-bad("https://linkedin.com.evil.com/in/esra-gunes", "platform");
+// Platform adı yol/alt alan adında geçen başka siteler artık "web" olarak kabul edilir; gösterilen etiket gerçek alan adıdır.
+assert.equal(normalizeWorkLink("https://evil.com/linkedin.com/in/esra-gunes").platform, "web");
+assert.equal(safeWorkLink("https://linkedin.com.evil.com/in/esra-gunes").host, "linkedin.com.evil.com");
 { const r = normalizeWorkLink("esra-gunes", "linkedin"); assert.equal(r.ok, true); assert.equal(r.url, "https://www.linkedin.com/in/esra-gunes/"); }
 { const r = normalizeWorkLink("esra-gunes", "instagram"); assert.equal(r.ok, false); assert.equal(r.needsPlatform, true); }
 assert.equal(safeWorkLink("https://www.linkedin.com/in/esra-gunes/").platform, "linkedin");
@@ -57,11 +58,26 @@ bad("youtube.com/watch?v=abc", "post");
 bad("javascript:alert(1)", "format");
 bad("data:text/html,x", "format");
 bad("https://instagram.com@evil.com/x", "format");
-bad("https://evil.com/instagram.com/x", "platform");
-for (const host of ["wa.me/905551112233", "bit.ly/abc", "linktr.ee/ilayda", "shopier.com/ilayda", "trendyol.com/x", "mumatolyem.com"]) bad(host, "platform");
+assert.equal(normalizeWorkLink("https://evil.com/instagram.com/x").platform, "web");
+for (const host of ["wa.me/905551112233", "bit.ly/abc", "linktr.ee/ilayda", "shopier.com/ilayda", "trendyol.com/x"]) bad(host, "platform");
 bad("https://www.instagram.com:8080/ilayda", "format");
 bad("insta gram.com/x", "format");
-assert.equal(safeWorkLink("https://evil.com/"), null);
+assert.equal(safeWorkLink("https://bit.ly/abc"), null);
+assert.equal(safeWorkLink("https://ayorahealing.com/").platform, "web");
+ok("ayorahealing.com", "https://ayorahealing.com/");
+ok("https://www.AyoraHealing.com/?utm_source=x#top", "https://www.ayorahealing.com/");
+ok("http://ornek.com.tr/portfoy/web-tasarim/", "https://ornek.com.tr/portfoy/web-tasarim");
+bad("https://bit.ly/abc", "platform");
+bad("https://shop.trendyol.com/magaza", "platform");
+bad("https://linktr.ee/ilayda", "platform");
+bad("https://drive.google.com/file/d/1", "platform");
+bad("https://192.168.1.1/", "format");
+bad("https://localhost/", "format");
+bad("https://xn--e1afmkfd.xn--p1ai/", "format");
+bad("https://ornek.com:8080/", "format");
+bad("https://user:pw@ornek.com/", "format");
+bad("https://ornek.com/a/b/c/d/e", "format");
+bad("javascript:alert(1)", "format");
 assert.equal(safeWorkLink("https://www.instagram.com/ilayda/").platform, "instagram");
 
 // --- JSON-LD: "<" kaçışlanır, yine de geçerli JSON ve aynı değere döner
