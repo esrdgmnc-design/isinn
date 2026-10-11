@@ -124,6 +124,11 @@ export default function HakkimizdaPage() {
         </ul>
         <p className="text-sm mb-8" style={{ color: "#374151" }}>Bir yazıda yanlış ya da eksik bir bilgi görürsen <a href={`mailto:${COMPANY.email}`} style={{ color: "#2563EB" }}>{COMPANY.email}</a> adresine yaz, düzeltelim.</p>
 
+        <h2 className="font-sans text-xl font-black mb-3" style={{ color: "#0F1115" }}>Kurucu</h2>
+        <p className="text-sm mb-8" style={{ color: "#374151" }}>
+          İşinn'in kurucusu Esra Güneş'tir. <a href="https://www.linkedin.com/in/esra-g-037912138/" rel="me noopener" target="_blank" style={{ color: "#2563EB" }}>LinkedIn profili</a>
+        </p>
+
         <h2 className="font-sans text-xl font-black mb-3" style={{ color: "#0F1115" }}>Şirket bilgileri</h2>
         <p className="text-sm mb-2" style={{ color: "#374151" }}>İşinn, {COMPANY.legalName} markasıdır.</p>
         <ul className="text-sm space-y-1 mb-8" style={{ color: "#374151" }}>

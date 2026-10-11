@@ -69,6 +69,7 @@ const organizationJsonLd = {
   "@context": "https://schema.org",
   "@type": "Organization",
   "@id": "https://www.isinn.com.tr/#org",
+  founder: { "@type": "Person", name: "Esra Güneş", sameAs: ["https://www.linkedin.com/in/esra-g-037912138/"] },
   name: "İşinn",
   legalName: COMPANY.legalName,
   alternateName: ["Isinn", "isinn.com.tr"],
