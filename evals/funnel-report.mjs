@@ -1,4 +1,4 @@
-// Haftalık büyüme raporu (salt okunur): iç trafik ayıklanmış huni, arz/talep ve Esenyurt pilotu sayıları.
+// Haftalık büyüme raporu (salt okunur): iç trafik ayıklanmış huni, arz/talep ve il dağılımı.
 //   node evals/funnel-report.mjs [gün=14]
 // İç trafik = (1) olayında internal:true olan cihazlar ("/?internal=1" ile işaretlenir), (2) yönetici hesaplar,
 // (3) e-postasında test/demo geçen hesaplar. Bu oturumların TÜM olayları dışlanır. Kişisel içerik yazdırılmaz.
@@ -62,8 +62,15 @@ const services = await q("services?select=id,title,city,is_remote,active,descrip
 const real = services.filter((s) => !(s.description || "").startsWith("DEMO") && !internalIds.has(s.provider_id));
 console.log("\nArz:");
 console.log(`  aktif vitrin: ${services.length}, bunlardan DEMO/iç hesap hariç: ${real.length}`);
-const esen = services.filter((s) => /esenyurt/i.test(s.city || ""));
-console.log(`  PİLOT Esenyurt: ${esen.length} vitrin (DEMO/iç hariç: ${esen.filter((s) => !(s.description || "").startsWith("DEMO") && !internalIds.has(s.provider_id)).length}), uzaktan hizmet veren: ${services.filter((s) => s.is_remote).length}`);
+// Kapsam Türkiye geneli. İstenirse bir ilçe/şehir için: PILOT_DISTRICT=<ad> node evals/funnel-report.mjs
+const pilot = (process.env.PILOT_DISTRICT || "").trim();
+if (pilot) {
+  const inPilot = services.filter((s) => (s.city || "").toLocaleLowerCase("tr-TR").includes(pilot.toLocaleLowerCase("tr-TR")));
+  console.log(`  ${pilot}: ${inPilot.length} vitrin (DEMO/iç hariç: ${inPilot.filter((s) => !(s.description || "").startsWith("DEMO") && !internalIds.has(s.provider_id)).length})`);
+}
+const byProvince = {};
+for (const s of real) { const p = s.is_remote ? "uzaktan" : ((s.city || "?").split(",").pop().trim() || "?"); byProvince[p] = (byProvince[p] || 0) + 1; }
+console.log("  il dağılımı (DEMO/iç hariç): " + Object.entries(byProvince).sort((x, y) => y[1] - x[1]).map(([k, v]) => `${k}=${v}`).join(", "));
 const jobsAll = await q("jobs?select=id,service_id,state,client_delivered_at,provider_delivered_at,created_at,client_id");
 const threads = jobsAll.filter((j) => j.service_id && !internalIds.has(j.client_id));
 const both = jobsAll.filter((j) => j.client_delivered_at && j.provider_delivered_at && !internalIds.has(j.client_id));
