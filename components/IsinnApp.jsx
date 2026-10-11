@@ -10,7 +10,7 @@ const Cropper = dynamic(() => import("react-easy-crop"), { ssr: false, loading: 
 import { COMPANY } from "../lib/companyInfo";
 import { FALLBACK_LISTING_IMG, formatPriceLabel, mapServiceRowToListing } from "../lib/mapServiceRowToListing";
 import { isFreePeriod, FREE_PERIOD_UNTIL_ISO } from "../lib/freePeriod";
-import { trackEvent, captureAttribution } from "../lib/analytics";
+import { trackEvent, captureAttribution, markInternal } from "../lib/analytics";
 import { useLanguage } from "../lib/i18n/LanguageContext";
 import { TALENT_BLOCKED_IDS, redactTalentPII, sanitizeTalentDraft, buildTalentFallback, detectsProductSaleIntent } from "../lib/talentCore";
 import WorkLinkEditor from "./WorkLinkEditor";
@@ -5101,6 +5101,8 @@ function SearchResultsView({ query, cityFilter, onBack, onSelectListing, realLis
     if (loggedSearchRef.current === key) return;
     loggedSearchRef.current = key;
     supabase.from("search_queries").insert({ query: query.trim(), result_count: results.length }).then(() => {});
+    // Kişisel içerik yok: yalnızca sonuç sayısı kovası. Sıfır sonuç oranı = arz boşluğunun en ucuz ölçüsü.
+    trackEvent("search_results", { bucket: results.length === 0 ? "0" : results.length <= 2 ? "1-2" : "3+", has_city: !!cityFilter }, currentUserId || null);
   }, [query, cityFilter, aiExpanding, results.length]);
 
   return (
@@ -12066,7 +12068,7 @@ export default function IsinnPrototype({ session, onRequireAuth, discoveryPopula
     if (!userId) { setIsAdmin(false); return; }
     let cancelled = false;
     supabase.from("profiles").select("is_admin").eq("id", userId).maybeSingle().then(({ data }) => {
-      if (!cancelled) setIsAdmin(!!data?.is_admin);
+      if (!cancelled) { setIsAdmin(!!data?.is_admin); if (data?.is_admin) markInternal(true); }
     });
     return () => { cancelled = true; };
   }, [userId]);

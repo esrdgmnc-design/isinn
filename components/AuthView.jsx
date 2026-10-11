@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { useLanguage } from "../lib/i18n/LanguageContext";
+import { trackEvent } from "../lib/analytics";
 
 // Kayıt sırasında hangi yasal metin sürümüne onay verildiğini işaretlemek
 // için — metinler (bkz. legal/ klasörü, /kvkk-aydinlatma-metni vb.) ileride
@@ -117,7 +118,9 @@ export default function AuthView({ onAuthenticated, onCancel }) {
         onAuthenticated(data.session);
       } else {
         setSignupDone(true);
+        trackEvent("signup_email_pending", {}, null);
       }
+      trackEvent("signup_submitted", { immediate_session: !!data.session }, null);
       setLoading(false);
       return;
     }
