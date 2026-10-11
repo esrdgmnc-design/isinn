@@ -17,7 +17,8 @@ declare
     'facebook.com','fb.com','fb.me','x.com','twitter.com','pinterest.com',
     'trendyol.com','hepsiburada.com','n11.com','etsy.com','shopier.com','ciceksepeti.com','sahibinden.com','dolap.com',
     'gittigidiyor.com','letgo.com','aliexpress.com','temu.com','myshopify.com','amazon.com','amazon.com.tr',
-    'drive.google.com','docs.google.com','dropbox.com','wetransfer.com','mega.nz'
+    'drive.google.com','docs.google.com','dropbox.com','wetransfer.com','mega.nz',
+    'youtu.be','vm.tiktok.com','vt.tiktok.com','bitly.com','lnkd.in','ig.me','instagr.am','wa.link','forms.gle','pin.it','fb.watch','discord.gg','discord.com','snapchat.com','t.ly','kisa.link','sites.google.com','translate.goog','web.archive.org','ebay.com','armut.com','shein.com','fiverr.com','amazon.de','web.app','github.io','nip.io','sslip.io'
   ];
 begin
   u := new.work_link_url;
@@ -46,6 +47,12 @@ begin
   if u ~ '^https://([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,24}(/[A-Za-z0-9._~%-]{1,60}){0,4}/?$'
      and u !~ '^https://([^/]*\.)?xn--' then
     h := substring(u from '^https://([^/]+)');
+    -- Riskli uzantılar ve marka taklidi alan adları
+    if h ~ '\.(tk|ml|ga|cf|gq|zip|mov|local|internal|test|localhost|invalid|onion|xyz|top|click|icu)$'
+       or h ~ '(instagram|tiktok|youtube|linkedin|whatsapp|facebook|isinn|banka|giris|login|signin|password|sifre)'
+       or u ~ '/\.\.?(/|$)' or u ~* '%(2f|5c|3a|3f)' then
+      raise exception 'Bu adres çalışma bağlantısı olarak eklenemez.';
+    end if;
     foreach d in array deny loop
       if h = d or h like '%.' || d then
         raise exception 'Bu adres çalışma bağlantısı olarak eklenemez (kısaltılmış bağlantı, link-in-bio, mesajlaşma, pazaryeri ya da dosya paylaşım adresi).';

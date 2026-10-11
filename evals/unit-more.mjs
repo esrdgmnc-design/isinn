@@ -48,7 +48,7 @@ bad("linkedin.com/jobs/view/123", "post");
 bad("linkedin.com/in/ab", "format");
 // Platform adı yol/alt alan adında geçen başka siteler artık "web" olarak kabul edilir; gösterilen etiket gerçek alan adıdır.
 assert.equal(normalizeWorkLink("https://evil.com/linkedin.com/in/esra-gunes").platform, "web");
-assert.equal(safeWorkLink("https://linkedin.com.evil.com/in/esra-gunes").host, "linkedin.com.evil.com");
+bad("https://linkedin.com.evil.com/in/esra-gunes", "platform");
 { const r = normalizeWorkLink("esra-gunes", "linkedin"); assert.equal(r.ok, true); assert.equal(r.url, "https://www.linkedin.com/in/esra-gunes/"); }
 { const r = normalizeWorkLink("esra-gunes", "instagram"); assert.equal(r.ok, false); assert.equal(r.needsPlatform, true); }
 assert.equal(safeWorkLink("https://www.linkedin.com/in/esra-gunes/").platform, "linkedin");
@@ -56,6 +56,10 @@ bad("instagram.com/p/XYZ/", "post");
 bad("tiktok.com/video/123", "post");
 bad("youtube.com/watch?v=abc", "post");
 bad("javascript:alert(1)", "format");
+for (const h of ["youtu.be/abc", "vm.tiktok.com/x", "lnkd.in/x", "forms.gle/x", "instagram.com.evil.com", "isinn-giris.com", "bahisx.xyz", "ornek.tk", "evil.localhost", "127.0.0.1.nip.io", "sites.google.com/view/x"]) bad(h, "platform");
+bad("ornek.com/r/https%3A%2F%2Fevil.com", "format");
+// URL ayrıştırıcı "/a/../b" yolunu "/b"ye indirger; kanonik adres güvenlidir.
+ok("ornek.com/a/../b", "https://ornek.com/b");
 bad("data:text/html,x", "format");
 bad("https://instagram.com@evil.com/x", "format");
 assert.equal(normalizeWorkLink("https://evil.com/instagram.com/x").platform, "web");
