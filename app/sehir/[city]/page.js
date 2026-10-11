@@ -7,6 +7,7 @@ import { formatPrice, getProviderName, getCityIntro, isIndexableListing, MIN_CIT
 import { getCityFaq } from "../../../lib/categoryFaq";
 import { jsonLdString } from "../../../lib/jsonLd";
 import { socialMeta } from "../../../lib/seoMeta";
+import SeoFooter from "../../../components/SeoFooter";
 
 // SEO için eklendi — bkz. app/kategori/[slug]/page.js'teki aynı gerekçe.
 // services.city serbest metin olduğu için (bkz. lib/seoTaxonomy.js) şehir
@@ -175,6 +176,7 @@ export default async function CityPage({ params }) {
           </div>
         )}
       </div>
+      <SeoFooter />
     </>
   );
 }

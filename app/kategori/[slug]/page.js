@@ -3,10 +3,11 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import { supabase } from "../../../lib/supabaseClient";
 import { SEO_CATEGORIES, SEO_CITIES, matchesCitySlug, categorySeoName } from "../../../lib/seoTaxonomy";
-import { formatPrice, getProviderName, getCategoryIntro, isIndexableListing, MIN_COMBO_LISTINGS } from "../../../lib/seoFormat";
+import { formatPrice, getProviderName, getCategoryIntro, isIndexableListing, MIN_COMBO_LISTINGS, MIN_CATEGORY_LISTINGS } from "../../../lib/seoFormat";
 import { getCategoryFaq } from "../../../lib/categoryFaq";
 import { jsonLdString } from "../../../lib/jsonLd";
 import { socialMeta } from "../../../lib/seoMeta";
+import SeoFooter from "../../../components/SeoFooter";
 
 // SEO için eklendi: kategoriler eskiden sadece ana sayfadaki bir istemci
 // tarafı filtreydi, kendi URL'leri yoktu — Google "istanbul temizlikçi" gibi
@@ -57,7 +58,7 @@ export async function generateMetadata({ params }) {
     // arttıkça otomatik olarak indekslenebilir hâle gelir.
     // "Diğer" bir yakalama kutusu (arama niyeti yok); gerçek (demo/ince olmayan) vitrini
     // olmayan sayfalar da indekslenmez.
-    robots: params.slug === "diger" || services.filter(isIndexableListing).length === 0 ? { index: false, follow: true } : undefined,
+    robots: params.slug === "diger" || services.filter(isIndexableListing).length < MIN_CATEGORY_LISTINGS ? { index: false, follow: true } : undefined,
     ...socialMeta({ title, description, url }),
   };
 }
@@ -180,6 +181,7 @@ export default async function CategoryPage({ params }) {
           </div>
         )}
       </div>
+      <SeoFooter />
     </>
   );
 }

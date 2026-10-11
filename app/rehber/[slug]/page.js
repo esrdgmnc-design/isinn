@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { REHBER_POSTS, findRehberPost, rehberMeta } from "../../../lib/rehberContent";
 import { jsonLdString } from "../../../lib/jsonLd";
 import { socialMeta } from "../../../lib/seoMeta";
+import SeoFooter from "../../../components/SeoFooter";
 
 const BASE_URL = "https://www.isinn.com.tr";
 
@@ -33,8 +34,11 @@ export default function RehberPostPage({ params }) {
   // birbirine PageRank/keşif değeri aktarmasını sağlıyor.
   // Aynı dildeki yazılar önce gelir (İngilizce yazının "ilgili rehber"i İngilizce olsun).
   const sameLang = REHBER_POSTS.filter((p) => (p.lang || "tr") === (post.lang || "tr"));
-  const sameCategory = sameLang.filter((p) => p.slug !== post.slug && p.category === post.category);
-  const others = sameLang.filter((p) => p.slug !== post.slug && p.category !== post.category);
+  // Listede bu yazıdan sonrakilerden başlayıp dönen sıra: her yazı yaklaşık eşit sayıda iç bağlantı alır.
+  const idx = sameLang.findIndex((p) => p.slug === post.slug);
+  const rotated = idx >= 0 ? [...sameLang.slice(idx + 1), ...sameLang.slice(0, idx)] : sameLang.filter((p) => p.slug !== post.slug);
+  const sameCategory = rotated.filter((p) => p.category === post.category);
+  const others = rotated.filter((p) => p.category !== post.category);
   const relatedPosts = [...sameCategory, ...others].slice(0, 3);
 
   const meta = rehberMeta(post);
@@ -51,12 +55,13 @@ export default function RehberPostPage({ params }) {
     headline: post.title,
     description: post.description,
     url: `${BASE_URL}/rehber/${post.slug}`,
-    mainEntityOfPage: `${BASE_URL}/rehber/${post.slug}`,
+    mainEntityOfPage: { "@type": "WebPage", "@id": `${BASE_URL}/rehber/${post.slug}` },
+    image: [`${BASE_URL}/opengraph-image`],
     inLanguage: isEn ? "en" : "tr",
     datePublished: meta.published,
     dateModified: meta.updated,
-    author: { "@type": "Organization", name: "İşinn", url: BASE_URL },
-    publisher: { "@type": "Organization", name: "İşinn", url: BASE_URL, logo: { "@type": "ImageObject", url: `${BASE_URL}/icons/icon-512.webp` } },
+    author: { "@id": `${BASE_URL}/#org` },
+    publisher: { "@id": `${BASE_URL}/#org` },
   };
   const breadcrumbJsonLd = {
     "@context": "https://schema.org",
@@ -152,6 +157,7 @@ export default function RehberPostPage({ params }) {
         )}
         <style>{`.rehber-body h2 { font-size: 18px; font-weight: 800; color: #0F1115; margin: 24px 0 8px; } .rehber-body p { margin: 0 0 12px; } .rehber-body ul { margin: 0 0 12px; padding-left: 20px; list-style: disc; } .rehber-body ol { margin: 0 0 12px; padding-left: 22px; list-style: decimal; } .rehber-body li { margin-bottom: 6px; } .rehber-body a { color: #2563EB; text-decoration: underline; }`}</style>
       </div>
+      <SeoFooter />
     </>
   );
 }

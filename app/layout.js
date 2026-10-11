@@ -57,6 +57,7 @@ export const viewport = {
 const websiteJsonLd = {
   "@context": "https://schema.org",
   "@type": "WebSite",
+  "@id": "https://www.isinn.com.tr/#website",
   name: "İşinn",
   alternateName: ["Isinn", "isinn.com.tr"],
   url: "https://www.isinn.com.tr",

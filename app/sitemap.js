@@ -9,7 +9,7 @@
 import { supabase } from "../lib/supabaseClient";
 import { SEO_CATEGORIES, SEO_CITIES, matchesCitySlug } from "../lib/seoTaxonomy";
 import { REHBER_POSTS, rehberMeta } from "../lib/rehberContent";
-import { isIndexableListing, MIN_CITY_LISTINGS, MIN_COMBO_LISTINGS } from "../lib/seoFormat";
+import { isIndexableListing, MIN_CITY_LISTINGS, MIN_COMBO_LISTINGS, MIN_CATEGORY_LISTINGS } from "../lib/seoFormat";
 
 const BASE_URL = "https://www.isinn.com.tr";
 
@@ -106,7 +106,7 @@ export default async function sitemap() {
     }
   }
 
-  const categoryEntries = SEO_CATEGORIES.filter((c) => (categoryStats.get(c.slug)?.n || 0) >= 1).map((c) => ({
+  const categoryEntries = SEO_CATEGORIES.filter((c) => (categoryStats.get(c.slug)?.n || 0) >= MIN_CATEGORY_LISTINGS).map((c) => ({
     url: `${BASE_URL}/kategori/${c.slug}`,
     lastModified: categoryStats.get(c.slug).last,
     changeFrequency: "weekly",

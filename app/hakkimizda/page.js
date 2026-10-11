@@ -2,6 +2,7 @@ import Link from "next/link";
 import { COMPANY } from "../../lib/companyInfo";
 import { jsonLdString } from "../../lib/jsonLd";
 import { socialMeta } from "../../lib/seoMeta";
+import SeoFooter from "../../components/SeoFooter";
 
 // İşinn nedir sorusuna (marka aramaları, yapay zekâ özetleri) tek, tutarlı ve doğrulanabilir
 // cevap. Her cümle platformun gerçek durumuna dayanır: komisyon yok, ödemeye aracılık yok,
@@ -51,7 +52,7 @@ export default function HakkimizdaPage() {
         description: DESCRIPTION,
         inLanguage: "tr",
         dateModified: UPDATED,
-        isPartOf: { "@type": "WebSite", name: "İşinn", url: BASE_URL },
+        isPartOf: { "@id": `${BASE_URL}/#website` },
       },
       {
         "@type": "BreadcrumbList",
@@ -140,6 +141,7 @@ export default function HakkimizdaPage() {
           <Link href="/kullanim-sartlari">Kullanım Şartları</Link>
         </div>
       </div>
+      <SeoFooter />
     </>
   );
 }

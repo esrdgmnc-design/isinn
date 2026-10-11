@@ -7,6 +7,7 @@ import { formatPrice, getProviderName, isIndexableListing } from "../../../lib/s
 import { socialMeta, clamp, optimizedImageUrl } from "../../../lib/seoMeta";
 import { SEO_CITIES, matchesCitySlug } from "../../../lib/seoTaxonomy";
 import { jsonLdString } from "../../../lib/jsonLd";
+import SeoFooter from "../../../components/SeoFooter";
 
 // SEO için eklendi (2026-09-16): İşinn'in tamamı eskiden tek bir "/" sayfası
 // üzerinde, istemci tarafı görünüm durumuyla çalışıyordu — her vitrin kendi
@@ -308,6 +309,7 @@ export default async function VitrinPage({ params }) {
           </section>
         )}
       </div>
+      <SeoFooter />
     </>
   );
 }

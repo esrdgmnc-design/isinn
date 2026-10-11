@@ -7,6 +7,7 @@ import { formatPrice, getProviderName, getCategoryCityIntro, isIndexableListing,
 import { getCategoryFaq } from "../../../../lib/categoryFaq";
 import { jsonLdString } from "../../../../lib/jsonLd";
 import { socialMeta } from "../../../../lib/seoMeta";
+import SeoFooter from "../../../../components/SeoFooter";
 
 // SEO'nun en değerli sayfası: "istanbul temizlikçi", "ankara özel ders" gibi
 // uzun kuyruk aramaların doğrudan hedefi — bkz. SEO stratejisi dokümanı,
@@ -107,7 +108,7 @@ export default async function CategoryCityPage({ params }) {
           <Link href={`/kategori/${params.slug}`} style={{ color: "#2563EB" }}>{categoryMeta.name}</Link> · {cityMeta.name}
         </p>
         <h1 className="font-sans text-2xl md:text-3xl font-black mb-2" style={{ color: "#0F1115" }}>
-          {cityMeta.name} {categoryMeta.name}
+          {cityMeta.name} {categorySeoName(categoryMeta)}
         </h1>
         <p className="text-sm mb-8" style={{ color: "#6B7280" }}>
           {getCategoryCityIntro(categoryMeta.name, cityMeta.name, `${params.slug}-${params.city}`)}
@@ -155,6 +156,7 @@ export default async function CategoryCityPage({ params }) {
           </div>
         )}
       </div>
+      <SeoFooter />
     </>
   );
 }

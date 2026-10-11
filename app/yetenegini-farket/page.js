@@ -2,6 +2,7 @@ import Link from "next/link";
 import TalentTryBox from "../../components/TalentTryBox";
 import { jsonLdString } from "../../lib/jsonLd";
 import { socialMeta } from "../../lib/seoMeta";
+import SeoFooter from "../../components/SeoFooter";
 
 // Yeteneğini Farket artık Google'ın tarayabileceği gerçek bir sayfaya sahip (eskiden
 // yalnızca uygulama içinde, ?view=talentDiscovery ile açılıyordu). Sayfadaki her
@@ -86,7 +87,20 @@ export default function YeteneginiFarketPage() {
         name: "Yeteneğini Farket: Becerilerinden hizmet fikirleri al",
         description: DESCRIPTION,
         inLanguage: "tr",
-        isPartOf: { "@type": "WebSite", name: "İşinn", url: BASE_URL },
+        isPartOf: { "@id": `${BASE_URL}/#website` },
+      },
+      {
+        "@type": "WebApplication",
+        "@id": `${URL}#app`,
+        name: "Yeteneğini Farket",
+        url: URL,
+        description: DESCRIPTION,
+        applicationCategory: "LifestyleApplication",
+        operatingSystem: "Web",
+        inLanguage: "tr",
+        isAccessibleForFree: true,
+        offers: { "@type": "Offer", price: "0", priceCurrency: "TRY" },
+        provider: { "@id": `${BASE_URL}/#org` },
       },
       {
         "@type": "BreadcrumbList",
@@ -200,6 +214,7 @@ export default function YeteneginiFarketPage() {
           <Link href="/kvkk-aydinlatma-metni">KVKK Aydınlatma Metni</Link>
         </div>
       </div>
+      <SeoFooter />
     </>
   );
 }

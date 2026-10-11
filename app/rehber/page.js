@@ -2,6 +2,7 @@ import Link from "next/link";
 import { REHBER_POSTS, rehberMeta } from "../../lib/rehberContent";
 import { jsonLdString } from "../../lib/jsonLd";
 import { socialMeta } from "../../lib/seoMeta";
+import SeoFooter from "../../components/SeoFooter";
 
 const BASE_URL = "https://www.isinn.com.tr";
 
@@ -28,6 +29,12 @@ const GROUPS = [
       "sirket-kurmadan-hizmet-sunmak",
       "calisan-anneler-icin-esnek-hizmet-fikirleri",
       "gencler-icin-teknolojik-hizmet-fikirleri",
+      "ozel-ders-vermek-icin-ne-gerekir",
+      "evde-cocuk-atolyesi-vermeden-once-dikkat-edilecekler",
+      "ogrenciyken-hangi-hizmetleri-verebilirsin",
+      "hizmet-fiyati-nasil-belirlenir-saatlik-sabit-teklif",
+      "musteriye-ilk-mesaj-ve-yazili-anlasma-sablonlari",
+      "instagramda-calismalarini-gosteriyorsan-yerelde-nasil-bulunursun",
       "ek-gelir-ve-freelance-is-yollari",
       "birkac-bin-takipci-ile-yerel-isletmelerden-sponsorluk",
     ],
@@ -66,6 +73,7 @@ export default function RehberIndexPage() {
   };
 
   return (
+    <>
     <div className="max-w-3xl mx-auto px-5 py-10">
       {/* eslint-disable-next-line react/no-danger */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdString(jsonLd) }} />
@@ -91,5 +99,7 @@ export default function RehberIndexPage() {
         </section>
       ))}
     </div>
+    <SeoFooter />
+    </>
   );
 }
