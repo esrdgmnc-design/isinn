@@ -1740,13 +1740,13 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
             gösteriyor (kullanıcının isteği — "öne çıkanlar için heveslendirici dursun"). */}
         {/* Kart destesi veriyle (listeler yüklenince) geliyor; gelmeden önce AYNI genişlikte boş yer ayırıyoruz — yoksa deste
             görününce sol sütun daralıp başlık yeniden sarılıyor ve sayfa zıplıyordu (büyük tablet/bilgisayar). */}
-        {featured.length === 0 && <div className="hidden lg:block w-full max-w-sm shrink-0" aria-hidden="true" />}
+        {featured.length === 0 && <div className="hidden lg:block w-full lg:max-w-[360px] xl:max-w-[470px] shrink-0" aria-hidden="true" />}
         {featured.length > 0 && (
           // max-w-sm — ilk halinin genişliği. max-w-lg'ye çıkarınca sol
           // taraftaki başlık daralıp 4 satıra düşüyordu (kullanıcı fark etti,
           // "yazı yine ilk hali ile kalsın" dedi) — o yüzden sağ tarafı bu
           // genişliğe göre küçülttük, geniş bırakmadık.
-          <div className="hidden lg:block relative w-full max-w-sm shrink-0 lg:mt-6">
+          <div className="hidden lg:block relative w-full lg:max-w-[360px] xl:max-w-[470px] shrink-0 lg:mt-4">
             {/* Fiverr'ın "AI Director" hero'sundaki fanlanmış kart destesi
                 stilinde — ama bizde her kart gerçek bir vitrin (sabit
                 illüstrasyon değil), kullanıcının verdiği referansa göre.
@@ -1759,7 +1759,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
             <style>{`
               @keyframes cardPop { from { opacity: 0; transform: scale(0.85) translateY(16px); } to { opacity: 1; transform: scale(1) translateY(0); } }
             `}</style>
-            <div className="flex items-end justify-center" style={{ paddingTop: "24px" }}>
+            <div className="flex items-end justify-center" style={{ paddingTop: "28px" }}>
               {Array.from({ length: Math.min(3, featured.length) }, (_, k) => featured[(featuredIndex + k) % featured.length]).map((l, i, arr) => {
                 const mid = (arr.length - 1) / 2;
                 const offset = i - mid; // -1..0..1
@@ -1777,10 +1777,10 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
                     key={`${featuredIndex}-${l.id}`}
                     className="shrink-0"
                     style={{
-                      width: isCenter ? "156px" : "100px",
-                      height: isCenter ? "234px" : "150px",
+                      width: isCenter ? "clamp(170px, 17.5vw, 250px)" : "clamp(112px, 11.5vw, 165px)",
+                      aspectRatio: "2 / 3",
                       transform: `rotate(${rotation}deg)`,
-                      marginLeft: i === 0 ? 0 : "-20px",
+                      marginLeft: i === 0 ? 0 : "clamp(-30px, -2vw, -20px)",
                       zIndex: isCenter ? 20 : 10 - Math.abs(offset),
                     }}
                   >
@@ -1804,14 +1804,14 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
                     >
                       <img src={l.img} alt={l.title} className="w-full h-full object-cover" style={isCenter ? {} : { filter: "brightness(0.55) saturate(0.85)" }} />
                       <div className="absolute inset-x-0 bottom-0 p-2 pt-7" style={{ background: "linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.88) 100%)" }}>
-                        <p className={`font-bold text-white truncate ${isCenter ? "text-xs" : "text-[10px]"}`}>{l.provider}</p>
+                        <p className={`font-bold text-white truncate ${isCenter ? "text-sm" : "text-[11px]"}`}>{l.provider}</p>
                       </div>
                       {l.isDemo && (
                         <span className="absolute top-2 right-2 text-[10px] font-black px-2 py-0.5 rounded-full text-white tracking-wide" style={{ background: "#DC2626" }}>{t("searchResults.demoBadge")}</span>
                       )}
                       {isCenter && (
                         <span
-                          className="absolute top-2 left-2 text-[10px] font-bold px-2 py-0.5 rounded-full text-white flex items-center gap-1"
+                          className="absolute top-2.5 left-2.5 text-[11px] font-bold px-2.5 py-1 rounded-full text-white flex items-center gap-1"
                           style={{ background: "linear-gradient(135deg, #F59E0B 0%, #D97706 100%)" }}
                         >
                           <Sparkles size={9} /> {l.isBoosted ? t("searchResults.sponsoredBadge") : t("searchResults.highlyRatedBadge")}
