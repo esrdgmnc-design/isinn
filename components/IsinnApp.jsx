@@ -1590,14 +1590,13 @@ const HomeListingCard = memo(function HomeListingCard({ l, isFavorite, onSelectL
 
 function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApplyJob, onOpenJob, realListings, listingsLoading, realJobs, favoriteIds, onToggleFavorite, onToggleJobFavorite, discoveryPopularCategories, discoveryRecentListings }) {
   const { t, language } = useLanguage();
-  const rotatingWords = t("rotatingWords");
+  const popularSearches = t("home.popularSearches");
   const [heroQ, setHeroQ] = useState("");
   const [heroCity, setHeroCity] = useState("");
   // Rakip site kıyaslamasında fark edildi: tek kutuya "istanbul temizlik"
   // yazmak aslında hiç işe yaramıyordu (bkz. SearchResultsView'daki haystack
   // sırası notu) — "ne" ve "nerede" ayrı alanlara bölündü, İşin Olsun'daki
   // gibi. Hızlı şehir çipleri de aynı gerekçeyle eklendi (yazmadan tıkla-ara).
-  const QUICK_CITIES = ["İstanbul", "Ankara", "İzmir", "Bursa", "Antalya", "Kocaeli"];
   // Önceden gizliydi, tıklayan açardı — kullanıcı "uzaktan hizmetler
   // kısmını da görünür yap" dedi, artık varsayılan açık (istenirse
   // gizlenebiliyor, aşağıdaki toggle hâlâ duruyor).
@@ -1649,98 +1648,76 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
           style={{ background: "#F59E0B" }}
         />
         <div className="max-w-6xl mx-auto relative lg:flex lg:items-center lg:justify-between lg:gap-10">
-        <div className="relative">
-          {/* leading-[0.98], sonra 1.05 — ikisi de "ç"/"y" gibi alt uzantılı
-              (descender) harfleri kırpmaya devam etti (kullanıcı ekran
-              görüntüsüyle doğruladı). Asıl sebep muhtemelen bg-clip-text +
-              inline-block birleşimi — bu ikili, satır kutusunu (line-height)
-              normalden daha sıkı yorumluyor ve gradyanla "boyanan" metnin alt
-              kısmını kesebiliyor. leading'i iyice gevşettik (1.15) VE
-              kırpılan tam da o gradyanlı span olduğu için ona ayrıca
-              pb-1.5 (alt boşluk) verdik. */}
-          <h1 className="font-sans text-[40px] sm:text-5xl md:text-7xl font-black leading-[1.15] max-w-3xl tracking-tight" style={{ color: "#FFFFFF" }}>
-            {t("home.heroLine1")}<br />
-            {/* Dönen kelimeler çok farklı uzunlukta ("çilingire" vs
-                "fizyoterapiste") — özellikle mobilde kısa kelimeyle tek
-                satıra sığan ikinci satır, uzun kelimede ikinci satıra taşıp
-                h1'in toplam yüksekliğini değiştiriyordu, bu da altındaki
-                her şeyi yukarı/aşağı kaydırıyordu (kullanıcı fark etti,
-                2026-09-12). İkinci satırı ayrı bir block'a alıp, en uzun
-                kelimenin 2 satıra sardığı en kötü durumu karşılayacak sabit
-                bir min-height veriyoruz — hangi kelime gelirse gelsin yükseklik
-                sabit kalıyor. */}
-            <HeroRotator words={rotatingWords} suffix={t("home.heroSuffix")} />
+        <div className="relative w-full lg:max-w-2xl">
+          {/* İlk ekran: ziyaretçi 3 saniyede İşinn'in ne olduğunu anlamalı — "doğru uzmanı bul" (arayan) + "hizmetini göster" (veren) +
+              yetenek mesajı. Başlık satırları sabit (dönen/değişen metin yok), bu yüzden düzen kaymaz. */}
+          <h1 className="font-sans text-[32px] min-[400px]:text-[36px] sm:text-5xl xl:text-6xl font-black leading-[1.1] tracking-tight" style={{ color: "#FFFFFF" }}>
+            {t("home.heroTitleA")}<br />
+            <span className="inline-block pb-1.5 bg-clip-text text-transparent" style={{ backgroundImage: "linear-gradient(90deg, #3B82F6, #60A5FA)" }}>{t("home.heroTitleB")}</span>
           </h1>
-          <style>{`@keyframes fadeSlide { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } } .hw-ghost::after { content: attr(data-w); }`}</style>
-          <p className="mt-8 max-w-md text-base" style={{ color: "#B8BCC4" }}>
-            {t("home.heroSubheading")}
+          <p className="mt-4 max-w-lg text-base sm:text-lg" style={{ color: "#B8BCC4" }}>
+            {t("home.heroDesc")}
           </p>
-          <div className="mt-9 flex items-center gap-1 max-w-lg bg-white rounded-full p-1.5 pl-4 shadow-2xl">
-            <Search size={16} style={{ color: "#9CA3AF" }} />
-            <input
-              value={heroQ}
-              onChange={(e) => setHeroQ(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter" && (heroQ.trim() || heroCity)) onSearch(heroQ, heroCity); }}
-              placeholder={t("home.searchPlaceholder")}
-              className="flex-1 min-w-0 text-sm outline-none py-1.5"
-              style={{ color: "#0F1115" }}
-            />
-            <div className="w-px h-5 shrink-0" style={{ background: "#E5E7EB" }} />
-            <MapPin size={14} className="shrink-0" style={{ color: "#9CA3AF" }} />
-            <select
-              value={heroCity}
-              onChange={(e) => setHeroCity(e.target.value)}
-              className="text-sm outline-none py-1.5 max-w-[92px] shrink-0 bg-transparent"
-              style={{ color: heroCity ? "#0F1115" : "#9CA3AF" }}
-            >
-              <option value="">{t("home.wherePlaceholder")}</option>
-              {CITIES.filter((c) => c.country === "Türkiye").map((c) => (
-                <option key={c.id} value={c.name}>{c.name}</option>
-              ))}
-            </select>
+          <form
+            onSubmit={(e) => { e.preventDefault(); if (heroQ.trim() || heroCity) onSearch(heroQ, heroCity); }}
+            className="mt-6 max-w-lg bg-white rounded-3xl p-3 sm:p-4 shadow-2xl"
+          >
+            <label className="flex items-center gap-3 px-3 py-3">
+              <Search size={20} className="shrink-0" style={{ color: "#9CA3AF" }} />
+              <input
+                value={heroQ}
+                onChange={(e) => setHeroQ(e.target.value)}
+                placeholder={t("home.searchQuestion")}
+                aria-label={t("home.searchQuestion")}
+                className="flex-1 min-w-0 text-base outline-none"
+                style={{ color: "#0F1115" }}
+              />
+            </label>
+            <div className="h-px mx-3" style={{ background: "#EEF0F3" }} />
+            <label className="flex items-center gap-3 px-3 py-3">
+              <MapPin size={20} className="shrink-0" style={{ color: "#9CA3AF" }} />
+              <select
+                value={heroCity}
+                onChange={(e) => setHeroCity(e.target.value)}
+                aria-label={t("home.cityPlaceholder")}
+                className="flex-1 min-w-0 text-base outline-none bg-transparent"
+                style={{ color: heroCity ? "#0F1115" : "#9CA3AF" }}
+              >
+                <option value="">{t("home.cityPlaceholder")}</option>
+                {CITIES.filter((c) => c.country === "Türkiye").map((c) => (
+                  <option key={c.id} value={c.name}>{c.name}</option>
+                ))}
+              </select>
+            </label>
             <button
-              onClick={() => (heroQ.trim() || heroCity) && onSearch(heroQ, heroCity)}
-              className="text-sm font-bold px-6 py-3 rounded-full text-white hover:scale-105 transition-transform shrink-0"
+              type="submit"
+              className="w-full mt-2 py-3.5 rounded-2xl text-white font-bold text-base flex items-center justify-center gap-2"
               style={{ background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)" }}
             >
-              {t("home.searchButton")}
+              {t("home.searchCta")}
+              <ChevronRight size={18} />
             </button>
-          </div>
-          <div className="mt-3 flex items-center gap-2 flex-wrap">
-            {QUICK_CITIES.map((c) => (
+          </form>
+          <div className="mt-3 max-w-lg flex items-center gap-2 flex-wrap">
+            {(Array.isArray(popularSearches) ? popularSearches : []).map((w) => (
               <button
-                key={c}
-                onClick={() => onSearch("", c)}
+                key={w}
+                type="button"
+                onClick={() => onSearch(w, "")}
                 className="text-xs font-medium px-3 py-1.5 rounded-full transition-colors"
                 style={{ background: "rgba(255,255,255,0.08)", color: "#B8BCC4" }}
               >
-                {c}
+                {w}
               </button>
             ))}
           </div>
-          {/* Küçük platform istatistikleri ("1 Sağlayıcı, 1 Tamamlanan iş...")
-              kullanıcıya amaçsız/zayıf geldi (platform henüz küçükken sayılar
-              güven vermek yerine tam tersi izlenim veriyordu) — yerine kısa
-              bir slogan koyduk. */}
-          <p className="mt-8 flex items-center gap-2 text-sm font-bold tracking-wide">
-            <Sparkles size={14} style={{ color: "#F59E0B" }} />
-            <span style={{ color: "#FFFFFF" }}>{t("home.taglinePrefix")}</span>
-            <span style={{ color: "#9CA3AF" }}>{t("home.taglineSuffix")}</span>
-          </p>
-          {/* Güven şeridi: en güçlü somut maddeler ilk ekranda (eskiden yalnızca SSS/Hakkımızda'daydı) + hizmet verenler için ikinci yol.
-              Ücretsiz bilgisi yalnızca ücretsiz dönemde ve gerçek bitiş tarihiyle (lib/freePeriod.js) gösterilir. */}
-          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs" style={{ color: "#B8BCC4" }}>
+          <HeroTalentCard onOpen={() => onNav("talentDiscovery")} onCreate={() => onNav("createListing")} />
+          {/* Güven şeridi: en güçlü somut maddeler ilk ekranda. Ücretsiz bilgisi yalnızca ücretsiz dönemde ve gerçek bitiş tarihiyle (lib/freePeriod.js). */}
+          <div className="mt-5 max-w-lg flex flex-wrap items-center justify-center sm:justify-start gap-x-4 gap-y-2 text-xs" style={{ color: "#B8BCC4" }}>
             <span>✓ {t("home.trustNoCommission")}</span>
             {isFreePeriod() && <span>✓ {t("home.trustFree", { date: new Date(FREE_PERIOD_UNTIL_ISO).toLocaleDateString(language === "en" ? "en-GB" : "tr-TR", { day: "numeric", month: "long", year: "numeric" }) })}</span>}
             <span>✓ {t("home.trustPhonePrivate")}</span>
           </div>
-          <button
-            onClick={() => onNav("createListing")}
-            className="mt-3 text-sm font-bold underline underline-offset-4 text-left"
-            style={{ color: "#F59E0B" }}
-          >
-            {t("home.providerCta")}
-          </button>
         </div>
 
         {/* Hero'nun sağ tarafı (metnin simetriği) boş kalıyordu — gerçek
@@ -3187,12 +3164,14 @@ function HeroRotator({ words, suffix }) {
             className="inline-block pb-1.5 animate-[fadeSlide_0.4s_ease] bg-clip-text text-transparent"
             style={{ backgroundImage: "linear-gradient(90deg, #2563EB, #60A5FA)", transform: "translateZ(0)", WebkitTransform: "translateZ(0)", willChange: "transform, opacity" }}
           >{w}</span>
-          {suffix}
+          <br />
+          {(suffix || "").trim()}
         </span>
       ) : (
         <span key={"g" + w} aria-hidden="true" style={{ gridArea: "1 / 1", visibility: "hidden" }}>
           <span className="hw-ghost inline-block pb-1.5" data-w={w} />
-          <span className="hw-ghost" data-w={suffix || ""} />
+          <br />
+          <span className="hw-ghost" data-w={(suffix || "").trim()} />
         </span>
       )))}
     </span>
@@ -7177,6 +7156,45 @@ async function requestTalentSuggestions({ skills, hours, budget, remote, remoteK
 // Ana sayfadan Yeteneğini Farket'e geçerken yazılan ilk cümleyi taşır (sekme
 // oturumu boyunca; sayfa açılınca bir kere okunup silinir).
 const TALENT_PREFILL_KEY = "isinn_talent_prefill";
+
+// İlk ekrana taşınan kompakt yetenek kartı: "Yeteneklerin sandığından daha değerli olabilir" mesajı siteye giren herkesin ilk gördüğü yerde.
+// Yazılan ilk cümle Yeteneğini Farket sayfasını dolu açar (alt bölümdeki banner ile aynı mekanizma).
+function HeroTalentCard({ onOpen, onCreate }) {
+  const { t } = useLanguage();
+  const [text, setText] = useState("");
+  const go = (prefill) => {
+    try { if (prefill) sessionStorage.setItem(TALENT_PREFILL_KEY, prefill); } catch {}
+    trackEvent("talent_home_start", { typed: !!prefill, where: "hero" }, null);
+    onOpen();
+  };
+  return (
+    <div className="mt-5 max-w-lg rounded-3xl p-5 sm:p-6" style={{ background: "linear-gradient(135deg, rgba(232,176,74,0.20) 0%, rgba(255,255,255,0.06) 100%)", border: "1px solid rgba(232,176,74,0.40)" }}>
+      <p className="flex items-center gap-1.5 text-xs font-bold tracking-wide" style={{ color: "#E8B04A" }}>
+        <Sparkles size={13} /> {t("talentDiscovery.heroKicker")}
+      </p>
+      <h2 className="mt-1.5 text-2xl sm:text-3xl font-black leading-tight" style={{ color: "#FFFFFF" }}>{t("talentDiscovery.navCardTitle")}</h2>
+      <p className="mt-2 text-sm sm:text-base" style={{ color: "#CBD5E1" }}>{t("talentDiscovery.navCardSubtitle")}</p>
+      <form onSubmit={(e) => { e.preventDefault(); go(text.trim()); }} className="mt-4 flex flex-col sm:flex-row gap-2.5">
+        <input
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          maxLength={200}
+          placeholder={t("talentDiscovery.homeBoxPlaceholder")}
+          aria-label={t("talentDiscovery.homeBoxPlaceholder")}
+          className="flex-1 min-w-0 rounded-xl px-4 py-3 text-base outline-none"
+          style={{ background: "#FFFFFF", color: "#16321F" }}
+        />
+        <button type="submit" className="shrink-0 flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-bold text-base whitespace-nowrap" style={{ background: "#E8B04A", color: "#16321F" }}>
+          {t("talentDiscovery.homeBoxButton")}
+          <ChevronRight size={18} />
+        </button>
+      </form>
+      <button type="button" onClick={onCreate} className="mt-3 text-sm font-bold text-left underline underline-offset-4" style={{ color: "#E8B04A" }}>
+        {t("home.providerCta")}
+      </button>
+    </div>
+  );
+}
 
 function TalentDiscoveryBanner({ onOpen }) {
   const { t } = useLanguage();
