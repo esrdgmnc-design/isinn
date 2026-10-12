@@ -1699,17 +1699,21 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
             </button>
           </form>
           <div className="mt-3 max-w-lg flex items-center gap-2 flex-wrap">
-            {(Array.isArray(popularSearches) ? popularSearches : []).map((w) => (
+            {(Array.isArray(popularSearches) ? popularSearches : []).map((item) => {
+              // "etiket|aranacak kök": çekimli kelimelerde (danışmanlık → danışman) arama kökü ile sonuç bulunur
+              const [w, term] = String(item).split("|");
+              return (
               <button
                 key={w}
                 type="button"
-                onClick={() => onSearch(w, "")}
+                onClick={() => onSearch(term || w, "")}
                 className="text-xs font-semibold px-3 py-1.5 rounded-full transition-colors"
                 style={{ background: "#FFFFFF", color: "#1E3A8A", border: "1px solid #DCE6FA" }}
               >
                 {w}
               </button>
-            ))}
+              );
+            })}
           </div>
           <HeroTalentCard onOpen={() => onNav("talentDiscovery")} onCreate={() => onNav("createListing")} />
           {/* Güven şeridi: en güçlü somut maddeler ilk ekranda. Ücretsiz bilgisi yalnızca ücretsiz dönemde ve gerçek bitiş tarihiyle (lib/freePeriod.js). */}
