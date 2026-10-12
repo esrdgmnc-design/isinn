@@ -1596,7 +1596,6 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
   // sırası notu) — "ne" ve "nerede" ayrı alanlara bölündü, İşin Olsun'daki
   // gibi. Hızlı şehir çipleri de aynı gerekçeyle eklendi (yazmadan tıkla-ara).
   const QUICK_CITIES = ["İstanbul", "Ankara", "İzmir", "Bursa", "Antalya", "Kocaeli"];
-  const [wordIndex, setWordIndex] = useState(0);
   // Önceden gizliydi, tıklayan açardı — kullanıcı "uzaktan hizmetler
   // kısmını da görünür yap" dedi, artık varsayılan açık (istenirse
   // gizlenebiliyor, aşağıdaki toggle hâlâ duruyor).
@@ -1625,11 +1624,6 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
     const sorted = base.slice().sort((a, b) => computeVisibilityScore(b) - computeVisibilityScore(a));
     return avoidAdjacentCategoryClash(sorted);
   }, [realListings, filter]);
-
-  useEffect(() => {
-    const interval = setInterval(() => setWordIndex((i) => (i + 1) % rotatingWords.length), 1800);
-    return () => clearInterval(interval);
-  }, [rotatingWords.length]);
 
   useEffect(() => {
     if (featured.length === 0) return;
@@ -1673,30 +1667,9 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
                 kelimenin 2 satıra sardığı en kötü durumu karşılayacak sabit
                 bir min-height veriyoruz — hangi kelime gelirse gelsin yükseklik
                 sabit kalıyor. */}
-            <span className="block min-h-[100px] sm:min-h-[120px] md:min-h-[176px]">
-              <span className="inline-block relative">
-                <span
-                  key={wordIndex}
-                  className="inline-block pb-1.5 animate-[fadeSlide_0.4s_ease] bg-clip-text text-transparent"
-                  style={{
-                    backgroundImage: "linear-gradient(90deg, #2563EB, #60A5FA)",
-                    // bg-clip-text + gradient + animasyon kombinasyonu Safari'de
-                    // bilinen bir çizim hatası tetikliyor (kelime her 1.8sn'de
-                    // değişirken hayalet/bulanık görünüyordu — "değişken yazı
-                    // ile ilgili kayma", kullanıcı 2026-09-15'te bildirdi).
-                    // Kendi GPU katmanına alınca Safari doğru çiziyor.
-                    transform: "translateZ(0)",
-                    WebkitTransform: "translateZ(0)",
-                    willChange: "transform, opacity",
-                  }}
-                >
-                  {rotatingWords[wordIndex]}
-                </span>
-              </span>
-              {t("home.heroSuffix")}
-            </span>
+            <HeroRotator words={rotatingWords} suffix={t("home.heroSuffix")} />
           </h1>
-          <style>{`@keyframes fadeSlide { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }`}</style>
+          <style>{`@keyframes fadeSlide { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } } .hw-ghost::after { content: attr(data-w); }`}</style>
           <p className="mt-8 max-w-md text-base" style={{ color: "#B8BCC4" }}>
             {t("home.heroSubheading")}
           </p>
@@ -1773,6 +1746,9 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
             üstte/en belirgin: hem gerçek bir vitrini sergiliyor hem Öne
             Çıkarma Paketi'nin "böyle görüneceksin" vaadini dolaylı yoldan
             gösteriyor (kullanıcının isteği — "öne çıkanlar için heveslendirici dursun"). */}
+        {/* Kart destesi veriyle (listeler yüklenince) geliyor; gelmeden önce AYNI genişlikte boş yer ayırıyoruz — yoksa deste
+            görününce sol sütun daralıp başlık yeniden sarılıyor ve sayfa zıplıyordu (büyük tablet/bilgisayar). */}
+        {featured.length === 0 && <div className="hidden lg:block w-full max-w-sm shrink-0" aria-hidden="true" />}
         {featured.length > 0 && (
           // max-w-sm — ilk halinin genişliği. max-w-lg'ye çıkarınca sol
           // taraftaki başlık daralıp 4 satıra düşüyordu (kullanıcı fark etti,
@@ -3184,6 +3160,77 @@ function OwnerVitrinPanelBody({ userId, serviceId, onListingsChanged, onReviewSe
         </>
       )}
     </div>
+  );
+}
+
+// Ana sayfa başlığındaki dönen kelime. Tüm kelimeler aynı grid hücresinde üst üste durur: kapsayıcının yüksekliği en uzun/en çok satıra
+// sarana göre SABİTLENİR, bu yüzden kelime değişince altındaki her şey (arama kutusu vb.) kaymaz/titremez. Görünmeyen kelimeler
+// yalnızca CSS ile (data-w + ::after) çizilir; sayfa metnine (SEO/erişilebilirlik) girmez. Dönüş kendi bileşeninde olduğu için
+// her ~2 sn'de tüm ana sayfa yeniden çizilmez. Hareket azaltma tercihi olanlarda dönmez.
+function HeroRotator({ words, suffix }) {
+  const [i, setI] = useState(0);
+  const n = words ? words.length : 0;
+  useEffect(() => {
+    if (n < 2) return undefined;
+    try { if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return undefined; } catch {}
+    const id = setInterval(() => setI((x) => (x + 1) % n), 2000);
+    return () => clearInterval(id);
+  }, [n]);
+  if (n === 0) return null;
+  return (
+    <span className="grid">
+      {words.map((w, k) => (k === i ? (
+        <span key={"a" + w} style={{ gridArea: "1 / 1" }}>
+          <span
+            className="inline-block pb-1.5 animate-[fadeSlide_0.4s_ease] bg-clip-text text-transparent"
+            style={{ backgroundImage: "linear-gradient(90deg, #2563EB, #60A5FA)", transform: "translateZ(0)", WebkitTransform: "translateZ(0)", willChange: "transform, opacity" }}
+          >{w}</span>
+          {suffix}
+        </span>
+      ) : (
+        <span key={"g" + w} aria-hidden="true" style={{ gridArea: "1 / 1", visibility: "hidden" }}>
+          <span className="hw-ghost inline-block pb-1.5" data-w={w} />
+          <span className="hw-ghost" data-w={suffix || ""} />
+        </span>
+      )))}
+    </span>
+  );
+}
+
+// Sessiz döngü videosu. React, "muted" özelliğini bazı tarayıcılarda (özellikle iPhone/iPad Safari) HTML özniteliği olarak yazmıyor;
+// bu durumda otomatik oynatma sessizce reddediliyordu ("video dönmüyor"). Burada sessizlik elle ayarlanır, görünür olunca oynatılır,
+// görünmezken durdurulur (pil ve akıcılık), oynatma engellenirse ilk dokunuşta ya da videoya basınca başlar.
+function LoopVideo({ src, poster, className, style }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const v = ref.current;
+    if (!v) return undefined;
+    v.muted = true; v.defaultMuted = true; v.setAttribute("muted", ""); v.setAttribute("playsinline", ""); v.setAttribute("webkit-playsinline", "");
+    let visible = true;
+    const tryPlay = () => { if (!visible) return; const p = v.play(); if (p && p.catch) p.catch(() => {}); };
+    const io = typeof IntersectionObserver !== "undefined"
+      ? new IntersectionObserver(([e]) => { visible = !!e?.isIntersecting; if (visible) tryPlay(); else v.pause(); }, { threshold: 0.25 })
+      : null;
+    if (io) io.observe(v); else tryPlay();
+    v.addEventListener("loadeddata", tryPlay);
+    window.addEventListener("touchstart", tryPlay, { once: true, passive: true });
+    window.addEventListener("click", tryPlay, { once: true });
+    return () => { if (io) io.disconnect(); v.removeEventListener("loadeddata", tryPlay); window.removeEventListener("touchstart", tryPlay); window.removeEventListener("click", tryPlay); };
+  }, [src]);
+  return (
+    <video
+      ref={ref}
+      src={src}
+      poster={poster}
+      preload="metadata"
+      autoPlay
+      loop
+      muted
+      playsInline
+      className={className}
+      style={style}
+      onClick={() => { const v = ref.current; if (v && v.paused) { const p = v.play(); if (p && p.catch) p.catch(() => {}); } }}
+    />
   );
 }
 
@@ -7149,14 +7196,9 @@ function TalentDiscoveryBanner({ onOpen }) {
             hissini metinden önce, görselle veriyor. Kullanıcının kararı
             (2026-09-28): bu alan İşinn'in gerçek farkı, o yüzden küçük bir
             simge değil, sayfanın odak noktalarından biri olmalı. */}
-        <video
+        <LoopVideo
           src="/videos/yetenek-ilham-sm.mp4"
           poster="/videos/yetenek-ilham-poster.jpg"
-          preload="metadata"
-          autoPlay
-          loop
-          muted
-          playsInline
           className="w-full sm:w-72 h-40 sm:h-44 rounded-2xl object-cover shrink-0"
         />
         <div className="flex-1 flex flex-col gap-4 w-full">
@@ -7424,12 +7466,9 @@ function TalentDiscoveryView({ onBack, onCreateListing, userId }) {
   return (
     <div className="max-w-xl mx-auto px-5 py-8">
       <button onClick={onBack} className="text-sm font-bold mb-6" style={{ color: "#2563EB" }}>{t("talentDiscovery.backLink")}</button>
-      <video
-        src="/videos/yetenek-ilham.mp4"
-        autoPlay
-        loop
-        muted
-        playsInline
+      <LoopVideo
+        src="/videos/yetenek-ilham-sm.mp4"
+        poster="/videos/yetenek-ilham-poster.jpg"
         className="w-full aspect-video rounded-2xl object-cover mb-6"
       />
       <h1 className="font-sans text-2xl font-black mb-2" style={{ color: "#0F1115" }}>{t("talentDiscovery.heroTitle")}</h1>
