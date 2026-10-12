@@ -1634,33 +1634,33 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
 
   return (
     <div>
-      <section className="px-5 pt-16 pb-24 relative overflow-hidden" style={{ background: "radial-gradient(ellipse at top left, #16321F 0%, #0F1115 55%, #0F1115 100%)" }}>
+      <section className="px-5 pt-16 pb-24 relative overflow-hidden" style={{ background: "linear-gradient(180deg, #EEF4FF 0%, #F6F9FF 65%, #FFFFFF 100%)" }}>
         <div
-          className="absolute -top-24 -right-20 w-80 h-80 rounded-full blur-3xl opacity-30"
-          style={{ background: "#2563EB" }}
+          className="absolute -top-24 -right-20 w-80 h-80 rounded-full blur-3xl opacity-40"
+          style={{ background: "#93C5FD" }}
         />
         <div
-          className="absolute bottom-0 left-1/4 w-64 h-64 rounded-full blur-3xl opacity-25"
-          style={{ background: "#8B5CF6" }}
+          className="absolute bottom-0 left-1/4 w-64 h-64 rounded-full blur-3xl opacity-30"
+          style={{ background: "#C7D2FE" }}
         />
         <div
-          className="absolute top-1/3 right-1/4 w-40 h-40 rounded-full blur-3xl opacity-20"
-          style={{ background: "#F59E0B" }}
+          className="absolute top-1/3 right-1/4 w-40 h-40 rounded-full blur-3xl opacity-30"
+          style={{ background: "#FDE68A" }}
         />
         <div className="max-w-6xl mx-auto relative lg:flex lg:items-center lg:justify-between lg:gap-10">
         <div className="relative w-full lg:max-w-2xl">
           {/* İlk ekran: ziyaretçi 3 saniyede İşinn'in ne olduğunu anlamalı — "doğru uzmanı bul" (arayan) + "hizmetini göster" (veren) +
               yetenek mesajı. Başlık satırları sabit (dönen/değişen metin yok), bu yüzden düzen kaymaz. */}
-          <h1 className="font-sans text-[32px] min-[400px]:text-[36px] sm:text-5xl xl:text-6xl font-black leading-[1.1] tracking-tight" style={{ color: "#FFFFFF" }}>
+          <h1 className="font-sans text-[32px] min-[400px]:text-[36px] sm:text-5xl xl:text-6xl font-black leading-[1.1] tracking-tight" style={{ color: "#0F1E3F" }}>
             {t("home.heroTitleA")}<br />
-            <span className="inline-block pb-1.5 bg-clip-text text-transparent" style={{ backgroundImage: "linear-gradient(90deg, #3B82F6, #60A5FA)" }}>{t("home.heroTitleB")}</span>
+            <span className="inline-block pb-1.5 bg-clip-text text-transparent" style={{ backgroundImage: "linear-gradient(90deg, #1D4ED8, #3B82F6)" }}>{t("home.heroTitleB")}</span>
           </h1>
-          <p className="mt-4 max-w-lg text-base sm:text-lg" style={{ color: "#B8BCC4" }}>
+          <p className="mt-4 max-w-lg text-base sm:text-lg" style={{ color: "#475569" }}>
             {t("home.heroDesc")}
           </p>
           <form
             onSubmit={(e) => { e.preventDefault(); if (heroQ.trim() || heroCity) onSearch(heroQ, heroCity); }}
-            className="mt-6 max-w-lg bg-white rounded-3xl p-3 sm:p-4 shadow-2xl"
+            className="mt-6 max-w-lg bg-white rounded-3xl p-3 sm:p-4 border shadow-[0_24px_50px_-24px_rgba(37,99,235,0.45)]" style={{ borderColor: "#DCE6FA" }}
           >
             <label className="flex items-center gap-3 px-3 py-3">
               <Search size={20} className="shrink-0" style={{ color: "#9CA3AF" }} />
@@ -1704,8 +1704,8 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
                 key={w}
                 type="button"
                 onClick={() => onSearch(w, "")}
-                className="text-xs font-medium px-3 py-1.5 rounded-full transition-colors"
-                style={{ background: "rgba(255,255,255,0.08)", color: "#B8BCC4" }}
+                className="text-xs font-semibold px-3 py-1.5 rounded-full transition-colors"
+                style={{ background: "#FFFFFF", color: "#1E3A8A", border: "1px solid #DCE6FA" }}
               >
                 {w}
               </button>
@@ -1713,7 +1713,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
           </div>
           <HeroTalentCard onOpen={() => onNav("talentDiscovery")} onCreate={() => onNav("createListing")} />
           {/* Güven şeridi: en güçlü somut maddeler ilk ekranda. Ücretsiz bilgisi yalnızca ücretsiz dönemde ve gerçek bitiş tarihiyle (lib/freePeriod.js). */}
-          <div className="mt-5 max-w-lg flex flex-wrap items-center justify-center sm:justify-start gap-x-4 gap-y-2 text-xs" style={{ color: "#B8BCC4" }}>
+          <div className="mt-5 max-w-lg flex flex-wrap items-center justify-center sm:justify-start gap-x-4 gap-y-2 text-xs font-medium" style={{ color: "#475569" }}>
             <span>✓ {t("home.trustNoCommission")}</span>
             {isFreePeriod() && <span>✓ {t("home.trustFree", { date: new Date(FREE_PERIOD_UNTIL_ISO).toLocaleDateString(language === "en" ? "en-GB" : "tr-TR", { day: "numeric", month: "long", year: "numeric" }) })}</span>}
             <span>✓ {t("home.trustPhonePrivate")}</span>
@@ -7168,12 +7168,12 @@ function HeroTalentCard({ onOpen, onCreate }) {
     onOpen();
   };
   return (
-    <div className="mt-5 max-w-lg rounded-3xl p-5 sm:p-6" style={{ background: "linear-gradient(135deg, rgba(232,176,74,0.20) 0%, rgba(255,255,255,0.06) 100%)", border: "1px solid rgba(232,176,74,0.40)" }}>
-      <p className="flex items-center gap-1.5 text-xs font-bold tracking-wide" style={{ color: "#E8B04A" }}>
+    <div className="mt-5 max-w-lg rounded-3xl p-5 sm:p-6" style={{ background: "linear-gradient(135deg, #FFF3DB 0%, #FFFAF0 100%)", border: "1px solid #F5D9A0", boxShadow: "0 22px 44px -26px rgba(245,181,68,0.7)" }}>
+      <p className="flex items-center gap-1.5 text-xs font-bold tracking-wide" style={{ color: "#B45309" }}>
         <Sparkles size={13} /> {t("talentDiscovery.heroKicker")}
       </p>
-      <h2 className="mt-1.5 text-2xl sm:text-3xl font-black leading-tight" style={{ color: "#FFFFFF" }}>{t("talentDiscovery.navCardTitle")}</h2>
-      <p className="mt-2 text-sm sm:text-base" style={{ color: "#CBD5E1" }}>{t("talentDiscovery.navCardSubtitle")}</p>
+      <h2 className="mt-1.5 text-2xl sm:text-3xl font-black leading-tight" style={{ color: "#0F1E3F" }}>{t("talentDiscovery.navCardTitle")}</h2>
+      <p className="mt-2 text-sm sm:text-base" style={{ color: "#475569" }}>{t("talentDiscovery.navCardSubtitle")}</p>
       <form onSubmit={(e) => { e.preventDefault(); go(text.trim()); }} className="mt-4 flex flex-col sm:flex-row gap-2.5">
         <input
           value={text}
@@ -7182,14 +7182,14 @@ function HeroTalentCard({ onOpen, onCreate }) {
           placeholder={t("talentDiscovery.homeBoxPlaceholder")}
           aria-label={t("talentDiscovery.homeBoxPlaceholder")}
           className="flex-1 min-w-0 rounded-xl px-4 py-3 text-base outline-none"
-          style={{ background: "#FFFFFF", color: "#16321F" }}
+          style={{ background: "#FFFFFF", color: "#0F172A", border: "1px solid #F0D9A8" }}
         />
-        <button type="submit" className="shrink-0 flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-bold text-base whitespace-nowrap" style={{ background: "#E8B04A", color: "#16321F" }}>
+        <button type="submit" className="shrink-0 flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-bold text-base whitespace-nowrap" style={{ background: "#0F1E3F", color: "#FFFFFF" }}>
           {t("talentDiscovery.homeBoxButton")}
           <ChevronRight size={18} />
         </button>
       </form>
-      <button type="button" onClick={onCreate} className="mt-3 text-sm font-bold text-left underline underline-offset-4" style={{ color: "#E8B04A" }}>
+      <button type="button" onClick={onCreate} className="mt-3 text-sm font-bold text-left underline underline-offset-4" style={{ color: "#2563EB" }}>
         {t("home.providerCta")}
       </button>
     </div>
@@ -7208,7 +7208,7 @@ function TalentDiscoveryBanner({ onOpen }) {
     <section className="max-w-6xl mx-auto px-5 mt-8">
       <div
         className="w-full text-left rounded-3xl p-5 sm:p-8 flex flex-col sm:flex-row items-center gap-5 sm:gap-8"
-        style={{ background: "linear-gradient(135deg, #16321F 0%, #0F1E14 100%)" }}
+        style={{ background: "linear-gradient(135deg, #0F1E3F 0%, #172A5C 100%)" }}
       >
         {/* Orijinal, AI ile üretilmiş ilham görsellerinden (örgü, ev yapımı
             pasta, kumaş çiçek, hediye paketleme, web tasarımı, mikro-influencer,
@@ -7239,18 +7239,18 @@ function TalentDiscoveryBanner({ onOpen }) {
               placeholder={t("talentDiscovery.homeBoxPlaceholder")}
               aria-label={t("talentDiscovery.homeBoxPlaceholder")}
               className="flex-1 rounded-xl px-4 py-3 text-sm sm:text-base outline-none"
-              style={{ background: "#FFFFFF", color: "#16321F" }}
+              style={{ background: "#FFFFFF", color: "#0F172A" }}
             />
             <button
               type="submit"
               className="shrink-0 flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-bold text-sm sm:text-base whitespace-nowrap"
-              style={{ background: "#E8B04A", color: "#16321F" }}
+              style={{ background: "#F5B544", color: "#0F1E3F" }}
             >
               {t("talentDiscovery.homeBoxButton")}
               <ChevronRight size={18} />
             </button>
           </form>
-          <button type="button" onClick={() => go("")} className="text-sm font-bold text-center sm:text-left" style={{ color: "#E8B04A" }}>
+          <button type="button" onClick={() => go("")} className="text-sm font-bold text-center sm:text-left" style={{ color: "#F5B544" }}>
             {t("talentDiscovery.homeBoxUnknown")}
           </button>
           {/* Taranabilir iç bağlantılar: rehberler ana sayfadan da bulunur (yalnızca /rehber değil). */}
