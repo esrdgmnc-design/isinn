@@ -12,7 +12,7 @@ import SeoFooter from "../../components/SeoFooter";
 const BASE_URL = "https://www.isinn.com.tr";
 const URL = `${BASE_URL}/yetenegini-farket`;
 const TITLE = "Ne İş Yapabilirim? Becerinden Hizmet Fikri Bul | İşinn";
-const DESCRIPTION = "Ne iş yapabileceğini bilmiyorsan becerilerini yaz: yapay zekâ 1-2 hizmet fikri ve hazır vitrin taslağı önersin. Üyelik gerekmez, komisyon yok. Kazanç garantisi değildir.";
+const DESCRIPTION = "Ne iş yapabilirim diye düşünüyorsan yapmayı sevdiğin bir şey yaz: yapay zekâ sunabileceğin hizmetleri ve ilk vitrinin için fikirleri önersin. Üyelik gerekmez, komisyon yok. Kazanç garantisi değildir.";
 
 // Beceriden hizmete somut örnekler. Hepsi gerçek İşinn kategorilerine bağlanır;
 // kazanç ya da talep iddiası içermez, "örnek" olduğu açıktır.
