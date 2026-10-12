@@ -1647,7 +1647,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
           className="absolute top-1/3 right-1/4 w-40 h-40 rounded-full blur-3xl opacity-30"
           style={{ background: "#FDE68A" }}
         />
-        <div className="max-w-6xl mx-auto relative lg:flex lg:items-center lg:justify-between lg:gap-10">
+        <div className="max-w-6xl mx-auto relative lg:flex lg:items-start lg:justify-between lg:gap-10">
         <div className="relative w-full lg:max-w-2xl">
           {/* İlk ekran: ziyaretçi 3 saniyede İşinn'in ne olduğunu anlamalı — "doğru uzmanı bul" (arayan) + "hizmetini göster" (veren) +
               yetenek mesajı. Başlık satırları sabit (dönen/değişen metin yok), bu yüzden düzen kaymaz. */}
@@ -1737,7 +1737,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
           // taraftaki başlık daralıp 4 satıra düşüyordu (kullanıcı fark etti,
           // "yazı yine ilk hali ile kalsın" dedi) — o yüzden sağ tarafı bu
           // genişliğe göre küçülttük, geniş bırakmadık.
-          <div className="hidden lg:block relative w-full max-w-sm shrink-0">
+          <div className="hidden lg:block relative w-full max-w-sm shrink-0 lg:mt-6">
             {/* Fiverr'ın "AI Director" hero'sundaki fanlanmış kart destesi
                 stilinde — ama bizde her kart gerçek bir vitrin (sabit
                 illüstrasyon değil), kullanıcının verdiği referansa göre.
@@ -1834,12 +1834,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
           onayı beklemeden (Play Store/App Store günler-haftalar sürüyor)
           bugünden gerçek bir "uygulamaya" sahip olduklarını ziyaretçilere
           kendi kendine anlatıyor — her seferinde elle anlatmaya gerek kalmasın. */}
-      {/* Kullanıcının kendi kararı (2026-09-27): birisi ana sayfaya girip "burada
-          pek kimse yok" demeden ÖNCE odağı "ben ne yapabilirim"e çekmeliyiz —
-          bu yüzden bu banner, sağlayıcı sayısını dolaylı da olsa ele veren her
-          şeyden (Öne Çıkan, Vitrinler ızgarası) önce, hero'nun hemen ardından
-          geliyor. */}
-      <TalentDiscoveryBanner onOpen={() => onNav("talentDiscovery")} />
+      {/* Yetenek mesajı artık ilk ekrandaki karta (HeroTalentCard) taşındı; videolu "emin değilim" bandı Vitrinler ızgarasının ardında. */}
       <InstallAppBanner />
 
       {featured.length > 0 && (
@@ -1944,6 +1939,8 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
           </div>
         )}
       </section>
+
+      <TalentDiscoveryBanner onOpen={() => onNav("talentDiscovery")} />
 
       <section className="max-w-6xl mx-auto px-5 mt-10">
         <div className="rounded-3xl p-7 relative overflow-hidden" style={{ background: "linear-gradient(135deg, #0F1115 0%, #1A1D23 60%, #16321F 100%)" }}>
@@ -7227,8 +7224,8 @@ function TalentDiscoveryBanner({ onOpen }) {
         />
         <div className="flex-1 flex flex-col gap-4 w-full">
           <div className="text-center sm:text-left">
-            <h2 className="text-xl sm:text-3xl font-black leading-tight" style={{ color: "#FFFFFF" }}>{t("talentDiscovery.navCardTitle")}</h2>
-            <p className="text-sm sm:text-lg mt-2" style={{ color: "#B8BCC4" }}>{t("talentDiscovery.navCardSubtitle")}</p>
+            <h2 className="text-xl sm:text-3xl font-black leading-tight" style={{ color: "#FFFFFF" }}>{t("talentDiscovery.lowerTitle")}</h2>
+            <p className="text-sm sm:text-lg mt-2" style={{ color: "#B8BCC4" }}>{t("talentDiscovery.lowerSubtitle")}</p>
           </div>
           {/* Ayrı bir sayfaya geçmeden başlayabilsin: ilk cümle burada yazılır,
               Yeteneğini Farket sayfası dolu açılır. */}
