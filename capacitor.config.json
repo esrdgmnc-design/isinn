@@ -10,5 +10,8 @@
   "android": {
     "allowMixedContent": false
   },
-  "backgroundColor": "#FFFFFF"
+  "backgroundColor": "#FFFFFF",
+  "ios": {
+    "appendUserAgent": "IsinnApp-iOS"
+  }
 }

@@ -55,8 +55,9 @@ export default function GizlilikPage() {
 
       <h2 style={h2}>4. Verilerinizi Nasıl Silebilirsiniz?</h2>
       <p style={p}>
-        Hesabınızı silmek için <b>{COMPANY.email}</b> üzerinden bize ulaşabilirsiniz. Hesap
-        silindiğinde profil, vitrin ve belgeleriniz kaldırılır; yasal saklama yükümlülüğü olan kayıtlar
+        Hesabınızı uygulama ve sitenin içinden, Profil sayfasındaki &quot;Hesabımı sil&quot; bölümünden kendiniz silebilirsiniz;
+        ayrıca <b>{COMPANY.email}</b> üzerinden de bize ulaşabilirsiniz. Hesap
+        silindiğinde profil, vitrin, mesaj ve belgeleriniz ile yüklediğiniz dosyalar kaldırılır; yasal saklama yükümlülüğü olan kayıtlar
         mevzuatın öngördüğü süre kadar saklanabilir.
       </p>
 

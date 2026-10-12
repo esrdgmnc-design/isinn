@@ -10,6 +10,7 @@ const Cropper = dynamic(() => import("react-easy-crop"), { ssr: false, loading: 
 import { COMPANY } from "../lib/companyInfo";
 import { FALLBACK_LISTING_IMG, formatPriceLabel, mapServiceRowToListing } from "../lib/mapServiceRowToListing";
 import { isFreePeriod, FREE_PERIOD_UNTIL_ISO } from "../lib/freePeriod";
+import { useIosApp } from "../lib/nativeApp";
 import { trackEvent, captureAttribution, markInternal } from "../lib/analytics";
 import { useLanguage } from "../lib/i18n/LanguageContext";
 import { TALENT_BLOCKED_IDS, redactTalentPII, sanitizeTalentDraft, buildTalentFallback, detectsProductSaleIntent } from "../lib/talentCore";
@@ -1091,6 +1092,7 @@ function LanguageToggle({ className = "" }) {
 function Header({ onNav, onSearch, pendingCount, session, onNotificationClick }) {
   const notif = useNotifications(session?.user?.id);
   const { t } = useLanguage();
+  const iosApp = useIosApp();
   const [q, setQ] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   // KRİTİK MOBİL HATA (kullanıcı fark etti, canlıda doğrulandı): Planlar/
@@ -1157,6 +1159,7 @@ function Header({ onNav, onSearch, pendingCount, session, onNotificationClick })
         </div>
         <div className="flex items-center gap-2 ml-auto">
           <LanguageToggle className="hidden sm:flex" />
+          {!iosApp && (
           <button
             onClick={() => onNav("pricing")}
             className="text-sm font-semibold px-3.5 py-2 rounded-full hidden sm:flex items-center gap-1.5 transition-colors"
@@ -1164,6 +1167,7 @@ function Header({ onNav, onSearch, pendingCount, session, onNotificationClick })
           >
             <Award size={15} /> {t("header.plans")}
           </button>
+          )}
           <button
             onClick={() => onNav("map")}
             className="text-sm font-semibold px-3.5 py-2 rounded-full flex items-center gap-1.5 hidden sm:flex"
@@ -1316,6 +1320,7 @@ function Header({ onNav, onSearch, pendingCount, session, onNotificationClick })
             <div className="flex justify-end mb-1">
               <LanguageToggle />
             </div>
+            {!iosApp && (
             <button
               onClick={() => { setMobileMenuOpen(false); onNav("pricing"); }}
               className="flex items-center gap-2 text-sm font-semibold px-2 py-2.5 rounded-lg text-left"
@@ -1323,6 +1328,7 @@ function Header({ onNav, onSearch, pendingCount, session, onNotificationClick })
             >
               <Award size={16} /> {t("header.plans")}
             </button>
+            )}
             <button
               onClick={() => { setMobileMenuOpen(false); onNav("map"); }}
               className="flex items-center gap-2 text-sm font-semibold px-2 py-2.5 rounded-lg text-left"
@@ -2279,6 +2285,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
 // aynı palet (bkz. HomeView'ın en üstündeki radial-gradient).
 function SiteFooter({ onNav }) {
   const { t } = useLanguage();
+  const iosApp = useIosApp();
   return (
     <footer className="px-5 pt-14 pb-8" style={{ background: "#0F1115" }}>
       <div className="max-w-6xl mx-auto">
@@ -2303,7 +2310,7 @@ function SiteFooter({ onNav }) {
               <button onClick={() => onNav("map")} className="text-xs text-left" style={{ color: "#9CA3AF" }}>{t("footer.map")}</button>
               <button onClick={() => onNav("createListing")} className="text-xs text-left" style={{ color: "#9CA3AF" }}>{t("footer.addService")}</button>
               <button onClick={() => onNav("post")} className="text-xs text-left" style={{ color: "#9CA3AF" }}>{t("footer.postJob")}</button>
-              <button onClick={() => onNav("pricing")} className="text-xs text-left" style={{ color: "#9CA3AF" }}>{t("footer.plans")}</button>
+              {!iosApp && <button onClick={() => onNav("pricing")} className="text-xs text-left" style={{ color: "#9CA3AF" }}>{t("footer.plans")}</button>}
               {/* SEO: gerçek bir sayfaya (app/rehber) giden gerçek <a> —
                   diğerleri gibi SPA view'ı değil, iç link değeri için. Sayfanın
                   kendisi hâlâ Türkçe (bkz. app/rehber) — sadece link etiketi çevrildi. */}
@@ -12158,6 +12165,8 @@ export default function IsinnPrototype({ session, onRequireAuth, discoveryPopula
   // -> gerçek ?view= okunuyor, ikisi uyuşmuyor. Sunucuyla aynı "home" ile başlayıp
   // mount sonrası (React commit tamamlandıktan sonra) gerçek görünüme geçiyoruz.
   const [view, setView] = useState("home");
+  const iosApp = useIosApp();
+  useEffect(() => { if (iosApp && view === "pricing") setView("home"); }, [iosApp, view]);
   useEffect(() => {
     const v = getInitialView();
     if (v !== "home") setView(v);
@@ -12818,7 +12827,7 @@ export default function IsinnPrototype({ session, onRequireAuth, discoveryPopula
         <div role="alert" className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-max max-w-[calc(100vw-2rem)] text-center px-4 py-2.5 rounded-2xl text-xs font-medium text-white shadow-lg" style={{ background: "#9C4A3C" }}>{favError}</div>
       )}
       <Header onNav={handleNav} onSearch={runSearch} pendingCount={pendingMediaApprovals.length + staffModerationQueue.length} session={session} onNotificationClick={handleNotificationClick} />
-      {!trialBannerDismissed && trialBanner?.status === "trialing" && trialBanner.daysLeft <= 7 && (
+      {!iosApp && !trialBannerDismissed && trialBanner?.status === "trialing" && trialBanner.daysLeft <= 7 && (
         <div className="flex items-center gap-3 px-5 py-2.5" style={{ background: "#FFFBEB", borderBottom: "1px solid #F0E4C4" }}>
           <AlertCircle size={15} style={{ color: "#C2872B" }} className="shrink-0" />
           <p className="text-xs flex-1" style={{ color: "#5C5744" }}>

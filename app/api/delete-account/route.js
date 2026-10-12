@@ -25,6 +25,15 @@ export async function POST(request) {
     return Response.json({ ok: false, message: "Sunucu yapılandırması eksik." }, { status: 500 });
   }
   const admin = createClient(supabaseUrl, serviceRoleKey);
+  // Veritabanı kayıtları cascade ile gider ama Storage dosyaları gitmez: kullanıcının klasörlerini önce temizliyoruz
+  // (en iyi çaba; başarısız olursa hesap silme engellenmez).
+  for (const bucket of ["profile-media", "provider-documents"]) {
+    try {
+      const { data: files } = await admin.storage.from(bucket).list(user.id, { limit: 1000 });
+      const paths = (files || []).filter((f) => f.id).map((f) => `${user.id}/${f.name}`);
+      if (paths.length) await admin.storage.from(bucket).remove(paths);
+    } catch {}
+  }
   const { error } = await admin.auth.admin.deleteUser(user.id);
   if (error) {
     return Response.json({ ok: false, message: "Hesap silinemedi: " + error.message }, { status: 500 });

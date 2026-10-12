@@ -84,3 +84,47 @@ workflows:
             -derivedDataPath build CODE_SIGNING_ALLOWED=NO
     artifacts:
       - ios/App/build/Build/Products/**/*.app
+
+  # iOS mağaza yayını (TestFlight -> App Store). ÖN KOŞUL (Esra yapar, sırlar sohbete/repoya yazılmaz):
+  #   1. Codemagic > Teams > Integrations > App Store Connect: API anahtarını (Issuer ID, Key ID, .p8) ekle,
+  #      adını "isinn_app_store_connect" yap (aşağıdaki integration adıyla birebir aynı olmalı).
+  #   2. App Store Connect'te com.isinn.app paketi için uygulama kaydını aç.
+  #   3. Codemagic > ios-release > Environment variables: APP_STORE_APPLE_ID = App Store Connect > Uygulama Bilgileri > "Apple ID" (sayısal kimlik).
+  # Codemagic dağıtım sertifikasını ve App Store profilini API anahtarıyla kendisi üretir.
+  ios-release:
+    name: iOS (App Store / TestFlight, imzalı)
+    max_build_duration: 45
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: isinn_app_store_connect
+    environment:
+      node: 22
+      xcode: latest
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.isinn.app
+      vars:
+        APP_ID: "com.isinn.app"
+    scripts:
+      - name: Bağımlılıkları kur
+        script: npm ci
+      - name: Capacitor senkronize et
+        script: npx cap sync ios
+      - name: İmzalama profillerini projeye uygula
+        script: xcode-project use-profiles
+      - name: Derleme numarasını artır (TestFlight'taki son numara + 1)
+        script: |
+          cd ios/App
+          LATEST=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" 2>/dev/null || echo 0)
+          NEXT=$((LATEST + 1))
+          agvtool new-version -all "$NEXT"
+      - name: IPA derle
+        script: |
+          xcode-project build-ipa --project ios/App/App.xcodeproj --scheme App
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true

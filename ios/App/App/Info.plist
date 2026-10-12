@@ -22,6 +22,16 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>NSCameraUsageDescription</key>
+	<string>Vitrin ve çalışma örneklerin için fotoğraf veya video çekmek amacıyla kameraya erişim gerekir.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Tanıtım videosu çekerken sesin kaydedilebilmesi için mikrofona erişim gerekir.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Vitrinine ve çalışma örneklerine eklemek istediğin fotoğraf ve videoları seçebilmen için galerine erişim gerekir.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Sana en yakın şehri ve yakınındaki hizmet verenleri göstermek için konumun yalnızca o anda kullanılır; saklanmaz.</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>
@@ -49,7 +59,7 @@
 	<string>Main</string>
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
-		<string>armv7</string>
+		<string>arm64</string>
 	</array>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
