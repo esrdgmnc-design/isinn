@@ -6,7 +6,8 @@ import { SEO_CATEGORIES, SEO_CITIES, matchesCitySlug, categorySeoName } from "..
 import { formatPrice, getProviderName, getCategoryIntro, isIndexableListing, MIN_COMBO_LISTINGS, MIN_CATEGORY_LISTINGS } from "../../../lib/seoFormat";
 import { getCategoryFaq } from "../../../lib/categoryFaq";
 import { jsonLdString } from "../../../lib/jsonLd";
-import { socialMeta } from "../../../lib/seoMeta";
+import { socialMeta, clamp } from "../../../lib/seoMeta";
+import { getCategoryGuides } from "../../../lib/categoryGuides";
 import SeoFooter from "../../../components/SeoFooter";
 
 // SEO için eklendi: kategoriler eskiden sadece ana sayfadaki bir istemci
@@ -90,15 +91,7 @@ export default async function CategoryPage({ params }) {
     ],
   };
   const categoryFaq = services.length > 0 ? getCategoryFaq(meta.name) : null;
-  const faqJsonLd = categoryFaq ? {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    mainEntity: categoryFaq.map((f) => ({
-      "@type": "Question",
-      name: f.q,
-      acceptedAnswer: { "@type": "Answer", text: f.a },
-    })),
-  } : null;
+  const guides = getCategoryGuides(params.slug);
 
   return (
     <>
@@ -107,10 +100,6 @@ export default async function CategoryPage({ params }) {
       {services.some(isIndexableListing) && (
         // eslint-disable-next-line react/no-danger
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdString(jsonLd) }} />
-      )}
-      {faqJsonLd && (
-        // eslint-disable-next-line react/no-danger
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdString(faqJsonLd) }} />
       )}
       <div className="max-w-5xl mx-auto px-5 py-10">
         <Link href="/" className="text-sm font-bold" style={{ color: "#2563EB" }}>← İşinn</Link>
@@ -142,6 +131,9 @@ export default async function CategoryPage({ params }) {
                   <div className="p-4">
                     <p className="text-sm font-bold mb-1 line-clamp-2" style={{ color: "#0F1115" }}>{row.title}</p>
                     <p className="text-xs mb-2" style={{ color: "#6B7280" }}>{provider} · {city}</p>
+                    {row.description && (
+                      <p className="text-xs mb-2 line-clamp-3" style={{ color: "#6B7280" }}>{clamp(String(row.description).split(/\n\s*\n/)[0], 130)}</p>
+                    )}
                     <p className="text-sm font-black" style={{ color: "#0F1115" }}>{formatPrice(row.price, row.price_type)}</p>
                   </div>
                 </Link>
@@ -166,6 +158,17 @@ export default async function CategoryPage({ params }) {
             </div>
           );
         })()}
+
+        {guides.length > 0 && (
+          <div className="mt-10 pt-8 border-t" style={{ borderColor: "#F0F0F0" }}>
+            <h2 className="font-sans text-lg font-black mb-3" style={{ color: "#0F1115" }}>İlgili rehberler</h2>
+            <ul className="space-y-2">
+              {guides.map((g) => (
+                <li key={g.slug}><Link href={`/rehber/${g.slug}`} className="text-sm font-bold" style={{ color: "#2563EB" }}>{g.title}</Link></li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {categoryFaq && (
           <div className="mt-10 pt-8 border-t" style={{ borderColor: "#F0F0F0" }}>

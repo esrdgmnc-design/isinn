@@ -7,6 +7,7 @@ import { formatPrice, getProviderName, isIndexableListing } from "../../../lib/s
 import { socialMeta, clamp, optimizedImageUrl } from "../../../lib/seoMeta";
 import { SEO_CITIES, matchesCitySlug } from "../../../lib/seoTaxonomy";
 import { jsonLdString } from "../../../lib/jsonLd";
+import { safeWorkLink } from "../../../lib/workLink";
 import SeoFooter from "../../../components/SeoFooter";
 
 // SEO için eklendi (2026-09-16): İşinn'in tamamı eskiden tek bir "/" sayfası
@@ -234,6 +235,7 @@ export default async function VitrinPage({ params }) {
             <div className="flex flex-wrap items-center gap-3">
               <a
                 href={`/?vitrin=${row.id}`}
+                rel="nofollow"
                 className="inline-block text-sm font-bold px-6 py-3 rounded-full text-white"
                 style={{ background: "#2563EB" }}
               >
@@ -252,7 +254,6 @@ export default async function VitrinPage({ params }) {
           if (!row.is_remote && row.city) rows.push(["Konum", row.city]);
           rows.push(["Fiyat", price]);
           if (row.created_at) rows.push(["Yayın tarihi", new Date(row.created_at).toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" })]);
-          if (row.video_intro_url) rows.push(["Tanıtım videosu", "Var"]);
           const filtered = rows.filter(([, v]) => v);
           if (filtered.length < 2) return null;
           return (
@@ -271,6 +272,15 @@ export default async function VitrinPage({ params }) {
           );
         })()}
 
+        {row.video_intro_url && (
+          <section className="mt-8">
+            <h2 className="font-sans text-lg font-black mb-3" style={{ color: "#0F1115" }}>Tanıtım videosu</h2>
+            <video controls playsInline preload="none" poster={realImg ? optimizedImageUrl(realImg, 800) : undefined} className="w-full rounded-2xl bg-black" style={{ maxHeight: "360px" }}>
+              <source src={row.video_intro_url} />
+            </video>
+          </section>
+        )}
+
         {portfolio.length > 0 && (
           <section className="mt-8">
             <h2 className="font-sans text-lg font-black mb-3" style={{ color: "#0F1115" }}>Çalışma örnekleri</h2>
@@ -283,6 +293,19 @@ export default async function VitrinPage({ params }) {
             </div>
           </section>
         )}
+
+        {(() => {
+          // "Çalışmalarımı gör": uygulamadaki kuralın aynısı (portföy en az 3 öğe ya da video varsa göster), nofollow/ugc.
+          const wl = safeWorkLink(row.work_link_url);
+          if (!wl || !(portfolio.length >= 3 || row.video_intro_url)) return null;
+          const path = new URL(wl.url).pathname.replace(/\/$/, "");
+          return (
+            <p className="mt-6 text-sm" style={{ color: "#374151" }}>
+              <a href={wl.url} target="_blank" rel="nofollow noopener noreferrer ugc" className="font-bold" style={{ color: "#2563EB" }}>Daha fazla çalışma: {wl.host}{path}</a>
+              <span className="block text-xs mt-1" style={{ color: "#9CA3AF" }}>Sağlayıcının kendi paylaştığı bağlantı; İşinn içeriğini denetlemez.</span>
+            </p>
+          );
+        })()}
 
         {related.sameProvider.length > 0 && (
           <section className="mt-8">
