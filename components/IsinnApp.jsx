@@ -1137,7 +1137,9 @@ function Header({ onNav, onSearch, pendingCount, session, onNotificationClick })
   const initials = emailPrefix ? emailPrefix.slice(0, 2).toUpperCase() : "?";
   return (
     <>
-    <header className="sticky top-0 z-30 backdrop-blur border-b" style={{ background: "rgba(255,255,255,0.85)", borderColor: "#EAEAEA" }}>
+    {/* Sabit başlıkta backdrop-filter (bulanıklık) telefonlarda, özellikle iPhone Safari'de kaydırırken titreme ve takılma yapıyor;
+        yalnızca geniş ekranda (md+) kullanılıyor, telefonda neredeyse opak beyaz. */}
+    <header className="sticky top-0 z-30 md:backdrop-blur border-b bg-white/[0.97] md:bg-white/85" style={{ borderColor: "#EAEAEA" }}>
       <div className="w-full px-5 sm:px-8 py-3 flex items-center gap-4">
         <button onClick={() => onNav("home")} className="font-sans text-xl font-black tracking-tight shrink-0" style={{ color: "#0F1115" }}>
           İşinn<span style={{ color: "#2563EB" }}>.</span>
