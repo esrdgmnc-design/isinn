@@ -1651,7 +1651,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
         <div className="relative w-full lg:max-w-2xl">
           {/* İlk ekran: ziyaretçi 3 saniyede İşinn'in ne olduğunu anlamalı — "doğru uzmanı bul" (arayan) + "hizmetini göster" (veren) +
               yetenek mesajı. Başlık satırları sabit (dönen/değişen metin yok), bu yüzden düzen kaymaz. */}
-          <h1 className="font-sans text-[32px] min-[400px]:text-[36px] sm:text-5xl xl:text-6xl font-black leading-[1.1] tracking-tight" style={{ color: "#0F1E3F" }}>
+          <h1 className="font-sans text-[32px] min-[400px]:text-[36px] sm:text-5xl xl:text-[52px] font-black leading-[1.1] tracking-tight" style={{ color: "#0F1E3F" }}>
             {t("home.heroTitleA")}<br />
             <span className="inline-block pb-1.5 bg-clip-text text-transparent" style={{ backgroundImage: "linear-gradient(90deg, #1D4ED8, #3B82F6)" }}>{t("home.heroTitleB")}</span>
           </h1>
@@ -1740,13 +1740,13 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
             gösteriyor (kullanıcının isteği — "öne çıkanlar için heveslendirici dursun"). */}
         {/* Kart destesi veriyle (listeler yüklenince) geliyor; gelmeden önce AYNI genişlikte boş yer ayırıyoruz — yoksa deste
             görününce sol sütun daralıp başlık yeniden sarılıyor ve sayfa zıplıyordu (büyük tablet/bilgisayar). */}
-        {featured.length === 0 && <div className="hidden lg:block w-full lg:max-w-[360px] xl:max-w-[470px] shrink-0" aria-hidden="true" />}
+        {featured.length === 0 && <div className="hidden lg:block w-full lg:max-w-[380px] xl:max-w-[500px] shrink-0" aria-hidden="true" />}
         {featured.length > 0 && (
           // max-w-sm — ilk halinin genişliği. max-w-lg'ye çıkarınca sol
           // taraftaki başlık daralıp 4 satıra düşüyordu (kullanıcı fark etti,
           // "yazı yine ilk hali ile kalsın" dedi) — o yüzden sağ tarafı bu
           // genişliğe göre küçülttük, geniş bırakmadık.
-          <div className="hidden lg:block relative w-full lg:max-w-[360px] xl:max-w-[470px] shrink-0 lg:mt-4">
+          <div className="hidden lg:block relative w-full lg:max-w-[380px] xl:max-w-[500px] shrink-0 lg:mt-0">
             {/* Fiverr'ın "AI Director" hero'sundaki fanlanmış kart destesi
                 stilinde — ama bizde her kart gerçek bir vitrin (sabit
                 illüstrasyon değil), kullanıcının verdiği referansa göre.
@@ -1759,7 +1759,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
             <style>{`
               @keyframes cardPop { from { opacity: 0; transform: scale(0.85) translateY(16px); } to { opacity: 1; transform: scale(1) translateY(0); } }
             `}</style>
-            <div className="flex items-end justify-center" style={{ paddingTop: "28px" }}>
+            <div className="flex items-end justify-center" style={{ paddingTop: "4px" }}>
               {Array.from({ length: Math.min(3, featured.length) }, (_, k) => featured[(featuredIndex + k) % featured.length]).map((l, i, arr) => {
                 const mid = (arr.length - 1) / 2;
                 const offset = i - mid; // -1..0..1
@@ -1777,7 +1777,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
                     key={`${featuredIndex}-${l.id}`}
                     className="shrink-0"
                     style={{
-                      width: isCenter ? "clamp(170px, 17.5vw, 250px)" : "clamp(112px, 11.5vw, 165px)",
+                      width: isCenter ? "clamp(185px, 19vw, 285px)" : "clamp(118px, 12vw, 175px)",
                       aspectRatio: "2 / 3",
                       transform: `rotate(${rotation}deg)`,
                       marginLeft: i === 0 ? 0 : "clamp(-30px, -2vw, -20px)",
@@ -1796,9 +1796,9 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
                       // tetikliyor) aynı string yeniden style'a yazılınca
                       // animasyon baştan sarıyordu. Statik class re-render'lar
                       // arasında değişmediği için bu sorunu yaşamıyor.
-                      className={`relative w-full h-full rounded-2xl overflow-hidden hover:z-20 hover:-translate-y-3 hover:scale-105 transition-transform block animate-[cardPop_0.6s_cubic-bezier(0.34,1.56,0.64,1)_both] ${isCenter ? "shadow-[0_0_0_3px_#F59E0B,0_20px_45px_rgba(0,0,0,0.55)]" : "shadow-xl"}`}
+                      className={`relative w-full h-full rounded-2xl overflow-hidden hover:z-20 hover:-translate-y-3 hover:scale-105 transition-transform block animate-[cardPop_0.6s_cubic-bezier(0.34,1.56,0.64,1)_both] ${isCenter ? "shadow-[0_0_0_2px_#F5B544,0_26px_50px_-16px_rgba(15,30,63,0.5)]" : "shadow-lg"}`}
                       style={{
-                        border: isCenter ? "2px solid rgba(255,255,255,0.9)" : "2px solid rgba(255,255,255,0.12)",
+                        border: isCenter ? "1px solid rgba(255,255,255,0.55)" : "1px solid rgba(255,255,255,0.3)",
                         animationDelay: `${i * 70}ms`,
                       }}
                     >
@@ -7189,7 +7189,7 @@ function TalentDiscoveryBanner({ onOpen }) {
         <LoopVideo
           src="/videos/yetenek-ilham-sm.mp4"
           poster="/videos/yetenek-ilham-poster.jpg"
-          className="w-full sm:w-72 h-32 sm:h-44 rounded-2xl object-cover shrink-0"
+          className="w-full sm:w-[22rem] lg:w-[28rem] h-44 sm:h-60 lg:h-72 rounded-2xl object-cover shrink-0"
         />
         <div className="flex-1 flex flex-col gap-4 w-full">
           <div className="text-center sm:text-left">
@@ -12288,6 +12288,10 @@ export default function IsinnPrototype({ session, onRequireAuth, discoveryPopula
   // sekmesi/oturumu başına bir kayıt, "ziyaretçi" değil "ziyaret" sayıyoruz.
   useEffect(() => {
     try {
+      // Geliştirme (localhost) ve iç trafik (isinn_internal) ziyaret sayısına girmesin: kurucunun/test cihazlarının ve otomatik testlerin
+      // panelde "ziyaret" gibi görünmesini önler (Vercel Analytics bot ve tekrar eden ziyaretleri zaten ayıklıyor).
+      const h = window.location.hostname;
+      if (h === "localhost" || h === "127.0.0.1" || h === "[::1]" || localStorage.getItem("isinn_internal") === "1") return;
       if (sessionStorage.getItem("isinn_visit_logged")) return;
       sessionStorage.setItem("isinn_visit_logged", "1");
     } catch (e) { /* sessionStorage kapalıysa sessizce vazgeç */ }
