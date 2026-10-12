@@ -7,6 +7,8 @@ const nextConfig = {
       { source: "/videos/:path*", headers: cache },
       { source: "/images/:path*", headers: cache },
       { source: "/icons/:path*", headers: cache },
+      // iOS Universal Links: AASA dosyası uzantısız, JSON olarak ve yönlendirmesiz servis edilmeli.
+      { source: "/.well-known/apple-app-site-association", headers: [{ key: "Content-Type", value: "application/json" }] },
     ];
   },
   images: {

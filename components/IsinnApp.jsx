@@ -11,6 +11,10 @@ import { COMPANY } from "../lib/companyInfo";
 import { FALLBACK_LISTING_IMG, formatPriceLabel, mapServiceRowToListing } from "../lib/mapServiceRowToListing";
 import { isFreePeriod, FREE_PERIOD_UNTIL_ISO } from "../lib/freePeriod";
 import { useIosApp } from "../lib/nativeApp";
+import { aiFetch } from "../lib/aiConsent";
+import { checkContent } from "../lib/contentFilter";
+import { startNativePush, enablePush, unregisterPush } from "../lib/nativePush";
+import AiConsentModal from "./AiConsentModal";
 import { trackEvent, captureAttribution, markInternal } from "../lib/analytics";
 import { useLanguage } from "../lib/i18n/LanguageContext";
 import { TALENT_BLOCKED_IDS, redactTalentPII, sanitizeTalentDraft, buildTalentFallback, detectsProductSaleIntent } from "../lib/talentCore";
@@ -406,7 +410,7 @@ const SUSPICIOUS_CONTENT_PATTERN = /whatsapp|telegram|\biban\b|banka hesab|kapor
 async function checkAndFlagContent(contentType, contentId, text, profileId) {
   if (!text || !contentId || !SUSPICIOUS_CONTENT_PATTERN.test(text)) return;
   try {
-    const response = await fetch("/api/claude", {
+    const response = await aiFetch("/api/claude", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -418,7 +422,7 @@ async function checkAndFlagContent(contentType, contentId, text, profileId) {
           content: `Bir hizmet pazaryerinde şu metin gönderildi:\n"${text}"\n\nBu metin platformu atlayıp doğrudan ödeme isteme, dolandırıcılık kalıbı ya da kullanıcıyı kandırmaya yönelik şüpheli bir istek içeriyor mu? Sadece WhatsApp/Telegram'dan iletişime geçmeyi önermek TEK BAŞINA şüpheli sayılmaz (normal bir tercih olabilir) — asıl önemli olan ödeme/kapora isteme veya aldatma niyeti var mı.\n\nSADECE şu JSON formatında yanıt ver: {"suspicious": true veya false, "reason": "kısa gerekçe (en fazla 15 kelime)"}`,
         }],
       }),
-    });
+    }, { silent: true });
     const data = await response.json();
     const raw = (data.content || []).map((b) => b.text || "").join("\n");
     const clean = raw.replace(/```json|```/g, "").trim();
@@ -1250,7 +1254,7 @@ function Header({ onNav, onSearch, pendingCount, session, onNotificationClick })
                       {t("header.favorites")}
                     </button>
                     <button
-                      onClick={() => { setMenuOpen(false); supabase.auth.signOut(); }}
+                      onClick={() => { setMenuOpen(false); unregisterPush().finally(() => supabase.auth.signOut()); }}
                       className="w-full text-left px-4 py-2.5 text-sm font-medium hover:bg-black/5"
                       style={{ color: "#9C4A3C" }}
                     >
@@ -3650,7 +3654,7 @@ function ListingDetail({ listing, onBack, onContact, userReviews, onAddReview, o
       setSummaryLoading(true);
       try {
         const commentsList = withText.slice(0, 30).map((r, i) => `${i + 1}. (${r.value}★) ${r.comment}`).join("\n");
-        const response = await fetch("/api/claude", {
+        const response = await aiFetch("/api/claude", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -3682,7 +3686,7 @@ function ListingDetail({ listing, onBack, onContact, userReviews, onAddReview, o
     }
     try {
       const base64 = dataUrl.split(",")[1];
-      const response = await fetch("/api/claude", {
+      const response = await aiFetch("/api/claude", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -3831,7 +3835,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
       const { data: pub } = supabase.storage.from("profile-media").getPublicUrl(path);
 
       const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch("/api/review-media", {
+      const res = await aiFetch("/api/review-media", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -5177,7 +5181,7 @@ function SearchResultsView({ query, cityFilter, onBack, onSelectListing, realLis
       setAiExpanding(true);
       try {
         const catList = CATEGORIES.map((c) => `${c.id}: ${c.name}`).join(", ");
-        const response = await fetch("/api/claude", {
+        const response = await aiFetch("/api/claude", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -5515,7 +5519,7 @@ function PostJobView({ onBack, onSubmitted, onViewOffers, onMatchAI, userId, onJ
       const prompt = `Bir hizmet pazaryeri uygulamasında bir MÜŞTERİ, ihtiyacı olan işi anlatan bir ilan yazıyor (bir sağlayıcı değil). Kategori: "${catName}". ${title.trim() || desc.trim() ? `Kullanıcının notu: "${title.trim()} ${desc.trim()}"` : "Kullanıcı henüz bir şey yazmadı, kategoriye uygun genel ve gerçekçi bir müşteri ihtiyacı metni üret."}
 SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
 {"title": "kısa, net bir ilan başlığı (en fazla 8 kelime)", "desc": "2-3 cümlelik, ihtiyacı ve beklentiyi anlatan bir açıklama"}`;
-      const response = await fetch("/api/claude", {
+      const response = await aiFetch("/api/claude", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ feature: "listing_write", model: "claude-sonnet-4-6", max_tokens: 400, messages: [{ role: "user", content: prompt }] }),
@@ -5538,6 +5542,8 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
     if (!categoryId) { setError(t("common.errCategoryRequired")); return; }
     if (categoryId === CUSTOM_CATEGORY_ID && !customCategoryLabel.trim()) { setError(t("common.errCustomCategoryRequired")); return; }
     if (!desc.trim()) { setError(t("postJob.errDesc")); return; }
+    if (checkContent(`${title}
+${desc}`).action === "block") { setError(t("moderation.blockedListing")); return; }
     if (!userId) { setError(t("postJob.errAuthRequired")); return; }
     // "Diğer" seçilince gerçek FK hedefi hep "diger" kategorisi — kullanıcının
     // yazdığı serbest metin ayrı bir kolonda duruyor (bkz. custom_category_label).
@@ -5602,11 +5608,11 @@ Aciliyet: ${urgencyLabel}${mode === "local" ? ` · Hizmet yeri: ${prefLabel}` : 
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session?.access_token) return;
-        fetch("/api/job-match", {
+        aiFetch("/api/job-match", {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
           body: JSON.stringify({ jobId: data.id }),
-        }).catch(() => {});
+        }, { silent: true }).catch(() => {});
       } catch {}
     })();
     // Listede olmayan bir kategori istendiyse, gerçekten görülmesi için
@@ -5969,7 +5975,7 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
         // (checkReviewMedia/checkPhotoContent/writeWithAI'nin kullandığı
         // doğru /api/claude sunucu route'u kullanılmıyordu, muhtemelen
         // gözden kaçmıştı). Aynı desene çekildi.
-        const response = await fetch("/api/claude", {
+        const response = await aiFetch("/api/claude", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -6415,7 +6421,7 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
         const jobDesc = (jobRow?.description || "").slice(0, 400);
         offerPrompt = `Bir hizmet pazaryerinde bir HİZMET VEREN, "${active.name}" adlı kişinin yayınladığı "${jobTitle}" iş ilanına TEKLİF vermek için ilk mesajını yazıyor. İlan açıklaması: "${jobDesc || "(açıklama yok)"}". ${ownLine}\n\nOnun yerine kısa (en fazla 3 cümle), nazik ve net bir teklif mesajı yaz: ilana neden yazdığını söylesin, ilanın ayrıntılarıyla ilgili somut bir soru sorsun ve müsaitlik ile ayrıntıları konuşmayı önersin. KURALLAR: Yalnızca yukarıda verilen gerçek bilgilere dayan; verilmeyen deneyim, sertifika, fiyat ya da süre uydurma. Kendi vitrinleri ilanla ilgili DEĞİLSE ilgili gibi davranma, vitrinden bahsetme. Mesajı yazan iş ilanını VERMİYOR, ilan sahibine yazıyor: kendini ilan veren ya da iş arayan biri gibi tanıtma, "ilanımı yayınladım" gibi cümleler kurma. Türkçe, samimi ama profesyonel bir dille.\n\nSADECE mesaj metnini yaz, tırnak işareti veya başka hiçbir şey ekleme.`;
       }
-      const response = await fetch("/api/claude", {
+      const response = await aiFetch("/api/claude", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -6490,6 +6496,8 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
     if (!active?.otherId || !currentUserId) return;
     const body = input.trim();
     if (!body) return;
+    // Açık küfür/hakaret/tehdit ya da tam IBAN numarası: gönderilmez (App Store 1.2 içerik filtresi).
+    if (checkContent(body).action === "block") { setGateError(t("moderation.blockedMessage")); return; }
     // Şüpheli ifade (IBAN, kapora, WhatsApp vb.) varsa göndermeden ÖNCE bir kez uyar —
     // engellemez: kullanıcı aynı mesajı tekrar gönderirse gider. Ödeme platform dışı
     // olduğu için dolandırıcılığa karşı tek koruma bilinçli kullanıcıdır.
@@ -6525,6 +6533,7 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
       .select()
       .single();
     setSending(false);
+    if (!error && data) enablePush();
     if (error || !data) {
       // Eskiden burada input zaten temizlenmişti, hata sessizce yutuluyordu —
       // kullanıcı yazdığı mesajı kaybediyordu, hiçbir açıklama görmüyordu.
@@ -6960,7 +6969,7 @@ async function checkPhotoModeration(url, mimeType) {
   try {
     const { data: { session } } = await supabase.auth.getSession();
     // 40 sn içinde cevap gelmezse bekleme biter (yavaş bağlantıda ekran sonsuza dek "kontrol ediliyor" kalmasın).
-    const response = await fetch("/api/listing-photo-check", {
+    const response = await aiFetch("/api/listing-photo-check", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -7107,7 +7116,7 @@ async function requestAiListingCopy({ categoryName, title, desc }) {
 KURALLAR: SADECE kullanıcının yazdığı bilgileri kullan, birinci tekil şahısla ve samimi yaz. Sertifika, diploma, yıl/deneyim süresi, fiyat, müşteri/sipariş sayısı, "uzman/profesyonel" gibi unvan ve sonuç/garanti iddiası EKLEME; hiçbir rakam ya da para birimi kullanma. Kullanıcı bir şey yazmadıysa kategoriye uygun, nötr, mütevazı ve iddiasız kısa bir taslak yaz.
 SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
 {"title": "kısa bir ilan başlığı (en fazla 8 kelime)", "desc": "2-3 cümlelik, samimi ve iddiasız bir hizmet açıklaması"}`;
-  const response = await fetch("/api/claude", {
+  const response = await aiFetch("/api/claude", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ feature: "listing_copy", model: "claude-sonnet-4-6", max_tokens: 400, temperature: 0.4, messages: [{ role: "user", content: prompt }] }),
@@ -7137,7 +7146,7 @@ async function requestTalentSuggestions({ skills, hours, budget, remote, remoteK
   const timer = setTimeout(() => controller.abort(), 58000);
   let response;
   try {
-    response = await fetch("/api/talent", {
+    response = await aiFetch("/api/talent", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -7920,6 +7929,9 @@ function ListingInfoEditor({ row, userId, onSaved, onCancel }) {
     if (categoryId === CUSTOM_CATEGORY_ID && !customCategoryLabel.trim()) { setError(t("common.errCustomCategoryRequired")); return; }
     if (!title.trim()) { setError(t("createListing.errTitle")); return; }
     if (!desc.trim()) { setError(t("createListing.errDesc")); return; }
+    if (checkContent(`${providerName}
+${title}
+${desc}`).action === "block") { setError(t("moderation.blockedListing")); return; }
     const parsedPrice = parsePriceInput(priceText.trim()).numeric;
     if (priceType !== "quote" && parsedPrice == null) { setError(t("listingDetail.editErrPrice")); return; }
     if (!cover.photo?.url) { setError(t("createListing.errPhoto")); return; }
@@ -8531,7 +8543,7 @@ function CreateListingView({ onBack, onCreated, userId, onGoToProfile, onGoToPla
     setRecLoading(true);
     try {
       const prompt = `Bir hizmet pazaryerinde yeni bir hizmet vitrini oluşturuldu. Başlık: "${listing.title}", kategori: "${CATEGORIES.find((c) => c.id === listing.category)?.name}". Bu sağlayıcıya, platformun sunduğu ücretli ek ürünlerden (Öne Çıkan Vitrin, Beceri Testi Rozeti, Görünürlük Paketi) birini kişiselleştirilmiş, samimi bir dille öner. SADECE şu JSON formatında yanıt ver: {"product": "Öne Çıkan Vitrin" | "Beceri Testi Rozeti" | "Görünürlük Paketi", "pitch": "2 cümlelik, o kişiye özel gerekçe"}`;
-      const response = await fetch("/api/claude", {
+      const response = await aiFetch("/api/claude", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ feature: "product_recommendation", model: "claude-sonnet-4-6", max_tokens: 300, messages: [{ role: "user", content: prompt }] }),
@@ -8553,6 +8565,9 @@ function CreateListingView({ onBack, onCreated, userId, onGoToProfile, onGoToPla
     if (categoryId === CUSTOM_CATEGORY_ID && !customCategoryLabel.trim()) { setError(t("common.errCustomCategoryRequired")); return; }
     if (!title.trim()) { setError(t("createListing.errTitle")); return; }
     if (!desc.trim()) { setError(t("createListing.errDesc")); return; }
+    if (checkContent(`${providerName}
+${title}
+${desc}`).action === "block") { setError(t("moderation.blockedListing")); return; }
     if (!price.trim()) { setError(t("createListing.errPrice")); return; }
     if (!photo?.url) { setError(t("createListing.errPhoto")); return; }
     if (moderation?.status === "checking") { setError(t("createListing.errModerationChecking")); return; }
@@ -9249,7 +9264,7 @@ function SupportChatView({ onBack, onReport, currentUserId, onNav }) {
       // Doğrudan api.anthropic.com'a, tarayıcıdan, API anahtarı hiç eklenmeden
       // çağrılıyordu — Destek Asistanı'nın kendisi bu yüzden hiç çalışmıyordu,
       // her mesajda sessizce "Bağlantı sorunu oluştu" hatasına düşüyordu.
-      const response = await fetch("/api/claude", {
+      const response = await aiFetch("/api/claude", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -9314,7 +9329,7 @@ ${userContext}`,
 
 YAZIŞMA:
 ${convoText}`;
-      const response = await fetch("/api/claude", {
+      const response = await aiFetch("/api/claude", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ feature: "report_summary", model: "claude-sonnet-4-6", max_tokens: 400, messages: [{ role: "user", content: prompt }] }),
@@ -10982,6 +10997,7 @@ function DeleteAccountCard() {
       });
       const data = await res.json();
       if (!data.ok) throw new Error(data.message || "Hesap silinemedi.");
+      await unregisterPush();
       await supabase.auth.signOut();
       window.location.href = "/";
     } catch (e) {
@@ -12250,6 +12266,8 @@ export default function IsinnPrototype({ session, onRequireAuth, discoveryPopula
   // Girişsiz "İletişime Geç"e basan ziyaretçi giriş yaptıktan sonra baktığı vitrine dönsün (15 dk içinde).
   const userIdRef = useRef(userId);
   userIdRef.current = userId;
+  // iOS kabuğu: push bildirimi dinleyicileri ve derin bağlantı (web'de hiçbir şey yapmaz). Dokunma = bildirim zilindeki tıklamayla aynı yönlendirme.
+  useEffect(() => { if (userId) startNativePush((n) => handleNotificationClick(n)); }, [userId]);
   useEffect(() => {
     let cancelled = false;
     const resume = () => {
@@ -13051,6 +13069,7 @@ export default function IsinnPrototype({ session, onRequireAuth, discoveryPopula
       )}
       {view === "adminDashboard" && isAdmin && <AdminDashboardView onBack={() => goBack()} />}
 
+      <AiConsentModal />
       {view !== "support" && <DraggableSupportButton onClick={() => setView("support")} quietOnTop={view === "home"} />}
     </div>
   );

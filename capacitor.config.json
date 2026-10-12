@@ -13,5 +13,10 @@
   "backgroundColor": "#FFFFFF",
   "ios": {
     "appendUserAgent": "IsinnApp-iOS"
+  },
+  "plugins": {
+    "PushNotifications": {
+      "presentationOptions": []
+    }
   }
 }
