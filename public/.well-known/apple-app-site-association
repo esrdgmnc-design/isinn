@@ -1,0 +1,1 @@
+{"applinks":{"details":[{"appIDs":["C6H3F65H4U.com.isinn.app"],"components":[{"/":"/reset-password*","exclude":true},{"/":"/api/*","exclude":true},{"/":"/odeme*","exclude":true},{"/":"/"},{"/":"/vitrin/*"},{"/":"/kategori/*"},{"/":"/sehir/*"},{"/":"/rehber/*"}]}]}}
