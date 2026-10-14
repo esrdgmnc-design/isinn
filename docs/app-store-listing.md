@@ -77,7 +77,7 @@ usta,freelance,yerel,ilan,tamir,temizlik,özel ders,fotoğrafçı,danışman,şe
 |---|---|
 | Destek URL | https://www.isinn.com.tr/hakkimizda |
 | Pazarlama URL | https://www.isinn.com.tr |
-| Telif hakkı | `2026 Code G Technology` (şirketin resmi unvanı farklıysa onu yaz) |
+| Telif hakkı | `2026 Esra Güneş` (bireysel geliştirici hesabı; şirket adı geçmez) |
 | Sürüm | 1.0 |
 
 ## 3. Ekran görüntüleri
@@ -127,7 +127,7 @@ Anketteki yanıtlar (hepsi "Yok" dışında):
 - **Giriş gerekli**: Evet. Demo hesabı aç (e-posta + şifre ile; Google girişi iOS'ta gizli olduğu için
   "Apple ile Giriş" zorunluluğu yok). İçinde en az bir yayında vitrin ve bir mesaj konuşması olsun ki
   inceleyen kişi özellikleri görebilsin. E-posta/şifreyi yalnızca App Store Connect'teki alana yaz.
-- **İletişim**: Esra Güneş, esra.gunes@codegtechnology.com, telefon App Store Connect'te.
+- **İletişim**: Esra Güneş; e-posta ve telefon olarak Apple Developer hesabındaki kişisel bilgiler.
 - **Notlar** (İngilizce, inceleme ekibi için):
 
 ```
