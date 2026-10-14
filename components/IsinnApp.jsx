@@ -1742,6 +1742,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
             <span>✓ {t("home.trustNoCommission")}</span>
             {isFreePeriod() && <span>✓ {t("home.trustFree", { date: new Date(FREE_PERIOD_UNTIL_ISO).toLocaleDateString(language === "en" ? "en-GB" : "tr-TR", { day: "numeric", month: "long", year: "numeric" }) })}</span>}
             <span>✓ {t("home.trustPhonePrivate")}</span>
+            <span>✓ {t("home.trustNameYours")}</span>
           </div>
         </div>
 
@@ -2397,6 +2398,7 @@ function ReviewCard({ review, onOpenMedia, isReal, currentUserId, providerId }) 
   const [replyError, setReplyError] = useState("");
   const submitReply = async () => {
     if (!replyText.trim()) return;
+    if (checkContent(replyText).action === "block") { setReplyError(t("moderation.blockedText")); return; }
     setReplySubmitting(true);
     setReplyError("");
     // .select("id"): RLS engeli olduğunda Supabase hata dönmeden 0 satır günceller.
@@ -3866,6 +3868,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
 
   const submitRealReview = async () => {
     setReviewError("");
+    if (checkContent(reviewComment).action === "block") { setReviewError(t("moderation.blockedText")); return null; }
     const jobId = reviewEligibility?.jobId;
     const existing = reviewEligibility?.existingRating;
     if (!jobId) {
@@ -7207,7 +7210,7 @@ function TalentDiscoveryBanner({ onOpen }) {
         <LoopVideo
           src="/videos/yetenek-ilham-sm.mp4"
           poster="/videos/yetenek-ilham-poster.jpg"
-          className="w-full sm:w-[22rem] lg:w-[28rem] h-44 sm:h-60 lg:h-72 rounded-2xl object-cover shrink-0"
+          className="w-full sm:w-[20rem] lg:w-[21rem] xl:w-[22rem] h-44 sm:h-52 lg:h-56 rounded-2xl object-cover shrink-0"
         />
         <div className="flex-1 flex flex-col gap-4 w-full">
           <div className="text-center sm:text-left">
@@ -8012,6 +8015,7 @@ ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return
             className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
             style={inputStyle}
           />
+          <p className="text-[11px] mt-1.5" style={{ color: "#6B6550" }}>{t("createListing.displayNameHint")}</p>
         </div>
 
         <ListingCategoryField
@@ -8981,6 +8985,7 @@ ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return
             className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
             style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
           />
+          <p className="text-[11px] mt-1.5" style={{ color: "#6B6550" }}>{t("createListing.displayNameHint")}</p>
         </div>
 
         <ListingCategoryField
@@ -11378,6 +11383,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
   const saveProfile = async () => {
     if (!userId) return;
     if (!fullName.trim()) { setSaveError(t("profile.errFullNameRequired")); return; }
+    if (checkContent(`${fullName}\n${bio}`).action === "block") { setSaveError(t("moderation.blockedText")); return; }
     setSaveError("");
     setSaving(true);
     const cityName = CITIES.find((c) => c.id === cityId)?.name || null;
