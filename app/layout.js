@@ -76,7 +76,7 @@ const organizationJsonLd = {
   alternateName: ["Isinn", "isinn.com.tr"],
   url: "https://www.isinn.com.tr",
   logo: "https://www.isinn.com.tr/icons/icon-512.webp",
-  description: "İşinn, becerini fark edip hizmet vitrinine dönüştürmene ve yakınındaki hizmetleri bulmana yardım eden bir hizmet keşif platformudur. Komisyon almaz, ödemeye aracılık etmez, ürün satmaz. İşinn (isinn.com.tr) bir banka, iş ilanı sitesi ya da ürün satış sitesi değildir.",
+  description: "İşinn, becerini fark edip hizmet vitrinine dönüştürmene ve yakınındaki hizmetleri bulmana yardım eden bir hizmet keşif platformudur. Komisyon almaz, ödemeye aracılık etmez, ürün satmaz. İşinn (isinn.com.tr) bir banka, işe alım/personel arama sitesi ya da ürün satış sitesi değildir.",
   // Konum/hizmet alanı bilgisi eskiden hiç yoktu — AI arama motorlarının ve
   // Google'ın İşinn'i "Türkiye'de yerleşik, yerel" bir varlık olarak
   // çözümlemesini (Knowledge Panel'de adres/harita gösterimi dahil)

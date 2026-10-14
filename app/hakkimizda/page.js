@@ -11,7 +11,7 @@ import SeoFooter from "../../components/SeoFooter";
 const BASE_URL = "https://www.isinn.com.tr";
 const URL = `${BASE_URL}/hakkimizda`;
 const TITLE = "İşinn Nedir? Ne Yapar, Ne Yapmaz | Hakkımızda";
-const DESCRIPTION = "İşinn, becerini fark edip hizmet vitrinine dönüştürmene ve yakınındaki hizmetleri bulmana yardım eden bir hizmet keşif platformudur. Komisyon almaz, ödemeye aracılık etmez, ürün satmaz. İşinn (isinn.com.tr) bir banka, iş ilanı sitesi ya da ürün satış sitesi değildir.";
+const DESCRIPTION = "İşinn, becerini fark edip hizmet vitrinine dönüştürmene ve yakınındaki hizmetleri bulmana yardım eden bir hizmet keşif platformudur. Komisyon almaz, ödemeye aracılık etmez, ürün satmaz. İşinn (isinn.com.tr) bir banka, işe alım/personel arama sitesi ya da ürün satış sitesi değildir.";
 const UPDATED = "2026-10-11";
 
 export const metadata = {
@@ -78,7 +78,7 @@ export default function HakkimizdaPage() {
         </nav>
         <h1 className="font-sans text-3xl font-black mb-3" style={{ color: "#0F1115" }}>İşinn Nedir? Ne Yapar, Ne Yapmaz</h1>
         <p className="text-base mb-3" style={{ color: "#374151" }}>
-          <b>Kısa cevap:</b> İşinn, becerini fark edip hizmet vitrinine dönüştürmene ve yakınındaki hizmetleri bulmana yardım eden bir hizmet keşif platformudur. Komisyon almaz, ödemeye aracılık etmez, ürün satmaz. İşinn (isinn.com.tr) bir banka, iş ilanı sitesi ya da ürün satış sitesi değildir.
+          <b>Kısa cevap:</b> İşinn, becerini fark edip hizmet vitrinine dönüştürmene ve yakınındaki hizmetleri bulmana yardım eden bir hizmet keşif platformudur. Komisyon almaz, ödemeye aracılık etmez, ürün satmaz. İşinn (isinn.com.tr) bir banka, işe alım/personel arama sitesi ya da ürün satış sitesi değildir.
         </p>
         <p className="text-xs mb-8" style={{ color: "#6B7280" }}>Son güncelleme: 11 Ekim 2026</p>
 
