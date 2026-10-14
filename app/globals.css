@@ -44,3 +44,14 @@ html.isinn-ios-app body {
 html.isinn-ios-app header.sticky {
   top: env(safe-area-inset-top);
 }
+
+/* Çok büyük ekranlar (iMac/27 inç): sayfa 1152 piksellik kutuda küçük kalıp kenarlar boş görünüyordu. Tüm rem tabanlı ölçüler (yazı, boşluk, max-w-*) orantılı büyür; telefon, tablet ve laptop (1920 piksel altı) etkilenmez. */
+@media (min-width: 1920px) {
+  html { font-size: 112.5%; }
+}
+@media (min-width: 2100px) {
+  html { font-size: 125%; }
+}
+@media (min-width: 2500px) {
+  html { font-size: 137.5%; }
+}
