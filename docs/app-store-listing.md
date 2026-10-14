@@ -67,10 +67,10 @@ GÜVEN VE GÜVENLİK
 Bazı özellikler (yazım yardımı, akıllı arama, fotoğraf uygunluk kontrolü) yapay zekâ ile çalışır ve ilk kullanımda onayın istenir.
 ```
 
-**Anahtar kelimeler** (en çok 100; bu liste 88 karakter / 95 bayt, iki ölçüye de sığar; virgülle, boşluksuz; ad ve alt başlıktaki kelimeleri tekrar etmeye gerek yok):
+**Anahtar kelimeler** (en çok 100; bu liste 84 karakter / 92 bayt; fiyat çağrıştıran "komisyonsuz" gibi kelimeler kullanılmaz, iki ölçüye de sığar; virgülle, boşluksuz; ad ve alt başlıktaki kelimeleri tekrar etmeye gerek yok):
 
 ```
-usta,freelance,yerel,ilan,tamir,temizlik,özel ders,fotoğrafçı,danışman,şehir,komisyonsuz
+usta,freelance,yerel,ilan,tamir,temizlik,özel ders,fotoğrafçı,danışman,şehir,portföy
 ```
 
 | Alan | Değer |
@@ -125,14 +125,16 @@ Her soruyu ayrı ve dürüst yanıtla:
 | Kullanım Verisi > Ürün Etkileşimi | Evet |
 | Arama Geçmişi (kayıtlı aramalar hesaba bağlı) | Evet |
 
-- **Konum: toplanmıyor** (yalnızca cihazda en yakın şehri bulmak için kullanılır, sunucuya gönderilmez).
+- **Konum: toplanmıyor** (yalnızca cihazda en yakın şehri bulmak için kullanılır, sunucuya gönderilmez; kodda doğrulandı).
+- Çökme/teşhis SDK'sı yok, Teşhis bölümü boş kalır.
 - Ödeme bilgisi: iOS uygulamasında toplanmıyor (satın alma ekranları gizli).
 
 ## 6. App Review bilgileri
 
 - **Giriş gerekli**: Evet. Demo hesabı aç (e-posta + şifre ile; Google girişi iOS'ta gizli olduğu için
   "Apple ile Giriş" zorunluluğu yok). İçinde en az bir yayında vitrin ve bir mesaj konuşması olsun ki
-  inceleyen kişi özellikleri görebilsin. E-posta/şifreyi yalnızca App Store Connect'teki alana yaz.
+  inceleyen kişi özellikleri görebilsin. Telefon/SMS doğrulaması istemeyen bir hesap olsun (inceleyen kişi
+  SMS alamaz). E-posta/şifreyi yalnızca App Store Connect'teki alana yaz.
 - **İletişim**: Esra Güneş; e-posta ve telefon olarak Apple Developer hesabındaki kişisel bilgiler.
 - **Notlar** (İngilizce, inceleme ekibi için):
 
