@@ -67,7 +67,7 @@ GÜVEN VE GÜVENLİK
 Bazı özellikler (yazım yardımı, akıllı arama, fotoğraf uygunluk kontrolü) yapay zekâ ile çalışır ve ilk kullanımda onayın istenir.
 ```
 
-**Anahtar kelimeler** (en çok 100 bayt; Türkçe harfler 2 bayt sayılır, bu liste 95 bayt; virgülle, boşluksuz; ad ve alt başlıktaki kelimeleri tekrar etmeye gerek yok):
+**Anahtar kelimeler** (en çok 100; bu liste 88 karakter / 95 bayt, iki ölçüye de sığar; virgülle, boşluksuz; ad ve alt başlıktaki kelimeleri tekrar etmeye gerek yok):
 
 ```
 usta,freelance,yerel,ilan,tamir,temizlik,özel ders,fotoğrafçı,danışman,şehir,komisyonsuz
@@ -75,16 +75,17 @@ usta,freelance,yerel,ilan,tamir,temizlik,özel ders,fotoğrafçı,danışman,şe
 
 | Alan | Değer |
 |---|---|
-| Destek URL | https://www.isinn.com.tr/hakkimizda |
+| Destek URL | https://www.isinn.com.tr/hakkimizda (sayfanın altında e-posta ve telefon görünür; Apple destek adresinde çalışan bir iletişim yolu ister) |
 | Pazarlama URL | https://www.isinn.com.tr |
 | Telif hakkı | `2026 Esra Güneş` (bireysel geliştirici hesabı; şirket adı geçmez) |
 | Sürüm | 1.0 |
 
 ## 3. Ekran görüntüleri
 
-- Zorunlu tek boyut: **6,9 inç iPhone — 1320 × 2868** (dikey). Diğer iPhone boyutları bundan otomatik ölçeklenir.
-  Uygulama yalnızca iPhone olduğundan iPad görüntüsü gerekmez.
-- 3–10 adet. Önerilen sıra: ana sayfa/keşfet → kategori listesi → vitrin detayı → mesajlaşma →
+- Büyük iPhone yuvası (6,9 inç): **1320 × 2868, 1290 × 2796 ya da 1260 × 2736** (dikey). Küçük iPhone yuvaları
+  bu görüntülerden otomatik ölçeklenir. Uygulama yalnızca iPhone olduğundan iPad görüntüsü gerekmez.
+- JPG ya da PNG; şeffaflık (alfa kanalı) olmamalı.
+- 1–10 adet (3 ve üzeri önerilir). Önerilen sıra: ana sayfa/keşfet → kategori listesi → vitrin detayı → mesajlaşma →
   Yeteneğini Farket → vitrin oluşturma.
 - Görüntüler **iOS uygulamasının kendisinden** alınmalı (Planlar ve satın alma ekranları iOS'ta gizli; web'den
   alınan ekranda fiyat/plan görünürse inceleme 3.1.1'den reddedebilir).
@@ -94,11 +95,16 @@ usta,freelance,yerel,ilan,tamir,temizlik,özel ders,fotoğrafçı,danışman,şe
 
 Anketteki yanıtlar (hepsi "Yok" dışında):
 
-- **Kullanıcı tarafından oluşturulan içerik / sohbet**: Evet (kullanıcılar arası mesajlaşma, vitrin ve yorumlar)
+Her soruyu ayrı ve dürüst yanıtla:
+
+- **Kullanıcı tarafından oluşturulan içerik**: Evet (vitrin, yorum, fotoğraf/video)
+- **Mesajlaşma ve sohbet**: Evet (kullanıcılar arası mesajlaşma)
+- **Sosyal medya**: Hayır (takip/akış yok)
+- **Reklam**: Hayır
 - **Sınırsız web erişimi**: Hayır (uygulama yalnızca isinn.com.tr'yi açar)
 - Şiddet, cinsellik, kumar, alkol/uyuşturucu, korku: Yok
-- Kullanım şartları 18 yaş sınırı koyduğu için derecelendirmeyi **18+** seç (anket 13+ çıkarsa
-  "Yaş derecelendirmesini geçersiz kıl" ile 18+ yap). Mağaza yaşı ile şartların çelişmesi incelemede soru doğurur.
+- Anket büyük ihtimalle 4+ hesaplar. Son adımdaki **"Override to Higher Age Rating" (daha yüksek yaşa geçersiz kıl)**
+  ile **18+** seç. Kullanım şartları 18 yaş sınırı koyduğu için Apple bunu zorunlu tutuyor.
 
 ## 5. Uygulama Gizliliği (App Privacy)
 
@@ -117,7 +123,7 @@ Anketteki yanıtlar (hepsi "Yok" dışında):
 | Tanımlayıcılar > Kullanıcı Kimliği | Evet |
 | Tanımlayıcılar > Cihaz Kimliği (bildirim anahtarı) | Evet |
 | Kullanım Verisi > Ürün Etkileşimi | Evet |
-| Arama Geçmişi | Hayır |
+| Arama Geçmişi (kayıtlı aramalar hesaba bağlı) | Evet |
 
 - **Konum: toplanmıyor** (yalnızca cihazda en yakın şehri bulmak için kullanılır, sunucuya gönderilmez).
 - Ödeme bilgisi: iOS uygulamasında toplanmıyor (satın alma ekranları gizli).
@@ -156,7 +162,11 @@ Demo account credentials are provided in the Sign-In Information fields.
 
 - **Şifreleme (Export Compliance)**: Info.plist'te `ITSAppUsesNonExemptEncryption = false` var, ayrıca soru sorulmaz.
 - **Reklam tanımlayıcısı (IDFA)**: Kullanılmıyor.
-- **Fiyat**: Ücretsiz. **Satılacak ülkeler**: Türkiye (istersen tümü).
+- **Fiyat**: Ücretsiz.
+- **Satılacak ülkeler**: Yalnızca **Türkiye**. AB ülkeleri seçilirse Dijital Hizmetler Yasası gereği "tacir" beyanı
+  istenir ve bireysel hesapta adresin, telefonun ve e-postan AB mağazasında herkese açık görünür.
+- **Uygulama Gizliliği**: Yanıtları girdikten sonra sağ üstte **Yayınla (Publish)** demeyi unutma.
+- **İçerik hakları** (Uygulama Bilgileri): Yanıtlanması zorunlu, 1. bölümdeki yanıt.
 - **Sürüm yayını**: "Onaydan sonra elle yayınla" seçmek ilk sürüm için daha güvenli.
 
 ## İnceleme riskleri
