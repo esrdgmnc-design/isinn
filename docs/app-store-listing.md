@@ -75,7 +75,7 @@ usta,freelance,yerel,ilan,tamir,temizlik,özel ders,fotoğrafçı,danışman,şe
 
 | Alan | Değer |
 |---|---|
-| Destek URL | https://www.isinn.com.tr/hakkimizda (sayfanın altında e-posta ve telefon görünür; Apple destek adresinde çalışan bir iletişim yolu ister) |
+| Destek URL | https://www.isinn.com.tr/destek (şirket adı geçmez; uygulama içi destek ve telefon) |
 | Pazarlama URL | https://www.isinn.com.tr |
 | Telif hakkı | `2026 Esra Güneş` (bireysel geliştirici hesabı; şirket adı geçmez) |
 | Sürüm | 1.0 |
