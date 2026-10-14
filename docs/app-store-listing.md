@@ -111,19 +111,20 @@ Her soruyu ayrı ve dürüst yanıtla:
 `ios/App/App/PrivacyInfo.xcprivacy` ile birebir aynı olmalı.
 
 - **İzleme (tracking)**: Hayır. Reklam yok, veri satışı yok.
-- Toplanan veriler (hepsi **Uygulama İşlevselliği** amacıyla, hiçbiri izleme için değil):
+- Toplanan veriler (hiçbiri izleme için değil; "Analiz" = kendi ürün kullanım kayıtlarımız ve çerezsiz Vercel Web Analytics):
 
-| Veri türü | Kimliğe bağlı mı |
-|---|---|
-| İletişim Bilgisi > Ad | Evet |
-| İletişim Bilgisi > E-posta adresi | Evet |
-| İletişim Bilgisi > Telefon numarası | Evet |
-| Kullanıcı İçeriği > Fotoğraflar veya Videolar | Evet |
-| Kullanıcı İçeriği > Diğer Kullanıcı İçeriği (mesajlar, yorumlar, vitrin metni) | Evet |
-| Tanımlayıcılar > Kullanıcı Kimliği | Evet |
-| Tanımlayıcılar > Cihaz Kimliği (bildirim anahtarı) | Evet |
-| Kullanım Verisi > Ürün Etkileşimi | Evet |
-| Arama Geçmişi (kayıtlı aramalar hesaba bağlı) | Evet |
+| Veri türü | Kimliğe bağlı mı | Amaç |
+|---|---|---|
+| İletişim Bilgisi > Ad | Evet | Uygulama İşlevselliği |
+| İletişim Bilgisi > E-posta adresi | Evet | Uygulama İşlevselliği |
+| İletişim Bilgisi > Telefon numarası | Evet | Uygulama İşlevselliği |
+| Kullanıcı İçeriği > Fotoğraflar veya Videolar | Evet | Uygulama İşlevselliği |
+| Kullanıcı İçeriği > Müşteri Desteği (destek talepleri) | Evet | Uygulama İşlevselliği |
+| Kullanıcı İçeriği > Diğer Kullanıcı İçeriği (mesajlar, yorumlar, vitrin metni) | Evet | Uygulama İşlevselliği |
+| Tanımlayıcılar > Kullanıcı Kimliği | Evet | Uygulama İşlevselliği, Analiz |
+| Tanımlayıcılar > Cihaz Kimliği (bildirim anahtarı) | Evet | Uygulama İşlevselliği |
+| Kullanım Verisi > Ürün Etkileşimi | Evet | Analiz |
+| Arama Geçmişi (kayıtlı aramalar, arama kayıtları) | Evet | Uygulama İşlevselliği, Analiz |
 
 - **Konum: toplanmıyor** (yalnızca cihazda en yakın şehri bulmak için kullanılır, sunucuya gönderilmez; kodda doğrulandı).
 - Çökme/teşhis SDK'sı yok, Teşhis bölümü boş kalır.
@@ -142,20 +143,20 @@ Her soruyu ayrı ve dürüst yanıtla:
 İşinn is a local service discovery marketplace in Turkey. Service providers publish a "showcase" (vitrin) with photos/videos; people looking for a service browse by category, city or proximity and contact providers through in-app messaging.
 
 Native features in the iOS app:
-- Push notifications for new messages, matching service requests, saved searches and moderation results (APNs).
+- Push notifications for new messages, matching service requests, saved searches and moderation results (APNs). The permission prompt appears after the user sends their first message.
 - Universal Links: isinn.com.tr showcase, category and city links open in the app.
 - Camera, microphone and photo library for showcase photos and intro videos.
 - Offline screen when there is no connection.
 
 User-generated content safeguards (Guideline 1.2):
-- Users can block other users and report users, showcases and service requests from the profile, showcase and message screens.
+- Users can block and report other users from the conversation screen, and report showcases and service requests from their detail screens.
 - Messages, showcase and request texts are filtered for objectionable content before they are posted; reports are reviewed by the admin team.
 
 Account deletion: Profile > "Hesabımı sil" > type SİL to confirm (deletes profile, showcases, messages, reviews and uploaded files).
 
 AI features (writing help, smart search, photo suitability check) use Anthropic Claude. The app asks for explicit consent before any content is sent.
 
-Payments: İşinn does not take commission and does not process payments between users. There are no digital purchases in the iOS app; paid membership screens are hidden on iOS.
+Payments: İşinn does not take commission and does not process payments between users. The iOS app offers no purchases and shows no prices, plans or links to external payment.
 
 Demo account credentials are provided in the Sign-In Information fields.
 ```
@@ -178,5 +179,10 @@ Demo account credentials are provided in the Sign-In Information fields.
   ekran kaydını gönder.
 - **3.1.1 Uygulama içi satın alma**: iOS'ta plan, fiyat, ödeme bağlantısı görünmemeli. TestFlight'ta profil,
   asistan ve ayarlar ekranlarını bu gözle bir kez daha gez.
+- **Yapay zekâ onayı reddedilirse** vitrine fotoğraf eklenemiyor (fotoğraf denetimi yapay zekâyla yapılıyor). İnceleme
+  bunu "temel özellik onaya bağlanmış" (5.1.1) diye sorabilir. Red gelirse fotoğrafları onaysız durumda elle
+  denetime düşürmek gerekir.
+- **Ücretsiz dönem bitince (20.12.2026)** vitrin açmak web'den alınan üyeliğe bağlanıyor. O tarihten sonraki
+  güncellemelerde Apple 3.1.3 kapsamında soru sorabilir; o zamana kadar bir yol belirlemek gerekir.
 - **5.1.1(v) Hesap silme**: Uygulama içinden yapılabiliyor; demo hesapla denenebilir olduğundan emin ol
   (inceleyen kişi demo hesabı silerse yenisini açman gerekir).

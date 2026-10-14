@@ -115,8 +115,12 @@ workflows:
       - name: Derleme numarasını artır (TestFlight'taki son numara + 1)
         script: |
           cd ios/App
-          LATEST=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" 2>/dev/null || echo 0)
+          # APP_STORE_APPLE_ID yoksa ya da sorgu başarısız olursa sessizce 1'e düşüp
+          # "yinelenen derleme numarası" ile reddedilmek yerine burada dur.
+          if [ -z "$APP_STORE_APPLE_ID" ]; then echo "APP_STORE_APPLE_ID tanımlı değil (ios-release > Environment variables)"; exit 1; fi
+          LATEST=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID")
           NEXT=$((LATEST + 1))
+          echo "TestFlight son derleme: $LATEST, yeni derleme: $NEXT"
           agvtool new-version -all "$NEXT"
       - name: IPA derle
         script: |

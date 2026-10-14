@@ -980,6 +980,8 @@ function HomeServiceBadge({ value, size = "sm" }) {
 // Bildirimler artık üst çubukta ayrı bir zil ikonu değil — profil (avatar)
 // menüsünde bir satır; açılan panel avatarın altına iniyor (kullanıcı: ana
 // sayfa kalabalık duruyor). Durum/okundu mantığı aynı, sadece Header'a taşındı.
+// Üyelik/ödeme bildirimleri iOS uygulamasında gösterilmez (App Store 3.1.1).
+const IOS_HIDDEN_NOTIFICATION_TYPES = "(subscription_ending_soon,vitrin_deactivated)";
 function useNotifications(userId) {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState([]);
@@ -988,11 +990,13 @@ function useNotifications(userId) {
 
   const loadUnreadCount = async () => {
     if (!userId) return;
-    const { count } = await supabase
+    let query = supabase
       .from("notifications")
       .select("id", { count: "exact", head: true })
       .eq("profile_id", userId)
       .is("read_at", null);
+    if (isIosApp()) query = query.not("type", "in", IOS_HIDDEN_NOTIFICATION_TYPES);
+    const { count } = await query;
     setUnreadCount(count || 0);
   };
 
@@ -1017,10 +1021,12 @@ function useNotifications(userId) {
     setOpen(next);
     if (!next || !userId) return;
     setLoading(true);
-    const { data } = await supabase
+    let query = supabase
       .from("notifications")
       .select("id, type, title, body, read_at, related_job_id, related_service_id, created_at")
-      .eq("profile_id", userId)
+      .eq("profile_id", userId);
+    if (isIosApp()) query = query.not("type", "in", IOS_HIDDEN_NOTIFICATION_TYPES);
+    const { data } = await query
       .order("created_at", { ascending: false })
       .limit(20);
     setItems(data || []);
@@ -2314,9 +2320,12 @@ function SiteFooter({ onNav }) {
             {/* IYS/Netgsm başvurusunda marka doğrulaması için — sitede İşinn'in
                 hangi tüzel kişiliğe (CODE G LTD) ait olduğu hiçbir yerde açıkça
                 yazmıyordu (kullanıcının isteği, 2026-09-12). */}
-            <p className="text-xs mt-3 leading-relaxed max-w-[220px]" style={{ color: "#7A7F8A" }}>
-              {t("footer.brandLine", { brand: COMPANY.brand, legalName: COMPANY.legalName })}
-            </p>
+            {/* iOS uygulaması bireysel geliştirici hesabıyla yayında: şirket satırı orada gösterilmez */}
+            {!iosApp && (
+              <p className="text-xs mt-3 leading-relaxed max-w-[220px]" style={{ color: "#7A7F8A" }}>
+                {t("footer.brandLine", { brand: COMPANY.brand, legalName: COMPANY.legalName })}
+              </p>
+            )}
           </div>
           <div>
             <p className="text-xs font-bold tracking-wide mb-3" style={{ color: "#FFFFFF" }}>{t("footer.exploreHeading")}</p>
@@ -2348,7 +2357,7 @@ function SiteFooter({ onNav }) {
           <div>
             <p className="text-xs font-bold tracking-wide mb-3" style={{ color: "#FFFFFF" }}>{t("footer.contactHeading")}</p>
             <div className="flex flex-col gap-2.5">
-              <a href={`mailto:${COMPANY.email}`} className="text-xs" style={{ color: "#9CA3AF" }}>{COMPANY.email}</a>
+              {!iosApp && <a href={`mailto:${COMPANY.email}`} className="text-xs" style={{ color: "#9CA3AF" }}>{COMPANY.email}</a>}
               <a href={`tel:${COMPANY.phoneHref}`} className="text-xs" style={{ color: "#9CA3AF" }}>{COMPANY.phone}</a>
               <button onClick={() => onNav("support")} className="text-xs text-left" style={{ color: "#9CA3AF" }}>{t("footer.supportRequest")}</button>
             </div>
@@ -2356,7 +2365,7 @@ function SiteFooter({ onNav }) {
         </div>
         <div className="pt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2" style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}>
           <p className="text-[11px]" style={{ color: "#5C6070" }}>
-            {t("footer.copyright", { year: new Date().getFullYear(), brand: COMPANY.brand, legalName: COMPANY.legalName, address: COMPANY.address })}
+            {iosApp ? `© ${new Date().getFullYear()} İşinn` : t("footer.copyright", { year: new Date().getFullYear(), brand: COMPANY.brand, legalName: COMPANY.legalName, address: COMPANY.address })}
           </p>
           <p className="text-[11px]" style={{ color: "#5C6070" }}>{t("footer.disclaimer")}</p>
         </div>
@@ -8145,9 +8154,9 @@ function OwnerVisibilityCard({ row, busy, error, onToggle, onGoToPlans }) {
       <div className="flex items-center gap-3 flex-wrap">
         <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: active ? "#2FBF71" : "#A8A08A" }} aria-hidden="true" />
         <div className="flex-1 min-w-[12rem]">
-          <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>{billingClosed ? t("listingDetail.visBillingClosedTitle") : active ? t("listingDetail.visPublished") : t("listingDetail.visUnpublished")}</p>
+          <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>{billingClosed ? t(iosApp ? "listingDetail.visClosedTitleIos" : "listingDetail.visBillingClosedTitle") : active ? t("listingDetail.visPublished") : t("listingDetail.visUnpublished")}</p>
           <p className="text-xs" style={{ color: "#5C5744" }}>
-            {billingClosed ? t("listingDetail.visBillingClosedBody") : active ? t("listingDetail.visPublishedHint") : t("listingDetail.visUnpublishedHint")}
+            {billingClosed ? t(iosApp ? "listingDetail.visClosedBodyIos" : "listingDetail.visBillingClosedBody") : active ? t("listingDetail.visPublishedHint") : t("listingDetail.visUnpublishedHint")}
           </p>
         </div>
         {billingClosed ? (
@@ -8921,9 +8930,11 @@ ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return
         <div className="w-14 h-14 rounded-full mx-auto mb-5 flex items-center justify-center" style={{ background: "rgba(245,158,11,0.15)" }}>
           <Sparkles size={22} style={{ color: "#F59E0B" }} />
         </div>
-        <h2 className="font-serif text-xl mb-2" style={{ color: "#1B2B24" }}>{t("createListing.limitTitle", { planName: planNameDisplay })}</h2>
+        <h2 className="font-serif text-xl mb-2" style={{ color: "#1B2B24" }}>{iosApp ? t("createListing.limitTitleIos") : t("createListing.limitTitle", { planName: planNameDisplay })}</h2>
         <p className="text-sm mb-6" style={{ color: "#5C5744" }}>
-          {vitrinLimit.planName === "Pro Üyelik"
+          {iosApp
+            ? t("createListing.limitBodyIos", { cap: vitrinLimit.cap })
+            : vitrinLimit.planName === "Pro Üyelik"
             ? t("createListing.limitBodyProNoAddon", { count: vitrinLimit.count, cap: vitrinLimit.cap })
             : t("createListing.limitBodyStandard", { cap: vitrinLimit.cap })}
         </p>
@@ -9120,6 +9131,8 @@ ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return
 // (eskiden asistan var olmayan isinn.com.tr/planlar adresini veriyordu, 404).
 const CHAT_LINK_VIEWS = new Set(["pricing", "createListing", "post", "profile", "messages", "favorites", "map", "support"]);
 const CHAT_LINK_PAGES = new Set(["iptal-iade-kosullari", "gizlilik-politikasi", "kullanim-sartlari", "kvkk-aydinlatma-metni", "mesafeli-satis-sozlesmesi"]);
+// iOS kabuğunda satış/iade sayfaları bağlanmaz (App Store 3.1.1; footer'da da gizli).
+const IOS_HIDDEN_CHAT_PAGES = new Set(["iptal-iade-kosullari", "mesafeli-satis-sozlesmesi"]);
 function renderInlineBold(line, keyPrefix, onNav) {
   const parts = line.split(/(\*\*[^*]+\*\*|\[[^\]]+\]\((?:view|page):[A-Za-z-]+\))/g);
   return parts.map((part, i) => {
@@ -9130,10 +9143,10 @@ function renderInlineBold(line, keyPrefix, onNav) {
       const [, label, kind, target] = m;
       const btnStyle = { background: "#2563EB", color: "white" };
       const btnCls = "inline-block px-2.5 py-1 rounded-full text-xs font-bold mx-0.5 no-underline";
-      if (kind === "view" && CHAT_LINK_VIEWS.has(target) && onNav) {
+      if (kind === "view" && CHAT_LINK_VIEWS.has(target) && onNav && !(target === "pricing" && isIosApp())) {
         return <button key={key} type="button" onClick={() => onNav(target)} className={btnCls} style={btnStyle}>{label}</button>;
       }
-      if (kind === "page" && CHAT_LINK_PAGES.has(target)) {
+      if (kind === "page" && CHAT_LINK_PAGES.has(target) && !(isIosApp() && IOS_HIDDEN_CHAT_PAGES.has(target))) {
         return <a key={key} href={`/${target}`} target="_blank" rel="noopener noreferrer" className={btnCls} style={btnStyle}>{label}</a>;
       }
       return <span key={key}>{label}</span>;
@@ -9300,23 +9313,23 @@ GERÇEK PLATFORM BİLGİLERİ (bunlarla çelişen hiçbir şey söyleme):
 
 1) HİZMET SAĞLAYICIYA (temizlikçi, öğretmen, tadilatçı vb.) yapılan ödemeler: İşinn bu ödemeye HİÇBİR ŞEKİLDE aracılık ETMEZ. Güvenli ödeme/escrow/iade garantisi YOKTUR. Ödeme tamamen müşteri ile sağlayıcı arasında, platform dışında (elden, IBAN vb.) gerçekleşir. Hizmeti görmeden önce ön ödeme/kapora/IBAN istenmesi şüphelidir — kullanıcıya bunu bildirmesini söyle. Bu ödemelerin iadesi de tamamen taraflar arasındaki anlaşmaya bağlıdır, İşinn karışmaz.
 
-2) İşinn'E YAPILAN ÜYELİK/ABONELİK ödemeleri (Standart/Pro Üyelik, Öne Çıkarma Paketi vb.) FARKLI bir konu — bunlar gerçekten PayTR altyapısı üzerinden İşinn'e tahsil edilir. Bu konuda gerçek kurallar: Standart Üyelik'te kart bilgisi istenmeyen bir ücretsiz deneme süresi var (süre Planlar sayfasında). Abonelik profil sayfasından istediğin zaman iptal edilebilir; iptal mevcut faturalama döneminin SONUNDA geçerli olur, kalan gün için orantılı iade yapılmaz, bir sonraki dönem için otomatik tahsilat yapılmaz. Hizmet devreye girdikten sonra yasal cayma hakkı yoktur (Mesafeli Sözleşmeler Yönetmeliği istisnası) ANCAK: yanlış/mükerrer tahsilatta tam iade yapılır; teknik arıza yüzünden satın alınan hizmet kullanılamadıysa bildirimden itibaren 3 iş günü içinde tam iade veya çözüm sağlanır; bunların dışındaki iade talepleri İşinn'in kendi takdirine bağlı, hak değil. Onaylanan iadeler ödemenin yapıldığı karta 7-14 iş günü içinde yansır, nakit/farklı yönteme iade yapılmaz. Detaylı koşullar: isinn.com.tr/iptal-iade-kosullari
+${iosApp ? "2) Bu iOS uygulamasında İşinn'e yapılan üyelik, plan, fiyat ya da ödeme konusu YOKTUR; bu konularda bilgi verme." : `2) İşinn'E YAPILAN ÜYELİK/ABONELİK ödemeleri (Standart/Pro Üyelik, Öne Çıkarma Paketi vb.) FARKLI bir konu — bunlar gerçekten PayTR altyapısı üzerinden İşinn'e tahsil edilir. Bu konuda gerçek kurallar: Standart Üyelik'te kart bilgisi istenmeyen bir ücretsiz deneme süresi var (süre Planlar sayfasında). Abonelik profil sayfasından istediğin zaman iptal edilebilir; iptal mevcut faturalama döneminin SONUNDA geçerli olur, kalan gün için orantılı iade yapılmaz, bir sonraki dönem için otomatik tahsilat yapılmaz. Hizmet devreye girdikten sonra yasal cayma hakkı yoktur (Mesafeli Sözleşmeler Yönetmeliği istisnası) ANCAK: yanlış/mükerrer tahsilatta tam iade yapılır; teknik arıza yüzünden satın alınan hizmet kullanılamadıysa bildirimden itibaren 3 iş günü içinde tam iade veya çözüm sağlanır; bunların dışındaki iade talepleri İşinn'in kendi takdirine bağlı, hak değil. Onaylanan iadeler ödemenin yapıldığı karta 7-14 iş günü içinde yansır, nakit/farklı yönteme iade yapılmaz. Detaylı koşullar: isinn.com.tr/iptal-iade-kosullari`}
 
 3) "Doğrulandı" rozeti SADECE telefon numarasının SMS/OTP ile doğrulandığı anlamına gelir — kimlik doğrulaması, geçmiş kontrolü veya İşinn'in o kişiyi güvenilir bulduğu anlamına GELMEZ. Bunu asla "kimliği doğrulanmış" gibi abartma.
 
 4) GERÇEK EKRAN ADIMLARI (yönlendirirken SADECE bunları kullan, olmayan bir buton/seçenek/adres UYDURMA):
-- Kayıt: sağ üstteki "Giriş Yap" → altta "Hesabın yok mu? Kayıt ol" → Ad Soyad, e-posta, şifre (en az 6 karakter), KVKK/Gizlilik/Kullanım Şartları onay kutusu → "Kayıt Ol". Alternatif: "Google ile devam et". E-postana gelen onay linkine tıklayıp giriş yapılır. Kayıtta "hizmet sağlayıcı / müşteri" diye bir seçenek YOKTUR — aynı hesapla hem hizmet alınır hem verilir.
+- Kayıt: sağ üstteki "Giriş Yap" → altta "Hesabın yok mu? Kayıt ol" → Ad Soyad, e-posta, şifre (en az 6 karakter), KVKK/Gizlilik/Kullanım Şartları onay kutusu → "Kayıt Ol". ${iosApp ? "" : `Alternatif: "Google ile devam et". `}E-postana gelen onay linkine tıklayıp giriş yapılır. Kayıtta "hizmet sağlayıcı / müşteri" diye bir seçenek YOKTUR — aynı hesapla hem hizmet alınır hem verilir.
 - Vitrin (hizmet sunan sayfa) açmak: giriş yaptıktan sonra üst menüdeki (telefonda ☰ menüsündeki) "Hizmet Ekle" → [Hizmet Ekle](view:createListing). İş ilanı vermek (hizmet ARAYAN için): "İlan Ver" → [İlan Ver](view:post).
-- Planlar ekranı: üst menüde "Planlar" → [Planlar](view:pricing).
+${iosApp ? "" : `- Planlar ekranı: üst menüde "Planlar" → [Planlar](view:pricing).`}
 - Diğer ekranlar: [Mesajlar](view:messages), [Profilim](view:profile), [Favorilerim](view:favorites), [Haritada Gör](view:map).
 
 BİÇİM KURALI: Sadece **kalın**, "- " madde işareti ve aşağıdaki bağlantı sözdizimini kullan. *İtalik*, tablo, kod bloğu, parantez içinde yıldız KULLANMA (ekranda ham işaret olarak görünür).
 
-BAĞLANTI KURALI: Kullanıcıyı bir ekrana yönlendirirken SADECE şu sözdizimini kullan: [Etiket](view:pricing) — view değerleri yalnızca pricing, createListing, post, profile, messages, favorites, map, support. Yasal sayfalar için [Etiket](page:iptal-iade-kosullari) — page değerleri yalnızca iptal-iade-kosullari, gizlilik-politikasi, kullanim-sartlari, kvkk-aydinlatma-metni, mesafeli-satis-sozlesmesi. ASLA isinn.com.tr/planlar gibi kendi uydurduğun bir URL/adres yazma (böyle sayfalar yok, 404 verir).
+${iosApp ? "BAĞLANTI KURALI: Kullanıcıyı bir ekrana yönlendirirken SADECE şu sözdizimini kullan: [Etiket](view:createListing) — view değerleri yalnızca createListing, post, profile, messages, favorites, map, support. Yasal sayfalar için [Etiket](page:gizlilik-politikasi) — page değerleri yalnızca gizlilik-politikasi, kullanim-sartlari, kvkk-aydinlatma-metni. ASLA kendi uydurduğun bir URL/adres yazma." : `BAĞLANTI KURALI: Kullanıcıyı bir ekrana yönlendirirken SADECE şu sözdizimini kullan: [Etiket](view:pricing) — view değerleri yalnızca pricing, createListing, post, profile, messages, favorites, map, support. Yasal sayfalar için [Etiket](page:iptal-iade-kosullari) — page değerleri yalnızca iptal-iade-kosullari, gizlilik-politikasi, kullanim-sartlari, kvkk-aydinlatma-metni, mesafeli-satis-sozlesmesi. ASLA isinn.com.tr/planlar gibi kendi uydurduğun bir URL/adres yazma (böyle sayfalar yok, 404 verir).`}
 
-5) GÜNCEL KAMPANYA VE PLANLAR (canlı veri, Planlar ekranıyla aynı — bunlarla çelişme):
+${iosApp ? "5) Plan ve fiyat bilgisi bu uygulamada yoktur; vitrin açmak için \"Hizmet Ekle\" yeterli." : `5) GÜNCEL KAMPANYA VE PLANLAR (canlı veri, Planlar ekranıyla aynı — bunlarla çelişme):
 ${isFreePeriod() ? `Şu an "90 gün herkese ücretsiz" kampanyası var: ${new Date(FREE_PERIOD_UNTIL_ISO).toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" })} tarihine kadar tüm özellikler ücretsiz, bu süre içinde plan satın almak GEREKMİYOR. Kullanıcıya "üyelik planı seç/satın al" DEME; vitrin açmak için doğrudan "Hizmet Ekle" yeterli. Kampanya sonrası için kullanıcıya önceden haber verilecek.` : "Ücretsiz dönem bitti; vitrin açmak için aktif bir üyelik gerekir."}
-${plansInfo ? `Planlar (dönem sonrası geçerli fiyat/hak): ${plansInfo}. Fiyatı sorulursa SADECE bu rakamları söyle.` : "Plan fiyatları şu an okunamadı; rakam söyleme, Planlar ekranına yönlendir."}
+${plansInfo ? `Planlar (dönem sonrası geçerli fiyat/hak): ${plansInfo}. Fiyatı sorulursa SADECE bu rakamları söyle.` : "Plan fiyatları şu an okunamadı; rakam söyleme, Planlar ekranına yönlendir."}`}
 
 6) YÖNETİME BİLDİRME (gerçek mekanizma): Sen yönetime kendin mesaj GÖNDEREMEZSİN, ama bu ekranda her yanıtının altında "Sorun çözüldü mü?" sorusu ve **Hayır, yönetime bildir** butonu çıkar; kullanıcı ona dokununca bu yazışma özetlenip ekibe bir destek talebi olarak iletilir. Bir sorunun ekibe iletilmesi gerektiğinde (şikayet, dolandırıcılık şüphesi, çözemediğin teknik hata, bilmediğin para/hukuk konusu) kullanıcıya SADECE bu butona dokunmasını söyle. "Yönetime iletemiyorum", "e-posta at" ya da uydurma bir iletişim adresi/telefon verme.
 
@@ -11055,6 +11068,7 @@ function DeleteAccountCard() {
 
 function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOpenModeration, onOpenUserReports, onOpenListingReports, onOpenContentFlags, isAdmin, pendingMediaApprovals, onApproveMedia, onRejectMedia, onListingsChanged, onJobsChanged, onEditJob, onCreateListing, onViewListing, realListings, onGoToPlans }) {
   const { t } = useLanguage();
+  const iosApp = useIosApp();
   // Video tanıtım/portföy/sertifika/CV artık vitrine özel — bkz. ListingDetail sahip modu
   // (supabase/vitrin_media.sql). Burada sadece paylaşılan profil fotoğrafı kalıyor
   // ("aynı kişinin gerçek yüzü her vitrinde aynı görünsün" — kullanıcının kararı).
@@ -11980,7 +11994,8 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
         </div>
       )}
 
-      <SubscriptionCard userId={userId} onGoToPlans={onGoToPlans} />
+      {/* iOS'ta üyelik/iptal/iade bilgisi gösterilmez (App Store 3.1.1) */}
+      {!iosApp && <SubscriptionCard userId={userId} onGoToPlans={onGoToPlans} />}
       <button
         onClick={() => { unregisterPush().finally(() => supabase.auth.signOut()); }}
         className="w-full mb-3 py-3 rounded-2xl border text-sm font-bold flex items-center justify-center gap-2"
