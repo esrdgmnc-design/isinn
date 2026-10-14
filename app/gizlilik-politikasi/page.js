@@ -16,7 +16,7 @@ const ul = { listStyle: "disc", paddingLeft: "1.25rem" };
 
 export default function GizlilikPage() {
   return (
-    <LegalPageLayout title="Gizlilik Politikası" updatedLabel="Son güncelleme: 11.09.2026 — avukat incelemesinden geçmiştir">
+    <LegalPageLayout title="Gizlilik Politikası" updatedLabel="Son güncelleme: 14.10.2026">
       <p style={p}>
         Bu Gizlilik Politikası, İşinn platformunu ("Platform") kullanırken kişisel verilerinizin neler
         olduğunu, nasıl toplandığını, kimlerle paylaşıldığını ve haklarınızı ne şekilde kullanabileceğinizi
@@ -33,7 +33,10 @@ export default function GizlilikPage() {
         <li style={li}><b>Mesajlar:</b> Platform içi mesajlaşmada gönderdiğiniz/aldığınız mesajlar</li>
         <li style={li}><b>Değerlendirmeler:</b> Puan, yorum ve isteğe bağlı fotoğraflar</li>
         <li style={li}><b>Konum:</b> "Konumumu Kullan" dediğinizde tarayıcınızın verdiği GPS konumu — yalnızca en yakın şehri bulmak için kullanılır, kaydedilmez</li>
+        <li style={li}><b>Kamera, mikrofon ve fotoğraf galerisi (mobil uygulama):</b> Yalnızca siz fotoğraf/video çekmek ya da seçmek istediğinizde ve izin verirseniz kullanılır; izin vermezseniz kullanılmaz</li>
+        <li style={li}><b>Cihaz bildirim anahtarı (iOS uygulaması):</b> Bildirim gönderebilmek için telefonunuza ait teknik bir anahtar; bildirimlere izin verirseniz kaydedilir, çıkış yaptığınızda ya da hesabınızı sildiğinizde silinir. Bildirimlerin kilit ekranında mesaj içeriği gösterilmez</li>
         <li style={li}><b>Kullanım verisi:</b> Favoriler, kayıtlı aramalar, bildirim tercihleri</li>
+        <li style={li}><b>Ürün kullanım kayıtları:</b> Arama yapma, vitrin görüntüleme, mesaj gönderme gibi etkileşimler; tarayıcınızın yerel depolamasında tutulan rastgele bir oturum kimliği ve sayfaya geldiğiniz bağlantı bilgisi. Giriş yaptıysanız bu kayıtlar hesabınızla eşleşebilir; platformu geliştirmek için kullanılır</li>
         <li style={li}><b>Ziyaret istatistikleri:</b> Vercel Web Analytics üzerinden, kimliğinizi belirlemeyen (çerezsiz) toplu sayfa görüntüleme/ziyaretçi sayıları</li>
         <li style={li}><b>Arama istatistikleri:</b> Platformda yazdığınız arama metni ve kaç sonuç döndüğü — kim aradığı bilgisi olmadan, yalnızca hangi hizmetlere talep olduğunu anlamak için</li>
       </ul>
@@ -42,7 +45,9 @@ export default function GizlilikPage() {
       <p style={p}>Verilerinizi <b>satmıyoruz</b>. Yalnızca platformu işletebilmek için aşağıdaki hizmet sağlayıcılarla paylaşıyoruz:</p>
       <ul style={ul}>
         <li style={li}><b>Supabase</b> — tüm verilerin saklandığı veritabanı/depolama altyapısı</li>
-        <li style={li}><b>Anthropic (Claude AI)</b> — fotoğraf uygunluk kontrolü, akıllı arama, yazım yardımı gibi özellikler için ilgili içerik işlenir</li>
+        <li style={li}><b>Anthropic (Claude AI)</b> — fotoğraf uygunluk kontrolü, akıllı arama, yazım yardımı, &quot;Yeteneğini Farket&quot; gibi yapay zekâ özellikleri için, bu özelliği kullandığınızda yazdığınız metin, yüklediğiniz vitrin/yorum fotoğrafları ve ilan metinleri ile ilgili görünen ad işlenir. iOS uygulamasında bu özellikleri ilk kullanırken açık onayınız istenir; onay vermezseniz bu özellikler kullanılamaz</li>
+        <li style={li}><b>Resend</b> — hesap doğrulama, şifre sıfırlama ve bildirim e-postalarının gönderimi</li>
+        <li style={li}><b>Apple (Apple Push Notification service)</b> — iOS uygulamasında bildirimlerin cihazınıza iletilmesi</li>
         <li style={li}><b>PayTR</b> — ödeme işlemleri (kart bilgileriniz bizim sunucularımıza hiç uğramaz, doğrudan PayTR'ye iletilir)</li>
         <li style={li}><b>Netgsm</b> — telefon doğrulama SMS'i</li>
         <li style={li}><b>Vercel</b> — platformun barındırıldığı ve çerezsiz ziyaret istatistiklerinin toplandığı altyapı</li>
@@ -65,7 +70,8 @@ export default function GizlilikPage() {
       <p style={p}>
         İşinn pazarlama/takip çerezi kullanmıyor — yalnızca oturumunuzu açık tutmak için teknik olarak zorunlu
         bir oturum belirteci tarayıcınızda tutulur. Ziyaret istatistikleri (Vercel Web Analytics) çerezsiz
-        çalışır, kimliğinizi belirlemez.
+        çalışır, kimliğinizi belirlemez. Bunun dışında, ürün kullanım kayıtları (bkz. madde 1) için tarayıcınızın
+        yerel depolamasında rastgele bir oturum kimliği saklanır; bunu tarayıcı ayarlarından silebilirsiniz.
       </p>
 
       <h2 style={h2}>6. Veri Güvenliği</h2>
@@ -75,10 +81,25 @@ export default function GizlilikPage() {
         bilgileriniz hiçbir aşamada İşinn sunucularına ulaşmaz.
       </p>
 
-      <h2 style={h2}>7. Politikada Değişiklikler</h2>
+      <h2 style={h2}>7. Yurt Dışına Aktarım</h2>
+      <p style={p}>
+        Kullandığımız hizmet sağlayıcıların (ör. Supabase, Vercel, Anthropic, Resend, Apple) sunucuları Türkiye dışında
+        bulunabilir; Anthropic ABD merkezlidir. Bu nedenle verileriniz, ilgili hizmetin kullanımı kapsamında yurt dışına
+        aktarılabilir. Haklarınız ve başvuru yolları için{" "}
+        <a href="/kvkk-aydinlatma-metni" style={{ color: "#2563EB" }}>KVKK Aydınlatma Metni</a>&apos;ne bakabilir veya bize
+        {" "}<b>{COMPANY.email}</b> üzerinden ulaşabilirsiniz.
+      </p>
+
+      <h2 style={h2}>8. Çocukların Verileri</h2>
+      <p style={p}>
+        İşinn 18 yaşından küçüklere yönelik değildir ve Kullanım Şartları gereği platformu yalnızca 18 yaşını doldurmuş
+        kişiler kullanabilir. 18 yaşından küçük birine ait bir hesap fark edersek hesabın kapatılması için gerekli adımları atarız.
+      </p>
+
+      <h2 style={h2}>9. Politikada Değişiklikler</h2>
       <p style={p}>Bu politika zaman zaman güncellenebilir; önemli değişikliklerde kullanıcılar bilgilendirilir.</p>
 
-      <h2 style={h2}>8. İletişim</h2>
+      <h2 style={h2}>10. İletişim</h2>
       <p style={p}>Gizlilikle ilgili sorularınız için: <b>{COMPANY.email}</b> · {COMPANY.phone}</p>
     </LegalPageLayout>
   );
