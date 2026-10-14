@@ -1609,6 +1609,7 @@ const HomeListingCard = memo(function HomeListingCard({ l, isFavorite, onSelectL
 
 function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApplyJob, onOpenJob, realListings, listingsLoading, realJobs, favoriteIds, onToggleFavorite, onToggleJobFavorite, discoveryPopularCategories, discoveryRecentListings }) {
   const { t, language } = useLanguage();
+  const iosApp = useIosApp();
   const popularSearches = t("home.popularSearches");
   const [heroQ, setHeroQ] = useState("");
   const [heroCity, setHeroCity] = useState("");
@@ -1744,10 +1745,10 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
             {t("home.providerCtaButton")}
             <ChevronRight size={16} />
           </button>
-          {/* Güven şeridi: en güçlü somut maddeler ilk ekranda. Ücretsiz bilgisi yalnızca ücretsiz dönemde ve gerçek bitiş tarihiyle (lib/freePeriod.js). */}
+          {/* Güven şeridi: en güçlü somut maddeler ilk ekranda. Ücretsiz bilgisi yalnızca ücretsiz dönemde ve gerçek bitiş tarihiyle (lib/freePeriod.js); iOS'ta üyelik/fiyat ima etmemek için gizli. */}
           <div className="mt-3 sm:mt-4 max-w-lg flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-medium" style={{ color: "#475569" }}>
             <span>✓ {t("home.trustNoCommission")}</span>
-            {isFreePeriod() && <span>✓ {t("home.trustFree", { date: new Date(FREE_PERIOD_UNTIL_ISO).toLocaleDateString(language === "en" ? "en-GB" : "tr-TR", { day: "numeric", month: "long", year: "numeric" }) })}</span>}
+            {!iosApp && isFreePeriod() && <span>✓ {t("home.trustFree", { date: new Date(FREE_PERIOD_UNTIL_ISO).toLocaleDateString(language === "en" ? "en-GB" : "tr-TR", { day: "numeric", month: "long", year: "numeric" }) })}</span>}
             <span>✓ {t("home.trustPhonePrivate")}</span>
           </div>
         </div>
