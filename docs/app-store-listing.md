@@ -82,6 +82,8 @@ usta,freelance,yerel,ilan,tamir,temizlik,özel ders,fotoğrafçı,danışman,şe
 
 ## 3. Ekran görüntüleri
 
+Hazır dosyalar (1320 × 2868, yükleme sırasıyla): `docs/appstore-screenshots/01-ana-sayfa.png` … `04-giris.png`.
+
 - Büyük iPhone yuvası (6,9 inç): **1320 × 2868, 1290 × 2796 ya da 1260 × 2736** (dikey). Küçük iPhone yuvaları
   bu görüntülerden otomatik ölçeklenir. Uygulama yalnızca iPhone olduğundan iPad görüntüsü gerekmez.
 - JPG ya da PNG; şeffaflık (alfa kanalı) olmamalı.
