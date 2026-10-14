@@ -10,7 +10,7 @@ const Cropper = dynamic(() => import("react-easy-crop"), { ssr: false, loading: 
 import { COMPANY } from "../lib/companyInfo";
 import { FALLBACK_LISTING_IMG, formatPriceLabel, mapServiceRowToListing } from "../lib/mapServiceRowToListing";
 import { isFreePeriod, FREE_PERIOD_UNTIL_ISO } from "../lib/freePeriod";
-import { useIosApp } from "../lib/nativeApp";
+import { useIosApp, isIosApp } from "../lib/nativeApp";
 import { aiFetch } from "../lib/aiConsent";
 import { checkContent } from "../lib/contentFilter";
 import { startNativePush, enablePush, unregisterPush } from "../lib/nativePush";
@@ -1462,6 +1462,7 @@ function InstallAppBanner() {
 
   useEffect(() => {
     try {
+      if (isIosApp()) return; // iOS uygulama kabuğunda zaten kurulu
       const isStandalone = window.matchMedia?.("(display-mode: standalone)")?.matches || window.navigator?.standalone === true;
       const alreadyDismissed = localStorage.getItem("isinn_install_banner_dismissed") === "1";
       if (isStandalone || alreadyDismissed) return; // dismissed=true kalır, hiç gösterilmez
@@ -2331,8 +2332,8 @@ function SiteFooter({ onNav }) {
               <a href="/kvkk-aydinlatma-metni" target="_blank" rel="noopener noreferrer" className="text-xs" style={{ color: "#9CA3AF" }}>{t("footer.kvkk")}</a>
               <a href="/gizlilik-politikasi" target="_blank" rel="noopener noreferrer" className="text-xs" style={{ color: "#9CA3AF" }}>{t("footer.privacy")}</a>
               <a href="/kullanim-sartlari" target="_blank" rel="noopener noreferrer" className="text-xs" style={{ color: "#9CA3AF" }}>{t("footer.terms")}</a>
-              <a href="/mesafeli-satis-sozlesmesi" target="_blank" rel="noopener noreferrer" className="text-xs" style={{ color: "#9CA3AF" }}>{t("footer.distanceSales")}</a>
-              <a href="/iptal-iade-kosullari" target="_blank" rel="noopener noreferrer" className="text-xs" style={{ color: "#9CA3AF" }}>{t("footer.cancellation")}</a>
+              {!iosApp && <a href="/mesafeli-satis-sozlesmesi" target="_blank" rel="noopener noreferrer" className="text-xs" style={{ color: "#9CA3AF" }}>{t("footer.distanceSales")}</a>}
+              {!iosApp && <a href="/iptal-iade-kosullari" target="_blank" rel="noopener noreferrer" className="text-xs" style={{ color: "#9CA3AF" }}>{t("footer.cancellation")}</a>}
             </div>
           </div>
           <div>
@@ -8124,6 +8125,7 @@ ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return
 // yanıltıcı olur — bunun yerine gerçek çözüme (Planlar) yönlendiriyoruz.
 function OwnerVisibilityCard({ row, busy, error, onToggle, onGoToPlans }) {
   const { t } = useLanguage();
+  const iosApp = useIosApp();
   const active = row.active !== false;
   const billingClosed = !active && !!row.deactivated_for_billing_at;
   return (
@@ -8137,6 +8139,7 @@ function OwnerVisibilityCard({ row, busy, error, onToggle, onGoToPlans }) {
           </p>
         </div>
         {billingClosed ? (
+          iosApp ? null : (
           <button
             type="button"
             onClick={onGoToPlans}
@@ -8145,6 +8148,7 @@ function OwnerVisibilityCard({ row, busy, error, onToggle, onGoToPlans }) {
           >
             {t("listingDetail.visBillingPlans")}
           </button>
+          )
         ) : (
           <button
             type="button"
@@ -8225,6 +8229,7 @@ function ShareAfterPublish({ listingId, listingTitle, userId }) {
 
 function CreateListingView({ onBack, onCreated, userId, onGoToProfile, onGoToPlans, onOpenTalentDiscovery, initialCategoryId, initialNote, initialTitle, initialDesc }) {
   const { t } = useLanguage();
+  const iosApp = useIosApp();
   const [mode, setMode] = useState("local");
   const [providerName, setProviderName] = useState("");
   // "Yeteneğini Keşfet"ten gelindiyse kategori ve kısa not önceden dolu gelir
@@ -8875,7 +8880,8 @@ ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return
           <Sparkles size={22} style={{ color: "#F59E0B" }} />
         </div>
         <h2 className="font-serif text-xl mb-2" style={{ color: "#1B2B24" }}>{t("createListing.noSubscriptionTitle")}</h2>
-        <p className="text-sm mb-6" style={{ color: "#5C5744" }}>{t("createListing.noSubscriptionBody")}</p>
+        <p className="text-sm mb-6" style={{ color: "#5C5744" }}>{iosApp ? t("createListing.noSubscriptionBodyIos") : t("createListing.noSubscriptionBody")}</p>
+        {!iosApp && (
         <button
           onClick={() => (onGoToPlans ? onGoToPlans() : onBack())}
           className="w-full py-2.5 rounded-full text-sm font-medium text-white"
@@ -8883,6 +8889,7 @@ ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return
         >
           {t("createListing.noSubscriptionButton")}
         </button>
+        )}
         {onGoToProfile && (
           <button onClick={onGoToProfile} className="w-full mt-3 py-2.5 rounded-full text-sm font-medium border" style={{ borderColor: "#D9D0BA", color: "#1B2B24" }}>
             {t("createListing.noSubscriptionPhoneButton")}
@@ -8908,7 +8915,7 @@ ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return
             ? t("createListing.limitBodyProNoAddon", { count: vitrinLimit.count, cap: vitrinLimit.cap })
             : t("createListing.limitBodyStandard", { cap: vitrinLimit.cap })}
         </p>
-        {vitrinLimit.planName !== "Pro Üyelik" ? (
+        {vitrinLimit.planName !== "Pro Üyelik" && !iosApp ? (
           <div className="rounded-2xl border-2 p-5 mb-6 text-left" style={{ borderColor: "#F59E0B", background: "#FFFBEB" }}>
             <p className="text-sm font-bold mb-1" style={{ color: "#1B2B24" }}>{t("createListing.proCardTitle")}</p>
             <ul className="text-xs space-y-1 mb-4" style={{ color: "#5C5744" }}>
@@ -9168,6 +9175,7 @@ const SUPPORT_CATEGORY_META = {
 
 function SupportChatView({ onBack, onReport, currentUserId, onNav }) {
   const { t } = useLanguage();
+  const iosApp = useIosApp();
   const [messages, setMessages] = useState([
     { sender: "ai", text: t("supportChat.greeting") },
   ]);
@@ -9305,7 +9313,7 @@ ${plansInfo ? `Planlar (dönem sonrası geçerli fiyat/hak): ${plansInfo}. Fiyat
 
 Bu sekiz madde dışında bir konuda (özellikle para/hukuk ile ilgili) emin değilsen yukarıdaki 6. maddedeki gibi **Hayır, yönetime bildir** butonunu öner.
 
-${userContext}`,
+${userContext}${iosApp ? "\n\nÖNEMLİ (iOS uygulaması): Bu kullanıcı İşinn iOS uygulamasını kullanıyor. Bu uygulamada üyelik, plan, fiyat, ücret, abonelik, ödeme ya da Planlar ekranı yoktur: bu konularda bilgi verme, fiyat söyleme, Planlar bağlantısı verme. Böyle bir soru gelirse sadece 'Bu uygulamada üyelik ve ödeme işlemleri yapılmıyor' de ve vitrin, mesajlaşma, ilan ve teknik konularda yardım et." : ""}`,
           messages: apiMessages,
         }),
       });
@@ -9401,7 +9409,7 @@ ${convoText}`;
         <>
           {messages.length === 1 && (
             <div className="flex flex-wrap gap-2 pt-3 mt-2 border-t shrink-0" style={{ borderColor: "#F0F0F0" }}>
-              {["quickVitrin", "quickJob", "quickMessages", "quickPlans"].map((k) => (
+              {["quickVitrin", "quickJob", "quickMessages", ...(iosApp ? [] : ["quickPlans"])].map((k) => (
                 <button
                   key={k}
                   onClick={() => sendMessage(t(`supportChat.${k}`))}
@@ -10896,6 +10904,7 @@ function PricingView({ onBack, onJoined, userId }) {
 // dönemin sonunda geçerli olur (cancel_at_period_end): o tarihe kadar vitrinler
 // yayında kalır, sonra günlük cron aboneliği kapatıp vitrinleri yayından kaldırır.
 function SubscriptionCard({ userId, onGoToPlans }) {
+  const iosApp = useIosApp();
   const [sub, setSub] = useState(undefined); // undefined: yükleniyor, null: aktif üyelik yok
   const [busy, setBusy] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -10933,8 +10942,8 @@ function SubscriptionCard({ userId, onGoToPlans }) {
       <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>Üyeliğim</p>
       {!sub ? (
         <>
-          <p className="text-xs mt-1 mb-3" style={{ color: "#6B6550" }}>Şu an aktif bir üyeliğin yok, bu yüzden vitrinlerin yayında değil. Telefon numaranı doğrulayarak ücretsiz denemeyi başlatabilir ya da bir plan seçebilirsin.</p>
-          {onGoToPlans && (
+          <p className="text-xs mt-1 mb-3" style={{ color: "#6B6550" }}>Şu an aktif bir üyeliğin yok, bu yüzden vitrinlerin yayında değil. {iosApp ? "Telefon numaranı doğrulayarak ücretsiz denemeyi başlatabilirsin." : "Telefon numaranı doğrulayarak ücretsiz denemeyi başlatabilir ya da bir plan seçebilirsin."}</p>
+          {onGoToPlans && !iosApp && (
             <button onClick={onGoToPlans} className="px-4 py-2 rounded-full text-xs font-bold text-white" style={{ background: "#F59E0B" }}>Planlara Git</button>
           )}
         </>

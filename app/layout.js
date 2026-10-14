@@ -1,4 +1,5 @@
 import AttributionCapture from "../components/AttributionCapture";
+import IosShellMarker from "../components/IosShellMarker";
 import "./globals.css";
 import { Analytics } from "@vercel/analytics/react";
 import { COMPANY } from "../lib/companyInfo";
@@ -108,6 +109,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="tr">
       <body>
+        <IosShellMarker />
         {/* eslint-disable-next-line react/no-danger */}
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdString(organizationJsonLd) }} />
         {/* eslint-disable-next-line react/no-danger */}

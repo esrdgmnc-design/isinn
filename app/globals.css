@@ -24,3 +24,23 @@ html, body {
     font-size: 16px !important;
   }
 }
+
+/* iOS uygulama kabuğu: durum çubuğu/çentik ve ana ekran çubuğu altına içerik girmesin (sınıf IosShellMarker ile eklenir). */
+html.isinn-ios-app::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: env(safe-area-inset-top);
+  background: #ffffff;
+  z-index: 40;
+  pointer-events: none;
+}
+html.isinn-ios-app body {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+html.isinn-ios-app header.sticky {
+  top: env(safe-area-inset-top);
+}
