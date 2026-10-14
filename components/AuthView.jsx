@@ -3,7 +3,7 @@ import { useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { useLanguage } from "../lib/i18n/LanguageContext";
 import { trackEvent } from "../lib/analytics";
-import { useIosApp } from "../lib/nativeApp";
+import { useIosApp } from "../lib/useIosApp";
 
 // Kayıt sırasında hangi yasal metin sürümüne onay verildiğini işaretlemek
 // için — metinler (bkz. legal/ klasörü, /kvkk-aydinlatma-metni vb.) ileride

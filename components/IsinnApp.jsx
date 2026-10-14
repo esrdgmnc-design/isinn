@@ -10,7 +10,8 @@ const Cropper = dynamic(() => import("react-easy-crop"), { ssr: false, loading: 
 import { COMPANY } from "../lib/companyInfo";
 import { FALLBACK_LISTING_IMG, formatPriceLabel, mapServiceRowToListing } from "../lib/mapServiceRowToListing";
 import { isFreePeriod, FREE_PERIOD_UNTIL_ISO } from "../lib/freePeriod";
-import { useIosApp, isIosApp } from "../lib/nativeApp";
+import { isIosApp } from "../lib/nativeApp";
+import { useIosApp } from "../lib/useIosApp";
 import { aiFetch } from "../lib/aiConsent";
 import { checkContent } from "../lib/contentFilter";
 import { startNativePush, enablePush, unregisterPush } from "../lib/nativePush";
