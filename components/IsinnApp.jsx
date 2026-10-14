@@ -1749,7 +1749,6 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
             <span>✓ {t("home.trustNoCommission")}</span>
             {isFreePeriod() && <span>✓ {t("home.trustFree", { date: new Date(FREE_PERIOD_UNTIL_ISO).toLocaleDateString(language === "en" ? "en-GB" : "tr-TR", { day: "numeric", month: "long", year: "numeric" }) })}</span>}
             <span>✓ {t("home.trustPhonePrivate")}</span>
-            <span>✓ {t("home.trustNameYours")}</span>
           </div>
         </div>
 
