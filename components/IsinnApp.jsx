@@ -36,7 +36,7 @@ import {
   PaintBucket, AirVent, PawPrint, Music2, Calculator, Languages,
   PenTool, Video, Mic, ClipboardList, TrendingUp, BarChart3, Wallet, CalendarClock, Puzzle, PencilRuler, Layers,
   MonitorSmartphone, Car, Bug, Stethoscope, Scale,
-  Shapes, Flame, Brush, Cpu, PersonStanding, Crown, Table2, Sofa, Footprints, ExternalLink
+  Shapes, Flame, Brush, Cpu, PersonStanding, Crown, Table2, Sofa, Footprints, ExternalLink, LogOut
 } from "lucide-react";
 
 // ---------------------------------------------------------------
@@ -1375,6 +1375,13 @@ function Header({ onNav, onSearch, pendingCount, session, onNotificationClick })
                   style={{ color: "#0F1115" }}
                 >
                   <Heart size={16} /> {t("header.favorites")}
+                </button>
+                <button
+                  onClick={() => { setMobileMenuOpen(false); unregisterPush().finally(() => supabase.auth.signOut()); }}
+                  className="flex items-center gap-2 text-sm font-semibold px-2 py-2.5 rounded-lg text-left"
+                  style={{ color: "#9C4A3C" }}
+                >
+                  <LogOut size={16} /> {t("header.logout")}
                 </button>
               </>
             )}
@@ -11974,6 +11981,13 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
       )}
 
       <SubscriptionCard userId={userId} onGoToPlans={onGoToPlans} />
+      <button
+        onClick={() => { unregisterPush().finally(() => supabase.auth.signOut()); }}
+        className="w-full mb-3 py-3 rounded-2xl border text-sm font-bold flex items-center justify-center gap-2"
+        style={{ borderColor: "#D9D0BA", background: "#FFFFFF", color: "#9C4A3C" }}
+      >
+        <LogOut size={16} /> {t("header.logout")}
+      </button>
       <DeleteAccountCard />
 
       <button
