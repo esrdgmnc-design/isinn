@@ -17,7 +17,7 @@ Android derlemesi bu bilgisayarda denenmedi (JDK/Android Studio yok); ilk derlem
 - Görseller: `ekran_goruntuleri/play_store/` (5 telefon ekranı 1080x2400, `ikon_512.png`, `one_cikan_grafik_1024x500.png`).
 
 ## 2. Kurucunun sırayla yapacakları
-1. Play Console kurumsal hesap doğrulaması (DUNS/cihaz) tamam mı bak. Bitmeden yayın olmaz.
+1. Play Console hesabı KİŞİSEL hesap çıktı (2026-10-15, Hesap Kimliği 4950170735960059927). Kurulumu tamamla: (a) Play Console mobil uygulamasıyla GERÇEK bir Android telefonda giriş yap (cihaz doğrulaması), (b) iletişim telefonunu doğrula ve kimlik belgesini yükle (Google onaylar). Bitmeden yayın olmaz.
 2. Console > Uygulama oluştur: ad, Türkçe, Uygulama, Ücretsiz, beyanlar.
 3. Yükleme anahtarı: Codemagic > Teams > Code signing identities > Android keystores (referans adı `isinn_upload_keystore`). Dosya ve şifreleri parola yöneticisi + çevrimdışı ikinci kopyaya yedekle.
 4. Codemagic'te `android-release` akışını çalıştır, `.aab` dosyasını indir.
@@ -27,7 +27,7 @@ Android derlemesi bu bilgisayarda denenmedi (JDK/Android Studio yok); ilk derlem
 8. İlk yüklemeden sonra "App signing key certificate" SHA-256'yı kopyala (herkese açık, gizli değil) → bana ver, `assetlinks.json` hazırlanır (v1.1).
 9. Üretim: kademeli yayın %5-10 ile başla, Android vitals'ı izle.
 
-Karar gerekenler: destek e-postası Play'de herkese açık görünür (hangisi?); iOS ve Android'de geliştirici kimliği tutarlılığı (iOS bireysel, Play kurumsal); 20 Aralık sonrası Android'de ödeme (Play Faturalandırma ya da ücretsiz kalma).
+Karar gerekenler: destek e-postası Play'de herkese açık görünür (hangisi?); iOS ve Android'de geliştirici kimliği tutarlılığı (iOS ve Play ikisi de kişisel hesap); 20 Aralık sonrası Android'de ödeme (Play Faturalandırma ya da ücretsiz kalma).
 
 ## 3. Mağaza metinleri (Türkçe, yapıştırmaya hazır)
 **Ad (27):** İşinn: Uzman Bul, Vitrin Aç
@@ -67,7 +67,6 @@ Kullanıcıları uygulama içinden şikâyet edebilir ve engelleyebilirsin. Hesa
 Kullanım Şartları: isinn.com.tr/kullanim-sartlari
 Gizlilik: isinn.com.tr/gizlilik-politikasi
 
-İşinn, Code G Teknoloji ve Ticaret Ltd. Şti. ürünüdür.
 
 **Sürüm notları 1.0 (342):**
 İşinn'in ilk sürümü yayında.
@@ -94,7 +93,7 @@ Gizlilik: isinn.com.tr/gizlilik-politikasi
 
 **Diğer:** hedef kitle yalnızca 18 ve üzeri (çocuk görseli koyma); reklam: Hayır; AD_ID izni: birleşik manifestte olmadığını doğrula; haber/sağlık/finans/devlet: Hayır; uygulama erişimi: SMS OTP incelemeciye ulaşmaz, iOS'takine benzer ön doğrulanmış demo hesap ve talimat ver.
 
-**Test kanalı:** "12 test kullanıcısı / 14 gün" kuralı kişisel hesaplar içindir; kurumsal hesapta geçerli olmaması beklenir, Console "Üretim erişimi" listesinde DOĞRULA.
+**Test kanalı (KİŞİSEL hesap):** Kişisel hesaplarda üretime çıkmadan önce kapalı testte en az 12 test kullanıcısı 14 gün kesintisiz kabul etmiş (katılmış) olmalı. Test kullanıcıları Gmail hesabı olan tanıdıklar olabilir. Kesin koşulu ve sayacı Console > Üretim erişimi bölümünde DOĞRULA. Bu yüzden ilk iş kapalı testi başlatmak: yayın tarihi buna bağlı.
 
 ## 5. Bilinen riskler ve ertelenenler
 - **Plan/ödeme (Play Faturalandırma):** Android'de gizli. 20 Aralık 2026 sonrası seçenekler: Play Faturalandırma entegrasyonu (WebView'da zor), Android'de ücretsiz kalma, hukuk danışmanlığı. Aralıktan önce karar ver.
