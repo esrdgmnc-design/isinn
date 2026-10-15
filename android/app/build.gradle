@@ -1,5 +1,15 @@
 apply plugin: 'com.android.application'
 
+// Codemagic ortam değişkenleri (yoksa yerel derleme): sürüm numarası ve yükleme anahtarı. Anahtar/şifre depoya yazılmaz.
+def isinnBuildNumber = 1
+try { isinnBuildNumber = Integer.parseInt(System.getenv("BUILD_NUMBER") ?: "1") } catch (Exception e) { isinnBuildNumber = 1 }
+def isinnKeystorePath = System.getenv("CM_KEYSTORE_PATH")
+def isinnKeystorePassword = System.getenv("CM_KEYSTORE_PASSWORD")
+def isinnKeyAlias = System.getenv("CM_KEY_ALIAS")
+def isinnKeyPassword = System.getenv("CM_KEY_PASSWORD")
+def isinnHasSigning = isinnKeystorePath && isinnKeystorePassword && isinnKeyAlias && isinnKeyPassword
+println "isinn imza: path=" + (isinnKeystorePath ? "var" : "YOK") + " storePw=" + (isinnKeystorePassword ? "var" : "YOK") + " alias=" + (isinnKeyAlias ? "var" : "YOK") + " keyPw=" + (isinnKeyPassword ? "var" : "YOK") + " build=" + isinnBuildNumber
+
 android {
     namespace = "com.isinn.app"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -8,7 +18,7 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         // Codemagic BUILD_NUMBER her derlemede artar (Play her yüklemede daha büyük versionCode ister); yerelde 1.
-        versionCode (System.getenv("BUILD_NUMBER") ?: "1").toInteger()
+        versionCode isinnBuildNumber
         versionName "1.0.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
@@ -19,18 +29,18 @@ android {
     }
     signingConfigs {
         // Yükleme anahtarı yalnızca Codemagic ortam değişkenlerinden gelir (CM_KEYSTORE_*); depoya anahtar/şifre yazılmaz.
-        release {
-            if (System.getenv("CM_KEYSTORE_PATH")) {
-                storeFile file(System.getenv("CM_KEYSTORE_PATH"))
-                storePassword System.getenv("CM_KEYSTORE_PASSWORD")
-                keyAlias System.getenv("CM_KEY_ALIAS")
-                keyPassword System.getenv("CM_KEY_PASSWORD")
+        if (isinnHasSigning) {
+            release {
+                storeFile file(isinnKeystorePath)
+                storePassword isinnKeystorePassword
+                keyAlias isinnKeyAlias
+                keyPassword isinnKeyPassword
             }
         }
     }
     buildTypes {
         release {
-            if (System.getenv("CM_KEYSTORE_PATH")) { signingConfig signingConfigs.release }
+            if (isinnHasSigning) { signingConfig signingConfigs.release }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
