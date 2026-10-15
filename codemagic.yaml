@@ -80,6 +80,9 @@ workflows:
         script: npm ci
       - name: Capacitor senkronize et
         script: npx cap sync android
+      # Uygulama siteyi internetten açıyor (server.url); gömülü videolar (9 MB) gereksiz, pakete girmesin.
+      - name: Gömülü videoları paketten çıkar
+        script: rm -rf android/app/src/main/assets/public/videos
       - name: Android AAB derle (release, imzalı)
         script: |
           cd android
