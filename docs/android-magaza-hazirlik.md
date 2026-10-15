@@ -14,7 +14,7 @@ Android derlemesi bu bilgisayarda denenmedi (JDK/Android Studio yok); ilk derlem
 - Yeni sayfa `/hesap-silme` (Veri güvenliği formundaki web bağlantısı); Gizlilik Politikası'ndan bağlandı.
 - `android/app/build.gradle`: `versionCode` Codemagic `BUILD_NUMBER`'dan, imza `CM_KEYSTORE_*` değişkenlerinden; `allowBackup=false`.
 - `codemagic.yaml`: `android-release` akışı (imzalı AAB). Otomatik yayın bölümü yorum satırı.
-- Görseller: `ekran_goruntuleri/play_store/` (5 telefon ekranı 1080x2400, `ikon_512.png`, `one_cikan_grafik_1024x500.png`).
+- Görseller: `ekran_goruntuleri/play_store_1080x1920/` (5 telefon ekranı 1080x1920, 9:16 — Play 2:1 oranından uzun görsel kabul etmez, `ikon_512.png`, `one_cikan_grafik_1024x500.png`).
 
 ## 2. Kurucunun sırayla yapacakları
 1. Play Console hesabı KİŞİSEL hesap çıktı (2026-10-15, Hesap Kimliği 4950170735960059927). Kurulumu tamamla: (a) Play Console mobil uygulamasıyla GERÇEK bir Android telefonda giriş yap (cihaz doğrulaması), (b) iletişim telefonunu doğrula ve kimlik belgesini yükle (Google onaylar). Bitmeden yayın olmaz.
