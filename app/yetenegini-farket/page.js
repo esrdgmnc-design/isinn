@@ -134,13 +134,13 @@ export default function YeteneginiFarketPage() {
         <h2 className="font-sans text-xl font-black mb-3" style={{ color: "#0F1115" }}>Örnek bir sonuç nasıl görünür?</h2>
         <p className="text-xs mb-3" style={{ color: "#6B7280" }}>Aşağıdaki, aracın gerçek bir denemede verdiği sonuçtur. Sen farklı yazarsan farklı fikirler çıkar; öneriler bir başlangıç noktasıdır.</p>
         <div className="rounded-2xl p-4 mb-4" style={{ background: "#F7F7F8" }}>
-          <p className="text-sm font-bold mb-1" style={{ color: "#0F1115" }}>Yazılan: “Telefonla fotoğraf çekmeyi ve video düzenlemeyi seviyorum”</p>
-          <p className="text-xs" style={{ color: "#6B7280" }}>Haftada 8 saat · evden/uzaktan</p>
+          <p className="text-sm font-bold mb-1" style={{ color: "#0F1115" }}>Yazılan: “Hayvanları çok severim, sabahları erken kalkarım, uzun yürüyüşlere çıkmaktan hoşlanırım”</p>
+          <p className="text-xs" style={{ color: "#6B7280" }}>Haftada 10 saat · yakın çevrede, yüz yüze</p>
         </div>
         <div className="space-y-3 mb-10">
           {[
-            { cat: "Video Düzenleme", offer: "Telefon Çekimlerinden Kısa Video Kurgusu", words: "video düzenlemeyi seviyorum", reason: "Telefon videolarını düzenleyebildiğini söylediğin için, bir esnafın tanıtım klibini ya da bir etkinlik anısını kurgulamak gibi somut işlerle vitrini açtığında sana ulaşmak isteyen biri olabilir.", step: "Daha önce düzenlediğin bir videoyu vitrin açıklamasının yanına örnek olarak ekle." },
-            { cat: "Profesyonel Fotoğraf", offer: "Telefon ile Yaratıcı Fotoğraf Çekimi", words: "", reason: "Telefon fotoğrafçılığını sevdiğini belirttiğin için, çektiğin yemek, mekân ya da portre fotoğraflarından birkaçını vitrine koyarsan bu konuda fotoğrafçı arayan biri sana ulaşabilir.", step: "Telefonunla çektiğin en iyi birkaç fotoğrafı seçip vitrin taslağına yükle." },
+            { cat: "Evcil Hayvan Bakımı", offer: "Sabah Yürüyüşü ve Evcil Hayvan Bakımı", words: "sabahları erken kalkarım, uzun yürüyüşlere", reason: "Sabah erken kalkıp uzun yürüyüşe çıkma alışkanlığın, evcil hayvan sahiplerinin en çok ihtiyaç duyduğu şeyi zaten yapıyor olman anlamına geliyor. Bunu vitrine taşıman yeterli.", step: "Komşularındaki ya da yakın çevrendeki köpek sahiplerine sabah yürüyüşü hizmeti sunmayı teklif et." },
+            { cat: "Oyun Ablası / Ağabeyi", offer: "Sabah Aktiviteli Oyun Arkadaşlığı Hizmeti", words: "erken kalkarım, uzun yürüyüşlere çıkmaktan", reason: "Erken saatlerde aktif olman ve uzun yürüyüş enerjin, çocukları sabah saatlerinde dışarıda meşgul edecek birine ihtiyaç duyan ailelere sürpriz bir çözüm olabilir. Vitrininde 'sabah aktivite arkadaşı' olarak konumlandırabilirsin.", step: "Vitrin açıklamanı sabah saatlerine odaklı yaz; parkta yürüyüş ve açık hava oyunlarını içerdiğini belirt." },
           ].map((c) => (
             <div key={c.cat} className="rounded-2xl p-4" style={{ border: "1px solid #F0F0F0" }}>
               <p className="text-sm font-black mb-1" style={{ color: "#0F1115" }}>{c.cat}</p>
