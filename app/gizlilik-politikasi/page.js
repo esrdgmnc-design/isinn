@@ -63,7 +63,8 @@ export default function GizlilikPage() {
         Hesabınızı uygulama ve sitenin içinden, Profil sayfasındaki &quot;Hesabımı sil&quot; bölümünden kendiniz silebilirsiniz;
         ayrıca <b>{COMPANY.email}</b> üzerinden de bize ulaşabilirsiniz. Hesap
         silindiğinde profil, vitrin, mesaj ve belgeleriniz ile yüklediğiniz dosyalar kaldırılır; yasal saklama yükümlülüğü olan kayıtlar
-        mevzuatın öngördüğü süre kadar saklanabilir.
+        mevzuatın öngördüğü süre kadar saklanabilir. Adım adım silme yolu ve uygulamaya girememeniz durumunda talep yöntemi için{" "}
+        <a href="/hesap-silme" style={{ color: "#2563EB" }}>Hesap ve veri silme sayfasına</a> bakabilirsiniz.
       </p>
 
       <h2 style={h2}>5. Çerezler</h2>

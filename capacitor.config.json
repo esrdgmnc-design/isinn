@@ -9,7 +9,8 @@
     "errorPath": "offline.html"
   },
   "android": {
-    "allowMixedContent": false
+    "allowMixedContent": false,
+    "appendUserAgent": "IsinnApp-Android"
   },
   "backgroundColor": "#FFFFFF",
   "ios": {

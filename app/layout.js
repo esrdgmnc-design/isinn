@@ -1,6 +1,6 @@
 import AttributionCapture from "../components/AttributionCapture";
 import IosShellMarker from "../components/IosShellMarker";
-import IosWelcome from "../components/IosWelcome";
+import AppWelcome from "../components/AppWelcome";
 import "./globals.css";
 import { Analytics } from "@vercel/analytics/react";
 import { COMPANY } from "../lib/companyInfo";
@@ -112,13 +112,13 @@ export default function RootLayout({ children }) {
       <body>
         {/* iOS kabuğunda ilk boyamadan önce sınıfı ekle (güvenli alan zıplamasın) ve açılış perdesini göster; web'de görünmez. */}
         {/* eslint-disable-next-line react/no-danger */}
-        <script dangerouslySetInnerHTML={{ __html: "try{if(/IsinnApp-iOS/.test(navigator.userAgent))document.documentElement.classList.add('isinn-ios-app')}catch(e){}" }} />
+        <script dangerouslySetInnerHTML={{ __html: "try{var u=navigator.userAgent;if(/IsinnApp-iOS/.test(u))document.documentElement.classList.add('isinn-ios-app');else if(/IsinnApp-Android/.test(u))document.documentElement.classList.add('isinn-android-app')}catch(e){}" }} />
         <div id="isinn-boot" aria-hidden="true">
           <img src="/icons/icon-192.webp" alt="" width="88" height="88" />
           <p>İşin gücün burada</p>
         </div>
         <IosShellMarker />
-        <IosWelcome />
+        <AppWelcome />
         {/* eslint-disable-next-line react/no-danger */}
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdString(organizationJsonLd) }} />
         {/* eslint-disable-next-line react/no-danger */}

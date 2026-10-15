@@ -10,8 +10,8 @@ const Cropper = dynamic(() => import("react-easy-crop"), { ssr: false, loading: 
 import { COMPANY } from "../lib/companyInfo";
 import { FALLBACK_LISTING_IMG, formatPriceLabel, mapServiceRowToListing } from "../lib/mapServiceRowToListing";
 import { isFreePeriod, FREE_PERIOD_UNTIL_ISO } from "../lib/freePeriod";
-import { isIosApp } from "../lib/nativeApp";
-import { useIosApp } from "../lib/useIosApp";
+import { isStoreApp, isAndroidApp } from "../lib/nativeApp";
+import { useStoreApp } from "../lib/useIosApp";
 import { aiFetch } from "../lib/aiConsent";
 import { checkContent } from "../lib/contentFilter";
 import { startNativePush, enablePush, unregisterPush } from "../lib/nativePush";
@@ -995,7 +995,7 @@ function useNotifications(userId) {
       .select("id", { count: "exact", head: true })
       .eq("profile_id", userId)
       .is("read_at", null);
-    if (isIosApp()) query = query.not("type", "in", IOS_HIDDEN_NOTIFICATION_TYPES);
+    if (isStoreApp()) query = query.not("type", "in", IOS_HIDDEN_NOTIFICATION_TYPES);
     const { count } = await query;
     setUnreadCount(count || 0);
   };
@@ -1025,7 +1025,7 @@ function useNotifications(userId) {
       .from("notifications")
       .select("id, type, title, body, read_at, related_job_id, related_service_id, created_at")
       .eq("profile_id", userId);
-    if (isIosApp()) query = query.not("type", "in", IOS_HIDDEN_NOTIFICATION_TYPES);
+    if (isStoreApp()) query = query.not("type", "in", IOS_HIDDEN_NOTIFICATION_TYPES);
     const { data } = await query
       .order("created_at", { ascending: false })
       .limit(20);
@@ -1103,7 +1103,7 @@ function LanguageToggle({ className = "" }) {
 function Header({ onNav, onSearch, pendingCount, session, onNotificationClick }) {
   const notif = useNotifications(session?.user?.id);
   const { t } = useLanguage();
-  const iosApp = useIosApp();
+  const storeApp = useStoreApp();
   const [q, setQ] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   // KRİTİK MOBİL HATA (kullanıcı fark etti, canlıda doğrulandı): Planlar/
@@ -1170,7 +1170,7 @@ function Header({ onNav, onSearch, pendingCount, session, onNotificationClick })
         </div>
         <div className="flex items-center gap-2 ml-auto">
           <LanguageToggle className="hidden sm:flex" />
-          {!iosApp && (
+          {!storeApp && (
           <button
             onClick={() => onNav("pricing")}
             className="text-sm font-semibold px-3.5 py-2 rounded-full hidden sm:flex items-center gap-1.5 transition-colors"
@@ -1331,7 +1331,7 @@ function Header({ onNav, onSearch, pendingCount, session, onNotificationClick })
             <div className="flex justify-end mb-1">
               <LanguageToggle />
             </div>
-            {!iosApp && (
+            {!storeApp && (
             <button
               onClick={() => { setMobileMenuOpen(false); onNav("pricing"); }}
               className="flex items-center gap-2 text-sm font-semibold px-2 py-2.5 rounded-lg text-left"
@@ -1476,7 +1476,7 @@ function InstallAppBanner() {
 
   useEffect(() => {
     try {
-      if (isIosApp()) return; // iOS uygulama kabuğunda zaten kurulu
+      if (isStoreApp()) return; // iOS uygulama kabuğunda zaten kurulu
       const isStandalone = window.matchMedia?.("(display-mode: standalone)")?.matches || window.navigator?.standalone === true;
       const alreadyDismissed = localStorage.getItem("isinn_install_banner_dismissed") === "1";
       if (isStandalone || alreadyDismissed) return; // dismissed=true kalır, hiç gösterilmez
@@ -1615,7 +1615,7 @@ const HomeListingCard = memo(function HomeListingCard({ l, isFavorite, onSelectL
 
 function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApplyJob, onOpenJob, realListings, listingsLoading, realJobs, favoriteIds, onToggleFavorite, onToggleJobFavorite, discoveryPopularCategories, discoveryRecentListings }) {
   const { t, language } = useLanguage();
-  const iosApp = useIosApp();
+  const storeApp = useStoreApp();
   const popularSearches = t("home.popularSearches");
   const [heroQ, setHeroQ] = useState("");
   const [heroCity, setHeroCity] = useState("");
@@ -1754,7 +1754,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
           {/* Güven şeridi: en güçlü somut maddeler ilk ekranda. Ücretsiz bilgisi yalnızca ücretsiz dönemde ve gerçek bitiş tarihiyle (lib/freePeriod.js); iOS'ta üyelik/fiyat ima etmemek için gizli. */}
           <div className="mt-3 sm:mt-4 max-w-lg flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-medium" style={{ color: "#475569" }}>
             <span>✓ {t("home.trustNoCommission")}</span>
-            {!iosApp && isFreePeriod() && <span>✓ {t("home.trustFree", { date: new Date(FREE_PERIOD_UNTIL_ISO).toLocaleDateString(language === "en" ? "en-GB" : "tr-TR", { day: "numeric", month: "long", year: "numeric" }) })}</span>}
+            {!storeApp && isFreePeriod() && <span>✓ {t("home.trustFree", { date: new Date(FREE_PERIOD_UNTIL_ISO).toLocaleDateString(language === "en" ? "en-GB" : "tr-TR", { day: "numeric", month: "long", year: "numeric" }) })}</span>}
             <span>✓ {t("home.trustPhonePrivate")}</span>
           </div>
         </div>
@@ -2305,7 +2305,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
 // aynı palet (bkz. HomeView'ın en üstündeki radial-gradient).
 function SiteFooter({ onNav }) {
   const { t } = useLanguage();
-  const iosApp = useIosApp();
+  const storeApp = useStoreApp();
   return (
     <footer className="px-5 pt-14 pb-8" style={{ background: "#0F1115" }}>
       <div className="max-w-6xl mx-auto">
@@ -2321,7 +2321,7 @@ function SiteFooter({ onNav }) {
                 hangi tüzel kişiliğe (CODE G LTD) ait olduğu hiçbir yerde açıkça
                 yazmıyordu (kullanıcının isteği, 2026-09-12). */}
             {/* iOS uygulaması bireysel geliştirici hesabıyla yayında: şirket satırı orada gösterilmez */}
-            {!iosApp && (
+            {!storeApp && (
               <p className="text-xs mt-3 leading-relaxed max-w-[220px]" style={{ color: "#7A7F8A" }}>
                 {t("footer.brandLine", { brand: COMPANY.brand, legalName: COMPANY.legalName })}
               </p>
@@ -2333,7 +2333,7 @@ function SiteFooter({ onNav }) {
               <button onClick={() => onNav("map")} className="text-xs text-left" style={{ color: "#9CA3AF" }}>{t("footer.map")}</button>
               <button onClick={() => onNav("createListing")} className="text-xs text-left" style={{ color: "#9CA3AF" }}>{t("footer.addService")}</button>
               <button onClick={() => onNav("post")} className="text-xs text-left" style={{ color: "#9CA3AF" }}>{t("footer.postJob")}</button>
-              {!iosApp && <button onClick={() => onNav("pricing")} className="text-xs text-left" style={{ color: "#9CA3AF" }}>{t("footer.plans")}</button>}
+              {!storeApp && <button onClick={() => onNav("pricing")} className="text-xs text-left" style={{ color: "#9CA3AF" }}>{t("footer.plans")}</button>}
               {/* SEO: gerçek bir sayfaya (app/rehber) giden gerçek <a> —
                   diğerleri gibi SPA view'ı değil, iç link değeri için. Sayfanın
                   kendisi hâlâ Türkçe (bkz. app/rehber) — sadece link etiketi çevrildi. */}
@@ -2350,14 +2350,14 @@ function SiteFooter({ onNav }) {
               <a href="/kvkk-aydinlatma-metni" target="_blank" rel="noopener noreferrer" className="text-xs" style={{ color: "#9CA3AF" }}>{t("footer.kvkk")}</a>
               <a href="/gizlilik-politikasi" target="_blank" rel="noopener noreferrer" className="text-xs" style={{ color: "#9CA3AF" }}>{t("footer.privacy")}</a>
               <a href="/kullanim-sartlari" target="_blank" rel="noopener noreferrer" className="text-xs" style={{ color: "#9CA3AF" }}>{t("footer.terms")}</a>
-              {!iosApp && <a href="/mesafeli-satis-sozlesmesi" target="_blank" rel="noopener noreferrer" className="text-xs" style={{ color: "#9CA3AF" }}>{t("footer.distanceSales")}</a>}
-              {!iosApp && <a href="/iptal-iade-kosullari" target="_blank" rel="noopener noreferrer" className="text-xs" style={{ color: "#9CA3AF" }}>{t("footer.cancellation")}</a>}
+              {!storeApp && <a href="/mesafeli-satis-sozlesmesi" target="_blank" rel="noopener noreferrer" className="text-xs" style={{ color: "#9CA3AF" }}>{t("footer.distanceSales")}</a>}
+              {!storeApp && <a href="/iptal-iade-kosullari" target="_blank" rel="noopener noreferrer" className="text-xs" style={{ color: "#9CA3AF" }}>{t("footer.cancellation")}</a>}
             </div>
           </div>
           <div>
             <p className="text-xs font-bold tracking-wide mb-3" style={{ color: "#FFFFFF" }}>{t("footer.contactHeading")}</p>
             <div className="flex flex-col gap-2.5">
-              {!iosApp && <a href={`mailto:${COMPANY.email}`} className="text-xs" style={{ color: "#9CA3AF" }}>{COMPANY.email}</a>}
+              {!storeApp && <a href={`mailto:${COMPANY.email}`} className="text-xs" style={{ color: "#9CA3AF" }}>{COMPANY.email}</a>}
               <a href={`tel:${COMPANY.phoneHref}`} className="text-xs" style={{ color: "#9CA3AF" }}>{COMPANY.phone}</a>
               <button onClick={() => onNav("support")} className="text-xs text-left" style={{ color: "#9CA3AF" }}>{t("footer.supportRequest")}</button>
             </div>
@@ -2365,7 +2365,7 @@ function SiteFooter({ onNav }) {
         </div>
         <div className="pt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2" style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}>
           <p className="text-[11px]" style={{ color: "#5C6070" }}>
-            {iosApp ? `© ${new Date().getFullYear()} İşinn` : t("footer.copyright", { year: new Date().getFullYear(), brand: COMPANY.brand, legalName: COMPANY.legalName, address: COMPANY.address })}
+            {storeApp ? `© ${new Date().getFullYear()} İşinn` : t("footer.copyright", { year: new Date().getFullYear(), brand: COMPANY.brand, legalName: COMPANY.legalName, address: COMPANY.address })}
           </p>
           <p className="text-[11px]" style={{ color: "#5C6070" }}>{t("footer.disclaimer")}</p>
         </div>
@@ -4834,6 +4834,8 @@ function MapView({ onBack, onSelectProvider, onSelectJob, realListings, realJobs
       </button>
       <div className="flex items-center justify-between flex-wrap gap-3 mb-3">
         <h1 className="font-serif text-2xl" style={{ color: "#1B2B24" }}>{t("mapView.title")}</h1>
+        {/* Android kabuğunda konum izni istenmiyor (Play izin beyanı gerekmesin): şehri elle seçersin. */}
+        {!isAndroidApp() && (
         <button
           onClick={useMyLocation}
           className="text-xs font-medium px-3.5 py-2 rounded-full flex items-center gap-1.5"
@@ -4842,6 +4844,7 @@ function MapView({ onBack, onSelectProvider, onSelectJob, realListings, realJobs
           <MapPin size={13} />
           {locStatus === "loading" ? t("mapView.locLoading") : locStatus === "granted" ? t("mapView.locGranted") : t("mapView.useMyLocation")}
         </button>
+        )}
       </div>
 
       <div className="flex items-center gap-1.5 mb-4">
@@ -7359,6 +7362,7 @@ function TalentDiscoveryView({ onBack, onCreateListing, userId }) {
   const [shownIds, setShownIds] = useState([]);
   const [regenCount, setRegenCount] = useState(0);
   const reqIdRef = useRef(null); // son öneri yanıtının kimliği (geri bildirim olaylarını ilişkilendirir)
+  const [reportedCats, setReportedCats] = useState([]); // yapay zekâ çıktısını bildirenler (Google Play yapay zekâ içerik politikası)
   const [notFitOpen, setNotFitOpen] = useState(false);
   const [notFitReason, setNotFitReason] = useState("");
   const [notFitText, setNotFitText] = useState("");
@@ -7716,6 +7720,18 @@ function TalentDiscoveryView({ onBack, onCreateListing, userId }) {
                   >
                     {t("talentDiscovery.createListingButton")}
                   </button>
+                  {reportedCats.includes(s.categoryId) ? (
+                    <p className="text-[11px] mt-2" style={{ color: "#6B7280" }}>{t("talentDiscovery.reportThanks")}</p>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => { trackEvent("talent_output_reported", { category: s.categoryId, request_id: reqIdRef.current, rank: sIdx + 1 }, null); setReportedCats((c) => [...c, s.categoryId]); }}
+                      className="block text-[11px] mt-2 underline"
+                      style={{ color: "#6B7280" }}
+                    >
+                      {t("talentDiscovery.reportOutput")}
+                    </button>
+                  )}
                   </div>
                 </div>
               );
@@ -8187,7 +8203,7 @@ ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return
 // yanıltıcı olur — bunun yerine gerçek çözüme (Planlar) yönlendiriyoruz.
 function OwnerVisibilityCard({ row, busy, error, onToggle, onGoToPlans }) {
   const { t } = useLanguage();
-  const iosApp = useIosApp();
+  const storeApp = useStoreApp();
   const active = row.active !== false;
   const billingClosed = !active && !!row.deactivated_for_billing_at;
   return (
@@ -8195,13 +8211,13 @@ function OwnerVisibilityCard({ row, busy, error, onToggle, onGoToPlans }) {
       <div className="flex items-center gap-3 flex-wrap">
         <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: active ? "#2FBF71" : "#A8A08A" }} aria-hidden="true" />
         <div className="flex-1 min-w-[12rem]">
-          <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>{billingClosed ? t(iosApp ? "listingDetail.visClosedTitleIos" : "listingDetail.visBillingClosedTitle") : active ? t("listingDetail.visPublished") : t("listingDetail.visUnpublished")}</p>
+          <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>{billingClosed ? t(storeApp ? "listingDetail.visClosedTitleIos" : "listingDetail.visBillingClosedTitle") : active ? t("listingDetail.visPublished") : t("listingDetail.visUnpublished")}</p>
           <p className="text-xs" style={{ color: "#5C5744" }}>
-            {billingClosed ? t(iosApp ? "listingDetail.visClosedBodyIos" : "listingDetail.visBillingClosedBody") : active ? t("listingDetail.visPublishedHint") : t("listingDetail.visUnpublishedHint")}
+            {billingClosed ? t(storeApp ? "listingDetail.visClosedBodyIos" : "listingDetail.visBillingClosedBody") : active ? t("listingDetail.visPublishedHint") : t("listingDetail.visUnpublishedHint")}
           </p>
         </div>
         {billingClosed ? (
-          iosApp ? null : (
+          storeApp ? null : (
           <button
             type="button"
             onClick={onGoToPlans}
@@ -8291,7 +8307,7 @@ function ShareAfterPublish({ listingId, listingTitle, userId }) {
 
 function CreateListingView({ onBack, onCreated, userId, onGoToProfile, onGoToPlans, onOpenTalentDiscovery, initialCategoryId, initialNote, initialTitle, initialDesc }) {
   const { t } = useLanguage();
-  const iosApp = useIosApp();
+  const storeApp = useStoreApp();
   const [mode, setMode] = useState("local");
   const [providerName, setProviderName] = useState("");
   // "Yeteneğini Keşfet"ten gelindiyse kategori ve kısa not önceden dolu gelir
@@ -8942,8 +8958,8 @@ ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return
           <Sparkles size={22} style={{ color: "#F59E0B" }} />
         </div>
         <h2 className="font-serif text-xl mb-2" style={{ color: "#1B2B24" }}>{t("createListing.noSubscriptionTitle")}</h2>
-        <p className="text-sm mb-6" style={{ color: "#5C5744" }}>{iosApp ? t("createListing.noSubscriptionBodyIos") : t("createListing.noSubscriptionBody")}</p>
-        {!iosApp && (
+        <p className="text-sm mb-6" style={{ color: "#5C5744" }}>{storeApp ? t("createListing.noSubscriptionBodyIos") : t("createListing.noSubscriptionBody")}</p>
+        {!storeApp && (
         <button
           onClick={() => (onGoToPlans ? onGoToPlans() : onBack())}
           className="w-full py-2.5 rounded-full text-sm font-medium text-white"
@@ -8971,15 +8987,15 @@ ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return
         <div className="w-14 h-14 rounded-full mx-auto mb-5 flex items-center justify-center" style={{ background: "rgba(245,158,11,0.15)" }}>
           <Sparkles size={22} style={{ color: "#F59E0B" }} />
         </div>
-        <h2 className="font-serif text-xl mb-2" style={{ color: "#1B2B24" }}>{iosApp ? t("createListing.limitTitleIos") : t("createListing.limitTitle", { planName: planNameDisplay })}</h2>
+        <h2 className="font-serif text-xl mb-2" style={{ color: "#1B2B24" }}>{storeApp ? t("createListing.limitTitleIos") : t("createListing.limitTitle", { planName: planNameDisplay })}</h2>
         <p className="text-sm mb-6" style={{ color: "#5C5744" }}>
-          {iosApp
+          {storeApp
             ? t("createListing.limitBodyIos", { cap: vitrinLimit.cap })
             : vitrinLimit.planName === "Pro Üyelik"
             ? t("createListing.limitBodyProNoAddon", { count: vitrinLimit.count, cap: vitrinLimit.cap })
             : t("createListing.limitBodyStandard", { cap: vitrinLimit.cap })}
         </p>
-        {vitrinLimit.planName !== "Pro Üyelik" && !iosApp ? (
+        {vitrinLimit.planName !== "Pro Üyelik" && !storeApp ? (
           <div className="rounded-2xl border-2 p-5 mb-6 text-left" style={{ borderColor: "#F59E0B", background: "#FFFBEB" }}>
             <p className="text-sm font-bold mb-1" style={{ color: "#1B2B24" }}>{t("createListing.proCardTitle")}</p>
             <ul className="text-xs space-y-1 mb-4" style={{ color: "#5C5744" }}>
@@ -9184,10 +9200,10 @@ function renderInlineBold(line, keyPrefix, onNav) {
       const [, label, kind, target] = m;
       const btnStyle = { background: "#2563EB", color: "white" };
       const btnCls = "inline-block px-2.5 py-1 rounded-full text-xs font-bold mx-0.5 no-underline";
-      if (kind === "view" && CHAT_LINK_VIEWS.has(target) && onNav && !(target === "pricing" && isIosApp())) {
+      if (kind === "view" && CHAT_LINK_VIEWS.has(target) && onNav && !(target === "pricing" && isStoreApp())) {
         return <button key={key} type="button" onClick={() => onNav(target)} className={btnCls} style={btnStyle}>{label}</button>;
       }
-      if (kind === "page" && CHAT_LINK_PAGES.has(target) && !(isIosApp() && IOS_HIDDEN_CHAT_PAGES.has(target))) {
+      if (kind === "page" && CHAT_LINK_PAGES.has(target) && !(isStoreApp() && IOS_HIDDEN_CHAT_PAGES.has(target))) {
         return <a key={key} href={`/${target}`} target="_blank" rel="noopener noreferrer" className={btnCls} style={btnStyle}>{label}</a>;
       }
       return <span key={key}>{label}</span>;
@@ -9243,7 +9259,7 @@ const SUPPORT_CATEGORY_META = {
 function SupportChatView({ onBack, onReport, currentUserId, onNav }) {
   const { t } = useLanguage();
   const vvh = useVisualViewportHeight();
-  const iosApp = useIosApp();
+  const storeApp = useStoreApp();
   const [messages, setMessages] = useState([
     { sender: "ai", text: t("supportChat.greeting") },
   ]);
@@ -9355,21 +9371,21 @@ GERÇEK PLATFORM BİLGİLERİ (bunlarla çelişen hiçbir şey söyleme):
 
 1) HİZMET SAĞLAYICIYA (temizlikçi, öğretmen, tadilatçı vb.) yapılan ödemeler: İşinn bu ödemeye HİÇBİR ŞEKİLDE aracılık ETMEZ. Güvenli ödeme/escrow/iade garantisi YOKTUR. Ödeme tamamen müşteri ile sağlayıcı arasında, platform dışında (elden, IBAN vb.) gerçekleşir. Hizmeti görmeden önce ön ödeme/kapora/IBAN istenmesi şüphelidir — kullanıcıya bunu bildirmesini söyle. Bu ödemelerin iadesi de tamamen taraflar arasındaki anlaşmaya bağlıdır, İşinn karışmaz.
 
-${iosApp ? "2) Bu iOS uygulamasında İşinn'e yapılan üyelik, plan, fiyat ya da ödeme konusu YOKTUR; bu konularda bilgi verme." : `2) İşinn'E YAPILAN ÜYELİK/ABONELİK ödemeleri (Standart/Pro Üyelik, Öne Çıkarma Paketi vb.) FARKLI bir konu — bunlar gerçekten PayTR altyapısı üzerinden İşinn'e tahsil edilir. Bu konuda gerçek kurallar: Standart Üyelik'te kart bilgisi istenmeyen bir ücretsiz deneme süresi var (süre Planlar sayfasında). Abonelik profil sayfasından istediğin zaman iptal edilebilir; iptal mevcut faturalama döneminin SONUNDA geçerli olur, kalan gün için orantılı iade yapılmaz, bir sonraki dönem için otomatik tahsilat yapılmaz. Hizmet devreye girdikten sonra yasal cayma hakkı yoktur (Mesafeli Sözleşmeler Yönetmeliği istisnası) ANCAK: yanlış/mükerrer tahsilatta tam iade yapılır; teknik arıza yüzünden satın alınan hizmet kullanılamadıysa bildirimden itibaren 3 iş günü içinde tam iade veya çözüm sağlanır; bunların dışındaki iade talepleri İşinn'in kendi takdirine bağlı, hak değil. Onaylanan iadeler ödemenin yapıldığı karta 7-14 iş günü içinde yansır, nakit/farklı yönteme iade yapılmaz. Detaylı koşullar: isinn.com.tr/iptal-iade-kosullari`}
+${storeApp ? "2) Bu mobil uygulamada İşinn'e yapılan üyelik, plan, fiyat ya da ödeme konusu YOKTUR; bu konularda bilgi verme." : `2) İşinn'E YAPILAN ÜYELİK/ABONELİK ödemeleri (Standart/Pro Üyelik, Öne Çıkarma Paketi vb.) FARKLI bir konu — bunlar gerçekten PayTR altyapısı üzerinden İşinn'e tahsil edilir. Bu konuda gerçek kurallar: Standart Üyelik'te kart bilgisi istenmeyen bir ücretsiz deneme süresi var (süre Planlar sayfasında). Abonelik profil sayfasından istediğin zaman iptal edilebilir; iptal mevcut faturalama döneminin SONUNDA geçerli olur, kalan gün için orantılı iade yapılmaz, bir sonraki dönem için otomatik tahsilat yapılmaz. Hizmet devreye girdikten sonra yasal cayma hakkı yoktur (Mesafeli Sözleşmeler Yönetmeliği istisnası) ANCAK: yanlış/mükerrer tahsilatta tam iade yapılır; teknik arıza yüzünden satın alınan hizmet kullanılamadıysa bildirimden itibaren 3 iş günü içinde tam iade veya çözüm sağlanır; bunların dışındaki iade talepleri İşinn'in kendi takdirine bağlı, hak değil. Onaylanan iadeler ödemenin yapıldığı karta 7-14 iş günü içinde yansır, nakit/farklı yönteme iade yapılmaz. Detaylı koşullar: isinn.com.tr/iptal-iade-kosullari`}
 
 3) "Doğrulandı" rozeti SADECE telefon numarasının SMS/OTP ile doğrulandığı anlamına gelir — kimlik doğrulaması, geçmiş kontrolü veya İşinn'in o kişiyi güvenilir bulduğu anlamına GELMEZ. Bunu asla "kimliği doğrulanmış" gibi abartma.
 
 4) GERÇEK EKRAN ADIMLARI (yönlendirirken SADECE bunları kullan, olmayan bir buton/seçenek/adres UYDURMA):
-- Kayıt: sağ üstteki "Giriş Yap" → altta "Hesabın yok mu? Kayıt ol" → Ad Soyad, e-posta, şifre (en az 6 karakter), KVKK/Gizlilik/Kullanım Şartları onay kutusu → "Kayıt Ol". ${iosApp ? "" : `Alternatif: "Google ile devam et". `}E-postana gelen onay linkine tıklayıp giriş yapılır. Kayıtta "hizmet sağlayıcı / müşteri" diye bir seçenek YOKTUR — aynı hesapla hem hizmet alınır hem verilir.
+- Kayıt: sağ üstteki "Giriş Yap" → altta "Hesabın yok mu? Kayıt ol" → Ad Soyad, e-posta, şifre (en az 6 karakter), KVKK/Gizlilik/Kullanım Şartları onay kutusu → "Kayıt Ol". ${storeApp ? "" : `Alternatif: "Google ile devam et". `}E-postana gelen onay linkine tıklayıp giriş yapılır. Kayıtta "hizmet sağlayıcı / müşteri" diye bir seçenek YOKTUR — aynı hesapla hem hizmet alınır hem verilir.
 - Vitrin (hizmet sunan sayfa) açmak: giriş yaptıktan sonra üst menüdeki (telefonda ☰ menüsündeki) "Hizmet Ekle" → [Hizmet Ekle](view:createListing). İş ilanı vermek (hizmet ARAYAN için): "İlan Ver" → [İlan Ver](view:post).
-${iosApp ? "" : `- Planlar ekranı: üst menüde "Planlar" → [Planlar](view:pricing).`}
+${storeApp ? "" : `- Planlar ekranı: üst menüde "Planlar" → [Planlar](view:pricing).`}
 - Diğer ekranlar: [Mesajlar](view:messages), [Profilim](view:profile), [Favorilerim](view:favorites), [Haritada Gör](view:map).
 
 BİÇİM KURALI: Sadece **kalın**, "- " madde işareti ve aşağıdaki bağlantı sözdizimini kullan. *İtalik*, tablo, kod bloğu, parantez içinde yıldız KULLANMA (ekranda ham işaret olarak görünür).
 
-${iosApp ? "BAĞLANTI KURALI: Kullanıcıyı bir ekrana yönlendirirken SADECE şu sözdizimini kullan: [Etiket](view:createListing) — view değerleri yalnızca createListing, post, profile, messages, favorites, map, support. Yasal sayfalar için [Etiket](page:gizlilik-politikasi) — page değerleri yalnızca gizlilik-politikasi, kullanim-sartlari, kvkk-aydinlatma-metni. ASLA kendi uydurduğun bir URL/adres yazma." : `BAĞLANTI KURALI: Kullanıcıyı bir ekrana yönlendirirken SADECE şu sözdizimini kullan: [Etiket](view:pricing) — view değerleri yalnızca pricing, createListing, post, profile, messages, favorites, map, support. Yasal sayfalar için [Etiket](page:iptal-iade-kosullari) — page değerleri yalnızca iptal-iade-kosullari, gizlilik-politikasi, kullanim-sartlari, kvkk-aydinlatma-metni, mesafeli-satis-sozlesmesi. ASLA isinn.com.tr/planlar gibi kendi uydurduğun bir URL/adres yazma (böyle sayfalar yok, 404 verir).`}
+${storeApp ? "BAĞLANTI KURALI: Kullanıcıyı bir ekrana yönlendirirken SADECE şu sözdizimini kullan: [Etiket](view:createListing) — view değerleri yalnızca createListing, post, profile, messages, favorites, map, support. Yasal sayfalar için [Etiket](page:gizlilik-politikasi) — page değerleri yalnızca gizlilik-politikasi, kullanim-sartlari, kvkk-aydinlatma-metni. ASLA kendi uydurduğun bir URL/adres yazma." : `BAĞLANTI KURALI: Kullanıcıyı bir ekrana yönlendirirken SADECE şu sözdizimini kullan: [Etiket](view:pricing) — view değerleri yalnızca pricing, createListing, post, profile, messages, favorites, map, support. Yasal sayfalar için [Etiket](page:iptal-iade-kosullari) — page değerleri yalnızca iptal-iade-kosullari, gizlilik-politikasi, kullanim-sartlari, kvkk-aydinlatma-metni, mesafeli-satis-sozlesmesi. ASLA isinn.com.tr/planlar gibi kendi uydurduğun bir URL/adres yazma (böyle sayfalar yok, 404 verir).`}
 
-${iosApp ? "5) Plan ve fiyat bilgisi bu uygulamada yoktur; vitrin açmak için \"Hizmet Ekle\" yeterli." : `5) GÜNCEL KAMPANYA VE PLANLAR (canlı veri, Planlar ekranıyla aynı — bunlarla çelişme):
+${storeApp ? "5) Plan ve fiyat bilgisi bu uygulamada yoktur; vitrin açmak için \"Hizmet Ekle\" yeterli." : `5) GÜNCEL KAMPANYA VE PLANLAR (canlı veri, Planlar ekranıyla aynı — bunlarla çelişme):
 ${isFreePeriod() ? `Şu an "90 gün herkese ücretsiz" kampanyası var: ${new Date(FREE_PERIOD_UNTIL_ISO).toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" })} tarihine kadar tüm özellikler ücretsiz, bu süre içinde plan satın almak GEREKMİYOR. Kullanıcıya "üyelik planı seç/satın al" DEME; vitrin açmak için doğrudan "Hizmet Ekle" yeterli. Kampanya sonrası için kullanıcıya önceden haber verilecek.` : "Ücretsiz dönem bitti; vitrin açmak için aktif bir üyelik gerekir."}
 ${plansInfo ? `Planlar (dönem sonrası geçerli fiyat/hak): ${plansInfo}. Fiyatı sorulursa SADECE bu rakamları söyle.` : "Plan fiyatları şu an okunamadı; rakam söyleme, Planlar ekranına yönlendir."}`}
 
@@ -9381,7 +9397,7 @@ ${plansInfo ? `Planlar (dönem sonrası geçerli fiyat/hak): ${plansInfo}. Fiyat
 
 Bu sekiz madde dışında bir konuda (özellikle para/hukuk ile ilgili) emin değilsen yukarıdaki 6. maddedeki gibi **Hayır, yönetime bildir** butonunu öner.
 
-${userContext}${iosApp ? "\n\nÖNEMLİ (iOS uygulaması): Bu kullanıcı İşinn iOS uygulamasını kullanıyor. Bu uygulamada üyelik, plan, fiyat, ücret, abonelik, ödeme ya da Planlar ekranı yoktur: bu konularda bilgi verme, fiyat söyleme, Planlar bağlantısı verme. Böyle bir soru gelirse sadece 'Bu uygulamada üyelik ve ödeme işlemleri yapılmıyor' de ve vitrin, mesajlaşma, ilan ve teknik konularda yardım et." : ""}`,
+${userContext}${storeApp ? "\n\nÖNEMLİ (mobil uygulama): Bu kullanıcı İşinn mobil uygulamasını kullanıyor. Bu uygulamada üyelik, plan, fiyat, ücret, abonelik, ödeme ya da Planlar ekranı yoktur: bu konularda bilgi verme, fiyat söyleme, Planlar bağlantısı verme. Böyle bir soru gelirse sadece 'Bu uygulamada üyelik ve ödeme işlemleri yapılmıyor' de ve vitrin, mesajlaşma, ilan ve teknik konularda yardım et." : ""}`,
           messages: apiMessages,
         }),
       });
@@ -9477,7 +9493,7 @@ ${convoText}`;
         <>
           {messages.length === 1 && (
             <div className="flex flex-wrap gap-2 pt-3 mt-2 border-t shrink-0" style={{ borderColor: "#F0F0F0" }}>
-              {["quickVitrin", "quickJob", "quickMessages", ...(iosApp ? [] : ["quickPlans"])].map((k) => (
+              {["quickVitrin", "quickJob", "quickMessages", ...(storeApp ? [] : ["quickPlans"])].map((k) => (
                 <button
                   key={k}
                   onClick={() => sendMessage(t(`supportChat.${k}`))}
@@ -10972,7 +10988,7 @@ function PricingView({ onBack, onJoined, userId }) {
 // dönemin sonunda geçerli olur (cancel_at_period_end): o tarihe kadar vitrinler
 // yayında kalır, sonra günlük cron aboneliği kapatıp vitrinleri yayından kaldırır.
 function SubscriptionCard({ userId, onGoToPlans }) {
-  const iosApp = useIosApp();
+  const storeApp = useStoreApp();
   const [sub, setSub] = useState(undefined); // undefined: yükleniyor, null: aktif üyelik yok
   const [busy, setBusy] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -11010,8 +11026,8 @@ function SubscriptionCard({ userId, onGoToPlans }) {
       <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>Üyeliğim</p>
       {!sub ? (
         <>
-          <p className="text-xs mt-1 mb-3" style={{ color: "#6B6550" }}>Şu an aktif bir üyeliğin yok, bu yüzden vitrinlerin yayında değil. {iosApp ? "Telefon numaranı doğrulayarak ücretsiz denemeyi başlatabilirsin." : "Telefon numaranı doğrulayarak ücretsiz denemeyi başlatabilir ya da bir plan seçebilirsin."}</p>
-          {onGoToPlans && !iosApp && (
+          <p className="text-xs mt-1 mb-3" style={{ color: "#6B6550" }}>Şu an aktif bir üyeliğin yok, bu yüzden vitrinlerin yayında değil. {storeApp ? "Telefon numaranı doğrulayarak ücretsiz denemeyi başlatabilirsin." : "Telefon numaranı doğrulayarak ücretsiz denemeyi başlatabilir ya da bir plan seçebilirsin."}</p>
+          {onGoToPlans && !storeApp && (
             <button onClick={onGoToPlans} className="px-4 py-2 rounded-full text-xs font-bold text-white" style={{ background: "#F59E0B" }}>Planlara Git</button>
           )}
         </>
@@ -11110,7 +11126,7 @@ function DeleteAccountCard() {
 
 function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOpenModeration, onOpenUserReports, onOpenListingReports, onOpenContentFlags, isAdmin, pendingMediaApprovals, onApproveMedia, onRejectMedia, onListingsChanged, onJobsChanged, onEditJob, onCreateListing, onViewListing, realListings, onGoToPlans }) {
   const { t } = useLanguage();
-  const iosApp = useIosApp();
+  const storeApp = useStoreApp();
   // Video tanıtım/portföy/sertifika/CV artık vitrine özel — bkz. ListingDetail sahip modu
   // (supabase/vitrin_media.sql). Burada sadece paylaşılan profil fotoğrafı kalıyor
   // ("aynı kişinin gerçek yüzü her vitrinde aynı görünsün" — kullanıcının kararı).
@@ -12037,7 +12053,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
       )}
 
       {/* iOS'ta üyelik/iptal/iade bilgisi gösterilmez (App Store 3.1.1) */}
-      {!iosApp && <SubscriptionCard userId={userId} onGoToPlans={onGoToPlans} />}
+      {!storeApp && <SubscriptionCard userId={userId} onGoToPlans={onGoToPlans} />}
       <button
         onClick={() => { unregisterPush().finally(() => supabase.auth.signOut()); }}
         className="w-full mb-3 py-3 rounded-2xl border text-sm font-bold flex items-center justify-center gap-2"
@@ -12268,8 +12284,8 @@ export default function IsinnPrototype({ session, onRequireAuth, discoveryPopula
   // -> gerçek ?view= okunuyor, ikisi uyuşmuyor. Sunucuyla aynı "home" ile başlayıp
   // mount sonrası (React commit tamamlandıktan sonra) gerçek görünüme geçiyoruz.
   const [view, setView] = useState("home");
-  const iosApp = useIosApp();
-  useEffect(() => { if (iosApp && view === "pricing") setView("home"); }, [iosApp, view]);
+  const storeApp = useStoreApp();
+  useEffect(() => { if (storeApp && view === "pricing") setView("home"); }, [storeApp, view]);
   useEffect(() => {
     const v = getInitialView();
     if (v !== "home") setView(v);
@@ -12932,7 +12948,7 @@ export default function IsinnPrototype({ session, onRequireAuth, discoveryPopula
         <div role="alert" className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-max max-w-[calc(100vw-2rem)] text-center px-4 py-2.5 rounded-2xl text-xs font-medium text-white shadow-lg" style={{ background: "#9C4A3C" }}>{favError}</div>
       )}
       <Header onNav={handleNav} onSearch={runSearch} pendingCount={pendingMediaApprovals.length + staffModerationQueue.length} session={session} onNotificationClick={handleNotificationClick} />
-      {!iosApp && !trialBannerDismissed && trialBanner?.status === "trialing" && trialBanner.daysLeft <= 7 && (
+      {!storeApp && !trialBannerDismissed && trialBanner?.status === "trialing" && trialBanner.daysLeft <= 7 && (
         <div className="flex items-center gap-3 px-5 py-2.5" style={{ background: "#FFFBEB", borderBottom: "1px solid #F0E4C4" }}>
           <AlertCircle size={15} style={{ color: "#C2872B" }} className="shrink-0" />
           <p className="text-xs flex-1" style={{ color: "#5C5744" }}>

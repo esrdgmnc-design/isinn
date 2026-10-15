@@ -3,7 +3,7 @@ import { useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { useLanguage } from "../lib/i18n/LanguageContext";
 import { trackEvent } from "../lib/analytics";
-import { useIosApp } from "../lib/useIosApp";
+import { useStoreApp } from "../lib/useIosApp";
 
 // Kayıt sırasında hangi yasal metin sürümüne onay verildiğini işaretlemek
 // için — metinler (bkz. legal/ klasörü, /kvkk-aydinlatma-metni vb.) ileride
@@ -13,7 +13,7 @@ const TERMS_VERSION = "2026-09-07-taslak";
 
 export default function AuthView({ onAuthenticated, onCancel }) {
   const { t } = useLanguage();
-  const iosApp = useIosApp(); // iOS kabuğunda Google girişi yok (Google gömülü WebView'ı engeller, 4.8)
+  const storeApp = useStoreApp(); // iOS kabuğunda Google girişi yok (Google gömülü WebView'ı engeller, 4.8)
   const [mode, setMode] = useState("login"); // login | signup | forgot
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -338,7 +338,7 @@ export default function AuthView({ onAuthenticated, onCancel }) {
           {mode === "login" ? t("auth.switchToSignup") : t("auth.switchToLogin")}
         </button>
 
-        {!iosApp && (<>
+        {!storeApp && (<>
         <div className="flex items-center gap-3 mb-5">
           <div className="flex-1 h-px" style={{ background: "#E5E7EB" }} />
           <span className="text-[11px] font-medium" style={{ color: "#9CA3AF" }}>{t("auth.or")}</span>

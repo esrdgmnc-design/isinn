@@ -45,9 +45,31 @@ html.isinn-ios-app header.sticky {
   top: env(safe-area-inset-top);
 }
 
+/* Android kabuğu (Android 15+ kenardan kenara çizim): sistem çubuklarının altına içerik girmesin.
+   Eski WebView sürümlerinde env() 0 döner; Capacitor SystemBars bu durumda --safe-area-inset-* değişkenlerini verir, ikisinin büyüğü alınır. */
+html.isinn-android-app::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: max(env(safe-area-inset-top), var(--safe-area-inset-top, 0px));
+  background: #ffffff;
+  z-index: 40;
+  pointer-events: none;
+}
+html.isinn-android-app body {
+  padding-top: max(env(safe-area-inset-top), var(--safe-area-inset-top, 0px));
+  padding-bottom: max(env(safe-area-inset-bottom), var(--safe-area-inset-bottom, 0px));
+}
+html.isinn-android-app header.sticky {
+  top: max(env(safe-area-inset-top), var(--safe-area-inset-top, 0px));
+}
+
 /* iOS kabuğu açılış perdesi: yalnızca uygulamada görünür, sayfa hazır olunca (isinn-booted) solar; JS çalışmazsa 6 sn sonra kendiliğinden kapanır. */
 #isinn-boot { display: none; }
-html.isinn-ios-app #isinn-boot {
+html.isinn-ios-app #isinn-boot,
+html.isinn-android-app #isinn-boot {
   display: flex;
   position: fixed;
   inset: 0;
@@ -63,7 +85,7 @@ html.isinn-ios-app #isinn-boot {
 }
 #isinn-boot img { border-radius: 20px; }
 #isinn-boot p { margin: 0; font-size: 15px; font-weight: 700; letter-spacing: 0.01em; }
-html.isinn-ios-app.isinn-booted #isinn-boot { opacity: 0; pointer-events: none; }
+html.isinn-booted #isinn-boot { opacity: 0; pointer-events: none; }
 @keyframes isinn-boot-failsafe { to { opacity: 0; pointer-events: none; visibility: hidden; } }
 
 /* Çok büyük ekranlar (iMac/27 inç): sayfa 1152 piksellik kutuda küçük kalıp kenarlar boş görünüyordu. Tüm rem tabanlı ölçüler (yazı, boşluk, max-w-*) orantılı büyür; telefon, tablet ve laptop (1920 piksel altı) etkilenmez. */

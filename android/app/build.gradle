@@ -7,8 +7,9 @@ android {
         applicationId "com.isinn.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        // Codemagic BUILD_NUMBER her derlemede artar (Play her yüklemede daha büyük versionCode ister); yerelde 1.
+        versionCode (System.getenv("BUILD_NUMBER") ?: "1").toInteger()
+        versionName "1.0.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,8 +17,20 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        // Yükleme anahtarı yalnızca Codemagic ortam değişkenlerinden gelir (CM_KEYSTORE_*); depoya anahtar/şifre yazılmaz.
+        release {
+            if (System.getenv("CM_KEYSTORE_PATH")) {
+                storeFile file(System.getenv("CM_KEYSTORE_PATH"))
+                storePassword System.getenv("CM_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("CM_KEY_ALIAS")
+                keyPassword System.getenv("CM_KEY_PASSWORD")
+            }
+        }
+    }
     buildTypes {
         release {
+            if (System.getenv("CM_KEYSTORE_PATH")) { signingConfig signingConfigs.release }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

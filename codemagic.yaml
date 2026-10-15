@@ -57,6 +57,42 @@ workflows:
     artifacts:
       - android/app/build/outputs/**/*.apk
 
+  # Android mağaza yayını (Google Play, imzalı AAB). ÖN KOŞUL (Esra yapar, sırlar sohbete/repoya yazılmaz):
+  #   1. Codemagic > Teams > Code signing identities > Android keystores: yükleme anahtarını oluştur ya da yükle,
+  #      referans adını "isinn_upload_keystore" yap (aşağıdaki android_signing adıyla birebir aynı olmalı).
+  #      Anahtar dosyasını ve şifreleri parola yöneticisine + ikinci bir çevrimdışı kopyaya yedekle.
+  #   2. İlk AAB'yi bu akıştan indirip Play Console > Dahili test'e ELLE yükle. Otomatik yayın (publishing) için
+  #      Google Cloud servis hesabı JSON anahtarı gerekir; hazır olana kadar publishing bölümü yorum satırı kalsın.
+  # versionCode, Codemagic BUILD_NUMBER değerinden gelir (android/app/build.gradle); her derlemede artar.
+  android-release:
+    name: Android (Google Play, imzalı AAB)
+    max_build_duration: 40
+    instance_type: mac_mini_m2
+    environment:
+      node: 22
+      java: 21
+      android_signing:
+        - isinn_upload_keystore
+      vars:
+        PACKAGE_NAME: "com.isinn.app"
+    scripts:
+      - name: Bağımlılıkları kur
+        script: npm ci
+      - name: Capacitor senkronize et
+        script: npx cap sync android
+      - name: Android AAB derle (release, imzalı)
+        script: |
+          cd android
+          chmod +x ./gradlew
+          ./gradlew bundleRelease
+    artifacts:
+      - android/app/build/outputs/**/*.aab
+    # publishing:
+    #   google_play:
+    #     credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS   # Codemagic > Environment variables (secure), grup: google_play
+    #     track: internal
+    #     submit_as_draft: true
+
   ios-debug:
     name: iOS (simülatör test paketi)
     max_build_duration: 30

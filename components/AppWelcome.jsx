@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Palette, BookOpen, Baby, ChefHat, Languages, Laptop, ArrowRight } from "lucide-react";
-import { isIosApp } from "../lib/nativeApp";
+import { isStoreApp } from "../lib/nativeApp";
 import { trackEvent } from "../lib/analytics";
 
 const SEEN_KEY = "isinn_ios_welcome_seen_v1";
@@ -27,25 +27,25 @@ function writeSeen() {
   try { sessionStorage.setItem(SEEN_KEY, "1"); } catch {}
 }
 
-// iOS uygulamasında ilk açılışta 2 ekranlık karşılama. Web ziyaretçilerinde ve sonraki açılışlarda hiçbir şey çizmez.
-export default function IosWelcome() {
+// iOS ve Android uygulamasında ilk açılışta 2 ekranlık karşılama. Web ziyaretçilerinde ve sonraki açılışlarda hiçbir şey çizmez.
+export default function AppWelcome() {
   const [step, setStep] = useState(0); // 0 = kapalı/yok, 1 ve 2 = ekranlar
   useEffect(() => {
-    if (!isIosApp() || readSeen()) return;
+    if (!isStoreApp() || readSeen()) return;
     setStep(1);
-    trackEvent("ios_welcome_shown", {}, null);
+    trackEvent("app_welcome_shown", {}, null);
   }, []);
 
   if (!step) return null;
 
   const close = (how) => {
     writeSeen();
-    trackEvent("ios_welcome_done", { how }, null);
+    trackEvent("app_welcome_done", { how }, null);
     setStep(0);
   };
   const openTalent = (text, how) => {
     writeSeen();
-    trackEvent("ios_welcome_done", { how }, null);
+    trackEvent("app_welcome_done", { how }, null);
     try { if (text) sessionStorage.setItem(TALENT_PREFILL_KEY, text); } catch {}
     window.location.assign("/?view=talentDiscovery");
   };
@@ -58,7 +58,7 @@ export default function IosWelcome() {
       style={{
         position: "fixed", inset: 0, zIndex: 200, background: "#FFFFFF", color: "#0F2A4A",
         display: "flex", flexDirection: "column",
-        padding: "calc(env(safe-area-inset-top) + 16px) 22px calc(env(safe-area-inset-bottom) + 20px)",
+        padding: "calc(max(env(safe-area-inset-top), var(--safe-area-inset-top, 0px)) + 16px) 22px calc(max(env(safe-area-inset-bottom), var(--safe-area-inset-bottom, 0px)) + 20px)",
         overflowY: "auto",
       }}
     >

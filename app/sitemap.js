@@ -23,6 +23,7 @@ export default async function sitemap() {
     "/yetenegini-farket",
     "/hakkimizda",
     "/destek",
+    "/hesap-silme",
     "/kvkk-aydinlatma-metni",
     "/gizlilik-politikasi",
     "/kullanim-sartlari",

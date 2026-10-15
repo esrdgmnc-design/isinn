@@ -43,4 +43,12 @@ assert.equal(calls, 3);
 await aiFetch("/api/job-match", {}, { silent: true });
 assert.equal(calls, 4);
 
+// Android kabuğu da iOS ile aynı: onay yoksa sorar, vazgeçilirse istek atmaz
+setUA("Mozilla/5.0 (Linux; Android 14) IsinnApp-Android");
+for (const k of Object.keys(store)) delete store[k];
+registerAiConsentPrompt((done) => { done(false); });
+const beforeAndroid = calls;
+await assert.rejects(() => aiFetch("/api/talent", {}), /ai_consent_declined/);
+assert.equal(calls, beforeAndroid, "android: reddedilince istek atılmamalı");
+
 console.log("ai onay testleri geçti");
