@@ -6154,8 +6154,25 @@ const AUTO_REPLIES = [
   "Elbette, fiyat teklifimi birazdan iletiyorum.",
 ];
 
+// Telefonda klavye açılınca görünür alan küçülür; sabit yükseklikli sohbet ekranında yazma kutusu klavyenin arkasında kalmasın diye
+// yüksekliği bu değere göre ayarlıyoruz (visualViewport yoksa null döner, eski davranış: 100dvh).
+function useVisualViewportHeight() {
+  const [h, setH] = useState(null);
+  useEffect(() => {
+    const vv = typeof window !== "undefined" ? window.visualViewport : null;
+    if (!vv) return;
+    const update = () => setH(Math.round(vv.height));
+    update();
+    vv.addEventListener("resize", update);
+    return () => vv.removeEventListener("resize", update);
+  }, []);
+  return h;
+}
+
 function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) {
   const { t } = useLanguage();
+  const vvh = useVisualViewportHeight();
+  const msgInputRef = useRef(null);
   const [conversations, setConversations] = useState([]);
   const [threads, setThreads] = useState({});
   const [activeId, setActiveId] = useState(null);
@@ -6603,7 +6620,7 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
 
   if (activeId && active) {
     return (
-      <div className="max-w-2xl mx-auto px-5 py-6 flex flex-col" style={{ height: "calc(100dvh - 61px)" }}>
+      <div className="max-w-2xl mx-auto px-5 py-6 flex flex-col" style={{ height: `calc(${vvh ? vvh + "px" : "100dvh"} - 61px)` }}>
         <button onClick={() => setActiveId(null)} className="flex items-center gap-1 text-sm mb-3 shrink-0" style={{ color: "#5C5744" }}>
           <ArrowLeft size={16} /> {t("messages.backToList")}
         </button>
@@ -6823,8 +6840,10 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
         ) : (
           <div className="flex items-center gap-2 pt-3 mt-2 border-t shrink-0" style={{ borderColor: "#D9D0BA" }}>
             <input
+              ref={msgInputRef}
               value={input}
               onChange={(e) => { setInput(e.target.value); if (gateError) setGateError(""); }}
+              onFocus={() => setTimeout(() => msgInputRef.current?.scrollIntoView({ block: "end", behavior: "smooth" }), 350)}
               onKeyDown={(e) => { if (e.key === "Enter") sendMessage(); }}
               placeholder={t("messages.inputPlaceholder")}
               className="flex-1 px-3.5 py-2.5 rounded-full border text-sm outline-none"
@@ -9223,6 +9242,7 @@ const SUPPORT_CATEGORY_META = {
 
 function SupportChatView({ onBack, onReport, currentUserId, onNav }) {
   const { t } = useLanguage();
+  const vvh = useVisualViewportHeight();
   const iosApp = useIosApp();
   const [messages, setMessages] = useState([
     { sender: "ai", text: t("supportChat.greeting") },
@@ -9417,7 +9437,7 @@ ${convoText}`;
   };
 
   return (
-    <div className="max-w-2xl mx-auto px-5 py-6 flex flex-col" style={{ height: "calc(100dvh - 61px)" }}>
+    <div className="max-w-2xl mx-auto px-5 py-6 flex flex-col" style={{ height: `calc(${vvh ? vvh + "px" : "100dvh"} - 61px)` }}>
       <button onClick={onBack} className="flex items-center gap-1 text-sm mb-3 shrink-0" style={{ color: "#6B7280" }}>
         <ChevronLeft size={16} /> {t("common.back")}
       </button>
