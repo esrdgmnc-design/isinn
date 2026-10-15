@@ -30,7 +30,7 @@ Android derlemesi bu bilgisayarda denenmedi (JDK/Android Studio yok); ilk derlem
 Karar gerekenler: destek e-postası Play'de herkese açık görünür (hangisi?); iOS ve Android'de geliştirici kimliği tutarlılığı (iOS ve Play ikisi de kişisel hesap); 20 Aralık sonrası Android'de ödeme (Play Faturalandırma ya da ücretsiz kalma).
 
 ## 3. Mağaza metinleri (Türkçe, yapıştırmaya hazır)
-**Ad (27):** İşinn: Uzman Bul, Vitrin Aç
+**Ad (24):** İşinn: İşin Gücün Burada (App Store ile aynı; eski "Uzman Bul, Vitrin Aç" adı artık kullanılmıyor)
 **Kısa açıklama (69):** Yakınındaki hizmet verenleri keşfet, vitrinini aç. İşin gücün burada.
 A/B alternatifleri (2. haftada dene): "Hizmet verenleri keşfet, kendi vitrinini aç. Komisyon yok, doğrudan mesajlaş." · "Özel ders, bakım, el emeği, çeviri... Yeteneğini keşfet, işini kur."
 
