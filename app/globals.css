@@ -45,6 +45,27 @@ html.isinn-ios-app header.sticky {
   top: env(safe-area-inset-top);
 }
 
+/* iOS kabuğu açılış perdesi: yalnızca uygulamada görünür, sayfa hazır olunca (isinn-booted) solar; JS çalışmazsa 6 sn sonra kendiliğinden kapanır. */
+#isinn-boot { display: none; }
+html.isinn-ios-app #isinn-boot {
+  display: flex;
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  background: #ffffff;
+  color: #2563eb;
+  transition: opacity 0.35s ease;
+  animation: isinn-boot-failsafe 0.01s linear 6s forwards;
+}
+#isinn-boot img { border-radius: 20px; }
+#isinn-boot p { margin: 0; font-size: 15px; font-weight: 700; letter-spacing: 0.01em; }
+html.isinn-ios-app.isinn-booted #isinn-boot { opacity: 0; pointer-events: none; }
+@keyframes isinn-boot-failsafe { to { opacity: 0; pointer-events: none; visibility: hidden; } }
+
 /* Çok büyük ekranlar (iMac/27 inç): sayfa 1152 piksellik kutuda küçük kalıp kenarlar boş görünüyordu. Tüm rem tabanlı ölçüler (yazı, boşluk, max-w-*) orantılı büyür; telefon, tablet ve laptop (1920 piksel altı) etkilenmez. */
 @media (min-width: 1920px) {
   html { font-size: 112.5%; }

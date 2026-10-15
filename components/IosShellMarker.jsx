@@ -7,7 +7,7 @@ import { isIosApp } from "../lib/nativeApp";
 export default function IosShellMarker() {
   useEffect(() => {
     if (!isIosApp()) return;
-    document.documentElement.classList.add("isinn-ios-app");
+    document.documentElement.classList.add("isinn-ios-app", "isinn-booted"); // booted: açılış perdesi solar
     const meta = document.querySelector('meta[name="viewport"]');
     if (meta && !/viewport-fit/.test(meta.content)) meta.setAttribute("content", `${meta.content}, viewport-fit=cover`);
   }, []);
