@@ -3395,6 +3395,9 @@ function ListingDetail({ listing, onBack, onContact, userReviews, onAddReview, o
   };
 
   const [showReviewForm, setShowReviewForm] = useState(false);
+  const reviewBoxRef = useRef(null);
+  const reviewTextRef = useRef(null);
+  const reviewAutoOpened = useRef(false);
   // Değerlendirme yazabilmek için gerçek bir "eşleşme" şartı: aranan kişiyle
   // bu vitrin için gerçekten iletişime geçmiş olman VE sağlayıcının en az bir
   // kez yanıt vermiş olması gerekiyor — yoksa herkes herkesi hiç tanışmadan
@@ -3881,6 +3884,37 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
       return "auto";
     }
   };
+
+  // Yorum formunu aç/kapat. Düğme ve "Mesajlardan geldim" otomatik açılışı aynı yolu kullanır.
+  const toggleReviewForm = async (forceOpen) => {
+    if (showReviewForm && !forceOpen) { setShowReviewForm(false); return; }
+    if (!isRealListing) { setShowReviewForm(true); return; }
+    setReviewEligibility({ checking: true });
+    setShowReviewForm(true); // hemen aç: "kontrol ediliyor" görünsün, kullanıcı sayfada kaybolmasın
+    const result = await checkReviewEligibility();
+    setReviewEligibility(result);
+    // Daha önce değerlendirmişse formu boş değil, mevcut puan/yorumla aç.
+    if (result?.existingRating) {
+      setReviewValue(result.existingRating.value);
+      setReviewComment(result.existingRating.comment || "");
+    }
+  };
+  // Form görününce ekrana kaydır ve yorum kutusuna odaklan (telefonda form altta kalıp tekrar dokunmak gerekmesin).
+  useEffect(() => {
+    if (!showReviewForm) return;
+    const id = setTimeout(() => {
+      reviewBoxRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      try { reviewTextRef.current?.focus({ preventScroll: true }); } catch {}
+    }, 300);
+    return () => clearTimeout(id);
+  }, [showReviewForm, reviewEligibility?.checking, reviewEligibility?.ok]);
+  // Mesajlardaki "Değerlendirme Yaz"dan gelindiyse form kendiliğinden açılsın.
+  useEffect(() => {
+    if (listing?.openReview && isRealListing && !ownerMode && !reviewAutoOpened.current) {
+      reviewAutoOpened.current = true;
+      toggleReviewForm(true);
+    }
+  }, []);
 
   const submitRealReview = async () => {
     setReviewError("");
@@ -4549,20 +4583,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
           )}
           {!ownerMode && (
           <button
-            onClick={async () => {
-              if (showReviewForm) { setShowReviewForm(false); return; }
-              if (!isRealListing) { setShowReviewForm(true); return; }
-              setReviewEligibility({ checking: true });
-              const result = await checkReviewEligibility();
-              setReviewEligibility(result);
-              // Daha önce değerlendirmişse formu boş değil, mevcut
-              // puan/yorumla aç — "güncelle" tam olarak bunu bekler.
-              if (result?.existingRating) {
-                setReviewValue(result.existingRating.value);
-                setReviewComment(result.existingRating.comment || "");
-              }
-              setShowReviewForm(true);
-            }}
+            onClick={() => toggleReviewForm(false)}
             className="text-xs font-bold px-3.5 py-2 rounded-full text-white"
             style={{ background: "#2563EB" }}
           >
@@ -4584,7 +4605,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
         )}
 
         {showReviewForm && (
-          <div className="rounded-xl border p-4 mb-5" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
+          <div ref={reviewBoxRef} className="rounded-xl border p-4 mb-5" style={{ borderColor: "#D9D0BA", background: "#F8F4E9", scrollMarginTop: "90px" }}>
             {reviewSubmitted ? (
               <div className="text-center py-4">
                 {(reviewSubmitted === "rejected" || reviewSubmitted === "child") ? (
@@ -4651,6 +4672,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
                   ))}
                 </div>
                 <textarea
+                  ref={reviewTextRef}
                   value={reviewComment}
                   onChange={(e) => setReviewComment(e.target.value)}
                   rows={3}
@@ -6415,7 +6437,7 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
       .eq("id", activeJob.serviceId)
       .maybeSingle();
     setOpeningReview(false);
-    if (data) onOpenListing(mapServiceRowToListing(data));
+    if (data) onOpenListing({ ...mapServiceRowToListing(data), openReview: true }); // yorum formu kendiliğinden açılsın
   };
 
   // İlk mesajı ne yazacağını bilememe sürtünmesini azaltmak için — sadece
