@@ -3019,13 +3019,15 @@ function OwnerVitrinPanelBody({ userId, serviceId, onListingsChanged, onReviewSe
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {[
+              ["total_views", t("vitrinMedia.funnelTotalViews")],
               ["views", t("vitrinMedia.funnelViews")],
+              ["total_views_all", t("vitrinMedia.funnelTotalViewsAll")],
               ["link_clicks", t("vitrinMedia.funnelLinkClicks")],
               ["shares", t("vitrinMedia.funnelShares")],
               ["conversations", t("vitrinMedia.funnelConversations")],
               ["replied", t("vitrinMedia.funnelReplied")],
               ["confirmed_both", t("vitrinMedia.funnelConfirmedBoth")],
-            ].map(([k, label]) => (
+            ].filter(([k]) => funnel[k] !== undefined || (k !== "total_views" && k !== "total_views_all")).map(([k, label]) => ( // toplam ziyaret alanları SQL (provider_funnel_total_views_2026_10_16.sql) çalışana kadar gizli
               <div key={k}>
                 <p className="font-serif text-2xl" style={{ color: "#1B2B24" }}>{funnel[k] ?? 0}</p>
                 <p className="text-[11px]" style={{ color: "#6B6550" }}>{label}</p>
@@ -4168,16 +4170,6 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
               <button onClick={onContact} className="w-full py-2.5 rounded-full text-sm font-medium text-white mb-2" style={{ background: "#C2872B" }}>
                 {t("listingDetail.contactButton")}
               </button>
-              {listing.dbId && !listing.isDemo && (
-                <button
-                  type="button"
-                  onClick={() => { trackEvent("past_work_started", { listing_id: listing.dbId }, currentUserId || null); onContact({ pastWork: true }); }}
-                  className="w-full text-xs font-bold mb-2.5 underline decoration-dotted"
-                  style={{ color: "#2563EB" }}
-                >
-                  {t("listingDetail.pastWorkButton")}
-                </button>
-              )}
               <button
                 onClick={() => onToggleFavorite?.(listing)}
                 className="w-full py-2.5 rounded-full text-sm font-medium border flex items-center justify-center gap-1.5"
