@@ -16,6 +16,7 @@ import { aiFetch } from "../lib/aiConsent";
 import { checkContent } from "../lib/contentFilter";
 import { startNativePush, enablePush, unregisterPush } from "../lib/nativePush";
 import AiConsentModal from "./AiConsentModal";
+import DeliveryConfirmGate from "./DeliveryConfirmGate";
 import { trackEvent, captureAttribution, markInternal } from "../lib/analytics";
 import { useLanguage } from "../lib/i18n/LanguageContext";
 import { TALENT_BLOCKED_IDS, redactTalentPII, sanitizeTalentDraft, buildTalentFallback, detectsProductSaleIntent } from "../lib/talentCore";
@@ -6394,9 +6395,11 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
     if (!activeId || active?.demo || !currentUserId) { setActiveJob(null); return; }
     let cancelled = false;
     (async () => {
-      let { data, error } = await supabase.from("jobs").select("client_id, state, service_id, client_delivered_at, provider_delivered_at, services(provider_id)").eq("id", activeId).maybeSingle();
+      // delivery_disputed_at (supabase/delivery_dispute_2026_10_16.sql) henüz yoksa bir önceki sürüme düşer
+      let { data, error } = await supabase.from("jobs").select("client_id, state, service_id, client_delivered_at, provider_delivered_at, delivery_disputed_at, services(provider_id)").eq("id", activeId).maybeSingle();
+      if (error) ({ data, error } = await supabase.from("jobs").select("client_id, state, service_id, client_delivered_at, provider_delivered_at, services(provider_id)").eq("id", activeId).maybeSingle());
       if (error) ({ data } = await supabase.from("jobs").select("client_id, state, service_id, services(provider_id)").eq("id", activeId).maybeSingle());
-      if (!cancelled) setActiveJob(data ? { clientId: data.client_id, state: data.state, serviceId: data.service_id, providerId: data.services?.provider_id || null, clientConfirmed: !!data.client_delivered_at, providerConfirmed: !!data.provider_delivered_at } : null);
+      if (!cancelled) setActiveJob(data ? { clientId: data.client_id, state: data.state, serviceId: data.service_id, providerId: data.services?.provider_id || null, clientConfirmed: !!data.client_delivered_at, providerConfirmed: !!data.provider_delivered_at, disputed: !!data.delivery_disputed_at } : null);
     })();
     setDeliveredError("");
     return () => { cancelled = true; };
@@ -6748,6 +6751,7 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
             </div>
           ) : activeJob.clientId === currentUserId ? (
             <div className="rounded-lg p-2.5 mb-3 shrink-0" style={{ background: "#F8F4E9", border: "1px solid #D9D0BA" }}>
+              {activeJob.disputed && <p className="text-xs mb-1.5 font-semibold" style={{ color: "#9C4A3C" }}>{t("messages.disputedNote")}</p>}
               <p className="text-xs mb-1.5" style={{ color: "#5C5744" }}>{t(initialContact?.pastWork ? "messages.pendingPastNote" : "messages.pendingClientNote")}</p>
               {deliveredError && <p className="text-xs mb-1.5" style={{ color: "#9C4A3C" }}>{deliveredError}</p>}
               <button
@@ -6765,6 +6769,7 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
             // sağlayıcının hiçbir hakkı yoktu, değerlendirme de hiç
             // açılmıyordu. Artık sağlayıcı da kendi tarafından işaretleyebiliyor.
             <div className="rounded-lg p-2.5 mb-3 shrink-0" style={{ background: "#F8F4E9", border: "1px solid #D9D0BA" }}>
+              {activeJob.disputed && <p className="text-xs mb-1.5 font-semibold" style={{ color: "#9C4A3C" }}>{t("messages.disputedNote")}</p>}
               <p className="text-xs mb-1.5" style={{ color: "#5C5744" }}>{t("messages.pendingProviderNote")}</p>
               {deliveredError && <p className="text-xs mb-1.5" style={{ color: "#9C4A3C" }}>{deliveredError}</p>}
               <button
@@ -12947,6 +12952,7 @@ export default function IsinnPrototype({ session, onRequireAuth, discoveryPopula
       {favError && (
         <div role="alert" className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-max max-w-[calc(100vw-2rem)] text-center px-4 py-2.5 rounded-2xl text-xs font-medium text-white shadow-lg" style={{ background: "#9C4A3C" }}>{favError}</div>
       )}
+      {userId && <DeliveryConfirmGate userId={userId} />}
       <Header onNav={handleNav} onSearch={runSearch} pendingCount={pendingMediaApprovals.length + staffModerationQueue.length} session={session} onNotificationClick={handleNotificationClick} />
       {!storeApp && !trialBannerDismissed && trialBanner?.status === "trialing" && trialBanner.daysLeft <= 7 && (
         <div className="flex items-center gap-3 px-5 py-2.5" style={{ background: "#FFFBEB", borderBottom: "1px solid #F0E4C4" }}>
