@@ -17,7 +17,7 @@ const ul = { listStyle: "disc", paddingLeft: "1.25rem" };
 
 export default function KvkkPage() {
   return (
-    <LegalPageLayout title="KVKK Aydınlatma Metni" updatedLabel="Son güncelleme: 09.09.2026 — avukat incelemesinden geçmiştir">
+    <LegalPageLayout title="KVKK Aydınlatma Metni" updatedLabel="Son güncelleme: 17.10.2026">
       <p style={p}>
         6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") kapsamında Veri Sorumlusu {COMPANY.legalName}{" "}
         olarak bizlerle paylaştığınız kişisel verilerinizi aşağıda yer verdiğimiz şekil ve şartlarda
@@ -88,7 +88,7 @@ export default function KvkkPage() {
         <li style={li}>Konum özelliğinin kullanılması halinde en yakın şehrin belirlenmesi</li>
         <li style={li}>Ödeme ve telefon doğrulama işlemlerinin gerçekleştirilmesi</li>
         <li style={li}>Platformun güvenli ve teknik olarak çalışmasının sağlanması</li>
-        <li style={li}>Fotoğraf uygunluk kontrolü, akıllı arama ve yazım yardımı gibi yapay zekâ destekli özelliklerin sunulması</li>
+        <li style={li}>Fotoğraf uygunluk kontrolü, akıllı arama, yazım yardımı, &quot;Yeteneğini Farket&quot; önerileri, talep ile vitrinlerin eşleştirilmesi ve (kullanıma sunulduğunda) &quot;Ne arıyorsun?&quot; ihtiyaç eşleştirmesi gibi yapay zekâ destekli özelliklerin sunulması</li>
         <li style={li}>Kullanıcı taleplerinin ve iletişim süreçlerinin yönetilmesi</li>
         <li style={li}>Yasal yükümlülüklerin yerine getirilmesi ve mevzuattan kaynaklanan kayıtların tutulması</li>
       </ul>
@@ -98,11 +98,19 @@ export default function KvkkPage() {
       <p style={p}>Kişisel verileriniz, yalnızca platformun işletilebilmesi ve yukarıda belirtilen amaçların yerine getirilebilmesi için gerekli olduğu ölçüde aşağıdaki hizmet sağlayıcılara aktarılabilmektedir:</p>
       <ul style={ul}>
         <li style={li}><b>Supabase</b> — verilerinizin saklanması amacıyla kullanılan veritabanı ve depolama altyapısı</li>
-        <li style={li}><b>Anthropic (Claude AI)</b> — fotoğraf uygunluk kontrolü, akıllı arama ve yazım yardımı gibi yapay zekâ destekli özellikler için ilgili metin ve/veya görseller işlenebilir</li>
+        <li style={li}><b>Anthropic (Claude AI, ABD)</b> — Fotoğraf uygunluk kontrolü, akıllı arama, yazım yardımı, &quot;Yeteneğini Farket&quot; önerileri, talep ile vitrinlerin eşleştirilmesi ve (kullanıma sunulduğunda) &quot;Ne arıyorsun?&quot; ihtiyaç eşleştirmesi gibi yapay zekâ destekli özellikler için, ilgili özelliği kullandığınızda yazdığınız metin ve/veya yüklediğiniz görseller işlenebilir</li>
+        <li style={li}><b>Resend</b> — hesap doğrulama, şifre sıfırlama ve bildirim e-postalarının gönderimi</li>
+        <li style={li}><b>Vercel</b> — platformun barındırılması ve çerezsiz, kimlik belirlemeyen ziyaret istatistikleri</li>
+        <li style={li}><b>Apple (Apple Push Notification service)</b> — iOS uygulamasında bildirimlerin cihazınıza iletilmesi</li>
         <li style={li}><b>PayTR</b> — ödeme işlemlerinin gerçekleştirilmesi; kart bilgileriniz İşinn sunucularına aktarılmaz, doğrudan PayTR'ye iletilir</li>
         <li style={li}><b>Netgsm</b> — telefon numarası doğrulama işlemleri kapsamında SMS gönderimi</li>
       </ul>
       <p style={p}>Bunun yanında, kullanıcı tarafından platformda herkese açık şekilde paylaşılması tercih edilen bilgiler, platformun diğer kullanıcıları tarafından görüntülenebilir.</p>
+      <p style={p}><b>Yapay zekâ destekli özelliklerde alınan önlemler:</b> Yapay zekâ hizmet sağlayıcısına yalnızca ilgili özelliğin çalışması için gereken metin veya görsel iletilir. Telefon numarası, e-posta adresi, T.C. kimlik numarası ve IBAN gibi tanımlayıcılar, metin gönderilen tüm yapay zekâ özelliklerinde iletilmeden önce otomatik olarak silinir. Sağlık şikâyeti içeren ihtiyaç aramaları yapay zekâ hizmet sağlayıcısına gönderilmez. Üyelik gerektirmeyen ihtiyaç aramalarında yazdığınız metin İşinn tarafından saklanmaz; yalnızca aranan hizmet türü ve il gibi kimliksiz istatistikler tutulur. Yapay zekânın ürettiği öneri ve sıralamalar yalnızca öneri niteliğindedir; ücretli öne çıkarma bu sıralamaları etkilemez. Bu özelliklerde lütfen ad, adres veya sağlık bilgisi gibi kişisel verileri yazmayınız.</p>
+      {/* YURT DIŞI AKTARIM DAYANAĞI: Anthropic ile KVKK m.9 standart sözleşmesi imzalanıp Kurul'a bildirildiğinde
+          aşağıdaki paragrafa dayanak açıkça yazılmalı (ör. "...KVKK'nın 9. maddesi uyarınca imzalanan ve Kurul'a
+          bildirilen standart sözleşmeye dayanılarak yapılır."). O tarihe kadar dayanak iddiası YAZILMAZ (2026-10-17). */}
+      <p style={p}><b>Yurt dışına aktarım:</b> Yukarıda sayılan hizmet sağlayıcıların bir kısmının (ör. Supabase, Vercel, Anthropic, Resend, Apple) sunucuları Türkiye dışında bulunabilir; bu nedenle kişisel verileriniz, ilgili hizmetin sunulması kapsamında yurt dışına aktarılabilir. Yurt dışına aktarımlar ve bunlara ilişkin güvenceler hakkında bilgi almak için aşağıdaki iletişim kanallarından bize başvurabilirsiniz.</p>
 
       <h2 style={h2}>5. Diğer Kullanıcıların Görebileceği Bilgiler</h2>
       <p style={p}>Platformun niteliği gereği aşağıdaki bilgiler diğer kullanıcıların erişimine açık olabilir:</p>

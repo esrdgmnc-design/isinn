@@ -6,6 +6,7 @@
 import { checkRateLimit, getClientIp } from "../../../lib/rateLimit";
 import { allowedTalentCategories, buildTalentPrompt, parseTalentResponse } from "../../../lib/talentCore";
 import { logAiCall, aiCapReached } from "../../../lib/aiLog";
+import { scrubPII } from "../../../lib/piiScrub";
 
 // İstem/doğrulama davranışı değişince artır: ai_calls günlüğünde hangi sürümün ne ürettiği görülür.
 const PROMPT_VERSION = "talent-v3";
@@ -29,7 +30,8 @@ async function loadCategories() {
   return rows;
 }
 
-const str = (v, max) => (typeof v === "string" ? v.trim().slice(0, max) : "");
+// Kullanıcı metinleri yapay zekâya gitmeden telefon/e-posta/T.C. kimlik/IBAN'dan arındırılır (lib/piiScrub.js).
+const str = (v, max) => (typeof v === "string" ? scrubPII(v.trim().slice(0, max)) : "");
 const idList = (v, maxItems) => (Array.isArray(v) ? v.filter((x) => typeof x === "string" && x.length <= 40).slice(0, maxItems) : []);
 
 export async function POST(request) {

@@ -13,6 +13,7 @@
 // tek bir isteğin/istemcinin maliyeti sınırsız büyütmesini engelliyor.
 import { checkRateLimit, getClientIp } from "../../../lib/rateLimit";
 import { logAiCall, aiCapReached } from "../../../lib/aiLog";
+import { scrubMessages, scrubPII } from "../../../lib/piiScrub";
 
 // Vitrin taslağı da üreten Yeteneğini Farket yanıtı ~15-25 sn sürebiliyor; Vercel'in
 // varsayılan fonksiyon süresi (Hobby'de 10 sn) bunu üretimde 504 ile keserdi.
@@ -72,8 +73,9 @@ export async function POST(request) {
   }
 
   // Yalnızca bilinen alanlar Anthropic'e iletilir (tools, stream, metadata vb. atılır).
-  const upstreamBody = { model: body.model, max_tokens: body.max_tokens, messages: body.messages };
-  if (typeof body.system === "string") upstreamBody.system = body.system;
+  // Telefon/e-posta/T.C. kimlik/IBAN yurt dışındaki sağlayıcıya hiç gitmez (bkz. lib/piiScrub.js, KVKK m.9).
+  const upstreamBody = { model: body.model, max_tokens: body.max_tokens, messages: scrubMessages(body.messages) };
+  if (typeof body.system === "string") upstreamBody.system = scrubPII(body.system);
   if (typeof body.temperature === "number" && body.temperature >= 0 && body.temperature <= 1) upstreamBody.temperature = body.temperature;
   const feature = typeof body.feature === "string" ? body.feature.replace(/[^a-z0-9_-]/gi, "").slice(0, 40) : "claude_proxy";
   const started = Date.now();

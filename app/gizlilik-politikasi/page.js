@@ -16,7 +16,7 @@ const ul = { listStyle: "disc", paddingLeft: "1.25rem" };
 
 export default function GizlilikPage() {
   return (
-    <LegalPageLayout title="Gizlilik Politikası" updatedLabel="Son güncelleme: 14.10.2026">
+    <LegalPageLayout title="Gizlilik Politikası" updatedLabel="Son güncelleme: 17.10.2026">
       <p style={p}>
         Bu Gizlilik Politikası, İşinn platformunu ("Platform") kullanırken kişisel verilerinizin neler
         olduğunu, nasıl toplandığını, kimlerle paylaşıldığını ve haklarınızı ne şekilde kullanabileceğinizi
@@ -38,14 +38,14 @@ export default function GizlilikPage() {
         <li style={li}><b>Kullanım verisi:</b> Favoriler, kayıtlı aramalar, bildirim tercihleri</li>
         <li style={li}><b>Ürün kullanım kayıtları:</b> Arama yapma, vitrin görüntüleme, mesaj gönderme gibi etkileşimler; tarayıcınızın yerel depolamasında tutulan rastgele bir oturum kimliği ve sayfaya geldiğiniz bağlantı bilgisi. Giriş yaptıysanız bu kayıtlar hesabınızla eşleşebilir; platformu geliştirmek için kullanılır</li>
         <li style={li}><b>Ziyaret istatistikleri:</b> Vercel Web Analytics üzerinden, kimliğinizi belirlemeyen (çerezsiz) toplu sayfa görüntüleme/ziyaretçi sayıları</li>
-        <li style={li}><b>Arama istatistikleri:</b> Platformda yazdığınız arama metni ve kaç sonuç döndüğü — kim aradığı bilgisi olmadan, yalnızca hangi hizmetlere talep olduğunu anlamak için</li>
+        <li style={li}><b>Arama istatistikleri:</b> Platformda yazdığınız arama metni ve kaç sonuç döndüğü — kim aradığı bilgisi olmadan, yalnızca hangi hizmetlere talep olduğunu anlamak için. &quot;Ne arıyorsun?&quot; ihtiyaç eşleştirmesinde ise metnin kendisi değil, yalnızca aranan hizmet türü, il ve sonuç sayısı aralığı kaydedilir</li>
       </ul>
 
       <h2 style={h2}>2. Verilerinizi Kimlerle Paylaşıyoruz?</h2>
       <p style={p}>Verilerinizi <b>satmıyoruz</b>. Yalnızca platformu işletebilmek için aşağıdaki hizmet sağlayıcılarla paylaşıyoruz:</p>
       <ul style={ul}>
         <li style={li}><b>Supabase</b> — tüm verilerin saklandığı veritabanı/depolama altyapısı</li>
-        <li style={li}><b>Anthropic (Claude AI)</b> — fotoğraf uygunluk kontrolü, akıllı arama, yazım yardımı, &quot;Yeteneğini Farket&quot; gibi yapay zekâ özellikleri için, bu özelliği kullandığınızda yazdığınız metin, yüklediğiniz vitrin/yorum fotoğrafları ve ilan metinleri ile ilgili görünen ad işlenir. iOS uygulamasında bu özellikleri ilk kullanırken açık onayınız istenir; onay vermezseniz bu özellikler kullanılamaz</li>
+        <li style={li}><b>Anthropic (Claude AI, ABD)</b> — fotoğraf uygunluk kontrolü, akıllı arama, yazım yardımı, &quot;Yeteneğini Farket&quot;, talep ile vitrin eşleştirmesi ve (kullanıma sunulduğunda) &quot;Ne arıyorsun?&quot; ihtiyaç eşleştirmesi gibi yapay zekâ özellikleri için, bu özelliği kullandığınızda yazdığınız metin, yüklediğiniz vitrin/yorum fotoğrafları ve ilan metinleri ile ilgili görünen ad işlenir. Telefon, e-posta, T.C. kimlik numarası ve IBAN gibi tanımlayıcılar, metin gönderilen tüm yapay zekâ özelliklerinde gönderilmeden önce otomatik olarak silinir; sağlık şikâyeti içeren ihtiyaç aramaları yapay zekâya hiç gönderilmez; üyeliksiz ihtiyaç aramalarında yazdığınız metni saklamayız. Yapay zekânın önerileri ve sıralamaları öneri niteliğindedir, ücretli öne çıkarma bu sıralamayı etkilemez. iOS uygulamasında bu özellikleri ilk kullanırken açık onayınız istenir; onay vermezseniz bu özellikler kullanılamaz</li>
         <li style={li}><b>Resend</b> — hesap doğrulama, şifre sıfırlama ve bildirim e-postalarının gönderimi</li>
         <li style={li}><b>Apple (Apple Push Notification service)</b> — iOS uygulamasında bildirimlerin cihazınıza iletilmesi</li>
         <li style={li}><b>PayTR</b> — ödeme işlemleri (kart bilgileriniz bizim sunucularımıza hiç uğramaz, doğrudan PayTR'ye iletilir)</li>
@@ -86,7 +86,8 @@ export default function GizlilikPage() {
       <p style={p}>
         Kullandığımız hizmet sağlayıcıların (ör. Supabase, Vercel, Anthropic, Resend, Apple) sunucuları Türkiye dışında
         bulunabilir; Anthropic ABD merkezlidir. Bu nedenle verileriniz, ilgili hizmetin kullanımı kapsamında yurt dışına
-        aktarılabilir. Haklarınız ve başvuru yolları için{" "}
+        aktarılabilir. Yapay zekâ özelliklerinde yalnızca özelliğin çalışması için gereken içerik iletilir ve yukarıda (madde 2) belirtilen
+        önlemler uygulanır; lütfen bu özelliklere ad, adres veya sağlık bilgisi yazmayın. Haklarınız ve başvuru yolları için{" "}
         <a href="/kvkk-aydinlatma-metni" style={{ color: "#2563EB" }}>KVKK Aydınlatma Metni</a>&apos;ne bakabilir veya bize
         {" "}<b>{COMPANY.email}</b> üzerinden ulaşabilirsiniz.
       </p>
