@@ -16,6 +16,8 @@ import { aiFetch } from "../lib/aiConsent";
 import { checkContent } from "../lib/contentFilter";
 import { startNativePush, enablePush, unregisterPush } from "../lib/nativePush";
 import AiConsentModal from "./AiConsentModal";
+import NeedMatchView, { NEED_PREFILL_KEY, NEED_TEXT_KEY } from "./NeedMatchView";
+import HomeBento from "./HomeBento";
 import DeliveryConfirmGate from "./DeliveryConfirmGate";
 import { trackEvent, captureAttribution, markInternal } from "../lib/analytics";
 import { useLanguage } from "../lib/i18n/LanguageContext";
@@ -25,7 +27,7 @@ import { safeWorkLink } from "../lib/workLink";
 import { extractJsonValue } from "../lib/jsonExtract";
 import { faqJsonLd } from "../lib/faqJsonLd";
 import {
-  Search, MapPin, Star, Heart, Share2, PlayCircle, ChevronLeft, ChevronRight,
+  Search, MapPin, Star, Heart, Share2, PlayCircle, ChevronLeft, ChevronRight, ChevronDown,
   Wrench, Truck, Monitor, Paintbrush, Code2, Sparkles, ThumbsUp,
   X, Send, Menu, Map as MapIcon, Check, MessageCircle, Clock, Key,
   GraduationCap, Baby, Megaphone, HardHat, Palette, Users, User, Grid3x3,
@@ -41,13 +43,12 @@ import {
 } from "lucide-react";
 
 // ---------------------------------------------------------------
-// Design tokens
-// Ink:      #1B2B24   (near-black green, primary text/dark surfaces)
-// Sand:     #EFE8D8   (warm background, not the generic cream default)
-// Ochre:    #C2872B   (accent — CTAs, price, stars)
-// Moss:     #3F7D5C   (local / "yerinde" tag)
-// Denim:    #3A5BA0   (remote / "uzaktan" tag)
-// Line:     #D9D0BA   (hairline borders on sand)
+// Design tokens (2026-10-17, site geneli birlik — ana sayfa dili)
+// Ink:      #0F1115   (yazı, seçili durum, ikincil düğme)
+// Brand:    #2563EB   (tek ana düğme rengi, gradyansız; öne çıkarma/boost da bu)
+// Muted:    #6B7280 / #4B5563 (ikincil yazı)
+// Line:     #E4E4E7   (tek kenarlık tonu)   Inset: #F7F7F8   Dark band: #0B0B0F
+// Anlamsal: hata #DC2626, başarı #16A34A, uyarı #D97706. Yıldızlar #C2872B (altın) kalır.
 // ---------------------------------------------------------------
 
 const CATEGORIES = [
@@ -181,7 +182,7 @@ const LEVEL_META = {
   "top-rated": { labelKey: "common.levelTopRated", label: "Üst Düzey", color: "#C2872B" },
   "level-2": { labelKey: "common.levelLevel2", label: "Deneyimli", color: "#6B4FA0" },
   "level-1": { labelKey: "common.levelLevel1", label: "Gelişen", color: "#3A5BA0" },
-  "new": { labelKey: "common.levelNew", label: "Yeni Vitrin", color: "#6B6550" },
+  "new": { labelKey: "common.levelNew", label: "Yeni Vitrin", color: "#6B7280" },
 };
 
 // getCategoryName/getCategoryGroupName ile aynı t()-ile-fallback deseni —
@@ -656,7 +657,7 @@ function PhotoCropModal({ imageSrc, aspect = 1, shape = "rect", fileName, onCanc
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 overflow-y-auto" style={{ background: "rgba(15,17,21,0.82)" }}>
       <div className="w-full max-w-sm rounded-2xl shadow-2xl my-auto" style={{ background: "#FFFFFF", maxHeight: "92vh", overflowY: "auto" }}>
         <div className="px-4 pt-4 pb-1">
-          <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>Fotoğrafı Ayarla</p>
+          <p className="text-sm font-bold" style={{ color: "#0F1115" }}>Fotoğrafı Ayarla</p>
         </div>
         {/* NOT: dvh birimi eski tablet/telefon tarayıcılarında (Safari 15.3 ve öncesi, eski Android Chrome) yok sayılıyor ve
             yükseklik 0 çıkıp kırpma alanı hiç oluşmuyordu ("Kırp ve Kaydet" sessizce çalışmıyordu) — vh kullanıyoruz.
@@ -678,7 +679,7 @@ function PhotoCropModal({ imageSrc, aspect = 1, shape = "rect", fileName, onCanc
         </div>
         <div className="p-4 space-y-3.5">
           <div className="flex items-center gap-3">
-            <span className="text-xs font-medium shrink-0" style={{ color: "#5C5744" }}>Yakınlaştır</span>
+            <span className="text-xs font-medium shrink-0" style={{ color: "#4B5563" }}>Yakınlaştır</span>
             <input
               type="range"
               min={1}
@@ -693,7 +694,7 @@ function PhotoCropModal({ imageSrc, aspect = 1, shape = "rect", fileName, onCanc
             <button
               onClick={onCancel}
               className="flex-1 py-2.5 rounded-lg text-sm font-medium border"
-              style={{ borderColor: "#D9D0BA", color: "#5C5744" }}
+              style={{ borderColor: "#E4E4E7", color: "#4B5563" }}
             >
               Vazgeç
             </button>
@@ -701,19 +702,19 @@ function PhotoCropModal({ imageSrc, aspect = 1, shape = "rect", fileName, onCanc
               onClick={handleSave}
               disabled={saving || !croppedAreaPixels}
               className="flex-1 py-2.5 rounded-lg text-sm font-bold text-white"
-              style={{ background: "#2FBF71", opacity: saving || !croppedAreaPixels ? 0.6 : 1 }}
+              style={{ background: "#2563EB", opacity: saving || !croppedAreaPixels ? 0.6 : 1 }}
             >
               {saving ? "Kaydediliyor..." : !croppedAreaPixels ? "Fotoğraf hazırlanıyor..." : "Kırp ve Kaydet"}
             </button>
           </div>
-          {saveError && <p role="alert" className="text-xs" style={{ color: "#9C4A3C" }}>{saveError}</p>}
+          {saveError && <p role="alert" className="text-xs" style={{ color: "#DC2626" }}>{saveError}</p>}
           {(showSkipCrop || (!croppedAreaPixels && saveError)) && (
             <button
               type="button"
               onClick={useWithoutCrop}
               disabled={saving}
               className="w-full py-2.5 rounded-lg text-sm font-bold border"
-              style={{ borderColor: "#2FBF71", color: "#1B7A47", background: "#FFFFFF" }}
+              style={{ borderColor: "#16A34A", color: "#15803D", background: "#FFFFFF" }}
             >
               Kırpmadan kullan
             </button>
@@ -792,6 +793,7 @@ function mapJobRowToPosting(row) {
     // "Yenile" (bump) sonrası bumped_at güncellenir — "postedTime" onu
     // yansıtmalı, yoksa yenileme hiçbir şeyi değiştirmiş gibi görünmez.
     postedTime: formatRelativeTr(row.bumped_at || row.created_at),
+    postedAt: row.bumped_at || row.created_at,
     offerCount: 0, // gerçek teklif/bidding akışı henüz yok
   };
 }
@@ -905,11 +907,8 @@ function ModeTag({ mode }) {
   const isLocal = mode === "local";
   return (
     <span
-      className="text-[11px] font-medium px-2 py-0.5 rounded-full tracking-wide"
-      style={{
-        background: isLocal ? "rgba(63,125,92,0.12)" : "rgba(58,91,160,0.12)",
-        color: isLocal ? "#3F7D5C" : "#3A5BA0",
-      }}
+      className="text-[11px] font-bold px-2 py-0.5 rounded-full tracking-wide"
+      style={{ background: "rgba(255,255,255,0.92)", color: "#0F1115" }}
     >
       {isLocal ? t("common.tagLocal") : t("common.tagRemote")}
     </span>
@@ -923,7 +922,7 @@ function LevelBadge({ level, size = "sm" }) {
   const label = getLevelLabel(level, t);
   return (
     <span
-      className={`inline-flex items-center gap-1 font-bold rounded-full ${size === "sm" ? "text-[10px] px-1.5 py-0.5" : "text-xs px-2.5 py-1"}`}
+      className={`inline-flex items-center gap-1 font-bold rounded-full ${size === "sm" ? "text-[11px] px-1.5 py-0.5" : "text-xs px-2.5 py-1"}`}
       style={{ background: `${meta.color}1F`, color: meta.color }}
     >
       {isTop && <Award size={size === "sm" ? 10 : 12} />}
@@ -937,7 +936,7 @@ function VerifiedBadges({ items, compact }) {
   if (!items || items.length === 0) return null;
   if (compact) {
     return (
-      <span className="inline-flex items-center gap-1 text-[11px] font-medium" style={{ color: "#3F7D5C" }}>
+      <span className="inline-flex items-center gap-1 text-[11px] font-medium" style={{ color: "#16A34A" }}>
         <ShieldCheck size={12} /> {t("common.verifiedBadge")}
       </span>
     );
@@ -946,7 +945,7 @@ function VerifiedBadges({ items, compact }) {
     <div className="space-y-1.5">
       {items.map((item, i) => (
         <div key={i} className="flex items-center gap-2 text-xs" style={{ color: "#3D3B30" }}>
-          <BadgeCheck size={14} style={{ color: "#3F7D5C" }} />
+          <BadgeCheck size={14} style={{ color: "#16A34A" }} />
           {item}
         </div>
       ))}
@@ -959,14 +958,14 @@ function HomeServiceBadge({ value, size = "sm" }) {
   if (!value) return null;
   const meta = {
     evde: { label: t("common.homeServiceComesToYou"), icon: Home, color: "#3F7D5C" },
-    mekanda: { label: t("common.homeServiceGoToThem"), icon: MapPin, color: "#3A5BA0" },
+    mekanda: { label: t("common.homeServiceGoToThem"), icon: MapPin, color: "#2563EB" },
     esnek: { label: t("common.homeServiceEitherBadge"), icon: Check, color: "#C2872B" },
   }[value];
   if (!meta) return null;
   const Icon = meta.icon;
   return (
     <span
-      className={`inline-flex items-center gap-1 font-medium rounded-full ${size === "sm" ? "text-[10px] px-1.5 py-0.5" : "text-xs px-2.5 py-1"}`}
+      className={`inline-flex items-center gap-1 font-medium rounded-full ${size === "sm" ? "text-[11px] px-1.5 py-0.5" : "text-xs px-2.5 py-1"}`}
       style={{ background: `${meta.color}1F`, color: meta.color }}
     >
       <Icon size={size === "sm" ? 10 : 12} />
@@ -1050,9 +1049,9 @@ function NotificationPopover({ notif, onNavigate }) {
       <div className="fixed inset-0 z-10" onClick={() => notif.setOpen(false)} />
       <div
         className="fixed sm:absolute inset-x-4 top-16 sm:inset-x-auto sm:right-0 sm:top-11 z-20 sm:w-80 max-h-96 overflow-y-auto rounded-xl shadow-lg border"
-        style={{ borderColor: "#F0F0F0", background: "#FFFFFF" }}
+        style={{ borderColor: "#E4E4E7", background: "#FFFFFF" }}
       >
-        <div className="px-4 py-3 border-b sticky top-0" style={{ borderColor: "#F0F0F0", background: "#FFFFFF" }}>
+        <div className="px-4 py-3 border-b sticky top-0" style={{ borderColor: "#E4E4E7", background: "#FFFFFF" }}>
           <p className="text-sm font-bold" style={{ color: "#0F1115" }}>{t("notifications.heading")}</p>
         </div>
         {notif.loading ? (
@@ -1069,7 +1068,7 @@ function NotificationPopover({ notif, onNavigate }) {
             >
               <p className="text-xs font-bold mb-0.5" style={{ color: "#0F1115" }}>{n.title}</p>
               <p className="text-xs leading-snug" style={{ color: "#6B7280" }}>{n.body}</p>
-              <p className="text-[10px] mt-1" style={{ color: "#9CA3AF" }}>{formatRelativeTr(n.created_at)}</p>
+              <p className="text-[11px] mt-1" style={{ color: "#9CA3AF" }}>{formatRelativeTr(n.created_at)}</p>
             </button>
           ))
         )}
@@ -1101,7 +1100,7 @@ function LanguageToggle({ className = "" }) {
   );
 }
 
-function Header({ onNav, onSearch, pendingCount, session, onNotificationClick }) {
+function Header({ onNav, onSearch, pendingCount, session, onNotificationClick, hideSearch }) {
   const notif = useNotifications(session?.user?.id);
   const { t } = useLanguage();
   const storeApp = useStoreApp();
@@ -1153,12 +1152,14 @@ function Header({ onNav, onSearch, pendingCount, session, onNotificationClick })
     <>
     {/* Sabit başlıkta backdrop-filter (bulanıklık) telefonlarda, özellikle iPhone Safari'de kaydırırken titreme ve takılma yapıyor;
         yalnızca geniş ekranda (md+) kullanılıyor, telefonda neredeyse opak beyaz. */}
-    <header className="sticky top-0 z-30 md:backdrop-blur border-b bg-white/[0.97] md:bg-white/85" style={{ borderColor: "#EAEAEA" }}>
-      <div className="w-full px-5 sm:px-8 py-3 flex items-center gap-4">
+    <header className="sticky top-0 z-30 md:backdrop-blur border-b bg-white/[0.97] md:bg-white/85" style={{ borderColor: "#E4E4E7" }}>
+      {/* 2026-10-17: logo ve menü, sayfadaki tüm bölümlerle aynı hizada (max-w-6xl + px-5). */}
+      <div className="max-w-6xl mx-auto px-5 py-3 flex items-center gap-4">
         <button onClick={() => onNav("home")} aria-label="İşinn ana sayfa" className="font-sans text-[30px] sm:text-[34px] leading-none font-black tracking-tight shrink-0" style={{ color: "#0F1115" }}>
           İşinn<span style={{ color: "#2563EB" }}>.</span>
         </button>
-        <div className="hidden md:flex items-center flex-1 max-w-md relative">
+        {/* Ana sayfada gizli (2026-10-17): hero'da zaten büyük arama kutusu var, iki arama çubuğu tekrar ediyordu. */}
+        <div className={`${hideSearch ? "hidden" : "hidden md:flex"} items-center flex-1 max-w-md relative`}>
           <Search size={16} className="absolute left-3.5" style={{ color: "#9CA3AF" }} />
           <input
             value={q}
@@ -1166,7 +1167,7 @@ function Header({ onNav, onSearch, pendingCount, session, onNotificationClick })
             onKeyDown={(e) => { if (e.key === "Enter" && q.trim()) onSearch(q); }}
             placeholder={t("header.searchPlaceholder")}
             className="w-full pl-9 pr-3 py-2.5 rounded-full text-sm outline-none border-2 transition-colors focus:border-current"
-            style={{ borderColor: "#F0F0F0", background: "#F7F7F8", color: "#0F1115" }}
+            style={{ borderColor: "#E4E4E7", background: "#F7F7F8", color: "#0F1115" }}
           />
         </div>
         <div className="flex items-center gap-2 ml-auto">
@@ -1174,46 +1175,45 @@ function Header({ onNav, onSearch, pendingCount, session, onNotificationClick })
           {!storeApp && (
           <button
             onClick={() => onNav("pricing")}
-            className="text-sm font-semibold px-3.5 py-2 rounded-full hidden sm:flex items-center gap-1.5 transition-colors"
-            style={{ background: "#F7F7F8", color: "#0F1115" }}
+            className="text-sm font-semibold px-2.5 py-2 hidden sm:flex items-center transition-opacity hover:opacity-60"
+            style={{ color: "#0F1115" }}
           >
-            <Award size={15} /> {t("header.plans")}
+            {t("header.plans")}
           </button>
           )}
           <button
             onClick={() => onNav("map")}
-            className="text-sm font-semibold px-3.5 py-2 rounded-full flex items-center gap-1.5 hidden sm:flex"
-            style={{ background: "#F7F7F8", color: "#0F1115" }}
+            className="text-sm font-semibold px-2.5 py-2 items-center hidden sm:flex transition-opacity hover:opacity-60"
+            style={{ color: "#0F1115" }}
           >
-            <MapIcon size={15} /> {t("header.map")}
+            {t("header.map")}
           </button>
-          <div className="hidden sm:flex items-center gap-1.5 p-1 rounded-full" style={{ background: "#F7F7F8" }}>
-            <button
-              onClick={() => onNav("createListing")}
-              className="text-sm font-bold px-3.5 py-2 rounded-full flex items-center gap-1.5 text-white shadow-sm"
-              style={{ background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)" }}
-            >
-              <Sparkles size={15} /> {t("header.addService")}
-            </button>
-            <button
-              onClick={() => onNav("post")}
-              className="text-sm font-bold px-3.5 py-2 rounded-full text-white"
-              style={{ background: "#0F1115" }}
-            >
-              {t("header.postJob")}
-            </button>
-          </div>
+          {/* 2026-10-17 minimalist üst menü: ikincil öğeler düz yazı; tek mavi düğme (Hizmet Ekle) + Giriş Yap. */}
+          <button
+            onClick={() => onNav("post")}
+            className="text-sm font-semibold px-2.5 py-2 hidden sm:flex items-center transition-opacity hover:opacity-60"
+            style={{ color: "#0F1115" }}
+          >
+            {t("header.postJob")}
+          </button>
+          <button
+            onClick={() => onNav("createListing")}
+            className="text-sm font-bold px-4 py-2 rounded-full hidden sm:flex items-center text-white"
+            style={{ background: "#2563EB" }}
+          >
+            {t("header.addService")}
+          </button>
           {session ? (
             <div className="relative">
               <button
                 onClick={() => setMenuOpen((v) => !v)}
                 className="relative w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0"
-                style={{ background: "linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%)" }}
+                style={{ background: "#0F1115" }}
               >
                 {initials}
                 {((pendingCount || 0) + notif.unreadCount) > 0 && (
                   <span
-                    className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
+                    className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center text-[11px] font-bold text-white"
                     style={{ background: "#EF4444" }}
                   >
                     {((pendingCount || 0) + notif.unreadCount) > 9 ? "9+" : ((pendingCount || 0) + notif.unreadCount)}
@@ -1226,7 +1226,7 @@ function Header({ onNav, onSearch, pendingCount, session, onNotificationClick })
                   <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
                   <div
                     className="absolute right-0 top-11 z-20 w-52 rounded-xl overflow-hidden shadow-lg border py-1"
-                    style={{ borderColor: "#F0F0F0", background: "#FFFFFF" }}
+                    style={{ borderColor: "#E4E4E7", background: "#FFFFFF" }}
                   >
                     <button
                       onClick={() => { setMenuOpen(false); onNav("messages"); }}
@@ -1242,7 +1242,7 @@ function Header({ onNav, onSearch, pendingCount, session, onNotificationClick })
                     >
                       <Bell size={15} /> {t("notifications.heading")}
                       {notif.unreadCount > 0 && (
-                        <span className="ml-auto min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center text-[10px] font-bold text-white" style={{ background: "#EF4444" }}>
+                        <span className="ml-auto min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center text-[11px] font-bold text-white" style={{ background: "#EF4444" }}>
                           {notif.unreadCount > 9 ? "9+" : notif.unreadCount}
                         </span>
                       )}
@@ -1264,7 +1264,7 @@ function Header({ onNav, onSearch, pendingCount, session, onNotificationClick })
                     <button
                       onClick={() => { setMenuOpen(false); unregisterPush().finally(() => supabase.auth.signOut()); }}
                       className="w-full text-left px-4 py-2.5 text-sm font-medium hover:bg-black/5"
-                      style={{ color: "#9C4A3C" }}
+                      style={{ color: "#DC2626" }}
                     >
                       {t("header.logout")}
                     </button>
@@ -1287,7 +1287,7 @@ function Header({ onNav, onSearch, pendingCount, session, onNotificationClick })
           <button
             onClick={() => setMobileMenuOpen((v) => !v)}
             className="sm:hidden w-9 h-9 rounded-full flex items-center justify-center shrink-0"
-            style={{ background: "#F7F7F8", color: "#1B2B24" }}
+            style={{ background: "#F7F7F8", color: "#0F1115" }}
             aria-label={t("header.menuAria")}
           >
             {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
@@ -1316,7 +1316,7 @@ function Header({ onNav, onSearch, pendingCount, session, onNotificationClick })
             onTouchStart={onMenuTouchStart}
             onTouchMove={onMenuTouchMove}
             className="sm:hidden fixed top-16 inset-x-0 z-[60] border-t px-5 py-3 flex flex-col gap-1 max-h-[calc(100dvh-4rem)] overflow-y-auto"
-            style={{ borderColor: "#EAEAEA", background: "#FFFFFF" }}
+            style={{ borderColor: "#E4E4E7", background: "#FFFFFF" }}
           >
             <div className="flex items-center relative mb-2">
               <Search size={16} className="absolute left-3.5" style={{ color: "#9CA3AF" }} />
@@ -1326,7 +1326,7 @@ function Header({ onNav, onSearch, pendingCount, session, onNotificationClick })
                 onKeyDown={(e) => { if (e.key === "Enter" && q.trim()) { onSearch(q); setMobileMenuOpen(false); } }}
                 placeholder={t("header.searchPlaceholder")}
                 className="w-full pl-9 pr-3 py-2.5 rounded-full text-sm outline-none border-2"
-                style={{ borderColor: "#F0F0F0", background: "#F7F7F8", color: "#0F1115" }}
+                style={{ borderColor: "#E4E4E7", background: "#F7F7F8", color: "#0F1115" }}
               />
             </div>
             <div className="flex justify-end mb-1">
@@ -1368,7 +1368,7 @@ function Header({ onNav, onSearch, pendingCount, session, onNotificationClick })
                 anasayfaya dönmek "zorunda" kalıyordu. Artık burada da var. */}
             {session && (
               <>
-                <div className="my-1 border-t" style={{ borderColor: "#EAEAEA" }} />
+                <div className="my-1 border-t" style={{ borderColor: "#E4E4E7" }} />
                 <button
                   onClick={() => { setMobileMenuOpen(false); onNav("profile"); }}
                   className="flex items-center gap-2 text-sm font-semibold px-2 py-2.5 rounded-lg text-left"
@@ -1386,7 +1386,7 @@ function Header({ onNav, onSearch, pendingCount, session, onNotificationClick })
                 <button
                   onClick={() => { setMobileMenuOpen(false); unregisterPush().finally(() => supabase.auth.signOut()); }}
                   className="flex items-center gap-2 text-sm font-semibold px-2 py-2.5 rounded-lg text-left"
-                  style={{ color: "#9C4A3C" }}
+                  style={{ color: "#DC2626" }}
                 >
                   <LogOut size={16} /> {t("header.logout")}
                 </button>
@@ -1403,65 +1403,22 @@ function Header({ onNav, onSearch, pendingCount, session, onNotificationClick })
 // içindeki rotatingWords dizisinden geliyor (bkz. HomeView) — bu sabit
 // buradan kaldırıldı.
 
-const CATEGORY_TILE_COLORS = ["#2563EB", "#14B8A6", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899", "#3B82F6", "#F97316"];
-// Her rengin canlı-koyu çift ucu — rozet gradyanı için (bkz. CategoryTile).
-const CATEGORY_TILE_GRADIENTS = [
-  ["#3B82F6", "#1D4ED8"], // mavi
-  ["#2DD4BF", "#0F766E"], // turkuaz
-  ["#FBBF24", "#B45309"], // amber
-  ["#F87171", "#B91C1C"], // kırmızı
-  ["#A78BFA", "#6D28D9"], // mor
-  ["#F472B6", "#BE185D"], // pembe
-  ["#60A5FA", "#1E40AF"], // gök mavisi
-  ["#FB923C", "#C2410C"], // turuncu
-];
-
-// Kategori başına küçük, "sevimli" bir görsel — özel illüstrasyon yerine emoji
-// (asset üretmeden en hızlı gerçek çözüm). Kullanıcının verdiği örnekler
-// (yemek, tadilat) dahil hepsi kendi görseline sahip.
-const CATEGORY_EMOJI = {
-  temizlik: "🧹", nakliye: "🚚", tadilat: "🛠️", cilingir: "🔑", ogretmen: "📚", egitmen: "🏅",
-  bakici: "👶", "hasta-bakici": "🩺", hemsire: "💉", fizyoterapist: "🦴",
-  "yoga-koc": "🧘", "spor-egitmeni": "🏋️", tirnakci: "💅", makyaj: "💄",
-  bakim: "🧴", terzi: "🧵", yemek: "🍲", muhendis: "👷", tasarim: "🎨",
-  yazilim: "💻", "sosyal-medya": "📱", dijital: "📈", diyetisyen: "🥗",
-  psikolog: "🧠", "logusa-bakicisi": "🤱", "emzirme-danismani": "🍼",
-  elektrikci: "💡", "su-tesisatcisi": "🚰", "hali-yikama": "🧽",
-  "etkinlik-organizatoru": "🎉", "bahce-bakim": "🌱", "profesyonel-fotograf": "📸",
-  "boya-badana": "🪣", "klima-beyaz-esya": "❄️", "kuafor-berber": "💇",
-  "evcil-hayvan": "🐾", "muzik-egitmeni": "🎵", muhasebe: "🧮", ceviri: "🌐",
-  "icerik-yazarligi": "✍️", "video-duzenleme": "🎬", seslendirme: "🎙️", "sanal-asistan": "🗂️",
-  "el-sanatlari-atolyesi": "🧵", "seramik-atolyesi": "🏺", "dikis-orgu-atolyesi": "🧶", "resim-sanat-atolyesi": "🎨", "mutfak-atolyesi": "🍰", "cocuk-atolyesi": "🎈", "geleneksel-sanatlar-atolyesi": "🖌️", "kodlama-egitmeni": "💻", "dans-egitmeni": "💃", "satranc-egitmeni": "♟️", "diksiyon-hitabet-egitmeni": "🎤", "ofis-programlari-egitmeni": "📊", "mobilya-yenileme": "🛋️", "ayakkabi-canta-tamiri": "👞",
+// Açık talep kartlarının üst şeridi: ana kategori grubuna göre iki tonlu, akan
+// renk geçişi (video yok; animasyon app/globals.css .job-aura). Tonlar bilerek
+// doygun ama koyu — beyaz yazı her zaman okunur, hiçbir meslek "pastel/şirin"
+// ya da "kurumsal" diye ayrışmaz; her grup aynı özenle kendi rengini alır.
+const JOB_AURA_THEMES = {
+  "egitim-aile": ["#312E81", "#7C3AED"],
+  "ev-hizmetleri": ["#134E4A", "#0891B2"],
+  "guzellik-bakim": ["#831843", "#C026D3"],
+  "saglik": ["#064E3B", "#16A34A"],
+  "atolye-kurs": ["#7C2D12", "#D97706"],
+  "profesyonel": ["#0F172A", "#2563EB"],
+  "diger": ["#1F2937", "#64748B"],
 };
-
-// Sayfanın en altındaki "Aradığını bulamadın mı?" kategori kartları. Üç deneme
-// oldu: önce koyu yeşil kart ("renkleri sevmedim"), sonra kartın tamamını
-// kaplayan doygun gradyan ("alt kısmı yine sevmedim, mini sevimli görseller
-// olsun") — bu üçüncüsü: sade beyaz kart + yumuşak pastel bir rozet içinde
-// kategoriye özel emoji, aşırı renk değil zarif bir vurgu ("daha zevli, daha
-// stil sahibi" isteği). Rozet gradyanı hâlâ canlı ama küçük bir alanda,
-// kartın geneli site genelindeki temiz beyaz dille uyumlu kalıyor.
-function CategoryTile({ c, i, onClick }) {
-  const { t } = useLanguage();
-  const [from, to] = CATEGORY_TILE_GRADIENTS[i % CATEGORY_TILE_GRADIENTS.length];
-  const emoji = CATEGORY_EMOJI[c.id] || "✨";
-  return (
-    <button
-      onClick={onClick}
-      className="group relative flex flex-col items-center gap-3 p-4 pt-5 rounded-2xl text-center hover:-translate-y-1 transition-all duration-300 shadow-sm hover:shadow-lg"
-      style={{ background: "#FFFFFF", border: "1px solid #EFEDE7" }}
-    >
-      <div
-        className="w-14 h-14 rounded-full flex items-center justify-center text-2xl transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3"
-        style={{ background: `linear-gradient(150deg, ${from}26 0%, ${to}26 100%)` }}
-      >
-        <span style={{ filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.08))" }}>{emoji}</span>
-      </div>
-      <span className="text-xs font-semibold leading-snug" style={{ color: "#0F1115" }}>
-        {getCategoryName(c.id, t)}
-      </span>
-    </button>
-  );
+function jobAuraTheme(categoryId) {
+  const group = PARENT_CATEGORIES.find((g) => g.categoryIds.includes(categoryId));
+  return JOB_AURA_THEMES[group?.id] || JOB_AURA_THEMES.diger;
 }
 
 // "Uygulamayı Telefonuna Kur" bandı (2026-09-15) — bkz. HomeView'daki not.
@@ -1481,6 +1438,10 @@ function InstallAppBanner() {
       const isStandalone = window.matchMedia?.("(display-mode: standalone)")?.matches || window.navigator?.standalone === true;
       const alreadyDismissed = localStorage.getItem("isinn_install_banner_dismissed") === "1";
       if (isStandalone || alreadyDismissed) return; // dismissed=true kalır, hiç gösterilmez
+      // 2026-10-17: ilk ziyarette gösterme (persona incelemesi: ilk girişte araya giriyordu); ikinci ziyaretten itibaren.
+      const visits = Number(localStorage.getItem("isinn_visit_count") || "0") + 1;
+      localStorage.setItem("isinn_visit_count", String(visits));
+      if (visits < 2) return;
       const ua = window.navigator.userAgent || "";
       // iPadOS 13+ Safari kendini "Macintosh" olarak tanıtıyor (masaüstü sitesi): dokunmatik ekran + Macintosh = iPad.
       const isIpadOs = /macintosh/i.test(ua) && (window.navigator.maxTouchPoints || 0) > 1;
@@ -1517,8 +1478,8 @@ function InstallAppBanner() {
 
   return (
     <section className="max-w-6xl mx-auto px-5 mt-8">
-      <div className="rounded-2xl p-4 sm:p-5 flex items-center gap-4 shadow-sm" style={{ background: "#16321F" }}>
-        <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 text-lg font-black" style={{ background: "#FFFFFF", color: "#16321F" }}>
+      <div className="rounded-2xl p-4 sm:p-5 flex items-center gap-4 shadow-sm" style={{ background: "#0B0B0F" }}>
+        <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 text-lg font-black" style={{ background: "#FFFFFF", color: "#0F1115" }}>
           İ<span style={{ color: "#2563EB" }}>.</span>
         </div>
         <div className="flex-1 min-w-0">
@@ -1540,8 +1501,8 @@ function InstallAppBanner() {
             Yükle
           </button>
         )}
-        <button onClick={dismiss} className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center" title={t("common.closeAria")} aria-label={t("common.closeAria")}>
-          <X size={14} style={{ color: "#8A9187" }} />
+        <button onClick={dismiss} className="shrink-0 w-10 h-10 rounded-full flex items-center justify-center" title={t("common.closeAria")} aria-label={t("common.closeAria")}>
+          <X size={14} style={{ color: "#B8BCC4" }} />
         </button>
       </div>
     </section>
@@ -1553,6 +1514,10 @@ function InstallAppBanner() {
 // Gerçek (DEMO olmayan) vitrin kartları için gerçek bir /vitrin/<id> bağlantısı: arama motorları ve "yeni sekmede aç" için.
 // Sıradan tıklama yine tek sayfa uygulamasında detayı açar (sayfa yenilenmez). Tüm kartı kaplayan "stretched link" tekniği.
 const isOptimizableImg = (src) => typeof src === "string" && (src.startsWith("/") || /^https:\/\/(images\.unsplash\.com|images\.pexels\.com|[a-z0-9-]+\.supabase\.co)\//.test(src));
+// Ana sayfa "Keşfet" kartı (2026-10-17): Instagram keşfet ızgarası gibi küçük kare
+// görseller, satırda 12'ye kadar. Kurucu: "vitrinler küçük, odaksız olsun ki azlığı
+// dikkat çekmesin; içeride kaç kişi olduğu öngörülemez dursun". Rozet/fiyat/yıldız/
+// "Yeni" yok; başlık ve sağlayıcı yalnızca üzerine gelince (ve ekran okuyucuda) görünür.
 const HomeListingCard = memo(function HomeListingCard({ l, isFavorite, onSelectListing, onToggleFavorite }) {
   const { t } = useLanguage();
   const href = l.isReal && l.dbId && !l.isDemo ? `/vitrin/${l.dbId}` : null;
@@ -1560,42 +1525,17 @@ const HomeListingCard = memo(function HomeListingCard({ l, isFavorite, onSelectL
       <div
         {...(href ? {} : { role: "button", tabIndex: 0, onKeyDown: (e) => { if (e.key === "Enter" || e.key === " ") onSelectListing(l); } })}
         onClick={() => onSelectListing(l)}
-        className={`text-left rounded-2xl overflow-hidden hover:-translate-y-1.5 transition-all group shadow-sm hover:shadow-xl cursor-pointer${href ? " relative" : ""}`}
-        style={{ border: "1px solid #F0F0F0", background: "#FFFFFF", transform: "translateZ(0)", WebkitTransform: "translateZ(0)", willChange: "transform" }}
+        className="group relative aspect-square rounded-lg overflow-hidden cursor-pointer"
+        style={{ background: "#F3F4F6" }}
+        title={`${l.title} · ${l.provider}`}
       >
-        <div className="relative h-44 overflow-hidden">
-          {isOptimizableImg(l.img) ? (
-            <Image src={l.img} alt={l.title} fill sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw" className="object-cover group-hover:scale-110 transition-transform duration-300" />
-          ) : (
-            <img loading="lazy" decoding="async" src={l.img} alt={l.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
-          )}
-          <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
-            <ModeTag mode={l.mode} />
-            {l.isDemo && (
-              <span className="text-[10px] font-black px-2 py-0.5 rounded-full text-white tracking-wide" style={{ background: "#DC2626" }}>{t("searchResults.demoBadge")}</span>
-            )}
-            {l.isBoosted && (
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white flex items-center gap-0.5" style={{ background: "#F59E0B" }}><Sparkles size={9} />{t("searchResults.sponsoredBadge")}</span>
-            )}
-            {l.isReal && (
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: "#2FBF71" }}>{t("searchResults.newBadge")}</span>
-            )}
-          </div>
-          <button
-            onClick={(e) => { e.stopPropagation(); onToggleFavorite?.(l); }}
-            aria-label={t("favorites.toggle")} className="absolute top-2 right-2 z-10 w-8 h-8 rounded-full bg-white/90 flex items-center justify-center hover:scale-110 transition-transform"
-          >
-            <Heart size={13} style={{ color: "#EF4444" }} fill={isFavorite ? "#EF4444" : "none"} />
-          </button>
-          <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between">
-            <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white border-2 border-white shrink-0" style={{ background: "linear-gradient(135deg, #8B5CF6, #6D28D9)" }}>
-              {l.provider.split(" ").map((w) => w[0]).join("").slice(0, 2)}
-            </div>
-            <span className="text-xs font-black px-2 py-0.5 rounded-full" style={{ background: "rgba(15,17,21,0.75)", color: "#FFFFFF" }}>{l.price}</span>
-          </div>
-        </div>
-        <div className="p-3.5">
-          <p className="text-sm font-bold leading-snug line-clamp-2 min-h-[2.5em]" style={{ color: "#0F1115" }}>
+        {isOptimizableImg(l.img) ? (
+          <Image src={l.img} alt={l.title} fill sizes="(max-width: 640px) 25vw, (max-width: 1024px) 12vw, 8vw" className="object-cover transition-transform duration-500 group-hover:scale-110" />
+        ) : (
+          <img loading="lazy" decoding="async" src={l.img} alt={l.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+        )}
+        <div className="absolute inset-0 flex flex-col justify-end p-1.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-300" style={{ background: "linear-gradient(180deg, rgba(0,0,0,0) 35%, rgba(0,0,0,0.75) 100%)" }}>
+          <p className="text-[11px] font-semibold leading-tight line-clamp-2 text-white">
             {href ? (
               <a
                 href={href}
@@ -1604,12 +1544,16 @@ const HomeListingCard = memo(function HomeListingCard({ l, isFavorite, onSelectL
               >{l.title}</a>
             ) : l.title}
           </p>
-          <p className="text-xs mt-1 truncate" style={{ color: "#9CA3AF" }}>{l.provider} · {l.city}</p>
-          <div className="flex items-center gap-1 mt-2">
-            <Stars value={l.rating} size={12} />
-            <span className="text-xs" style={{ color: "#6B7280" }}>{l.reviewCount > 0 ? `(${l.reviewCount})` : t("searchResults.newListingLabel")}</span>
-          </div>
+          <p className="text-[10px] truncate" style={{ color: "rgba(255,255,255,0.75)" }}>{l.provider}</p>
         </div>
+        {isFavorite && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggleFavorite?.(l); }}
+            aria-label={t("favorites.toggle")} className="absolute top-1 right-1 z-10 w-5 h-5 rounded-full bg-white/90 flex items-center justify-center"
+          >
+            <Heart size={10} style={{ color: "#EF4444" }} fill="#EF4444" />
+          </button>
+        )}
       </div>
   );
 });
@@ -1627,8 +1571,10 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
   // Önceden gizliydi, tıklayan açardı — kullanıcı "uzaktan hizmetler
   // kısmını da görünür yap" dedi, artık varsayılan açık (istenirse
   // gizlenebiliyor, aşağıdaki toggle hâlâ duruyor).
-  const [showRemote, setShowRemote] = useState(true);
   const [featuredIndex, setFeaturedIndex] = useState(0);
+  // Kullanıcı karta dokunurken/üzerindeyken/klavye odağındayken döngü durur — yoksa basarken kart değişip yanlış vitrin açılıyordu.
+  const [featuredPaused, setFeaturedPaused] = useState(false);
+  const pauseFeatured = { onMouseEnter: () => setFeaturedPaused(true), onMouseLeave: () => setFeaturedPaused(false), onTouchStart: () => setFeaturedPaused(true), onFocus: () => setFeaturedPaused(true), onBlur: () => setFeaturedPaused(false) };
   // Gerçek ilanlar da en az bir değerlendirmeyle 4.5+ puana ulaşınca "Öne Çıkan"a
   // girebiliyor — sabit demo listesine hapsolmuyor, gerçekten hak ederek çıkıyor.
   // "Öne Çıkan" şeridi sınırlı kapasiteli (FEATURED_SLOT_CAP) — uygun havuz
@@ -1637,60 +1583,64 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
   // üstte kalır ve geri kalanların Öne Çıkarma parası boşa gider (bkz.
   // computeVisibilityScore/seededDailyShuffle üstündeki not).
   const FEATURED_SLOT_CAP = 8;
+  // 2026-10-17: DEMO vitrinler ana sayfada gösterilmiyor (kategori/arama/vitrin
+  // sayfalarında rozetiyle duruyorlar) — ilk izlenim yalnızca gerçek profillerden.
+  const homeListings = useMemo(() => (realListings || []).filter((l) => !l.isDemo), [realListings]);
+  // Ana sayfada ilk 24 küçük vitrin (masaüstünde iki tam satır); "Daha fazlasını gör" tam listeye götürür. Gizlenenler yine
+  // HTML'de (CSS hidden), SSR/SEO'dan düşmüyor.
+  const HOME_GRID_LIMIT = 24;
+  const jobsScrollRef = useRef(null);
   // useMemo: hero kelime (1.8sn) ve öne çıkan (4.5sn) zamanlayıcıları HomeView'ı
   // sürekli yeniden render ediyor — filtre/sıralama/karıştırma her tikte tekrar koşmasın.
   const featured = useMemo(() => {
-    const eligible = (realListings || []).filter((l) => l.isBoosted || (l.reviewCount > 0 && l.rating >= 4.5));
+    const eligible = homeListings.filter((l) => l.isBoosted || (l.reviewCount > 0 && l.rating >= 4.5));
     return seededDailyShuffle(eligible).slice(0, FEATURED_SLOT_CAP);
-  }, [realListings]);
+  }, [homeListings]);
   const filtered = useMemo(() => {
-    const all = realListings || [];
+    const all = homeListings;
     const base =
       filter === "all" ? all :
       filter === "home" ? all.filter((l) => l.mode === "local" && (l.homeService === "evde" || l.homeService === "esnek")) :
       all.filter((l) => l.mode === filter);
     const sorted = base.slice().sort((a, b) => computeVisibilityScore(b) - computeVisibilityScore(a));
     return avoidAdjacentCategoryClash(sorted);
-  }, [realListings, filter]);
+  }, [homeListings, filter]);
 
   useEffect(() => {
-    if (featured.length === 0) return;
+    if (featured.length === 0 || featuredPaused) return;
+    let reduce = false;
+    try { reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch {}
+    if (reduce) return;
     const featuredInterval = setInterval(() => setFeaturedIndex((i) => (i + 1) % featured.length), 4500);
     return () => clearInterval(featuredInterval);
-  }, [featured.length]);
+  }, [featured.length, featuredPaused]);
 
   return (
     <div>
-      <section className="px-5 pt-7 sm:pt-16 pb-6 sm:pb-20 relative overflow-hidden" style={{ background: "linear-gradient(180deg, #EEF4FF 0%, #F6F9FF 65%, #FFFFFF 100%)" }}>
-        <div
-          className="absolute -top-24 -right-20 w-80 h-80 rounded-full blur-3xl opacity-40"
-          style={{ background: "#93C5FD" }}
-        />
-        <div
-          className="absolute bottom-0 left-1/4 w-64 h-64 rounded-full blur-3xl opacity-30"
-          style={{ background: "#C7D2FE" }}
-        />
-        <div
-          className="absolute top-1/3 right-1/4 w-40 h-40 rounded-full blur-3xl opacity-30"
-          style={{ background: "#FDE68A" }}
-        />
-        <div className="max-w-6xl mx-auto relative lg:flex lg:items-start lg:justify-between lg:gap-10">
+      {/* Hero (2026-10-17): çerçeveli kutu ve renk geçişi denendi, kurucu ikisini de kaldırttı. Kenarlar alttaki tüm
+          bölümlerle aynı hizada (max-w-6xl + px-5); Yeteneğini Keşfet ilk ekranda görünsün diye hero kompakt.
+          Kurucu "genel hava çok sade" dedi; koyu bant denendi ("çok koyu oldu"). Duman efekti de denendi, minimalist
+          sadelikte kaldırıldı: düz beyaz zemin. */}
+      <div className="pb-14 sm:pb-16" style={{ background: "#FFFFFF" }}>
+      {/* Hero (2026-10-17): tam beyaz zemin, siyah yazı, ince siyah kenarlıklar; mavi yalnızca ana düğmede (logodaki nokta gibi). */}
+      <section className="max-w-6xl mx-auto px-5 pt-3 sm:pt-5 pb-1 relative">
+        {/* Sağdaki yelpaze deste iki yana ~50px taşar (döndürülmüş yan kartlar); lg:pr-14 sağ kartı içerik hizasında tutar. */}
+        <div className="relative py-3 sm:py-4 lg:pr-14 lg:flex lg:items-center lg:justify-between lg:gap-14">
         <div className="relative w-full lg:max-w-2xl">
           {/* İlk ekran: ziyaretçi 3 saniyede İşinn'in ne olduğunu anlamalı — "doğru uzmanı bul" (arayan) + "hizmetini göster" (veren) +
               yetenek mesajı. Başlık satırları sabit (dönen/değişen metin yok), bu yüzden düzen kaymaz. */}
-          <h1 className="font-sans text-[32px] min-[400px]:text-[36px] sm:text-5xl xl:text-[52px] font-black leading-[1.1] tracking-tight" style={{ color: "#0F1E3F" }}>
+          {/* 2026-10-17: kurucu isteğiyle ilk haline döndü — iki satır, ikinci satır mavi geçişli yazı (tek satır ve işaretleyici çizgi denendi). */}
+          <h1 className="font-sans text-[32px] min-[400px]:text-[36px] sm:text-[44px] xl:text-[48px] font-black leading-[1.08] tracking-tight" style={{ color: "#0F1115" }}>
             {t("home.heroTitleA")}<br />
             <span className="inline-block pb-1.5 bg-clip-text text-transparent" style={{ backgroundImage: "linear-gradient(90deg, #1D4ED8, #3B82F6)" }}>{t("home.heroTitleB")}</span>
           </h1>
-          <p className="mt-3 sm:mt-4 max-w-lg text-[15px] leading-snug sm:text-lg sm:leading-normal" style={{ color: "#475569" }}>
-            {t("home.heroDesc")}
-          </p>
+          {/* Açıklama cümlesi kaldırıldı (2026-10-17, kurucu: tekrar eden yazıları sil) — başlık aynı şeyi söylüyor. */}
           <form
             onSubmit={(e) => { e.preventDefault(); if (heroQ.trim() || heroCity) onSearch(heroQ, heroCity); }}
-            className="mt-5 sm:mt-6 max-w-lg bg-white rounded-3xl p-2.5 sm:p-4 border shadow-[0_24px_50px_-24px_rgba(37,99,235,0.45)]" style={{ borderColor: "#DCE6FA" }}
+            className="mt-5 max-w-lg lg:max-w-xl bg-white rounded-2xl p-2.5 sm:p-3 lg:p-2 border lg:flex lg:items-center" style={{ borderColor: "#0F1115" }}
           >
-            <label className="flex items-center gap-3 px-3 py-2.5 sm:py-3">
-              <Search size={20} className="shrink-0" style={{ color: "#9CA3AF" }} />
+            <label className="flex items-center gap-3 px-3 py-2.5 lg:flex-1 lg:min-w-0">
+              <Search size={20} className="shrink-0" style={{ color: "#6B7280" }} />
               <input
                 value={heroQ}
                 onChange={(e) => setHeroQ(e.target.value)}
@@ -1700,15 +1650,15 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
                 style={{ color: "#0F1115" }}
               />
             </label>
-            <div className="h-px mx-3" style={{ background: "#EEF0F3" }} />
-            <div className="flex items-center gap-2 pl-3 pt-1.5 sm:pt-2">
-              <MapPin size={20} className="shrink-0" style={{ color: "#9CA3AF" }} />
+            <div className="h-px mx-3 lg:h-8 lg:w-px lg:mx-0" style={{ background: "#E4E4E7" }} />
+            <div className="flex items-center gap-2 pl-3 pt-1.5 sm:pt-2 lg:pt-0 lg:shrink-0">
+              <MapPin size={20} className="shrink-0" style={{ color: "#6B7280" }} />
               <select
                 value={heroCity}
                 onChange={(e) => setHeroCity(e.target.value)}
                 aria-label={t("home.cityPlaceholder")}
-                className="flex-1 min-w-0 text-base outline-none bg-transparent py-2"
-                style={{ color: heroCity ? "#0F1115" : "#9CA3AF" }}
+                className="flex-1 min-w-0 lg:flex-none lg:w-36 text-base outline-none bg-transparent py-2"
+                style={{ color: heroCity ? "#0F1115" : "#6B7280" }}
               >
                 <option value="">{t("home.cityPlaceholder")}</option>
                 {CITIES.filter((c) => c.country === "Türkiye").map((c) => (
@@ -1717,16 +1667,16 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
               </select>
               <button
                 type="submit"
-                className="shrink-0 px-4 sm:px-6 py-3 rounded-2xl text-white font-bold text-[15px] sm:text-base flex items-center gap-1.5"
-                style={{ background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)" }}
+                className="shrink-0 px-4 sm:px-6 py-2.5 rounded-xl text-white font-bold text-[15px] flex items-center gap-1.5"
+                style={{ background: "#2563EB" }}
               >
-                <span className="sm:hidden">{t("home.searchCtaShort")}</span>
-                <span className="hidden sm:inline">{t("home.searchCta")}</span>
+                <span className="sm:hidden lg:inline">{t("home.searchCtaShort")}</span>
+                <span className="hidden sm:inline lg:hidden">{t("home.searchCta")}</span>
                 <ChevronRight size={16} />
               </button>
             </div>
           </form>
-          <div className="mt-3 max-w-lg flex items-center gap-2 overflow-x-auto sm:overflow-visible sm:flex-wrap -mx-5 px-5 sm:mx-0 sm:px-0 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="mt-3 max-w-lg flex items-center gap-2 overflow-x-auto sm:overflow-visible sm:flex-wrap lg:hidden -mx-5 px-5 sm:mx-0 sm:px-0 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {(Array.isArray(popularSearches) ? popularSearches : []).map((item) => {
               // "etiket|aranacak kök": çekimli kelimelerde (danışmanlık → danışman) arama kökü ile sonuç bulunur
               const [w, term] = String(item).split("|");
@@ -1735,31 +1685,36 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
                 key={w}
                 type="button"
                 onClick={() => onSearch(term || w, "")}
-                className="shrink-0 whitespace-nowrap text-xs font-semibold px-3 py-1.5 rounded-full transition-colors"
-                style={{ background: "#FFFFFF", color: "#1E3A8A", border: "1px solid #DCE6FA" }}
+                className="shrink-0 whitespace-nowrap text-xs font-semibold px-3.5 min-h-[40px] inline-flex items-center rounded-full transition-colors"
+                style={{ background: "#FFFFFF", color: "#0F1115", border: "1px solid #0F1115" }}
               >
                 {w}
               </button>
               );
             })}
           </div>
-          <button
-            type="button"
-            onClick={() => onNav("createListing")}
-            className="mt-3 max-w-lg w-full py-3 rounded-2xl border-2 font-bold text-[15px] flex items-center justify-center gap-2 bg-white/60"
-            style={{ borderColor: "#2563EB", color: "#1D4ED8" }}
-          >
-            {t("home.providerCtaButton")}
-            <ChevronRight size={16} />
-          </button>
-          {/* Güven şeridi: en güçlü somut maddeler ilk ekranda. Ücretsiz bilgisi yalnızca ücretsiz dönemde ve gerçek bitiş tarihiyle (lib/freePeriod.js); iOS'ta üyelik/fiyat ima etmemek için gizli. */}
-          <div className="mt-3 sm:mt-4 max-w-lg flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-medium" style={{ color: "#475569" }}>
-            <span>✓ {t("home.trustNoCommission")}</span>
-            {!storeApp && isFreePeriod() && <span>✓ {t("home.trustFree", { date: new Date(FREE_PERIOD_UNTIL_ISO).toLocaleDateString(language === "en" ? "en-GB" : "tr-TR", { day: "numeric", month: "long", year: "numeric" }) })}</span>}
-            <span>✓ {t("home.trustPhonePrivate")}</span>
+          {/* 2026-10-17 sadeleştirme (kurucu: "kalabalık geliyor"): vitrin düğmesi ve "bulamadın mı" bağlantısı tek satırda. */}
+          <div className="mt-4 max-w-lg lg:max-w-2xl flex flex-col sm:flex-row sm:items-center gap-x-5 gap-y-2.5">
+            <button
+              type="button"
+              onClick={() => onNav("createListing")}
+              className="w-full sm:w-auto sm:px-6 py-2.5 rounded-2xl border font-bold text-[15px] flex items-center justify-center gap-2 bg-white transition-colors hover:bg-black hover:text-white"
+              style={{ borderColor: "#0F1115", color: "#0F1115" }}
+            >
+              {t("home.providerCtaButton")}
+              <ChevronRight size={16} />
+            </button>
+            <p className="text-[13px] text-center sm:text-left" style={{ color: "#4B5563" }}>
+              {t("home.notFoundPrompt")}{" "}
+              <button type="button" onClick={() => onNav("post")} className="font-bold underline underline-offset-2" style={{ color: "#0F1115" }}>
+                {t("home.notFoundCta")}
+              </button>
+            </p>
           </div>
         </div>
 
+        {/* 2026-10-17: kurucu kararı — hero'nun sağ üstünde ÖNE ÇIKANLAR kesinlikle kalır (mozaik denemesi geri alındı).
+            Yan kartlar artık karartılmıyor. */}
         {/* Hero'nun sağ tarafı (metnin simetriği) boş kalıyordu — gerçek
             veriden beslenen, yüzen kartlar ekledik. Öne Çıkan kart bilerek en
             üstte/en belirgin: hem gerçek bir vitrini sergiliyor hem Öne
@@ -1767,13 +1722,13 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
             gösteriyor (kullanıcının isteği — "öne çıkanlar için heveslendirici dursun"). */}
         {/* Kart destesi veriyle (listeler yüklenince) geliyor; gelmeden önce AYNI genişlikte boş yer ayırıyoruz — yoksa deste
             görününce sol sütun daralıp başlık yeniden sarılıyor ve sayfa zıplıyordu (büyük tablet/bilgisayar). */}
-        {featured.length === 0 && <div className="hidden lg:block w-full lg:max-w-[380px] xl:max-w-[500px] shrink-0" aria-hidden="true" />}
+        {featured.length === 0 && <div className="hidden lg:block w-full lg:max-w-[340px] xl:max-w-[400px] shrink-0" aria-hidden="true" />}
         {featured.length > 0 && (
           // max-w-sm — ilk halinin genişliği. max-w-lg'ye çıkarınca sol
           // taraftaki başlık daralıp 4 satıra düşüyordu (kullanıcı fark etti,
           // "yazı yine ilk hali ile kalsın" dedi) — o yüzden sağ tarafı bu
           // genişliğe göre küçülttük, geniş bırakmadık.
-          <div className="hidden lg:block relative w-full lg:max-w-[380px] xl:max-w-[500px] shrink-0 lg:mt-0">
+          <div className="hidden lg:block relative w-full lg:max-w-[340px] xl:max-w-[400px] shrink-0 lg:mt-0" {...pauseFeatured}>
             {/* Fiverr'ın "AI Director" hero'sundaki fanlanmış kart destesi
                 stilinde — ama bizde her kart gerçek bir vitrin (sabit
                 illüstrasyon değil), kullanıcının verdiği referansa göre.
@@ -1804,7 +1759,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
                     key={`${featuredIndex}-${l.id}`}
                     className="shrink-0"
                     style={{
-                      width: isCenter ? "clamp(185px, 19vw, 285px)" : "clamp(118px, 12vw, 175px)",
+                      width: isCenter ? "clamp(150px, 13vw, 190px)" : "clamp(96px, 8.5vw, 122px)",
                       aspectRatio: "2 / 3",
                       transform: `rotate(${rotation}deg)`,
                       marginLeft: i === 0 ? 0 : "clamp(-30px, -2vw, -20px)",
@@ -1823,23 +1778,23 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
                       // tetikliyor) aynı string yeniden style'a yazılınca
                       // animasyon baştan sarıyordu. Statik class re-render'lar
                       // arasında değişmediği için bu sorunu yaşamıyor.
-                      className={`relative w-full h-full rounded-2xl overflow-hidden hover:z-20 hover:-translate-y-3 hover:scale-105 transition-transform block animate-[cardPop_0.6s_cubic-bezier(0.34,1.56,0.64,1)_both] ${isCenter ? "shadow-[0_0_0_2px_#F5B544,0_26px_50px_-16px_rgba(15,30,63,0.5)]" : "shadow-lg"}`}
+                      className={`relative w-full h-full rounded-2xl overflow-hidden hover:z-20 hover:-translate-y-3 hover:scale-105 transition-transform block animate-[cardPop_0.6s_cubic-bezier(0.34,1.56,0.64,1)_both] motion-reduce:animate-none ${isCenter ? "shadow-[0_0_0_2px_#FFFFFF,0_26px_50px_-16px_rgba(15,17,21,0.45)]" : "shadow-lg"}`}
                       style={{
                         border: isCenter ? "1px solid rgba(255,255,255,0.55)" : "1px solid rgba(255,255,255,0.3)",
                         animationDelay: `${i * 70}ms`,
                       }}
                     >
-                      <img src={l.img} alt={l.title} className="w-full h-full object-cover" style={isCenter ? {} : { filter: "brightness(0.55) saturate(0.85)" }} />
+                      <img src={l.img} alt={l.title} className="w-full h-full object-cover" style={isCenter ? {} : { filter: "brightness(0.92)" }} />
                       <div className="absolute inset-x-0 bottom-0 p-2 pt-7" style={{ background: "linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.88) 100%)" }}>
                         <p className={`font-bold text-white truncate ${isCenter ? "text-sm" : "text-[11px]"}`}>{l.provider}</p>
                       </div>
                       {l.isDemo && (
-                        <span className="absolute top-2 right-2 text-[10px] font-black px-2 py-0.5 rounded-full text-white tracking-wide" style={{ background: "#DC2626" }}>{t("searchResults.demoBadge")}</span>
+                        <span className="absolute top-2 right-2 text-[11px] font-black px-2 py-0.5 rounded-full text-white tracking-wide" style={{ background: "#DC2626" }}>{t("searchResults.demoBadge")}</span>
                       )}
                       {isCenter && (
                         <span
                           className="absolute top-2.5 left-2.5 text-[11px] font-bold px-2.5 py-1 rounded-full text-white flex items-center gap-1"
-                          style={{ background: "linear-gradient(135deg, #F59E0B 0%, #D97706 100%)" }}
+                          style={{ background: "#0F1115" }}
                         >
                           <Sparkles size={9} /> {l.isBoosted ? t("searchResults.sponsoredBadge") : t("searchResults.highlyRatedBadge")}
                         </span>
@@ -1855,14 +1810,11 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
                 etmeden önce ziyaretçiye "burası bir şeyler satmaya çalışıyor"
                 izlenimi veriyordu (rakip site kıyaslamasında fark edildi).
                 Hero'da güven, satış sayfada (Planlar) yapılmalı. */}
-            <p className="text-[11px] mt-4 text-center" style={{ color: "#6B7280" }}>
-              {t("home.activeListingsNote")}
-            </p>
+            {/* "Şu an platformda yayında olan vitrinler" notu sadeleştirmede kaldırıldı (2026-10-17). */}
           </div>
         )}
         </div>
       </section>
-      <div className="h-12" style={{ background: "linear-gradient(180deg, #0F1115 0%, #FFFFFF 100%)" }} />
 
       {/* "Uygulamayı Telefonuna Kur" — 2026-09-15, PWA desteği (bkz.
           public/manifest.webmanifest) eklendikten sonra kullanıcının kendi
@@ -1870,26 +1822,33 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
           onayı beklemeden (Play Store/App Store günler-haftalar sürüyor)
           bugünden gerçek bir "uygulamaya" sahip olduklarını ziyaretçilere
           kendi kendine anlatıyor — her seferinde elle anlatmaya gerek kalmasın. */}
-      {/* Videolu "Yeteneğini Keşfet" bandı (video + başlık + yazı kutusu + İlham Al) hero'nun hemen altında, tek örnek olarak. */}
+      {/* Yeteneğini Keşfet (yapay zekânın bel kemiği; kurucu kararıyla ana sayfada kalır) — hero'nun hemen altında. */}
       <TalentDiscoveryBanner onOpen={() => onNav("talentDiscovery")} />
+      {/* Güven şeridi (2026-10-17: kurucu isteğiyle hero'dan Yeteneğini Keşfet kartının altına taşındı, ortalı tek satır). Ücretsiz bilgisi yalnızca ücretsiz dönemde ve gerçek bitiş tarihiyle (lib/freePeriod.js); iOS'ta üyelik/fiyat ima etmemek için gizli. */}
+      <div className="max-w-6xl mx-auto px-5 mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-xs font-medium" style={{ color: "#6B7280" }}>
+        <span>✓ {t("home.trustNoCommission")}</span>
+        {!storeApp && isFreePeriod() && <span>✓ {t("home.trustFree", { date: new Date(FREE_PERIOD_UNTIL_ISO).toLocaleDateString(language === "en" ? "en-GB" : "tr-TR", { day: "numeric", month: "long", year: "numeric" }) })}</span>}
+        <span>✓ {t("home.trustPhonePrivate")}</span>
+      </div>
+      </div>
       <InstallAppBanner />
 
       {featured.length > 0 && (
-        <section className="max-w-6xl mx-auto px-5 mt-8">
-          <h2 className="font-sans text-2xl font-black mb-4" style={{ color: "#0F1115" }}>{t("home.featuredHeading")}</h2>
+        <section className="max-w-6xl mx-auto px-5 mt-14 sm:mt-16" {...pauseFeatured}>
+          <h2 className="font-sans text-2xl sm:text-3xl font-black tracking-tight mb-5" style={{ color: "#0F1115" }}>{t("home.featuredHeading")}</h2>
           {(() => {
             const p = featured[featuredIndex];
             return (
               <button
                 onClick={() => onSelectListing(p)}
                 className="w-full text-left rounded-2xl overflow-hidden flex flex-col sm:flex-row hover:shadow-xl transition-shadow shadow-md"
-                style={{ border: "1px solid #F0F0F0", background: "#FFFFFF" }}
+                style={{ border: "1px solid #E4E4E7", background: "#FFFFFF" }}
               >
                 <div className="sm:w-64 h-44 sm:h-auto shrink-0 relative overflow-hidden">
                   <img loading="lazy" decoding="async" src={p.img} alt={p.title} className="w-full h-full object-cover" />
                   <span
                     className="absolute top-2 left-2 text-[11px] font-bold px-2 py-0.5 rounded-full text-white flex items-center gap-1"
-                    style={{ background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)" }}
+                    style={{ background: "#2563EB" }}
                   >
                     <Award size={11} /> {getLevelLabel("top-rated", t)}
                   </span>
@@ -1904,56 +1863,197 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
                       periyodik olarak zıplıyordu ("kayma", kullanıcı 2026-09-16'da
                       fark etti). line-clamp + sabit min-height ile sınırlandı. */}
                   <p className="font-sans text-lg font-bold mb-1 line-clamp-2" style={{ color: "#0F1115" }}>{p.title}</p>
-                  <p className="text-xs mb-2" style={{ color: "#9CA3AF" }}>{p.provider} · {p.city}</p>
+                  <p className="text-xs mb-2" style={{ color: "#6B7280" }}>{p.provider} · {p.city}</p>
                   <p className="text-xs leading-relaxed line-clamp-2 mb-3" style={{ color: "#6B7280" }}>{p.desc}</p>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5">
                       <Stars value={p.rating} size={13} />
                       <span className="text-xs font-bold" style={{ color: "#0F1115" }}>{p.rating}</span>
-                      <span className="text-xs" style={{ color: "#9CA3AF" }}>{t("listingDetail.reviewCount", { count: p.reviewCount })}</span>
+                      <span className="text-xs" style={{ color: "#6B7280" }}>{t("listingDetail.reviewCount", { count: p.reviewCount })}</span>
                     </div>
-                    <span className="text-sm font-black" style={{ color: "#F59E0B" }}>{p.price}</span>
+                    <span className="text-sm font-black" style={{ color: "#0F1115" }}>{p.price}</span>
                   </div>
                 </div>
               </button>
             );
           })()}
-          <div className="flex items-center justify-center gap-1.5 mt-3">
+          <div className="flex items-center justify-center mt-1">
             {featured.map((_, i) => (
               <button
                 key={i}
+                type="button"
                 onClick={() => setFeaturedIndex(i)}
-                className="rounded-full transition-all"
-                style={{
-                  width: i === featuredIndex ? "18px" : "6px",
-                  height: "6px",
-                  background: i === featuredIndex ? "#2563EB" : "#E5E7EB",
-                }}
-              />
+                aria-label={`${i + 1}. vitrin`}
+                aria-current={i === featuredIndex ? "true" : undefined}
+                className="h-11 min-w-[28px] px-1 flex items-center justify-center"
+              >
+                <span
+                  className="block rounded-full transition-all"
+                  style={{ width: i === featuredIndex ? "18px" : "6px", height: "6px", background: i === featuredIndex ? "#0F1115" : "#D4D4D8" }}
+                />
+              </button>
             ))}
           </div>
         </section>
       )}
 
-      <section className="max-w-6xl mx-auto px-5 mt-12">
+      {/* Vurucu alan (bento, 2026-10-17): kutucuklar "Ne arıyorsun?" eşleştirmesine örnek cümleyle açılır. */}
+      {/* 2026-10-17 (kurucu: "uyumsuz geçiş, hizalı değil"): bento + Nasıl çalışıyoruz artık kenardan kenara bant değil,
+          Yeteneğini Keşfet kartı gibi ortak sütunda (max-w-6xl + px-5) yuvarlak köşeli tek koyu kart. */}
+      <div className="max-w-6xl mx-auto px-5 mt-14 sm:mt-16">
+      <div className="rounded-3xl overflow-hidden" style={{ background: "#0B0B0F" }}>
+      <HomeBento onOpen={(example) => { try { if (example) sessionStorage.setItem(NEED_TEXT_KEY, example); } catch {} onNav("needMatch"); }} />
+
+      {/* "Nasıl çalışıyoruz" (2026-10-17): kenardan kenara tam genişlik, üstteki bento bandıyla aynı zemin — tek akış. */}
+      <section className="w-full">
+        <div className="px-5 sm:px-8 pt-4 pb-8 sm:pb-10 relative">
+          <p className="text-xs tracking-[0.2em] uppercase font-bold mb-1.5 relative" style={{ color: "#3B82F6" }}>{t("home.howItWorksEyebrow")}</p>
+          <h2 className="font-sans text-2xl sm:text-3xl font-black tracking-tight mb-7 relative" style={{ color: "#FFFFFF" }}>{t("home.howItWorksHeading")}</h2>
+          <div className="grid sm:grid-cols-3 gap-6 relative">
+            <div>
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-3" style={{ background: "#2563EB" }}>
+                <Unlock size={17} className="text-white" />
+              </div>
+              <p className="text-sm font-bold mb-1.5" style={{ color: "#FFFFFF" }}>{t("home.step1Title")}</p>
+              <p className="text-xs leading-relaxed" style={{ color: "#9CA3AF" }}>
+                {t("home.step1BodyPre")}<span className="font-semibold" style={{ color: "#E4E4E7" }}>{t("home.step1BodyHighlight")}</span>{t("home.step1BodySuf")}
+              </p>
+            </div>
+            <div>
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-3" style={{ background: "#2563EB" }}>
+                <Megaphone size={17} className="text-white" />
+              </div>
+              <p className="text-sm font-bold mb-1.5" style={{ color: "#FFFFFF" }}>{t("home.step2Title")}</p>
+              <p className="text-xs leading-relaxed" style={{ color: "#9CA3AF" }}>
+                {t("home.step2Body")}
+              </p>
+            </div>
+            <div>
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-3" style={{ background: "#2563EB" }}>
+                <ShieldCheck size={17} className="text-white" />
+              </div>
+              <p className="text-sm font-bold mb-1.5" style={{ color: "#FFFFFF" }}>{t("home.step3Title")}</p>
+              <p className="text-xs leading-relaxed" style={{ color: "#9CA3AF" }}>
+                {t("home.step3Body")}
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+      </div>
+      </div>
+
+      {/* Açık talepler (2026-10-17 yeniden tasarım): pastel başlık şeridi, turuncu
+          fiyat ve emoji kalktı; sektör-nötr, sade kart. "0 teklif var" (teklif akışı
+          yok, sayı hep 0'dı) ve her kartta aynı "Detaylar ilanda" satırı çıkarıldı;
+          "Yeni" etiketi artık yalnızca son 7 günde verilen/yenilenen ilanlarda. */}
+      <section className="max-w-6xl mx-auto px-5 mt-14 sm:mt-16">
+        <div className="flex items-end justify-between gap-4 mb-5">
+          <div className="min-w-0">
+            <h2 className="font-sans text-2xl sm:text-3xl font-black tracking-tight" style={{ color: "#0F1115" }}>{t("home.jobsHeading")}</h2>
+            <p className="text-sm mt-1" style={{ color: "#6B7280" }}>{t("home.jobsSubtext")}</p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Telefonda gizli (2026-10-17, kurucu: "saçma duruyor") — başlık yanında sıkışıyordu; telefonda hero'daki "Ücretsiz talep oluştur" bağlantısı var. */}
+            <button onClick={() => onNav("post")} className="hidden sm:inline-flex text-sm font-bold px-4 py-2.5 rounded-full transition-colors hover:bg-black hover:text-white" style={{ border: "1px solid #0F1115", color: "#0F1115" }}>
+              {t("home.postJobCta")}
+            </button>
+            <button onClick={() => jobsScrollRef.current?.scrollBy({ left: -300, behavior: "smooth" })} aria-label={t("home.scrollPrev")} className="hidden sm:flex w-10 h-10 rounded-full items-center justify-center transition-colors hover:bg-gray-100" style={{ border: "1px solid #E4E4E7", color: "#0F1115" }}>
+              <ChevronLeft size={18} />
+            </button>
+            <button onClick={() => jobsScrollRef.current?.scrollBy({ left: 300, behavior: "smooth" })} aria-label={t("home.scrollNext")} className="hidden sm:flex w-10 h-10 rounded-full items-center justify-center transition-colors hover:bg-gray-100" style={{ border: "1px solid #E4E4E7", color: "#0F1115" }}>
+              <ChevronRight size={18} />
+            </button>
+          </div>
+        </div>
+        <div className="relative -mx-5">
+          {/* Sağ kenardaki ince geçiş: kartların yatay kaydığını belli ediyor (önceden yarım kesik kart "bozuk" sanılıyordu). */}
+          <div
+            className="pointer-events-none absolute right-0 top-0 bottom-0 w-12 z-10"
+            style={{ background: "linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.95) 100%)" }}
+          />
+          <div ref={jobsScrollRef} className="flex gap-4 overflow-x-auto pb-3 px-5 scroll-px-5 snap-x snap-mandatory" style={{ scrollbarWidth: "none" }}>
+          {(realJobs || []).map((job) => {
+            const cat = CATEGORIES.find((c) => c.id === job.category);
+            const Icon = cat?.icon;
+            const isNew = job.postedAt && Date.now() - new Date(job.postedAt).getTime() < 7 * 24 * 60 * 60 * 1000;
+            const [auraA, auraB] = jobAuraTheme(cat?.id);
+            // Kart (2026-10-17): beyaz gövde + üstte kategori grubunun akan renk şeridi.
+            // Freelancer tarzı tam renkli/koyu varyantlar denendi; kurucu bu ilk hâli seçti.
+            return (
+              <div
+                key={job.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => onOpenJob(job)}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onOpenJob(job); }}
+                className="group text-left rounded-2xl overflow-hidden shrink-0 snap-start flex flex-col p-5 transition-all duration-300 cursor-pointer hover:-translate-y-0.5"
+                style={{ border: "1px solid #E4E4E7", background: "#FFFFFF", width: "280px", boxShadow: "0 1px 2px rgba(15,17,21,0.04)" }}
+              >
+                <div className="job-aura -mx-5 -mt-5 mb-4 px-5 h-[72px] flex items-center justify-between gap-2" style={{ "--aura-a": auraA, "--aura-b": auraB }}>
+                  <span className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.1em] min-w-0 text-white">
+                    {Icon && (
+                      <span className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" style={{ background: "rgba(255,255,255,0.16)" }}>
+                        <Icon size={14} />
+                      </span>
+                    )}
+                    <span className="truncate">{cat ? getCategoryName(cat.id, t) : t("home.jobFallbackCategory")}</span>
+                  </span>
+                  {job.isReal && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onToggleJobFavorite?.(job); }}
+                      aria-label={t("favorites.toggle")} className="w-8 h-8 -mr-1.5 rounded-full flex items-center justify-center shrink-0 transition-colors hover:bg-white/20"
+                    >
+                      <Heart size={14} style={{ color: "#FFFFFF" }} fill={favoriteIds?.has(job.dbId) ? "#FFFFFF" : "none"} />
+                    </button>
+                  )}
+                </div>
+                <p className="text-[17px] font-bold leading-snug line-clamp-2 min-h-[2.75em] mb-3" style={{ color: "#0F1115" }}>{job.title}</p>
+                <p className="text-xs flex items-center gap-1.5 mb-5" style={{ color: "#6B7280" }}>
+                  <MapPin size={12} className="shrink-0" />
+                  <span className="truncate">{job.district}</span>
+                  <span aria-hidden="true">·</span>
+                  <span className="shrink-0">{job.postedTime}</span>
+                  {isNew && (
+                    <span className="ml-1 text-[11px] font-bold px-1.5 py-0.5 rounded shrink-0" style={{ background: "#ECFDF3", color: "#15803D" }}>{t("searchResults.newBadge")}</span>
+                  )}
+                </p>
+                <div className="mt-auto pt-4 flex items-center justify-between gap-3" style={{ borderTop: "1px solid #F0EEE9" }}>
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: "#9CA3AF" }}>{t("home.jobBudgetLabel")}</p>
+                    <p className="text-sm font-black truncate" style={{ color: "#0F1115" }}>{job.budget}</p>
+                  </div>
+                  <span
+                    onClick={(e) => { e.stopPropagation(); onApplyJob(job); }}
+                    className="shrink-0 inline-flex items-center gap-1 px-4 py-2 rounded-full text-xs font-bold text-white"
+                    style={{ background: "#0F1115" }}
+                  >
+                    {t("jobDetail.applyButton")}
+                    <ChevronRight size={14} className="transition-transform group-hover:translate-x-0.5" />
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+          </div>
+        </div>
+      </section>
+
+      {/* Vitrin ızgarası 2026-10-17'de sayfanın altına, SSS'nin üstüne alındı ("Vitrinleri keşfet"). */}
+      <section className="max-w-6xl mx-auto px-5 mt-14 sm:mt-16">
         <div className="flex items-end justify-between mb-5 flex-wrap gap-2">
           <div>
-            <h2 className="font-sans text-3xl font-black" style={{ color: "#0F1115" }}>{t("home.showcasesHeading")}</h2>
+            <h2 className="font-sans text-2xl sm:text-3xl font-black tracking-tight" style={{ color: "#0F1115" }}>{t("home.showcasesHeading")}</h2>
             <p className="text-sm mt-0.5" style={{ color: "#6B7280" }}>{t("home.showcasesSubtext")}</p>
           </div>
-          {!listingsLoading && filtered.length > 0 && (
-            <span className="text-xs font-bold px-3 py-1.5 rounded-full" style={{ background: "#EFF6FF", color: "#2563EB" }}>
-              {t("home.listingsCountBadge", { count: filtered.length })}
-            </span>
-          )}
         </div>
-        <div className="rounded-2xl p-1.5 flex gap-1 w-full sm:w-fit mb-5" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB" }}>
+        <div className="rounded-2xl p-1.5 flex gap-1 w-full sm:w-fit mb-5" style={{ background: "#FFFFFF", border: "1px solid #E4E4E7" }}>
           {[["all", t("home.filterAll")], ["home", t("home.filterHome")], ["local", t("home.filterLocal")], ["remote", t("home.filterRemote")]].map(([key, label]) => (
             <button
               key={key}
               onClick={() => setFilter(key)}
               className="flex-1 sm:flex-none text-[13px] sm:text-sm px-2 sm:px-4 py-2 rounded-xl font-bold transition-all whitespace-nowrap"
-              style={filter === key ? { background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)", color: "#FFFFFF" } : { color: "#6B7280" }}
+              style={filter === key ? { background: "#0F1115", color: "#FFFFFF" } : { color: "#6B7280" }}
             >
               {label}
             </button>
@@ -1965,271 +2065,67 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
             <span className="text-sm" style={{ color: "#9CA3AF" }}>{t("home.listingsLoadingText")}</span>
           </div>
         ) : filtered.length === 0 ? (
-          <div className="rounded-2xl p-8 text-center" style={{ border: "1px solid #F0F0F0", background: "#FAFAFA" }}>
+          <div className="rounded-2xl p-8 text-center" style={{ border: "1px solid #E4E4E7", background: "#FAFAFA" }}>
             <p className="text-sm" style={{ color: "#6B7280" }}>{t("home.noListingsMatch")}</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-            {filtered.map((l) => (
-              <HomeListingCard key={l.id} l={l} isFavorite={!!favoriteIds?.has(l.dbId)} onSelectListing={onSelectListing} onToggleFavorite={onToggleFavorite} />
+          <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-12 gap-1.5 sm:gap-2">
+            {filtered.map((l, idx) => (
+              <div key={l.id} className={idx >= HOME_GRID_LIMIT ? "hidden" : "contents"}>
+                <HomeListingCard l={l} isFavorite={!!favoriteIds?.has(l.dbId)} onSelectListing={onSelectListing} onToggleFavorite={onToggleFavorite} />
+              </div>
             ))}
           </div>
         )}
-      </section>
-
-      <section className="max-w-6xl mx-auto px-5 mt-10">
-        <div className="rounded-3xl p-7 relative overflow-hidden" style={{ background: "linear-gradient(135deg, #0F1115 0%, #1A1D23 60%, #16321F 100%)" }}>
-          <div className="absolute -bottom-10 -right-10 w-52 h-52 rounded-full blur-3xl opacity-20" style={{ background: "#8B5CF6" }} />
-          <p className="text-xs tracking-[0.2em] uppercase font-bold mb-1.5 relative" style={{ color: "#2563EB" }}>{t("home.howItWorksEyebrow")}</p>
-          <h2 className="font-sans text-2xl font-black mb-6 relative" style={{ color: "#FFFFFF" }}>{t("home.howItWorksHeading")}</h2>
-          <div className="grid sm:grid-cols-3 gap-5 relative">
-            <div>
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-3" style={{ background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)" }}>
-                <Unlock size={17} className="text-white" />
-              </div>
-              <p className="text-sm font-bold mb-1.5" style={{ color: "#FFFFFF" }}>{t("home.step1Title")}</p>
-              <p className="text-xs leading-relaxed" style={{ color: "#9CA3AF" }}>
-                {t("home.step1BodyPre")}<span className="font-semibold" style={{ color: "#E5E7EB" }}>{t("home.step1BodyHighlight")}</span>{t("home.step1BodySuf")}
-              </p>
-            </div>
-            <div>
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-3" style={{ background: "linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%)" }}>
-                <Megaphone size={17} className="text-white" />
-              </div>
-              <p className="text-sm font-bold mb-1.5" style={{ color: "#FFFFFF" }}>{t("home.step2Title")}</p>
-              <p className="text-xs leading-relaxed" style={{ color: "#9CA3AF" }}>
-                {t("home.step2Body")}
-              </p>
-            </div>
-            <div>
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-3" style={{ background: "linear-gradient(135deg, #F59E0B 0%, #D97706 100%)" }}>
-                <ShieldCheck size={17} className="text-white" />
-              </div>
-              <p className="text-sm font-bold mb-1.5" style={{ color: "#FFFFFF" }}>{t("home.step3Title")}</p>
-              <p className="text-xs leading-relaxed" style={{ color: "#9CA3AF" }}>
-                {t("home.step3Body")}
-              </p>
-            </div>
+        {!listingsLoading && filtered.length > 0 && (
+          <div className="flex justify-center mt-6">
+            <button
+              onClick={() => onSearch("")}
+              className="text-sm font-bold px-6 py-3 rounded-full transition-all hover:-translate-y-0.5"
+              style={{ background: "#0F1115", color: "#FFFFFF" }}
+            >
+              {t("home.showAllListings")}
+            </button>
           </div>
-        </div>
-      </section>
-
-      <section className="max-w-6xl mx-auto px-5 mt-12">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="font-sans text-2xl font-black" style={{ color: "#0F1115" }}>{t("home.jobsHeading")}</h2>
-            <p className="text-xs mt-0.5" style={{ color: "#9CA3AF" }}>{t("home.jobsSubtext")}</p>
-          </div>
-          <button onClick={() => onNav("post")} className="text-xs font-bold px-3.5 py-2 rounded-full shrink-0" style={{ background: "#F7F7F8", color: "#0F1115" }}>
-            {t("home.postJobCta")}
-          </button>
-        </div>
-        <div className="relative -mx-5">
-          {/* Kartlar yatay kaydırmayla görülüyor ama bunu belirten hiçbir
-              görsel ipucu yoktu — sağdaki kart yarım kesik göründüğü için
-              "daha fazlası var, kaydır" değil "bozuk/eksik" gibi algılanıyordu
-              (kullanıcı geri bildirimi: "sağdakiler görünmüyor"). Sağ kenara
-              kaydırılabilir olduğunu gösteren ince bir gradient ekliyoruz. */}
-          <div
-            className="pointer-events-none absolute right-0 top-0 bottom-2 w-10 z-10 sm:hidden"
-            style={{ background: "linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.95) 100%)" }}
-          />
-          <div className="flex gap-4 overflow-x-auto pb-2 px-5" style={{ scrollbarWidth: "thin" }}>
-          {(realJobs || []).map((job, jobIdx) => {
-            const cat = CATEGORIES.find((c) => c.id === job.category);
-            const Icon = cat?.icon;
-            const catIndex = CATEGORIES.findIndex((c) => c.id === job.category);
-            const tileColor = CATEGORY_TILE_COLORS[(catIndex >= 0 ? catIndex : jobIdx) % CATEGORY_TILE_COLORS.length];
-            return (
-              <div
-                key={job.id}
-                role="button"
-                tabIndex={0}
-                onClick={() => onOpenJob(job)}
-                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onOpenJob(job); }}
-                className="text-left rounded-2xl overflow-hidden shrink-0 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer"
-                style={{ border: "1px solid #F0F0F0", background: "#FFFFFF", width: "270px" }}
-              >
-                <div className="h-16 flex items-center justify-between px-4" style={{ background: `${tileColor}17` }}>
-                  <div className="flex items-center gap-2 min-w-0">
-                    {Icon && (
-                      <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: tileColor }}>
-                        <Icon size={16} className="text-white" />
-                      </div>
-                    )}
-                    <span className="text-[11px] font-bold truncate" style={{ color: tileColor }}>{getCategoryName(cat?.id, t)}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    {job.isReal && (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: "#2FBF71" }}>{t("searchResults.newBadge")}</span>
-                    )}
-                    {job.isReal && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); onToggleJobFavorite?.(job); }}
-                        aria-label={t("favorites.toggle")} className="w-6 h-6 rounded-full bg-white/90 flex items-center justify-center hover:scale-110 transition-transform"
-                      >
-                        <Heart size={12} style={{ color: "#EF4444" }} fill={favoriteIds?.has(job.dbId) ? "#EF4444" : "none"} />
-                      </button>
-                    )}
-                  </div>
-                </div>
-                <div className="p-4">
-                  <p className="text-[11px] mb-1.5" style={{ color: "#9CA3AF" }}>{job.postedTime}</p>
-                  <p className="text-sm font-bold leading-snug mb-2 line-clamp-2 min-h-[2.5em]" style={{ color: "#0F1115" }}>{job.title}</p>
-                  <p className="text-xs mb-0.5 flex items-center gap-1" style={{ color: "#6B7280" }}><MapPin size={11} />{job.district}</p>
-                  <p className="text-xs mb-3 flex items-center gap-1" style={{ color: "#6B7280" }}><Clock size={11} />{job.schedule}</p>
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-base font-black" style={{ color: "#F59E0B" }}>{job.budget}</span>
-                    <span className="text-[11px] font-medium" style={{ color: "#9CA3AF" }}>{t("home.offerCountLabel", { count: job.offerCount })}</span>
-                  </div>
-                  <span
-                    onClick={(e) => { e.stopPropagation(); onApplyJob(job); }}
-                    className="w-full py-2 rounded-full text-xs font-bold text-white flex items-center justify-center"
-                    style={{ background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)" }}
-                  >
-                    {t("jobDetail.applyButton")}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
-          </div>
-        </div>
-      </section>
-
-      <section className="max-w-6xl mx-auto px-5 mt-12">
-        <h2 className="font-sans text-2xl font-black mb-1" style={{ color: "#0F1115" }}>{t("home.topProfilesHeading")}</h2>
-        <p className="text-sm mb-5" style={{ color: "#6B7280" }}>{t("home.topProfilesSubtext")}</p>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {[
-            // Gerçek değerlendirme almış sağlayıcılar, sabit demo kartlardan
-            // önce gösteriliyor — burada yer almak sabit bir listeye değil,
-            // gerçekten kazanılan puana bağlı.
-            ...(realListings || [])
-              .filter((l) => l.reviewCount > 0)
-              .sort((a, b) => b.rating - a.rating)
-              .slice(0, 4)
-              .map((l) => ({ listing: l, specialties: [l.desc ? (l.desc.length > 42 ? `${l.desc.slice(0, 42)}…` : l.desc) : ""], bg: "#1F2937" })),
-          ].slice(0, 4).map((item) => {
-            const l = item.listing;
-            return (
-              <div
-                key={l.id}
-                role="button"
-                tabIndex={0}
-                onClick={() => onSelectListing(l)}
-                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onSelectListing(l); }}
-                className="text-left rounded-2xl overflow-hidden hover:-translate-y-1.5 transition-all group shadow-sm hover:shadow-xl cursor-pointer"
-              >
-                <div className="relative h-44 overflow-hidden" style={{ background: item.bg }}>
-                  <img loading="lazy" decoding="async" src={l.img} alt={l.title} className="w-full h-full object-cover opacity-90 group-hover:scale-110 transition-transform duration-300" />
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onToggleFavorite?.(l); }}
-                    aria-label={t("favorites.toggle")} className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/90 flex items-center justify-center hover:scale-110 transition-transform"
-                  >
-                    <Heart size={13} style={{ color: "#EF4444" }} fill={favoriteIds?.has(l.dbId) ? "#EF4444" : "none"} />
-                  </button>
-                  <div className="absolute bottom-2.5 left-2.5 flex items-center gap-1.5">
-                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white border-2 border-white" style={{ background: "linear-gradient(135deg, #8B5CF6, #6D28D9)" }}>
-                      {l.provider.split(" ").map((w) => w[0]).join("").slice(0, 2)}
-                    </div>
-                    <LevelBadge level={l.level} />
-                  </div>
-                </div>
-                <div className="pt-3">
-                  <p className="text-sm font-black mb-0.5 truncate" style={{ color: "#0F1115" }}>{l.provider}</p>
-                  <div className="flex items-center gap-1 mb-2">
-                    <Stars value={l.rating} size={11} />
-                    <span className="text-[11px]" style={{ color: "#9CA3AF" }}>{l.rating} ({l.reviewCount})</span>
-                  </div>
-                  <div className="space-y-0.5">
-                    {item.specialties.map((s, si) => (
-                      <p key={si} className="text-xs line-clamp-2" style={{ color: "#6B7280" }}>{s}</p>
-                    ))}
-                  </div>
-                  <span className="text-xs font-black inline-block mt-2" style={{ color: "#F59E0B" }}>{l.price}</span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* Sayfanın en altına bilerek taşındı — akışta (Öne Çıkan/Vitrinler/
-          Aranıyor) aradığını bulamayan biri için son bir "ilham ver" katmanı,
-          önden dayatılan bir kategori seçimi değil (kullanıcının kararı). */}
-      <section className="max-w-6xl mx-auto px-5 mt-12 pb-16 space-y-9">
-        <div>
-          <h2 className="font-sans text-2xl font-black mb-1" style={{ color: "#0F1115" }}>{t("home.notFoundHeading")}</h2>
-          <p className="text-sm" style={{ color: "#6B7280" }}>{t("home.notFoundSubtext")}</p>
-        </div>
-        {PARENT_CATEGORIES.filter((g) => g.id !== "profesyonel").map((group) => {
-          const GroupIcon = group.icon;
-          const groupCategories = group.categoryIds
-            .map((id) => CATEGORIES.find((c) => c.id === id))
-            .filter(Boolean);
-          return (
-            <div key={group.id}>
-              <div className="flex items-center gap-2 mb-3">
-                <GroupIcon size={16} style={{ color: "#1D4ED8" }} />
-                <h3 className="text-sm font-bold tracking-wide" style={{ color: "#374151" }}>{getCategoryGroupName(group.id, t)}</h3>
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
-                {groupCategories.map((c, i) => (
-                  <CategoryTile key={c.id} c={c} i={i} onClick={() => onSearch(c.name)} />
-                ))}
-              </div>
-            </div>
-          );
-        })}
-
-        {!showRemote ? (
-          <button
-            onClick={() => setShowRemote(true)}
-            className="text-xs font-bold flex items-center gap-1"
-            style={{ color: "#1D4ED8" }}
-          >
-            {t("home.showRemoteToggle")}
-          </button>
-        ) : (
-          (() => {
-            const group = PARENT_CATEGORIES.find((g) => g.id === "profesyonel");
-            const GroupIcon = group.icon;
-            const groupCategories = group.categoryIds.map((id) => CATEGORIES.find((c) => c.id === id)).filter(Boolean);
-            return (
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <GroupIcon size={16} style={{ color: "#1D4ED8" }} />
-                  <h3 className="text-sm font-bold tracking-wide" style={{ color: "#374151" }}>{getCategoryGroupName(group.id, t)}</h3>
-                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "#EFF6FF", color: "#3B82F6" }}>{t("common.tagRemote")}</span>
-                  <button
-                    onClick={() => setShowRemote(false)}
-                    className="text-[11px] font-bold ml-auto"
-                    style={{ color: "#9CA3AF" }}
-                  >
-                    {t("home.hideRemoteToggle")}
-                  </button>
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
-                  {groupCategories.map((c, i) => (
-                    <CategoryTile key={c.id} c={c} i={i} onClick={() => onSearch(c.name)} />
-                  ))}
-                </div>
-              </div>
-            );
-          })()
         )}
       </section>
 
+      {/* 2026-10-17: "Öne çıkan profiller" (vitrinlerin tekrarı) ve ~70 kategorilik
+          "Aradığını bulamadın mı?" duvarı kaldırıldı — kutucuklar bağlantı değil arama
+          düğmesiydi (SEO kaybı yok), çoğu boş sonuca çıkıyordu. Yedek: git tag
+          yedek/ana-sayfa-oncesi-2026-10-17 (emojili pastel CategoryTile stili de silindi). */}
       {/* Ana sayfadaki FAQPage JSON-LD'si görünür bir SSS olmadan duruyordu (Google
           yapılandırılmış veri politikası: işaretlenen içerik sayfada görünmeli). Aynı
           veri (lib/faqJsonLd.js) burada da görünür olarak basılıyor. */}
-      <section className="max-w-3xl mx-auto px-5 mt-12 mb-10">
-        <h2 className="font-sans text-xl font-black mb-4" style={{ color: "#0F1115" }}>Sıkça Sorulan Sorular</h2>
+      {/* Popüler Kategoriler (2026-10-17): footer'ın altından SSS'nin üstüne taşındı. Kategori sayfalarına gerçek
+          bağlantılar (SEO; sunucuda hesaplanır, bkz. app/page.js). Eski "Yeni Eklenen Vitrinler" kartları kaldırıldı:
+          aynı vitrinler Keşfet ızgarasında bağlantılı duruyor ve vitrin sayısı öngörülemez kalmalı. */}
+      {discoveryPopularCategories?.length > 0 && (
+        <section className="max-w-6xl mx-auto px-5 mt-14 sm:mt-16">
+          <h2 className="font-sans text-2xl sm:text-3xl font-black tracking-tight mb-5" style={{ color: "#0F1115" }}>Popüler Kategoriler</h2>
+          <div className="flex flex-wrap gap-2">
+            {discoveryPopularCategories.map((c) => (
+              <Link key={c.slug} href={`/kategori/${c.slug}`} className="text-sm font-bold px-4 py-2 rounded-full transition-colors hover:bg-black hover:text-white" style={{ border: "1px solid #0F1115", color: "#0F1115" }}>
+                {c.name}
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* SSS (2026-10-17): iki sütun — başlık solda, sorular sağa yaslı. */}
+      <section className="max-w-6xl mx-auto px-5 mt-14 sm:mt-16 mb-14 sm:mb-16 grid md:grid-cols-[1fr_1.6fr] gap-6 md:gap-12">
+        <div>
+          <h2 className="font-sans text-2xl sm:text-3xl font-black tracking-tight" style={{ color: "#0F1115" }}>Sıkça Sorulan Sorular</h2>
+          <p className="text-sm mt-2" style={{ color: "#6B7280" }}>Aradığın cevabı bulamazsan Destek Asistanı'na yazabilirsin.</p>
+        </div>
         <div className="space-y-2">
           {faqJsonLd.mainEntity.map((f) => (
-            <details key={f.name} className="rounded-xl border px-4 py-3" style={{ borderColor: "#F0F0F0" }}>
-              <summary className="text-sm font-bold cursor-pointer" style={{ color: "#0F1115" }}>{f.name}</summary>
+            <details key={f.name} className="group rounded-xl border px-4 py-3" style={{ borderColor: "#E4E4E7" }}>
+              <summary className="text-sm font-bold cursor-pointer list-none [&::-webkit-details-marker]:hidden flex items-center justify-between gap-3 min-h-[28px]" style={{ color: "#0F1115" }}>
+                {f.name}
+                <ChevronDown size={16} className="shrink-0 transition-transform group-open:rotate-180" style={{ color: "#6B7280" }} />
+              </summary>
               <p className="text-sm mt-2" style={{ color: "#4B5563" }}>{f.acceptedAnswer.text}</p>
             </details>
           ))}
@@ -2238,63 +2134,6 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
 
       <SiteFooter onNav={onNav} />
 
-      {/* SEO denetimi (2026-09-28): bu blok önceden app/page.js'te <HomeClient/>'ın
-          DIŞINDA, koşulsuz bir kardeş eleman olarak render ediliyordu — bu yüzden
-          kullanıcı SPA içinde başka bir view'a (ör. yönetim paneli) geçtiğinde de
-          altta görünmeye devam ediyordu (kullanıcı fark etti: "yönetim panelinin
-          altında da görünüyor"). Buraya, sadece view==="home" iken render edilen
-          HomeView'ın içine taşındı — server component (app/page.js) hâlâ view
-          "home" ile başladığı için (bkz. IsinnPrototype'taki hydration notu) ilk
-          SSR HTML'de aynen yer alıyor, SEO amacı korunuyor; ama artık kullanıcı
-          başka bir view'a geçtiğinde gerçekten kayboluyor. */}
-      {(discoveryPopularCategories?.length > 0 || discoveryRecentListings?.length > 0) && (
-        <div className="max-w-6xl mx-auto px-5 py-12 border-t" style={{ borderColor: "#F0F0F0" }}>
-          {discoveryPopularCategories?.length > 0 && (
-            <div className="mb-10">
-              <h2 className="font-sans text-xl font-black mb-4" style={{ color: "#0F1115" }}>Popüler Kategoriler</h2>
-              <div className="flex flex-wrap gap-2">
-                {discoveryPopularCategories.map((c) => (
-                  <Link
-                    key={c.slug}
-                    href={`/kategori/${c.slug}`}
-                    className="text-sm font-bold px-4 py-2 rounded-full"
-                    style={{ border: "1px solid #E5E7EB", color: "#1B2B24" }}
-                  >
-                    {c.name}
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
-          {discoveryRecentListings?.length > 0 && (
-            <div>
-              <h2 className="font-sans text-xl font-black mb-4" style={{ color: "#0F1115" }}>Yeni Eklenen Vitrinler</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                {discoveryRecentListings.map((row) => {
-                  const provider = (row.display_name && row.display_name.trim()) || (row.profiles?.business_name && row.profiles.business_name.trim()) || row.profiles?.full_name || "Sağlayıcı";
-                  const city = row.is_remote ? "Uzaktan" : (row.city || "Türkiye");
-                  const img = (Array.isArray(row.images) && row.images[0]) || "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=1200";
-                  return (
-                    <Link key={row.id} href={`/vitrin/${row.id}`} className="rounded-2xl overflow-hidden block" style={{ border: "1px solid #F0F0F0" }}>
-                      <div className="relative w-full h-32">
-                        <Image src={img} alt={row.title} fill sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 25vw" className="object-cover" />
-                      </div>
-                      <div className="p-3">
-                        {row.categories?.name && (
-                          <p className="text-[11px] font-bold uppercase tracking-wide mb-1" style={{ color: "#2563EB" }}>{row.categories.name}</p>
-                        )}
-                        <p className="text-sm font-bold mb-1 line-clamp-2" style={{ color: "#0F1115" }}>{row.title}</p>
-                        <p className="text-xs mb-1" style={{ color: "#6B7280" }}>{provider} · {city}</p>
-                        <p className="text-sm font-black" style={{ color: "#0F1115" }}>{formatPriceLabel(row.price, row.price_type)}</p>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }
@@ -2308,7 +2147,7 @@ function SiteFooter({ onNav }) {
   const { t } = useLanguage();
   const storeApp = useStoreApp();
   return (
-    <footer className="px-5 pt-14 pb-8" style={{ background: "#0F1115" }}>
+    <footer className="px-5 pt-14 pb-28 sm:pb-8" style={{ background: "#0B0B0F" }}>
       <div className="max-w-6xl mx-auto">
         <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-10 pb-10">
           <div>
@@ -2465,15 +2304,15 @@ function ReviewCard({ review, onOpenMedia, isReal, currentUserId, providerId }) 
   };
 
   return (
-    <div className="py-4 border-b last:border-0" style={{ borderColor: "#D9D0BA" }}>
+    <div className="py-4 border-b last:border-0" style={{ borderColor: "#E4E4E7" }}>
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium text-white" style={{ background: "#3A5BA0" }}>
+          <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium text-white" style={{ background: "#2563EB" }}>
             {review.initials}
           </div>
           <div>
-            <p className="text-sm font-medium" style={{ color: "#1B2B24" }}>{review.name}</p>
-            <p className="text-[11px]" style={{ color: "#6B6550" }}>{review.bothConfirmed ? "İki taraf da işi onayladı" : review.verified ? "Hizmeti aldığını beyan etti" : "Yorum"} · {review.time}</p>
+            <p className="text-sm font-medium" style={{ color: "#0F1115" }}>{review.name}</p>
+            <p className="text-[11px]" style={{ color: "#6B7280" }}>{review.bothConfirmed ? "İki taraf da işi onayladı" : review.verified ? "Hizmeti aldığını beyan etti" : "Yorum"} · {review.time}</p>
           </div>
         </div>
         <Stars value={review.value} />
@@ -2507,7 +2346,7 @@ function ReviewCard({ review, onOpenMedia, isReal, currentUserId, providerId }) 
           onClick={isReal ? toggleHelpful : () => { if (!voted) { setHelpful(helpful + 1); setVoted(true); } }}
           disabled={votePending}
           className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border"
-          style={{ borderColor: voted ? "#C2872B" : "#D9D0BA", color: voted ? "#C2872B" : "#5C5744", opacity: votePending ? 0.6 : 1 }}
+          style={{ borderColor: voted ? "#2563EB" : "#E4E4E7", color: voted ? "#2563EB" : "#4B5563", opacity: votePending ? 0.6 : 1 }}
         >
           <ThumbsUp size={12} />
           Faydalı buldum · {helpful}
@@ -2520,16 +2359,16 @@ function ReviewCard({ review, onOpenMedia, isReal, currentUserId, providerId }) 
       </div>
 
       {showReplyForm && (
-        <div className="mt-2.5 pl-3 border-l-2" style={{ borderColor: "#D9D0BA" }}>
+        <div className="mt-2.5 pl-3 border-l-2" style={{ borderColor: "#E4E4E7" }}>
           <textarea
             value={replyText}
             onChange={(e) => setReplyText(e.target.value)}
             rows={2}
             placeholder="Bu değerlendirmeye herkese açık bir yanıt yaz..."
             className="w-full px-3 py-2 rounded-lg border text-xs outline-none resize-none mb-1.5"
-            style={{ borderColor: "#D9D0BA", background: "#FFFFFF", color: "#1B2B24" }}
+            style={{ borderColor: "#E4E4E7", background: "#FFFFFF", color: "#0F1115" }}
           />
-          {replyError && <p className="text-[11px] mb-1.5" role="alert" style={{ color: "#9C4A3C" }}>{replyError}</p>}
+          {replyError && <p className="text-[11px] mb-1.5" role="alert" style={{ color: "#DC2626" }}>{replyError}</p>}
           <div className="flex items-center gap-2">
             <button
               onClick={submitReply}
@@ -2539,15 +2378,15 @@ function ReviewCard({ review, onOpenMedia, isReal, currentUserId, providerId }) 
             >
               {replySubmitting ? "Gönderiliyor..." : providerReply ? "Yanıtı Güncelle" : "Yanıtı Yayınla"}
             </button>
-            <button onClick={() => { setShowReplyForm(false); setReplyText(providerReply); }} className="text-xs font-medium" style={{ color: "#6B6550" }}>Vazgeç</button>
+            <button onClick={() => { setShowReplyForm(false); setReplyText(providerReply); }} className="text-xs font-medium" style={{ color: "#6B7280" }}>Vazgeç</button>
           </div>
         </div>
       )}
 
       {providerReply && !showReplyForm && (
-        <div className="mt-2.5 pl-3 py-2 border-l-2 rounded-r-lg" style={{ borderColor: "#3F7D5C", background: "#F8F4E9" }}>
+        <div className="mt-2.5 pl-3 py-2 border-l-2 rounded-r-lg" style={{ borderColor: "#16A34A", background: "#F7F7F8" }}>
           <div className="flex items-center justify-between gap-2">
-            <p className="text-[11px] font-bold mb-0.5" style={{ color: "#3F7D5C" }}>Sağlayıcının yanıtı</p>
+            <p className="text-[11px] font-bold mb-0.5" style={{ color: "#16A34A" }}>Sağlayıcının yanıtı</p>
             {/* Düzenleme hakkı — eskiden bir kere yazılan yanıt kalıcıydı,
                 düzeltme/güncelleme yolu yoktu (kullanıcının kararı: olmalı). */}
             {isOwner && (
@@ -2652,10 +2491,10 @@ function DocViewerModal({ doc, onClose }) {
         style={{ background: "#FFFFFF", height: "85dvh" }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-4 py-3 border-b shrink-0" style={{ borderColor: "#F0F0F0" }}>
-          <p className="text-sm font-medium truncate" style={{ color: "#1B2B24" }}>{doc.name}</p>
+        <div className="flex items-center justify-between px-4 py-3 border-b shrink-0" style={{ borderColor: "#E4E4E7" }}>
+          <p className="text-sm font-medium truncate" style={{ color: "#0F1115" }}>{doc.name}</p>
           <button onClick={onClose} className="shrink-0 ml-3 p-2 -mr-2" aria-label={t("common.closeAria")}>
-            <X size={18} style={{ color: "#5C5744" }} />
+            <X size={18} style={{ color: "#4B5563" }} />
           </button>
         </div>
         <div className="flex-1 overflow-auto" style={{ background: "#F7F7F8" }}>
@@ -2665,7 +2504,7 @@ function DocViewerModal({ doc, onClose }) {
             <img src={doc.url} alt={doc.name} className="w-full h-full object-contain" />
           ) : (
             <div className="h-full flex items-center justify-center p-6 text-center">
-              <p className="text-sm" style={{ color: "#5C5744" }}>{t("vitrinMedia.docPreviewUnsupported")}</p>
+              <p className="text-sm" style={{ color: "#4B5563" }}>{t("vitrinMedia.docPreviewUnsupported")}</p>
             </div>
           )}
         </div>
@@ -2679,8 +2518,8 @@ function DocViewerModal({ doc, onClose }) {
 function DocConsentToggle({ visible, onChange }) {
   const { t } = useLanguage();
   return (
-    <div className="px-2.5 pb-2.5 -mt-1 rounded-b-lg" style={{ background: "#EFE8D8" }}>
-      <div className="flex items-center gap-2 pt-2 border-t" style={{ borderColor: "#D9D0BA" }}>
+    <div className="px-2.5 pb-2.5 -mt-1 rounded-b-lg" style={{ background: "#F4F4F5" }}>
+      <div className="flex items-center gap-2 pt-2 border-t" style={{ borderColor: "#E4E4E7" }}>
         <button
           type="button"
           role="switch"
@@ -2688,17 +2527,17 @@ function DocConsentToggle({ visible, onChange }) {
           aria-label={t("vitrinMedia.docVisibleLabel")}
           onClick={() => onChange(!visible)}
           className="relative w-8 h-[18px] rounded-full shrink-0 transition-colors"
-          style={{ background: visible ? "#3F7D5C" : "#B8AF95" }}
+          style={{ background: visible ? "#2563EB" : "#D4D4D8" }}
         >
           <span className="absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white transition-all" style={{ left: visible ? "16px" : "2px" }} />
         </button>
-        <span className="text-[11px] font-medium" style={{ color: "#1B2B24" }}>{t("vitrinMedia.docVisibleLabel")}</span>
-        <span className="text-[10px] ml-auto flex items-center gap-1" style={{ color: visible ? "#3F7D5C" : "#6B6550" }}>
+        <span className="text-[11px] font-medium" style={{ color: "#0F1115" }}>{t("vitrinMedia.docVisibleLabel")}</span>
+        <span className="text-[11px] ml-auto flex items-center gap-1" style={{ color: visible ? "#16A34A" : "#6B7280" }}>
           {!visible && <Lock size={10} />}
           {visible ? t("vitrinMedia.docPublicBadge") : t("vitrinMedia.docPrivateBadge")}
         </span>
       </div>
-      <p className="text-[10px] mt-1.5" style={{ color: "#6B6550" }}>{t("vitrinMedia.docVisibleHint")}</p>
+      <p className="text-[11px] mt-1.5" style={{ color: "#6B7280" }}>{t("vitrinMedia.docVisibleHint")}</p>
     </div>
   );
 }
@@ -2711,18 +2550,18 @@ function OwnerVitrinPanel({ userId, serviceId, onListingsChanged, onReviewSettin
   const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   return (
-    <div className="mt-10 pt-8 border-t" style={{ borderColor: "#D9D0BA" }}>
+    <div className="mt-10 pt-8 border-t" style={{ borderColor: "#E4E4E7" }}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         className="w-full flex items-center gap-2 text-left"
       >
-        <Lock size={16} style={{ color: "#3F7D5C" }} />
-        <h2 className="font-serif text-xl flex-1" style={{ color: "#1B2B24" }}>{t("listingDetail.ownerPanelTitle")}</h2>
-        <ChevronRight size={18} style={{ color: "#5C5744", transform: open ? "rotate(90deg)" : "none", transition: "transform 0.15s" }} />
+        <Lock size={16} style={{ color: "#2563EB" }} />
+        <h2 className="font-sans text-xl font-black tracking-tight flex-1" style={{ color: "#0F1115" }}>{t("listingDetail.ownerPanelTitle")}</h2>
+        <ChevronRight size={18} style={{ color: "#4B5563", transform: open ? "rotate(90deg)" : "none", transition: "transform 0.15s" }} />
       </button>
-      <p className="text-xs mt-1" style={{ color: "#6B6550" }}>{t("listingDetail.ownerPanelSubtext")}</p>
+      <p className="text-xs mt-1" style={{ color: "#6B7280" }}>{t("listingDetail.ownerPanelSubtext")}</p>
       {open && (
         <OwnerVitrinPanelBody
           userId={userId}
@@ -2970,49 +2809,49 @@ function OwnerVitrinPanelBody({ userId, serviceId, onListingsChanged, onReviewSe
   const certAllPublic = certificates.length > 0 && certificates.every((c) => c.visible);
   const cvPublic = !!cv?.visible;
   const ownerOnlyBadge = (
-    <span className="ml-auto text-[10px] flex items-center gap-1 shrink-0" style={{ color: "#6B6550" }}>
+    <span className="ml-auto text-[11px] flex items-center gap-1 shrink-0" style={{ color: "#6B7280" }}>
       <Lock size={10} /> {t("listingDetail.ownerPanelTitle")}
     </span>
   );
 
   return (
     <div className="mt-5">
-      <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
+      <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#E4E4E7", background: "#F7F7F8" }}>
         <div className="flex items-center gap-2 mb-3">
-          <Activity size={16} style={{ color: "#3F7D5C" }} />
-          <h3 className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("vitrinMedia.statsHeading")}</h3>
+          <Activity size={16} style={{ color: "#2563EB" }} />
+          <h3 className="text-sm font-bold" style={{ color: "#0F1115" }}>{t("vitrinMedia.statsHeading")}</h3>
         </div>
         {statsLoading ? (
-          <p className="text-xs" style={{ color: "#6B6550" }}>{t("common.loading")}</p>
+          <p className="text-xs" style={{ color: "#6B7280" }}>{t("common.loading")}</p>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div>
-              <p className="font-serif text-2xl" style={{ color: "#1B2B24" }}>{stats?.conversations ?? 0}</p>
-              <p className="text-[11px]" style={{ color: "#6B6550" }}>{t("vitrinMedia.statConversations")}</p>
+              <p className="font-sans text-2xl sm:text-3xl font-black tracking-tight" style={{ color: "#0F1115" }}>{stats?.conversations ?? 0}</p>
+              <p className="text-[11px]" style={{ color: "#6B7280" }}>{t("vitrinMedia.statConversations")}</p>
             </div>
             <div>
-              <p className="font-serif text-2xl" style={{ color: "#1B2B24" }}>{stats?.completed ?? 0}</p>
-              <p className="text-[11px]" style={{ color: "#6B6550" }}>{t("vitrinMedia.statCompleted")}</p>
+              <p className="font-sans text-2xl sm:text-3xl font-black tracking-tight" style={{ color: "#0F1115" }}>{stats?.completed ?? 0}</p>
+              <p className="text-[11px]" style={{ color: "#6B7280" }}>{t("vitrinMedia.statCompleted")}</p>
             </div>
             <div>
-              <p className="font-serif text-2xl" style={{ color: "#1B2B24" }}>{stats?.avgRating ?? "—"}{stats?.reviewCount ? ` (${stats.reviewCount})` : ""}</p>
-              <p className="text-[11px]" style={{ color: "#6B6550" }}>{t("vitrinMedia.statAvgRating")}</p>
+              <p className="font-sans text-2xl sm:text-3xl font-black tracking-tight" style={{ color: "#0F1115" }}>{stats?.avgRating ?? "—"}{stats?.reviewCount ? ` (${stats.reviewCount})` : ""}</p>
+              <p className="text-[11px]" style={{ color: "#6B7280" }}>{t("vitrinMedia.statAvgRating")}</p>
             </div>
             <div>
-              <p className="font-serif text-2xl" style={{ color: "#1B2B24" }}>{stats?.favorites ?? 0}</p>
-              <p className="text-[11px]" style={{ color: "#6B6550" }}>{t("vitrinMedia.statFavorites")}</p>
+              <p className="font-sans text-2xl sm:text-3xl font-black tracking-tight" style={{ color: "#0F1115" }}>{stats?.favorites ?? 0}</p>
+              <p className="text-[11px]" style={{ color: "#6B7280" }}>{t("vitrinMedia.statFavorites")}</p>
             </div>
           </div>
         )}
       </div>
 
       {funnel && (
-        <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
+        <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#E4E4E7", background: "#F7F7F8" }}>
           <div className="flex items-center gap-2 mb-1">
-            <TrendingUp size={16} style={{ color: "#3F7D5C" }} />
-            <h3 className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("vitrinMedia.funnelHeading", { days: funnel.days })}</h3>
+            <TrendingUp size={16} style={{ color: "#2563EB" }} />
+            <h3 className="text-sm font-bold" style={{ color: "#0F1115" }}>{t("vitrinMedia.funnelHeading", { days: funnel.days })}</h3>
           </div>
-          <p className="text-[11px] mb-3" style={{ color: "#6B6550" }}>
+          <p className="text-[11px] mb-3" style={{ color: "#6B7280" }}>
             {funnel.measured_since
               ? t("vitrinMedia.funnelMeasuredSince", { date: new Date(funnel.measured_since).toLocaleDateString("tr-TR") })
               : t("vitrinMedia.funnelNotMeasuredYet")}
@@ -3029,8 +2868,8 @@ function OwnerVitrinPanelBody({ userId, serviceId, onListingsChanged, onReviewSe
               ["confirmed_both", t("vitrinMedia.funnelConfirmedBoth")],
             ].filter(([k]) => funnel[k] !== undefined || (k !== "total_views" && k !== "total_views_all")).map(([k, label]) => ( // toplam ziyaret alanları SQL (provider_funnel_total_views_2026_10_16.sql) çalışana kadar gizli
               <div key={k}>
-                <p className="font-serif text-2xl" style={{ color: "#1B2B24" }}>{funnel[k] ?? 0}</p>
-                <p className="text-[11px]" style={{ color: "#6B6550" }}>{label}</p>
+                <p className="font-sans text-2xl sm:text-3xl font-black tracking-tight" style={{ color: "#0F1115" }}>{funnel[k] ?? 0}</p>
+                <p className="text-[11px]" style={{ color: "#6B7280" }}>{label}</p>
               </div>
             ))}
           </div>
@@ -3039,33 +2878,33 @@ function OwnerVitrinPanelBody({ userId, serviceId, onListingsChanged, onReviewSe
               {t("vitrinMedia.funnelReplyTip", { count: funnel.conversations - funnel.replied })}
             </p>
           )}
-          <p className="text-[10px] mt-2" style={{ color: "#8A8470" }}>{t("vitrinMedia.funnelNote")}</p>
+          <p className="text-[11px] mt-2" style={{ color: "#8A8470" }}>{t("vitrinMedia.funnelNote")}</p>
         </div>
       )}
 
-      <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
+      <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#E4E4E7", background: "#F7F7F8" }}>
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("vitrinMedia.reviewsHeading")}</p>
-            <p className="text-xs mt-0.5" style={{ color: "#6B6550" }}>
+            <p className="text-sm font-bold" style={{ color: "#0F1115" }}>{t("vitrinMedia.reviewsHeading")}</p>
+            <p className="text-xs mt-0.5" style={{ color: "#6B7280" }}>
               {shareReviews ? t("vitrinMedia.reviewsSharedNote") : t("vitrinMedia.reviewsOwnNote")}
             </p>
           </div>
-          <label className="flex items-center gap-2 text-xs shrink-0 cursor-pointer" style={{ color: "#5C5744" }}>
+          <label className="flex items-center gap-2 text-xs shrink-0 cursor-pointer" style={{ color: "#4B5563" }}>
             {shareReviewsSaving && <Loader2 size={12} className="animate-spin" />}
             <input type="checkbox" checked={shareReviews} onChange={(e) => toggleShareReviews(e.target.checked)} />
             {t("vitrinMedia.mergeToggle")}
           </label>
         </div>
-        {shareReviewsError && <p className="text-[11px] mt-2" role="alert" style={{ color: "#9C4A3C" }}>{shareReviewsError}</p>}
+        {shareReviewsError && <p className="text-[11px] mt-2" role="alert" style={{ color: "#DC2626" }}>{shareReviewsError}</p>}
       </div>
 
-      <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
+      <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#E4E4E7", background: "#F7F7F8" }}>
         <div className="flex items-center gap-2 mb-1">
-          <BadgeCheck size={16} style={{ color: "#3A5BA0" }} />
-          <h3 className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("vitrinMedia.credentialHeading")}</h3>
+          <BadgeCheck size={16} style={{ color: "#2563EB" }} />
+          <h3 className="text-sm font-bold" style={{ color: "#0F1115" }}>{t("vitrinMedia.credentialHeading")}</h3>
         </div>
-        <p className="text-xs mb-3" style={{ color: "#6B6550" }}>
+        <p className="text-xs mb-3" style={{ color: "#6B7280" }}>
           {t("vitrinMedia.credentialIntro")}
         </p>
         <input
@@ -3075,47 +2914,47 @@ function OwnerVitrinPanelBody({ userId, serviceId, onListingsChanged, onReviewSe
           onBlur={saveCredential}
           placeholder={t("vitrinMedia.credentialPlaceholder")}
           className="w-full px-3 py-2.5 rounded-lg border text-xs mb-1"
-          style={{ borderColor: "#D9D0BA" }}
+          style={{ borderColor: "#E4E4E7" }}
         />
-        <p className="text-[11px] flex items-center gap-1" style={{ color: credentialSaved ? "#3F7D5C" : "#6B6550" }}>
+        <p className="text-[11px] flex items-center gap-1" style={{ color: credentialSaved ? "#16A34A" : "#6B7280" }}>
           {credentialSaving && <Loader2 size={10} className="animate-spin" />}
           {credentialSaving ? t("common.savingEllipsis") : credentialSaved ? t("vitrinMedia.credentialSaved") : t("vitrinMedia.credentialAutoSaveHint")}
         </p>
-        {credentialError && <p className="text-[11px] mt-1" role="alert" style={{ color: "#9C4A3C" }}>{credentialError}</p>}
+        {credentialError && <p className="text-[11px] mt-1" role="alert" style={{ color: "#DC2626" }}>{credentialError}</p>}
       </div>
 
       {loading ? (
-        <p className="text-xs" style={{ color: "#6B6550" }}>{t("common.loading")}</p>
+        <p className="text-xs" style={{ color: "#6B7280" }}>{t("common.loading")}</p>
       ) : (
         <>
           <DocViewerModal doc={docViewer} onClose={() => setDocViewer(null)} />
 
-          <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
+          <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#E4E4E7", background: "#F7F7F8" }}>
             <div className="flex items-center gap-2 mb-1">
-              <Award size={16} style={{ color: "#C2872B" }} />
-              <h3 className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("vitrinMedia.certHeading")}</h3>
+              <Award size={16} style={{ color: "#2563EB" }} />
+              <h3 className="text-sm font-bold" style={{ color: "#0F1115" }}>{t("vitrinMedia.certHeading")}</h3>
               {!certAllPublic && ownerOnlyBadge}
             </div>
-            <p className="text-xs mb-4" style={{ color: "#6B6550" }}>
+            <p className="text-xs mb-4" style={{ color: "#6B7280" }}>
               {t("vitrinMedia.certIntro")}
             </p>
             {certError && (
-              <p className="text-xs mb-3 px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{certError}</p>
+              <p className="text-xs mb-3 px-3 py-2 rounded-lg" style={{ background: "rgba(220,38,38,0.1)", color: "#DC2626" }}>{certError}</p>
             )}
             <div className="space-y-2 mb-3">
               {certificates.map((c, i) => (
                 <div key={c.id || i}>
-                  <div className="flex items-center gap-2.5 p-2.5 rounded-lg" style={{ background: "#EFE8D8" }}>
+                  <div className="flex items-center gap-2.5 p-2.5 rounded-lg" style={{ background: "#F4F4F5" }}>
                     <button onClick={() => setDocViewer({ url: c.url, name: c.name, isPdf: c.isPdf })} className="flex items-center gap-2.5 flex-1 min-w-0 text-left">
                       {c.isPdf ? (
-                        <FileText size={16} style={{ color: "#3A5BA0" }} className="shrink-0" />
+                        <FileText size={16} style={{ color: "#2563EB" }} className="shrink-0" />
                       ) : (
                         <img loading="lazy" decoding="async" src={c.url} alt="" className="w-9 h-9 rounded object-cover shrink-0" />
                       )}
-                      <span className="text-xs flex-1 truncate underline decoration-dotted" style={{ color: "#1B2B24" }}>{c.name}</span>
+                      <span className="text-xs flex-1 truncate underline decoration-dotted" style={{ color: "#0F1115" }}>{c.name}</span>
                     </button>
                     <button onClick={() => removeCertificate(c, i)} className="shrink-0" aria-label={t("common.remove")}>
-                      <Trash2 size={14} style={{ color: "#9C4A3C" }} />
+                      <Trash2 size={14} style={{ color: "#DC2626" }} />
                     </button>
                   </div>
                   <DocConsentToggle visible={!!c.visible} onChange={(v) => setDocVisibility("cert", c, v)} />
@@ -3125,7 +2964,7 @@ function OwnerVitrinPanelBody({ userId, serviceId, onListingsChanged, onReviewSe
             {certificates.length < 5 && (
               <label
                 className="flex items-center justify-center gap-2 py-2.5 rounded-lg border-2 border-dashed text-xs font-medium cursor-pointer"
-                style={{ borderColor: "#D9D0BA", color: "#5C5744", opacity: certUploading ? 0.6 : 1 }}
+                style={{ borderColor: "#E4E4E7", color: "#4B5563", opacity: certUploading ? 0.6 : 1 }}
               >
                 {certUploading ? <Loader2 size={14} className="animate-spin" /> : <UploadCloud size={14} />}
                 {certUploading ? t("common.loading") : t("vitrinMedia.certUpload")}
@@ -3134,30 +2973,30 @@ function OwnerVitrinPanelBody({ userId, serviceId, onListingsChanged, onReviewSe
             )}
           </div>
 
-          <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
+          <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#E4E4E7", background: "#F7F7F8" }}>
             <div className="flex items-center gap-2 mb-1">
-              <FileText size={16} style={{ color: "#3A5BA0" }} />
-              <h3 className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("vitrinMedia.cvHeading")}</h3>
+              <FileText size={16} style={{ color: "#2563EB" }} />
+              <h3 className="text-sm font-bold" style={{ color: "#0F1115" }}>{t("vitrinMedia.cvHeading")}</h3>
               {!cvPublic && ownerOnlyBadge}
             </div>
-            <p className="text-xs mb-4" style={{ color: "#6B6550" }}>
+            <p className="text-xs mb-4" style={{ color: "#6B7280" }}>
               {t("vitrinMedia.cvIntro")}
             </p>
             {cvError && (
-              <p className="text-xs mb-3 px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{cvError}</p>
+              <p className="text-xs mb-3 px-3 py-2 rounded-lg" style={{ background: "rgba(220,38,38,0.1)", color: "#DC2626" }}>{cvError}</p>
             )}
             {cv ? (
               <div>
-                <div className="flex items-center gap-2.5 p-2.5 rounded-lg" style={{ background: "#EFE8D8" }}>
+                <div className="flex items-center gap-2.5 p-2.5 rounded-lg" style={{ background: "#F4F4F5" }}>
                   <button
                     onClick={() => setDocViewer({ url: cv.url, name: cv.name, isPdf: (cv.name || "").toLowerCase().endsWith(".pdf") })}
                     className="flex items-center gap-2.5 flex-1 min-w-0 text-left"
                   >
-                    <FileText size={16} style={{ color: "#3A5BA0" }} className="shrink-0" />
-                    <span className="text-xs flex-1 truncate underline decoration-dotted" style={{ color: "#1B2B24" }}>{cv.name}</span>
+                    <FileText size={16} style={{ color: "#2563EB" }} className="shrink-0" />
+                    <span className="text-xs flex-1 truncate underline decoration-dotted" style={{ color: "#0F1115" }}>{cv.name}</span>
                   </button>
                   <button onClick={removeCv} className="shrink-0" aria-label={t("common.remove")}>
-                    <Trash2 size={14} style={{ color: "#9C4A3C" }} />
+                    <Trash2 size={14} style={{ color: "#DC2626" }} />
                   </button>
                 </div>
                 <DocConsentToggle visible={!!cv.visible} onChange={(v) => setDocVisibility("cv", cv, v)} />
@@ -3165,7 +3004,7 @@ function OwnerVitrinPanelBody({ userId, serviceId, onListingsChanged, onReviewSe
             ) : (
               <label
                 className="flex items-center justify-center gap-2 py-2.5 rounded-lg border-2 border-dashed text-xs font-medium cursor-pointer"
-                style={{ borderColor: "#D9D0BA", color: "#5C5744", opacity: cvUploading ? 0.6 : 1 }}
+                style={{ borderColor: "#E4E4E7", color: "#4B5563", opacity: cvUploading ? 0.6 : 1 }}
               >
                 {cvUploading ? <Loader2 size={14} className="animate-spin" /> : <UploadCloud size={14} />}
                 {cvUploading ? t("common.loading") : t("vitrinMedia.cvUpload")}
@@ -3204,8 +3043,8 @@ function HeroRotator({ words, suffix }) {
       {words.map((w, k) => (k === i ? (
         <span key={"a" + w} style={{ gridArea: "1 / 1" }}>
           <span
-            className="inline-block pb-1.5 animate-[fadeSlide_0.4s_ease] bg-clip-text text-transparent"
-            style={{ backgroundImage: "linear-gradient(90deg, #2563EB, #60A5FA)", transform: "translateZ(0)", WebkitTransform: "translateZ(0)", willChange: "transform, opacity" }}
+            className="inline-block pb-1.5 animate-[fadeSlide_0.4s_ease]"
+            style={{ color: "#2563EB", transform: "translateZ(0)", WebkitTransform: "translateZ(0)", willChange: "transform, opacity" }}
           >{w}</span>
           <br />
           {(suffix || "").trim()}
@@ -3274,10 +3113,10 @@ function PastWorkInvite({ serviceId, userId }) {
     }
   };
   return (
-    <div className="mt-5 pt-4 border-t" style={{ borderColor: "#EAE3CE" }}>
-      <p className="text-xs font-bold mb-1" style={{ color: "#5C5744" }}>{t("listingDetail.pastWorkInviteTitle")}</p>
-      <p className="text-[11px] mb-2" style={{ color: "#6B6550" }}>{t("listingDetail.pastWorkInviteHelp")}</p>
-      <button type="button" onClick={copy} className="px-4 py-2 rounded-full text-xs font-bold border" style={{ borderColor: "#D9D0BA", color: "#1B2B24", background: "#FFFFFF" }}>
+    <div className="mt-5 pt-4 border-t" style={{ borderColor: "#E4E4E7" }}>
+      <p className="text-xs font-bold mb-1" style={{ color: "#4B5563" }}>{t("listingDetail.pastWorkInviteTitle")}</p>
+      <p className="text-[11px] mb-2" style={{ color: "#6B7280" }}>{t("listingDetail.pastWorkInviteHelp")}</p>
+      <button type="button" onClick={copy} className="px-4 py-2 rounded-full text-xs font-bold border" style={{ borderColor: "#E4E4E7", color: "#0F1115", background: "#FFFFFF" }}>
         {copied ? t("listingDetail.pastWorkCopied") : t("listingDetail.pastWorkCopy")}
       </button>
     </div>
@@ -4051,20 +3890,20 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
     <div className="max-w-4xl mx-auto px-5 py-8">
       {isOwner && (
         // top-[61px]: üstteki sabit site başlığının altına yapışsın diye.
-        <div className="sticky top-[61px] z-20 mb-4 rounded-xl border px-3.5 py-2.5 flex items-center gap-x-3 gap-y-2 flex-wrap" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
-          <span className="text-xs font-bold flex items-center gap-1.5" style={{ color: "#1B2B24" }}>
-            <Pencil size={13} style={{ color: "#3F7D5C" }} /> {t("listingDetail.ownerBarTitle")}
+        <div className="sticky top-[61px] z-20 mb-4 rounded-xl border px-3.5 py-2.5 flex items-center gap-x-3 gap-y-2 flex-wrap" style={{ borderColor: "#E4E4E7", background: "#F7F7F8" }}>
+          <span className="text-xs font-bold flex items-center gap-1.5" style={{ color: "#0F1115" }}>
+            <Pencil size={13} style={{ color: "#2563EB" }} /> {t("listingDetail.ownerBarTitle")}
           </span>
           <div className="flex items-center gap-2 flex-wrap ml-auto">
             {!asCustomer && !editingInfo && (
-              <button onClick={() => setEditingInfo(true)} className="text-xs font-bold px-3 py-1.5 rounded-full text-white" style={{ background: "#3F7D5C" }}>
+              <button onClick={() => setEditingInfo(true)} className="text-xs font-bold px-3 py-1.5 rounded-full text-white" style={{ background: "#2563EB" }}>
                 {t("listingDetail.ownerEdit")}
               </button>
             )}
             <button
               onClick={() => { setAsCustomer((v) => !v); setEditingMedia(false); setEditingInfo(false); setConfirmRemoveMediaId(null); }}
               className="text-xs font-medium px-3 py-1.5 rounded-full border flex items-center gap-1.5"
-              style={{ borderColor: "#D9D0BA", color: "#1B2B24", background: "#FFFFFF" }}
+              style={{ borderColor: "#E4E4E7", color: "#0F1115", background: "#FFFFFF" }}
             >
               <Eye size={12} /> {asCustomer ? t("listingDetail.ownerBackToOwnerView") : t("listingDetail.ownerViewAsCustomer")}
             </button>
@@ -4074,7 +3913,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
       {ownerMode && ownerRow && (
         <OwnerVisibilityCard row={ownerRow} busy={visBusy} error={visError} onToggle={toggleVisibility} onGoToPlans={onGoToPlans} />
       )}
-      <button onClick={onBack} className="flex items-center gap-1 text-sm mb-5" style={{ color: "#5C5744" }}>
+      <button onClick={onBack} className="flex items-center gap-1 text-sm mb-5" style={{ color: "#4B5563" }}>
         <ChevronLeft size={16} /> {t("common.back")}
       </button>
 
@@ -4089,7 +3928,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
           ownerRow ? (
             <ListingInfoEditor row={ownerRow} userId={currentUserId} onSaved={handleInfoSaved} onCancel={() => setEditingInfo(false)} />
           ) : (
-            <div className="w-full max-w-xl py-10 flex justify-center"><Loader2 size={18} className="animate-spin" style={{ color: "#6B6550" }} /></div>
+            <div className="w-full max-w-xl py-10 flex justify-center"><Loader2 size={18} className="animate-spin" style={{ color: "#6B7280" }} /></div>
           )
         ) : (
         <div className="max-w-xl">
@@ -4103,8 +3942,8 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
               <span>{t("listingDetail.demoNotice")}</span>
             </div>
           )}
-          <h1 className="font-serif text-2xl mt-2.5 mb-2" style={{ color: "#1B2B24" }}>{listing.title}</h1>
-          <div className="flex items-center gap-3 text-sm mb-4" style={{ color: "#5C5744" }}>
+          <h1 className="font-sans text-2xl sm:text-3xl font-black tracking-tight mt-2.5 mb-2" style={{ color: "#0F1115" }}>{listing.title}</h1>
+          <div className="flex items-center gap-3 text-sm mb-4" style={{ color: "#4B5563" }}>
             <span className="flex items-center gap-1"><MapPin size={14} />{listing.city}</span>
             {listing.reviewCount > 0 ? (
               <span className="flex items-center gap-1"><Stars value={listing.rating} size={13} />{listing.rating} {t("listingDetail.reviewCount", { count: listing.reviewCount })}</span>
@@ -4114,13 +3953,13 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
           </div>
           <p className="text-sm leading-relaxed whitespace-pre-line" style={{ color: "#3D3B30" }}>{listing.desc}</p>
           {descEdit?.description_prev && (
-            <div className="mt-3 text-[11px] rounded-lg px-3 py-2" style={{ background: "#F3EEDD", color: "#5C5744" }}>
+            <div className="mt-3 text-[11px] rounded-lg px-3 py-2" style={{ background: "#F3EEDD", color: "#4B5563" }}>
               {ownerMode ? (
                 <>
                   <p className="mb-2">{t("listingDetail.descEditedOwner")}</p>
                   <div className="flex flex-wrap gap-2">
-                    <button type="button" disabled={descBusy} onClick={() => resolveDescEdit(true)} className="px-3 py-1.5 rounded-full text-xs font-bold border" style={{ borderColor: "#D9D0BA", background: "#FFFFFF", color: "#1B2B24" }}>{t("listingDetail.descRestore")}</button>
-                    <button type="button" disabled={descBusy} onClick={() => resolveDescEdit(false)} className="px-3 py-1.5 rounded-full text-xs font-bold border" style={{ borderColor: "#D9D0BA", background: "#FFFFFF", color: "#1B2B24" }}>{t("listingDetail.descKeep")}</button>
+                    <button type="button" disabled={descBusy} onClick={() => resolveDescEdit(true)} className="px-3 py-1.5 rounded-full text-xs font-bold border" style={{ borderColor: "#E4E4E7", background: "#FFFFFF", color: "#0F1115" }}>{t("listingDetail.descRestore")}</button>
+                    <button type="button" disabled={descBusy} onClick={() => resolveDescEdit(false)} className="px-3 py-1.5 rounded-full text-xs font-bold border" style={{ borderColor: "#E4E4E7", background: "#FFFFFF", color: "#0F1115" }}>{t("listingDetail.descKeep")}</button>
                   </div>
                   {descMsg && <p className="mt-2">{descMsg}</p>}
                 </>
@@ -4132,23 +3971,23 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
         </div>
         )}
 
-        <div className="rounded-xl border p-5 w-full sm:w-64 shrink-0" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
+        <div className="rounded-xl border p-5 w-full sm:w-64 shrink-0" style={{ borderColor: "#E4E4E7", background: "#F7F7F8" }}>
           <div className="flex items-center gap-2.5 mb-3">
-            <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-medium text-white" style={{ background: "#1B2B24" }}>
+            <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-medium text-white" style={{ background: "#0F1115" }}>
               {listing.provider.split(" ").map((w) => w[0]).join("").slice(0,2)}
             </div>
             <div>
               <div className="flex items-center gap-1.5 flex-wrap">
-                <p className="text-sm font-medium" style={{ color: "#1B2B24" }}>{listing.provider}</p>
+                <p className="text-sm font-medium" style={{ color: "#0F1115" }}>{listing.provider}</p>
                 <LevelBadge level={listing.level} />
               </div>
-              {avgResponseLabel && <p className="text-[11px]" style={{ color: "#6B6550" }}>{t("listingDetail.avgResponse", { time: avgResponseLabel })}</p>}
+              {avgResponseLabel && <p className="text-[11px]" style={{ color: "#6B7280" }}>{t("listingDetail.avgResponse", { time: avgResponseLabel })}</p>}
             </div>
           </div>
           {listing.verified && listing.verified.length > 0 && (
-            <div className="mb-4 pb-4 border-b" style={{ borderColor: "#D9D0BA" }}>
+            <div className="mb-4 pb-4 border-b" style={{ borderColor: "#E4E4E7" }}>
               <VerifiedBadges items={listing.verified} />
-              <p className="text-[10px] mt-2" style={{ color: "#6B6550" }}>{t("listingDetail.docsDisclaimer")}</p>
+              <p className="text-[11px] mt-2" style={{ color: "#6B7280" }}>{t("listingDetail.docsDisclaimer")}</p>
             </div>
           )}
           {/* Meslek odası/sicil no — Seçenek A, şeffaflık katmanı (2026-09-14).
@@ -4156,36 +3995,36 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
               doğrulamadık, sağlayıcının kendi beyanı — o yüzden yeşil
               "doğrulanmış" rengiyle değil, nötr bir tonla ve açık etiketle. */}
           {listing.professionalCredential && (
-            <div className="mb-4 pb-4 border-b flex items-start gap-1.5" style={{ borderColor: "#D9D0BA" }}>
-              <BadgeCheck size={14} style={{ color: "#6B6550" }} className="mt-0.5 shrink-0" />
-              <p className="text-xs" style={{ color: "#5C5744" }}>
+            <div className="mb-4 pb-4 border-b flex items-start gap-1.5" style={{ borderColor: "#E4E4E7" }}>
+              <BadgeCheck size={14} style={{ color: "#6B7280" }} className="mt-0.5 shrink-0" />
+              <p className="text-xs" style={{ color: "#4B5563" }}>
                 {listing.professionalCredential}
-                <span className="block text-[10px] mt-0.5" style={{ color: "#6B6550" }}>{t("listingDetail.credentialDisclaimer")}</span>
+                <span className="block text-[11px] mt-0.5" style={{ color: "#6B7280" }}>{t("listingDetail.credentialDisclaimer")}</span>
               </p>
             </div>
           )}
-          <p className="text-lg font-medium mb-4" style={{ color: "#C2872B" }}>{listing.price}</p>
+          <p className="text-lg font-medium mb-4" style={{ color: "#0F1115" }}>{listing.price}</p>
           {!ownerMode && (
             <>
-              <button onClick={onContact} className="w-full py-2.5 rounded-full text-sm font-medium text-white mb-2" style={{ background: "#C2872B" }}>
+              <button onClick={onContact} className="w-full py-2.5 rounded-full text-sm font-medium text-white mb-2" style={{ background: "#2563EB" }}>
                 {t("listingDetail.contactButton")}
               </button>
               <button
                 onClick={() => onToggleFavorite?.(listing)}
                 className="w-full py-2.5 rounded-full text-sm font-medium border flex items-center justify-center gap-1.5"
-                style={isFavorited ? { borderColor: "#9C4A3C", color: "#9C4A3C", background: "rgba(156,74,60,0.06)" } : { borderColor: "#D9D0BA", color: "#1B2B24" }}
+                style={isFavorited ? { borderColor: "#DC2626", color: "#DC2626", background: "rgba(220,38,38,0.06)" } : { borderColor: "#E4E4E7", color: "#0F1115" }}
               >
-                <Heart size={14} fill={isFavorited ? "#9C4A3C" : "none"} />
+                <Heart size={14} fill={isFavorited ? "#DC2626" : "none"} />
                 {isFavorited ? t("listingDetail.removeFavorite") : t("listingDetail.addFavorite")}
               </button>
             </>
           )}
 
-          <p className="text-[10px] mt-2 text-center" style={{ color: "#8A8470" }}>{t("listingDetail.verifiedNote")}</p>
+          <p className="text-[11px] mt-2 text-center" style={{ color: "#8A8470" }}>{t("listingDetail.verifiedNote")}</p>
           {["bakici", "hasta-bakici", "logusa-bakicisi", "oyun-ablasi", "cocuk-atolyesi"].includes(listing.category) && (
-            <details className="mt-3 rounded-xl border px-3 py-2 text-xs" style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}>
+            <details className="mt-3 rounded-xl border px-3 py-2 text-xs" style={{ borderColor: "#E4E4E7", background: "#F7F7F8", color: "#0F1115" }}>
               <summary className="cursor-pointer font-medium">{t("listingDetail.safetyTitle")}</summary>
-              <ul className="list-disc pl-4 mt-2 space-y-1" style={{ color: "#5C5744" }}>
+              <ul className="list-disc pl-4 mt-2 space-y-1" style={{ color: "#4B5563" }}>
                 <li>{t("listingDetail.safetyItem1")}</li>
 <li>{t("listingDetail.safetyItem2")}</li>
 <li>{t("listingDetail.safetyItem3")}</li>
@@ -4197,7 +4036,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
             <button
               onClick={shareThisListing}
               className="w-full py-2.5 mt-2 rounded-full text-sm font-medium border flex items-center justify-center gap-1.5"
-              style={{ borderColor: "#D9D0BA", color: "#1B2B24" }}
+              style={{ borderColor: "#E4E4E7", color: "#0F1115" }}
             >
               <Share2 size={14} />
               {shareCopied ? t("listingDetail.shareCopied") : t("listingDetail.shareButton")}
@@ -4208,21 +4047,21 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
             <button
               onClick={() => setShowListingReportForm((v) => !v)}
               className="w-full py-2 mt-2 rounded-full text-xs font-medium"
-              style={{ color: "#9C4A3C" }}
+              style={{ color: "#DC2626" }}
             >
               {t("listingDetail.reportListingButton")}
             </button>
           )}
           {listingReportSubmitted && (
-            <p className="text-xs text-center mt-2" style={{ color: "#3F7D5C" }}>{t("listingDetail.reportSubmitted")}</p>
+            <p className="text-xs text-center mt-2" style={{ color: "#16A34A" }}>{t("listingDetail.reportSubmitted")}</p>
           )}
           {showListingReportForm && !listingReportSubmitted && (
-            <div className="mt-2 pt-3 border-t" style={{ borderColor: "#D9D0BA" }}>
+            <div className="mt-2 pt-3 border-t" style={{ borderColor: "#E4E4E7" }}>
               <select
                 value={listingReportReason}
                 onChange={(e) => setListingReportReason(e.target.value)}
                 className="w-full px-3 py-2 rounded-lg border text-xs outline-none mb-2"
-                style={{ borderColor: "#D9D0BA", background: "#FFFFFF", color: "#1B2B24" }}
+                style={{ borderColor: "#E4E4E7", background: "#FFFFFF", color: "#0F1115" }}
               >
                 {Object.keys(LISTING_REPORT_REASON_LABELS).map((k) => <option key={k} value={k}>{t(`common.listingReportReasons.${k}`)}</option>)}
               </select>
@@ -4232,14 +4071,14 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
                 rows={2}
                 placeholder={t("listingDetail.reportDetailPlaceholder")}
                 className="w-full px-3 py-2 rounded-lg border text-xs outline-none mb-2 resize-none"
-                style={{ borderColor: "#D9D0BA", background: "#FFFFFF", color: "#1B2B24" }}
+                style={{ borderColor: "#E4E4E7", background: "#FFFFFF", color: "#0F1115" }}
               />
-              {listingReportError && <p className="text-[11px] mb-2" style={{ color: "#9C4A3C" }}>{listingReportError}</p>}
+              {listingReportError && <p className="text-[11px] mb-2" style={{ color: "#DC2626" }}>{listingReportError}</p>}
               <button
                 onClick={submitListingReport}
                 disabled={listingReportSubmitting}
                 className="w-full py-2 rounded-full text-xs font-bold text-white"
-                style={{ background: "#9C4A3C", opacity: listingReportSubmitting ? 0.7 : 1 }}
+                style={{ background: "#DC2626", opacity: listingReportSubmitting ? 0.7 : 1 }}
               >
                 {listingReportSubmitting ? t("listingDetail.reportSubmitting") : t("listingDetail.reportSubmitButton")}
               </button>
@@ -4249,19 +4088,19 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
       </div>
 
       {(listing.videoIntro || listing.backgroundChecks || listing.references) && (
-        <div className="mt-10 pt-8 border-t" style={{ borderColor: "#D9D0BA" }}>
+        <div className="mt-10 pt-8 border-t" style={{ borderColor: "#E4E4E7" }}>
           <div className="flex items-center gap-2 mb-1">
-            <ShieldCheck size={18} style={{ color: "#3F7D5C" }} />
-            <h2 className="font-serif text-xl" style={{ color: "#1B2B24" }}>{t("listingDetail.trustCenterHeading")}</h2>
+            <ShieldCheck size={18} style={{ color: "#2563EB" }} />
+            <h2 className="font-sans text-xl font-black tracking-tight" style={{ color: "#0F1115" }}>{t("listingDetail.trustCenterHeading")}</h2>
           </div>
-          <p className="text-xs mb-5" style={{ color: "#6B6550" }}>
+          <p className="text-xs mb-5" style={{ color: "#6B7280" }}>
             {t("listingDetail.trustCenterSubtext")}
           </p>
 
           <div className="grid md:grid-cols-2 gap-6">
             {listing.videoIntro && (
               <div>
-                <p className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: "#5C5744" }}>{t("listingDetail.videoIntroLabel")}</p>
+                <p className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: "#4B5563" }}>{t("listingDetail.videoIntroLabel")}</p>
                 {listing.videoIntro.videoUrl ? (
                   <video
                     controls
@@ -4288,14 +4127,14 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
 
             {listing.backgroundChecks && (
               <div>
-                <p className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: "#5C5744" }}>{t("listingDetail.backgroundChecksLabel")}</p>
+                <p className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: "#4B5563" }}>{t("listingDetail.backgroundChecksLabel")}</p>
                 <div className="space-y-2.5">
                   {listing.backgroundChecks.map((check, i) => (
                     <div key={i} className="flex items-start gap-2.5 text-xs">
-                      <BadgeCheck size={15} style={{ color: "#3F7D5C" }} className="shrink-0 mt-0.5" />
+                      <BadgeCheck size={15} style={{ color: "#16A34A" }} className="shrink-0 mt-0.5" />
                       <div>
-                        <p className="font-medium" style={{ color: "#1B2B24" }}>{check.label} <span className="font-normal" style={{ color: "#6B6550" }}>· {check.date}</span></p>
-                        <p style={{ color: "#5C5744" }}>{check.note}</p>
+                        <p className="font-medium" style={{ color: "#0F1115" }}>{check.label} <span className="font-normal" style={{ color: "#6B7280" }}>· {check.date}</span></p>
+                        <p style={{ color: "#4B5563" }}>{check.note}</p>
                       </div>
                     </div>
                   ))}
@@ -4306,12 +4145,12 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
 
           {listing.references && (
             <div className="mt-6">
-              <p className="text-xs font-bold uppercase tracking-wide mb-3" style={{ color: "#5C5744" }}>{t("listingDetail.referencesLabel")}</p>
+              <p className="text-xs font-bold uppercase tracking-wide mb-3" style={{ color: "#4B5563" }}>{t("listingDetail.referencesLabel")}</p>
               <div className="grid sm:grid-cols-2 gap-3">
                 {listing.references.map((ref, i) => (
-                  <div key={i} className="rounded-xl border p-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
+                  <div key={i} className="rounded-xl border p-4" style={{ borderColor: "#E4E4E7", background: "#F7F7F8" }}>
                     <p className="text-xs leading-relaxed mb-2 italic" style={{ color: "#3D3B30" }}>"{ref.quote}"</p>
-                    <p className="text-[11px] font-medium" style={{ color: "#5C5744" }}>{ref.name} · {ref.relation}</p>
+                    <p className="text-[11px] font-medium" style={{ color: "#4B5563" }}>{ref.name} · {ref.relation}</p>
                   </div>
                 ))}
               </div>
@@ -4321,17 +4160,17 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
       )}
 
       {(providerShowcase?.video_intro_url || hasRealCover || providerPortfolio.length > 0 || ownerMode) && (
-        <div className="mt-10 pt-8 border-t" style={{ borderColor: "#D9D0BA" }}>
+        <div className="mt-10 pt-8 border-t" style={{ borderColor: "#E4E4E7" }}>
           <div className="flex items-center gap-2 mb-1">
-            <Grid3x3 size={18} style={{ color: "#3F7D5C" }} />
-            <h2 className="font-serif text-xl" style={{ color: "#1B2B24" }}>{t("listingDetail.showcaseHeading", { provider: listing.provider })}</h2>
+            <Grid3x3 size={18} style={{ color: "#2563EB" }} />
+            <h2 className="font-sans text-xl font-black tracking-tight" style={{ color: "#0F1115" }}>{t("listingDetail.showcaseHeading", { provider: listing.provider })}</h2>
           </div>
-          <p className="text-xs mb-5" style={{ color: "#6B6550" }}>
+          <p className="text-xs mb-5" style={{ color: "#6B7280" }}>
             {t("listingDetail.showcaseSubtext")}
           </p>
 
           {providerShowcaseLoading && (
-            <p className="text-xs mb-5 flex items-center gap-1.5" style={{ color: "#6B6550" }}>
+            <p className="text-xs mb-5 flex items-center gap-1.5" style={{ color: "#6B7280" }}>
               <Loader2 size={12} className="animate-spin" /> {t("common.loading")}
             </p>
           )}
@@ -4339,15 +4178,15 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
           {(providerShowcase?.video_intro_url || ownerMode) && (
             <div className="mb-6">
               <div className="flex items-center justify-between mb-2">
-                <p className="text-xs font-bold uppercase tracking-wide" style={{ color: "#5C5744" }}>{t("listingDetail.videoIntroLabel")}</p>
+                <p className="text-xs font-bold uppercase tracking-wide" style={{ color: "#4B5563" }}>{t("listingDetail.videoIntroLabel")}</p>
                 {ownerMode && providerShowcase?.video_intro_url && (
-                  <button onClick={removeVideoIntro} className="text-[11px] font-medium flex items-center gap-1" style={{ color: "#9C4A3C" }}>
+                  <button onClick={removeVideoIntro} className="text-[11px] font-medium flex items-center gap-1" style={{ color: "#DC2626" }}>
                     <Trash2 size={11} /> {t("common.remove")}
                   </button>
                 )}
               </div>
               {ownerMode && videoError && (
-                <p className="text-xs mb-2 px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{videoError}</p>
+                <p className="text-xs mb-2 px-3 py-2 rounded-lg" style={{ background: "rgba(220,38,38,0.1)", color: "#DC2626" }}>{videoError}</p>
               )}
               {providerShowcase?.video_intro_url ? (
                 <video controls playsInline preload="metadata" poster={listing.img || undefined} className="w-full rounded-xl bg-black" style={{ maxHeight: "320px" }}>
@@ -4356,7 +4195,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
               ) : (
                 <label
                   className="flex items-center justify-center gap-2 py-6 rounded-xl border-2 border-dashed text-xs font-medium cursor-pointer"
-                  style={{ borderColor: "#D9D0BA", color: "#5C5744", opacity: videoUploading ? 0.6 : 1 }}
+                  style={{ borderColor: "#E4E4E7", color: "#4B5563", opacity: videoUploading ? 0.6 : 1 }}
                 >
                   {videoUploading ? <Loader2 size={16} className="animate-spin" /> : <UploadCloud size={16} />}
                   {videoUploading ? t("common.loading") : t("vitrinMedia.videoUpload")}
@@ -4369,19 +4208,19 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
           {(hasRealCover || providerPortfolio.length > 0 || ownerMode) && (
             <div>
               <div className="flex items-center justify-between mb-2">
-                <p className="text-xs font-bold uppercase tracking-wide" style={{ color: "#5C5744" }}>{t("listingDetail.portfolioLabel")}</p>
+                <p className="text-xs font-bold uppercase tracking-wide" style={{ color: "#4B5563" }}>{t("listingDetail.portfolioLabel")}</p>
                 {ownerMode && providerPortfolio.length > 0 && (
                   <button
                     onClick={() => { setEditingMedia((v) => !v); setConfirmRemoveMediaId(null); }}
                     className="text-[11px] font-medium underline"
-                    style={{ color: "#5C5744" }}
+                    style={{ color: "#4B5563" }}
                   >
                     {editingMedia ? t("listingDetail.ownerEditMediaDone") : t("listingDetail.ownerEditMedia")}
                   </button>
                 )}
               </div>
               {ownerMode && ownerPortfolio.error && (
-                <p className="text-xs mb-2 px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{ownerPortfolio.error}</p>
+                <p className="text-xs mb-2 px-3 py-2 rounded-lg" style={{ background: "rgba(220,38,38,0.1)", color: "#DC2626" }}>{ownerPortfolio.error}</p>
               )}
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
                 {/* Kullanıcı geri bildirimi: kapak fotoğrafı vitrine girince
@@ -4407,7 +4246,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
                       </div>
                     )}
                     {item.isCover && (
-                      <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded text-[9px] font-bold text-white" style={{ background: "rgba(0,0,0,0.55)" }}>{t("vitrinMedia.coverBadge")}</span>
+                      <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded text-[10px] font-bold text-white" style={{ background: "rgba(0,0,0,0.55)" }}>{t("vitrinMedia.coverBadge")}</span>
                     )}
                     {/* Silme herkese açık sayfada kazara olmasın: sadece "Medyayı
                         düzenle" açıkken ve iki adımlı onayla. */}
@@ -4418,14 +4257,14 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
                           style={{ background: "rgba(27,43,36,0.82)" }}
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <span className="text-[10px] font-medium text-white">{t("listingDetail.ownerRemoveMediaConfirm")}</span>
+                          <span className="text-[11px] font-medium text-white">{t("listingDetail.ownerRemoveMediaConfirm")}</span>
                           <span className="flex items-center gap-1">
                             <span
                               role="button"
                               tabIndex={0}
                               onClick={(e) => { e.stopPropagation(); setConfirmRemoveMediaId(null); ownerPortfolio.remove(item); }}
-                              className="text-[10px] font-bold px-2 py-1 rounded-full text-white cursor-pointer"
-                              style={{ background: "#9C4A3C" }}
+                              className="text-[11px] font-bold px-2 py-1 rounded-full text-white cursor-pointer"
+                              style={{ background: "#DC2626" }}
                             >
                               {t("profile.confirmDeleteYes")}
                             </span>
@@ -4433,7 +4272,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
                               role="button"
                               tabIndex={0}
                               onClick={(e) => { e.stopPropagation(); setConfirmRemoveMediaId(null); }}
-                              className="text-[10px] font-medium px-2 py-1 rounded-full text-white cursor-pointer"
+                              className="text-[11px] font-medium px-2 py-1 rounded-full text-white cursor-pointer"
                               style={{ background: "rgba(255,255,255,0.2)" }}
                             >
                               {t("common.cancel")}
@@ -4455,9 +4294,9 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
                   </button>
                 ))}
                 {ownerMode && providerPortfolio.length < 9 && (
-                  <label className="aspect-square rounded-lg border-2 border-dashed flex flex-col items-center justify-center cursor-pointer gap-1" style={{ borderColor: "#D9D0BA", color: "#6B6550", opacity: ownerPortfolio.uploading ? 0.6 : 1 }}>
+                  <label className="aspect-square rounded-lg border-2 border-dashed flex flex-col items-center justify-center cursor-pointer gap-1" style={{ borderColor: "#E4E4E7", color: "#6B7280", opacity: ownerPortfolio.uploading ? 0.6 : 1 }}>
                     {ownerPortfolio.uploading ? <Loader2 size={18} className="animate-spin" /> : <UploadCloud size={18} />}
-                    <span className="text-[10px] font-medium">{ownerPortfolio.uploading ? t("common.loading") : t("listingDetail.ownerAddMedia")}</span>
+                    <span className="text-[11px] font-medium">{ownerPortfolio.uploading ? t("common.loading") : t("listingDetail.ownerAddMedia")}</span>
                     <input type="file" accept="image/*,video/*" multiple className="hidden" onChange={ownerPortfolio.add} disabled={ownerPortfolio.uploading} />
                   </label>
                 )}
@@ -4486,21 +4325,21 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
             if (!wl || !enoughShowcase) return null;
             const label = wl.host + new URL(wl.url).pathname.replace(/\/$/, "");
             return (
-              <div className="mt-5 pt-4 border-t" style={{ borderColor: "#EAE3CE" }}>
-                <p className="text-[11px] mb-2" style={{ color: "#6B6550" }}>{t("listingDetail.workLinkLead")}</p>
+              <div className="mt-5 pt-4 border-t" style={{ borderColor: "#E4E4E7" }}>
+                <p className="text-[11px] mb-2" style={{ color: "#6B7280" }}>{t("listingDetail.workLinkLead")}</p>
                 <a
                   href={wl.url}
                   target="_blank"
                   rel="noopener noreferrer nofollow ugc"
                   onClick={() => trackEvent("portfolio_link_click", { listing_id: listing.dbId || null, platform: wl.platform, has_video: !!providerShowcase?.video_intro_url, gallery_count: providerPortfolio.length }, currentUserId || null)}
                   className="inline-flex items-center justify-center gap-2 w-full sm:w-auto min-h-[44px] px-5 rounded-full border text-sm font-medium"
-                  style={{ borderColor: "#D9D0BA", color: "#1B2B24", background: "#FFFFFF" }}
+                  style={{ borderColor: "#E4E4E7", color: "#0F1115", background: "#FFFFFF" }}
                 >
                   <ExternalLink size={14} />
                   {t("listingDetail.workLinkButton")}
-                  <span className="text-xs" style={{ color: "#6B6550" }}>{label}</span>
+                  <span className="text-xs" style={{ color: "#6B7280" }}>{label}</span>
                 </a>
-                <p className="text-[10px] mt-1.5" style={{ color: "#8A8470" }}>{t("listingDetail.workLinkNote")}</p>
+                <p className="text-[11px] mt-1.5" style={{ color: "#8A8470" }}>{t("listingDetail.workLinkNote")}</p>
               </div>
             );
           })()}
@@ -4508,24 +4347,24 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
       )}
 
       {sharedDocs.length > 0 && (
-        <div className="mt-10 pt-8 border-t" style={{ borderColor: "#D9D0BA" }}>
+        <div className="mt-10 pt-8 border-t" style={{ borderColor: "#E4E4E7" }}>
           <div className="flex items-center gap-2 mb-1">
-            <FileText size={18} style={{ color: "#3A5BA0" }} />
-            <h2 className="font-serif text-xl" style={{ color: "#1B2B24" }}>{t("listingDetail.docsHeading")}</h2>
+            <FileText size={18} style={{ color: "#2563EB" }} />
+            <h2 className="font-sans text-xl font-black tracking-tight" style={{ color: "#0F1115" }}>{t("listingDetail.docsHeading")}</h2>
           </div>
-          <p className="text-xs mb-4" style={{ color: "#6B6550" }}>{t("listingDetail.docsSubtext")}</p>
+          <p className="text-xs mb-4" style={{ color: "#6B7280" }}>{t("listingDetail.docsSubtext")}</p>
           <div className="grid sm:grid-cols-2 gap-2">
             {sharedDocs.map((d) => (
               <button
                 key={d.id}
                 onClick={() => openSharedDoc(d)}
                 className="flex items-center gap-2.5 p-3 rounded-xl border text-left"
-                style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}
+                style={{ borderColor: "#E4E4E7", background: "#F7F7F8" }}
               >
-                {d.doc_type === "cv" ? <FileText size={16} style={{ color: "#3A5BA0" }} className="shrink-0" /> : <Award size={16} style={{ color: "#C2872B" }} className="shrink-0" />}
+                {d.doc_type === "cv" ? <FileText size={16} style={{ color: "#2563EB" }} className="shrink-0" /> : <Award size={16} style={{ color: "#2563EB" }} className="shrink-0" />}
                 <span className="min-w-0">
-                  <span className="block text-xs font-medium truncate" style={{ color: "#1B2B24" }}>{d.file_name || d.label || t("createListing.docFallbackName")}</span>
-                  <span className="block text-[10px]" style={{ color: "#6B6550" }}>{d.doc_type === "cv" ? t("listingDetail.docTypeCv") : t("listingDetail.docTypeCertificate")}</span>
+                  <span className="block text-xs font-medium truncate" style={{ color: "#0F1115" }}>{d.file_name || d.label || t("createListing.docFallbackName")}</span>
+                  <span className="block text-[11px]" style={{ color: "#6B7280" }}>{d.doc_type === "cv" ? t("listingDetail.docTypeCv") : t("listingDetail.docTypeCertificate")}</span>
                 </span>
               </button>
             ))}
@@ -4557,11 +4396,11 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
         />
       )}
 
-      <div className="mt-10 pt-8 border-t" style={{ borderColor: "#D9D0BA" }}>
+      <div className="mt-10 pt-8 border-t" style={{ borderColor: "#E4E4E7" }}>
         <div className="flex items-center justify-between flex-wrap gap-2 mb-1">
           <div className="flex items-center gap-3">
-            <h2 className="font-serif text-xl" style={{ color: "#1B2B24" }}>{t("vitrinMedia.reviewsHeading")}</h2>
-            <span className="text-sm" style={{ color: "#5C5744" }}>
+            <h2 className="font-sans text-xl font-black tracking-tight" style={{ color: "#0F1115" }}>{t("vitrinMedia.reviewsHeading")}</h2>
+            <span className="text-sm" style={{ color: "#4B5563" }}>
               {avg ? t("listingDetail.avgSummary", { avg, count: allReviews.length }) : t("listingDetail.noReviewsYet")}
             </span>
           </div>
@@ -4570,7 +4409,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
               yazılanlardır (gizlilik) — sayılar tutmuyorsa (12 yorum ama 8
               listeleniyor gibi) kafa karışmasın diye açıkça belirtiyoruz. */}
           {isRealListing && shareProfileReviews && allReviews.length !== displayReviews.length && (
-            <p className="text-[11px] w-full" style={{ color: "#6B6550" }}>
+            <p className="text-[11px] w-full" style={{ color: "#6B7280" }}>
               {t("listingDetail.mergedReviewsNote")}
             </p>
           )}
@@ -4584,56 +4423,56 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
           </button>
           )}
         </div>
-        <p className="text-xs mb-4" style={{ color: "#6B6550" }}>{t("listingDetail.reviewsSortNote")}</p>
+        <p className="text-xs mb-4" style={{ color: "#6B7280" }}>{t("listingDetail.reviewsSortNote")}</p>
 
         {isRealListing && (summaryLoading || reviewSummary) && (
           <div className="flex items-start gap-2 rounded-xl p-3.5 mb-4" style={{ background: "#EFF6FF" }}>
             <Sparkles size={14} style={{ color: "#2563EB" }} className="mt-0.5 shrink-0" />
             {summaryLoading && !reviewSummary ? (
-              <p className="text-xs" style={{ color: "#5C5744" }}>{t("listingDetail.aiSummaryLoading")}</p>
+              <p className="text-xs" style={{ color: "#4B5563" }}>{t("listingDetail.aiSummaryLoading")}</p>
             ) : (
-              <p className="text-xs leading-relaxed" style={{ color: "#1B2B24" }}>{reviewSummary}</p>
+              <p className="text-xs leading-relaxed" style={{ color: "#0F1115" }}>{reviewSummary}</p>
             )}
           </div>
         )}
 
         {showReviewForm && (
-          <div ref={reviewBoxRef} className="rounded-xl border p-4 mb-5" style={{ borderColor: "#D9D0BA", background: "#F8F4E9", scrollMarginTop: "90px" }}>
+          <div ref={reviewBoxRef} className="rounded-xl border p-4 mb-5" style={{ borderColor: "#E4E4E7", background: "#F7F7F8", scrollMarginTop: "90px" }}>
             {reviewSubmitted ? (
               <div className="text-center py-4">
                 {(reviewSubmitted === "rejected" || reviewSubmitted === "child") ? (
-                  <AlertCircle size={22} style={{ color: "#9C4A3C" }} className="mx-auto mb-2" />
+                  <AlertCircle size={22} style={{ color: "#DC2626" }} className="mx-auto mb-2" />
                 ) : (
-                  <Check size={22} style={{ color: "#3F7D5C" }} className="mx-auto mb-2" />
+                  <Check size={22} style={{ color: "#16A34A" }} className="mx-auto mb-2" />
                 )}
-                <p className="text-sm font-medium mb-1" style={{ color: "#1B2B24" }}>
+                <p className="text-sm font-medium mb-1" style={{ color: "#0F1115" }}>
                   {reviewSubmitted === "rejected" ? t("listingDetail.reviewPublishedNoMedia")
                     : reviewSubmitted === "child" ? t("listingDetail.reviewPublishedNoMedia")
                     : reviewSubmitted === "updated" ? t("listingDetail.reviewUpdated")
                     : t("listingDetail.reviewPublished")}
                 </p>
                 {reviewSubmitted === "pending" && (
-                  <p className="text-xs" style={{ color: "#6B6550" }}>{t("listingDetail.pendingMediaNote")}</p>
+                  <p className="text-xs" style={{ color: "#6B7280" }}>{t("listingDetail.pendingMediaNote")}</p>
                 )}
                 {reviewSubmitted === "staff-review" && (
-                  <p className="text-xs" style={{ color: "#6B6550" }}>{t("listingDetail.staffReviewNote")}</p>
+                  <p className="text-xs" style={{ color: "#6B7280" }}>{t("listingDetail.staffReviewNote")}</p>
                 )}
                 {reviewSubmitted === "rejected" && (
-                  <p className="text-xs" style={{ color: "#6B6550" }}>{t("listingDetail.rejectedMediaNote")}</p>
+                  <p className="text-xs" style={{ color: "#6B7280" }}>{t("listingDetail.rejectedMediaNote")}</p>
                 )}
                 {reviewSubmitted === "child" && (
-                  <p className="text-xs" style={{ color: "#6B6550" }}>{t("listingDetail.childMediaNote")}</p>
+                  <p className="text-xs" style={{ color: "#6B7280" }}>{t("listingDetail.childMediaNote")}</p>
                 )}
                 <button onClick={() => { setShowReviewForm(false); setReviewSubmitted(null); }} className="text-xs font-medium mt-2" style={{ color: "#2563EB" }}>{t("listingDetail.close")}</button>
               </div>
             ) : isRealListing && reviewEligibility?.checking ? (
               <div className="flex items-center gap-2 py-3 justify-center">
-                <Loader2 size={14} className="animate-spin" style={{ color: "#6B6550" }} />
-                <span className="text-xs" style={{ color: "#6B6550" }}>{t("listingDetail.checkingEligibility")}</span>
+                <Loader2 size={14} className="animate-spin" style={{ color: "#6B7280" }} />
+                <span className="text-xs" style={{ color: "#6B7280" }}>{t("listingDetail.checkingEligibility")}</span>
               </div>
             ) : isRealListing && !reviewEligibility?.ok ? (
               <div className="text-center py-3">
-                <p className="text-xs" style={{ color: "#5C5744" }}>{reviewEligibility?.reason || t("listingDetail.errNeedContactFallback")}</p>
+                <p className="text-xs" style={{ color: "#4B5563" }}>{reviewEligibility?.reason || t("listingDetail.errNeedContactFallback")}</p>
                 {reviewEligibility?.needsContact && (
                   <button onClick={onContact} className="text-xs font-bold mt-2" style={{ color: "#2563EB" }}>{t("listingDetail.contactButton")}</button>
                 )}
@@ -4654,7 +4493,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
                     onChange={(e) => setReviewName(e.target.value)}
                     placeholder={t("listingDetail.namePlaceholder")}
                     className="w-full px-3 py-2 rounded-lg border text-sm outline-none mb-2.5"
-                    style={{ borderColor: "#D9D0BA", background: "#FFFFFF", color: "#1B2B24" }}
+                    style={{ borderColor: "#E4E4E7", background: "#FFFFFF", color: "#0F1115" }}
                   />
                 )}
                 <div className="flex gap-1 mb-2.5">
@@ -4671,7 +4510,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
                   rows={3}
                   placeholder={t("listingDetail.commentPlaceholder")}
                   className="w-full px-3 py-2 rounded-lg border text-sm outline-none resize-none mb-2.5"
-                  style={{ borderColor: "#D9D0BA", background: "#FFFFFF", color: "#1B2B24" }}
+                  style={{ borderColor: "#E4E4E7", background: "#FFFFFF", color: "#0F1115" }}
                 />
                 {(
                   <>
@@ -4683,7 +4522,7 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
                           <img loading="lazy" decoding="async" src={reviewMediaFile.url} alt="" className="w-14 h-14 rounded-lg object-cover" />
                         )
                       )}
-                      <label className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg border-2 border-dashed cursor-pointer" style={{ borderColor: "#D9D0BA", color: "#5C5744" }}>
+                      <label className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg border-2 border-dashed cursor-pointer" style={{ borderColor: "#E4E4E7", color: "#4B5563" }}>
                         <Camera size={13} />
                         {reviewMediaFile ? t("listingDetail.changeMediaButton") : isRealListing ? t("listingDetail.addPhotoButton") : t("listingDetail.addPhotoVideoButton")}
                         {/* Gerçek vitrinlerde video bilerek desteklenmiyor — bkz.
@@ -4693,13 +4532,13 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
                         <input type="file" accept={isRealListing ? "image/*" : "image/*,video/*"} className="hidden" onChange={handleReviewMedia} />
                       </label>
                     </div>
-                    <p className="text-[11px] mb-3" style={{ color: "#6B6550" }}>
+                    <p className="text-[11px] mb-3" style={{ color: "#6B7280" }}>
                       {t("listingDetail.mediaConsentNote")}
                     </p>
                   </>
                 )}
                 {reviewError && (
-                  <p className="text-xs mb-3 px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{reviewError}</p>
+                  <p className="text-xs mb-3 px-3 py-2 rounded-lg" style={{ background: "rgba(220,38,38,0.1)", color: "#DC2626" }}>{reviewError}</p>
                 )}
                 <button
                   onClick={submitReview}
@@ -4822,17 +4661,17 @@ function MapView({ onBack, onSelectProvider, onSelectJob, realListings, realJobs
 
   return (
     <div className="max-w-6xl mx-auto px-5 py-6">
-      <button onClick={onBack} className="flex items-center gap-1 text-sm mb-4" style={{ color: "#5C5744" }}>
+      <button onClick={onBack} className="flex items-center gap-1 text-sm mb-4" style={{ color: "#4B5563" }}>
         <ChevronLeft size={16} /> {t("common.back")}
       </button>
       <div className="flex items-center justify-between flex-wrap gap-3 mb-3">
-        <h1 className="font-serif text-2xl" style={{ color: "#1B2B24" }}>{t("mapView.title")}</h1>
+        <h1 className="font-sans text-2xl sm:text-3xl font-black tracking-tight" style={{ color: "#0F1115" }}>{t("mapView.title")}</h1>
         {/* Android kabuğunda konum izni istenmiyor (Play izin beyanı gerekmesin): şehri elle seçersin. */}
         {!isAndroidApp() && (
         <button
           onClick={useMyLocation}
           className="text-xs font-medium px-3.5 py-2 rounded-full flex items-center gap-1.5"
-          style={{ background: locStatus === "granted" ? "#3F7D5C" : "#C2872B", color: "white" }}
+          style={{ background: "#2563EB", color: "white" }}
         >
           <MapPin size={13} />
           {locStatus === "loading" ? t("mapView.locLoading") : locStatus === "granted" ? t("mapView.locGranted") : t("mapView.useMyLocation")}
@@ -4846,7 +4685,7 @@ function MapView({ onBack, onSelectProvider, onSelectJob, realListings, realJobs
             key={key}
             onClick={() => setPinType(key)}
             className="text-xs font-bold px-3.5 py-2 rounded-full transition-colors"
-            style={pinType === key ? { background: "#2563EB", color: "#FFFFFF" } : { background: "#F8F4E9", color: "#5C5744", border: "1px solid #D9D0BA" }}
+            style={pinType === key ? { background: "#2563EB", color: "#FFFFFF" } : { background: "#F7F7F8", color: "#4B5563", border: "1px solid #E4E4E7" }}
           >
             {label}
           </button>
@@ -4854,18 +4693,18 @@ function MapView({ onBack, onSelectProvider, onSelectJob, realListings, realJobs
       </div>
 
       {locStatus === "denied" && (
-        <p className="text-xs mb-3 px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>
+        <p className="text-xs mb-3 px-3 py-2 rounded-lg" style={{ background: "rgba(220,38,38,0.1)", color: "#DC2626" }}>
           {t("mapView.locDenied")}
         </p>
       )}
 
       <div className="flex items-center gap-2 mb-3">
-        <MapPin size={14} style={{ color: "#6B6550" }} />
+        <MapPin size={14} style={{ color: "#6B7280" }} />
         <select
           value={cityId}
           onChange={(e) => { setCityId(e.target.value); setActive(null); }}
           className="text-sm font-medium px-3 py-2 rounded-lg border outline-none"
-          style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
+          style={{ borderColor: "#E4E4E7", background: "#F7F7F8", color: "#0F1115" }}
         >
           {[["Türkiye", "turkey"], ["Hindistan", "india"], ["Avrupa", "europe"], ["Kuzey Amerika", "northAmerica"], ["Orta Doğu", "middleEast"], ["Asya-Pasifik", "asiaPacific"]].map(([region, regionKey]) => (
             <optgroup key={region} label={t(`common.regions.${regionKey}`)}>
@@ -4876,7 +4715,7 @@ function MapView({ onBack, onSelectProvider, onSelectJob, realListings, realJobs
           ))}
         </select>
         {userLoc && (
-          <span className="text-[11px]" style={{ color: "#3F7D5C" }}>{t("mapView.nearestCityAuto")}</span>
+          <span className="text-[11px]" style={{ color: "#16A34A" }}>{t("mapView.nearestCityAuto")}</span>
         )}
       </div>
 
@@ -4888,22 +4727,22 @@ function MapView({ onBack, onSelectProvider, onSelectJob, realListings, realJobs
             onChange={(e) => setMapQuery(e.target.value)}
             placeholder={t("mapView.searchPlaceholder")}
             className="w-full pl-10 pr-3 py-2.5 rounded-full border text-sm outline-none"
-            style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
+            style={{ borderColor: "#E4E4E7", background: "#F7F7F8", color: "#0F1115" }}
           />
           {mapQuery && (
             <button onClick={() => setMapQuery("")} className="absolute right-1.5 top-1/2 -translate-y-1/2 p-2" aria-label={t("common.clearSearchAria")}>
-              <X size={14} style={{ color: "#6B6550" }} />
+              <X size={14} style={{ color: "#6B7280" }} />
             </button>
           )}
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[11px] font-medium" style={{ color: "#6B6550" }}>{t("mapView.popularLabel")}</span>
+          <span className="text-[11px] font-medium" style={{ color: "#6B7280" }}>{t("mapView.popularLabel")}</span>
           {["Çilingir", "Temizlik", "Bakıcı", "Kuaför", "Hemşire", "Yoga & Meditasyon"].map((term) => (
             <button
               key={term}
               onClick={() => setMapQuery(term)}
               className="text-xs font-medium px-3 py-1.5 rounded-full border"
-              style={mapQuery === term ? { background: "#EFE8D8", color: "#1B2B24", borderColor: "#1B2B24" } : { borderColor: "#D9D0BA", color: "#6B6550" }}
+              style={mapQuery === term ? { background: "#F4F4F5", color: "#0F1115", borderColor: "#0F1115" } : { borderColor: "#E4E4E7", color: "#6B7280" }}
             >
               {term}
             </button>
@@ -4916,14 +4755,14 @@ function MapView({ onBack, onSelectProvider, onSelectJob, realListings, realJobs
         <div
           className="relative rounded-2xl overflow-hidden border h-[480px]"
           style={{
-            borderColor: "#D9D0BA",
+            borderColor: "#E4E4E7",
             background: "#E4DCC5",
             backgroundImage:
               "linear-gradient(rgba(217,208,186,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(217,208,186,0.6) 1px, transparent 1px)",
             backgroundSize: "36px 36px",
           }}
         >
-          <div className="absolute top-3 left-3 text-[11px] px-2.5 py-1 rounded-full" style={{ background: "rgba(255,255,255,0.85)", color: "#5C5744" }}>
+          <div className="absolute top-3 left-3 text-[11px] px-2.5 py-1 rounded-full" style={{ background: "rgba(255,255,255,0.85)", color: "#4B5563" }}>
             {t("mapView.cityProviderCount", { city: city?.name, count: sorted.length })}
           </div>
           {sorted.map((p) => (
@@ -4940,11 +4779,11 @@ function MapView({ onBack, onSelectProvider, onSelectJob, realListings, realJobs
                 {p.kind === "job" ? <Megaphone size={14} fill="white" /> : <MapPin size={15} fill="white" />}
               </div>
               <span
-                className="mt-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full whitespace-nowrap shadow-sm"
+                className="mt-1 text-[11px] font-medium px-1.5 py-0.5 rounded-full whitespace-nowrap shadow-sm"
                 style={
                   active?.id === p.id
                     ? { background: catColor[p.category], color: "white" }
-                    : { background: "white", color: "#1B2B24" }
+                    : { background: "white", color: "#0F1115" }
                 }
               >
                 {p.price}
@@ -4954,43 +4793,43 @@ function MapView({ onBack, onSelectProvider, onSelectJob, realListings, realJobs
         </div>
 
         {/* Side panel: active pin detail or list, sorted by real distance when location is known */}
-        <div className="rounded-2xl border p-4 h-[480px] overflow-y-auto" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
+        <div className="rounded-2xl border p-4 h-[480px] overflow-y-auto" style={{ borderColor: "#E4E4E7", background: "#F7F7F8" }}>
           {active ? (
             <div>
-              <button onClick={() => setActive(null)} className="text-xs mb-3" style={{ color: "#6B6550" }}>{t("mapView.backToList")}</button>
+              <button onClick={() => setActive(null)} className="text-xs mb-3" style={{ color: "#6B7280" }}>{t("mapView.backToList")}</button>
               {active.kind === "job" && (
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full mb-2" style={{ background: "#FFF3E0", color: "#C2872B" }}>
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full mb-2" style={{ background: "#FFF3E0", color: "#2563EB" }}>
                   <Megaphone size={10} /> {t("mapView.jobBadge")}
                 </span>
               )}
               <img loading="lazy" decoding="async" src={active.img} alt="" className="w-full h-28 object-cover rounded-lg mb-3" />
-              <p className="text-sm font-medium" style={{ color: "#1B2B24" }}>{active.name}</p>
-              <p className="text-xs mb-2" style={{ color: "#6B6550" }}>{active.district}, {city?.name}</p>
+              <p className="text-sm font-medium" style={{ color: "#0F1115" }}>{active.name}</p>
+              <p className="text-xs mb-2" style={{ color: "#6B7280" }}>{active.district}, {city?.name}</p>
               {active.kind !== "job" && (
                 <div className="flex items-center gap-1 mb-1">
                   <Stars value={active.rating} size={12} />
-                  <span className="text-xs" style={{ color: "#5C5744" }}>{active.rating}</span>
+                  <span className="text-xs" style={{ color: "#4B5563" }}>{active.rating}</span>
                 </div>
               )}
               {active.distance != null && (
-                <p className="text-xs mb-2" style={{ color: "#3F7D5C" }}>{t("mapView.distanceAway", { distance: active.distance.toFixed(1) })}</p>
+                <p className="text-xs mb-2" style={{ color: "#16A34A" }}>{t("mapView.distanceAway", { distance: active.distance.toFixed(1) })}</p>
               )}
-              <p className="text-sm font-medium mb-3 mt-2" style={{ color: "#C2872B" }}>{active.price}</p>
+              <p className="text-sm font-medium mb-3 mt-2" style={{ color: "#0F1115" }}>{active.price}</p>
               <button
                 onClick={() => (active.kind === "job" ? onSelectJob(active.job) : onSelectProvider(active))}
                 className="w-full py-2 rounded-full text-sm font-medium text-white"
-                style={{ background: "#C2872B" }}
+                style={{ background: "#2563EB" }}
               >
                 {active.kind === "job" ? t("mapView.applyButton") : t("mapView.viewProfileButton")}
               </button>
             </div>
           ) : (
             <div className="space-y-2">
-              <p className="text-xs font-medium mb-2" style={{ color: "#6B6550" }}>
+              <p className="text-xs font-medium mb-2" style={{ color: "#6B7280" }}>
                 {userLoc ? t("mapView.nearestProviders") : t("mapView.mapProviders")}
               </p>
               {sorted.length === 0 && (
-                <p className="text-xs" style={{ color: "#6B6550" }}>{t("mapView.noProviders")}</p>
+                <p className="text-xs" style={{ color: "#6B7280" }}>{t("mapView.noProviders")}</p>
               )}
               {sorted.map((p) => (
                 <button
@@ -5002,11 +4841,11 @@ function MapView({ onBack, onSelectProvider, onSelectJob, realListings, realJobs
                     {p.kind === "job" ? <Megaphone size={13} fill="white" /> : <MapPin size={14} fill="white" />}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs font-medium truncate" style={{ color: "#1B2B24" }}>{p.name}</p>
-                    <p className="text-[11px] truncate" style={{ color: "#6B6550" }}>{p.district} · {p.price}</p>
+                    <p className="text-xs font-medium truncate" style={{ color: "#0F1115" }}>{p.name}</p>
+                    <p className="text-[11px] truncate" style={{ color: "#6B7280" }}>{p.district} · {p.price}</p>
                   </div>
                   {p.distance != null && (
-                    <span className="text-[11px] font-medium shrink-0" style={{ color: "#3F7D5C" }}>{p.distance.toFixed(1)} km</span>
+                    <span className="text-[11px] font-medium shrink-0" style={{ color: "#16A34A" }}>{p.distance.toFixed(1)} km</span>
                   )}
                 </button>
               ))}
@@ -5014,7 +4853,7 @@ function MapView({ onBack, onSelectProvider, onSelectJob, realListings, realJobs
           )}
         </div>
       </div>
-      <p className="text-xs mt-3" style={{ color: "#6B6550" }}>
+      <p className="text-xs mt-3" style={{ color: "#6B7280" }}>
         {t("mapView.disclaimerNote")}
       </p>
     </div>
@@ -5070,16 +4909,16 @@ function JobDetailView({ job, onBack, onContact, currentUserId }) {
 
   return (
     <div className="max-w-3xl mx-auto px-5 py-8">
-      <button onClick={onBack} className="flex items-center gap-1 text-sm mb-5" style={{ color: "#5C5744" }}>
+      <button onClick={onBack} className="flex items-center gap-1 text-sm mb-5" style={{ color: "#4B5563" }}>
         <ChevronLeft size={16} /> {t("common.back")}
       </button>
 
-      <div className="rounded-2xl p-7 mb-6 relative overflow-hidden" style={{ background: "linear-gradient(135deg, #0F1115 0%, #1A1D23 60%, #16321F 100%)" }}>
-        <div className="absolute -bottom-10 -right-10 w-52 h-52 rounded-full blur-3xl opacity-20" style={{ background: "#F59E0B" }} />
+      <div className="rounded-2xl p-7 mb-6 relative overflow-hidden" style={{ background: "#0B0B0F" }}>
+
         <div className="flex items-center gap-2 mb-3 relative">
           {Icon && (
             <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background: "rgba(255,255,255,0.12)" }}>
-              <Icon size={16} style={{ color: "#F59E0B" }} />
+              <Icon size={16} style={{ color: "#2563EB" }} />
             </div>
           )}
           <span className="text-xs font-semibold" style={{ color: "#B8BCC4" }}>{getCategoryName(cat?.id, t)}{job?.postedTime ? ` · ${job.postedTime}` : ""}</span>
@@ -5094,9 +4933,9 @@ function JobDetailView({ job, onBack, onContact, currentUserId }) {
             {job?.desc || t("jobDetail.noDescription")}
           </p>
         </div>
-        <div className="rounded-xl border p-5 h-fit" style={{ borderColor: "#F0F0F0", background: "#FAFAFA" }}>
+        <div className="rounded-xl border p-5 h-fit" style={{ borderColor: "#E4E4E7", background: "#FAFAFA" }}>
           <p className="text-xs font-medium mb-1" style={{ color: "#9CA3AF" }}>{t("jobDetail.budgetLabel")}</p>
-          <p className="text-lg font-black mb-4" style={{ color: "#F59E0B" }}>{job?.budget}</p>
+          <p className="text-lg font-black mb-4" style={{ color: "#0F1115" }}>{job?.budget}</p>
           <p className="text-xs font-medium mb-1" style={{ color: "#9CA3AF" }}>{t("jobDetail.locationLabel")}</p>
           <p className="text-sm mb-4 flex items-center gap-1" style={{ color: "#374151" }}>
             <MapPin size={13} />{job?.district}
@@ -5106,7 +4945,7 @@ function JobDetailView({ job, onBack, onContact, currentUserId }) {
           <button
             onClick={onContact}
             className="w-full py-2.5 rounded-full text-sm font-bold text-white"
-            style={{ background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)" }}
+            style={{ background: "#2563EB" }}
           >
             {t("jobDetail.applyButton")}
           </button>
@@ -5116,7 +4955,7 @@ function JobDetailView({ job, onBack, onContact, currentUserId }) {
               onClick={bumpJob}
               disabled={bumping || bumped}
               className="w-full py-2 mt-2 rounded-full text-xs font-bold border flex items-center justify-center gap-1.5"
-              style={{ borderColor: "#D9D0BA", color: bumped ? "#3F7D5C" : "#5C5744", opacity: bumping ? 0.6 : 1 }}
+              style={{ borderColor: "#E4E4E7", color: bumped ? "#16A34A" : "#4B5563", opacity: bumping ? 0.6 : 1 }}
             >
               {bumping ? <Loader2 size={12} className="animate-spin" /> : bumped ? <Check size={12} /> : null}
               {bumped ? t("jobDetail.bumpedLabel") : t("jobDetail.bumpButton")}
@@ -5127,21 +4966,21 @@ function JobDetailView({ job, onBack, onContact, currentUserId }) {
             <button
               onClick={() => setShowReportForm((v) => !v)}
               className="w-full py-2 mt-2 rounded-full text-xs font-medium"
-              style={{ color: "#9C4A3C" }}
+              style={{ color: "#DC2626" }}
             >
               {t("jobDetail.reportButton")}
             </button>
           )}
           {reportSubmitted && (
-            <p className="text-xs text-center mt-2" style={{ color: "#3F7D5C" }}>{t("listingDetail.reportSubmitted")}</p>
+            <p className="text-xs text-center mt-2" style={{ color: "#16A34A" }}>{t("listingDetail.reportSubmitted")}</p>
           )}
           {showReportForm && !reportSubmitted && (
-            <div className="mt-2 pt-3 border-t" style={{ borderColor: "#F0F0F0" }}>
+            <div className="mt-2 pt-3 border-t" style={{ borderColor: "#E4E4E7" }}>
               <select
                 value={reportReason}
                 onChange={(e) => setReportReason(e.target.value)}
                 className="w-full px-3 py-2 rounded-lg border text-xs outline-none mb-2"
-                style={{ borderColor: "#D9D0BA", background: "#FFFFFF", color: "#1B2B24" }}
+                style={{ borderColor: "#E4E4E7", background: "#FFFFFF", color: "#0F1115" }}
               >
                 {Object.keys(LISTING_REPORT_REASON_LABELS).map((k) => <option key={k} value={k}>{t(`common.listingReportReasons.${k}`)}</option>)}
               </select>
@@ -5151,14 +4990,14 @@ function JobDetailView({ job, onBack, onContact, currentUserId }) {
                 rows={2}
                 placeholder={t("listingDetail.reportDetailPlaceholder")}
                 className="w-full px-3 py-2 rounded-lg border text-xs outline-none mb-2 resize-none"
-                style={{ borderColor: "#D9D0BA", background: "#FFFFFF", color: "#1B2B24" }}
+                style={{ borderColor: "#E4E4E7", background: "#FFFFFF", color: "#0F1115" }}
               />
-              {reportError && <p className="text-[11px] mb-2" style={{ color: "#9C4A3C" }}>{reportError}</p>}
+              {reportError && <p className="text-[11px] mb-2" style={{ color: "#DC2626" }}>{reportError}</p>}
               <button
                 onClick={submitListingReport}
                 disabled={reportSubmitting}
                 className="w-full py-2 rounded-full text-xs font-bold text-white"
-                style={{ background: "#9C4A3C", opacity: reportSubmitting ? 0.7 : 1 }}
+                style={{ background: "#DC2626", opacity: reportSubmitting ? 0.7 : 1 }}
               >
                 {reportSubmitting ? t("listingDetail.reportSubmitting") : t("listingDetail.reportSubmitButton")}
               </button>
@@ -5279,24 +5118,27 @@ function SearchResultsView({ query, cityFilter, onBack, onSelectListing, realLis
 
   return (
     <div className="max-w-6xl mx-auto px-5 py-8">
-      <button onClick={onBack} className="flex items-center gap-1 text-sm mb-4" style={{ color: "#5C5744" }}>
+      <button onClick={onBack} className="flex items-center gap-1 text-sm mb-4" style={{ color: "#6B7280" }}>
         <ChevronLeft size={16} /> {t("common.back")}
       </button>
-      <h1 className="font-serif text-2xl mb-1" style={{ color: "#1B2B24" }}>
-        {t("searchResults.resultsHeading", {
-          label: query.trim() && cityFilter ? `"${query}" — ${cityFilter}` : query.trim() ? `"${query}"` : cityFilter,
-          count: results.length,
-        })}
+      {/* 2026-10-17: sonuç SAYISI gösterilmez (kurucu: içeride kaç kişi olduğu öngörülemez dursun);
+          boş aramada (ana sayfa "Daha fazlasını gör") başlık "Keşfet". */}
+      <h1 className="font-sans text-2xl sm:text-3xl font-black tracking-tight mb-1" style={{ color: "#0F1115" }}>
+        {query.trim() || cityFilter
+          ? t("searchResults.resultsHeading", {
+              label: query.trim() && cityFilter ? `"${query}" — ${cityFilter}` : query.trim() ? `"${query}"` : cityFilter,
+            })
+          : t("home.showcasesHeading")}
       </h1>
       <div className="flex items-center justify-between flex-wrap gap-3 mb-3">
-        <p className="text-sm" style={{ color: "#5C5744" }}>{t("searchResults.subheading")}</p>
+        <p className="text-sm" style={{ color: "#6B7280" }}>{query.trim() || cityFilter ? t("searchResults.subheading") : t("searchResults.browseSubheading")}</p>
         <div className="flex items-center gap-2">
           {currentUserId && query.trim() && (
             <button
               onClick={saveThisSearch}
               disabled={savingSearch || searchSaved}
-              className="flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-full border"
-              style={searchSaved ? { background: "#3F7D5C", color: "white", borderColor: "#3F7D5C" } : { borderColor: "#D9D0BA", color: "#5C5744" }}
+              className="flex items-center gap-2 text-xs font-bold px-3.5 py-2 rounded-full border"
+              style={searchSaved ? { background: "#0F1115", color: "white", borderColor: "#0F1115" } : { borderColor: "#0F1115", color: "#0F1115" }}
             >
               <Bell size={13} />
               {searchSaved ? t("searchResults.searchSaved") : savingSearch ? t("searchResults.savingSearch") : t("searchResults.saveSearch")}
@@ -5304,8 +5146,8 @@ function SearchResultsView({ query, cityFilter, onBack, onSelectListing, realLis
           )}
           <button
             onClick={() => setHomeOnly(!homeOnly)}
-            className="flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-full border"
-            style={homeOnly ? { background: "#3F7D5C", color: "white", borderColor: "#3F7D5C" } : { borderColor: "#D9D0BA", color: "#5C5744" }}
+            className="flex items-center gap-2 text-xs font-bold px-3.5 py-2 rounded-full border"
+            style={homeOnly ? { background: "#0F1115", color: "white", borderColor: "#0F1115" } : { borderColor: "#0F1115", color: "#0F1115" }}
           >
             <Home size={13} />
             {t("searchResults.homeOnlyToggle")}
@@ -5325,45 +5167,45 @@ function SearchResultsView({ query, cityFilter, onBack, onSelectListing, realLis
       )}
 
       {results.length === 0 ? (
-        <div className="rounded-xl border p-8 text-center" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
-          <p className="text-sm" style={{ color: "#5C5744" }}>{t("searchResults.empty")}</p>
+        <div className="rounded-2xl border p-8 text-center" style={{ borderColor: "#E4E4E7", background: "#FFFFFF" }}>
+          <p className="text-sm" style={{ color: "#6B7280" }}>{t("searchResults.empty")}</p>
         </div>
       ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
           {results.map((l) => (
             <button
               key={l.id}
               onClick={() => onSelectListing(l)}
-              className="text-left rounded-xl overflow-hidden border hover:shadow-md transition-shadow group"
-              style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}
+              className="text-left rounded-2xl overflow-hidden border hover:shadow-md transition-shadow group flex flex-col"
+              style={{ borderColor: "#E4E4E7", background: "#FFFFFF" }}
             >
-              <div className="relative h-40 overflow-hidden">
+              <div className="relative aspect-[4/3] overflow-hidden">
                 <img loading="lazy" decoding="async" src={l.img} alt={l.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                <div className="absolute top-2 left-2 flex items-center gap-1.5">
+                <div className="absolute top-2 left-2 right-2 flex items-center gap-1.5 flex-wrap">
                   <ModeTag mode={l.mode} />
                   {l.isDemo && (
-                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full text-white tracking-wide" style={{ background: "#DC2626" }}>{t("searchResults.demoBadge")}</span>
+                    <span className="text-[11px] font-black px-2 py-0.5 rounded-full text-white tracking-wide" style={{ background: "#DC2626" }}>{t("searchResults.demoBadge")}</span>
                   )}
                   {l.isBoosted && (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white flex items-center gap-0.5" style={{ background: "#F59E0B" }}><Sparkles size={9} />{t("searchResults.sponsoredBadge")}</span>
+                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full text-white flex items-center gap-0.5" style={{ background: "#2563EB" }}><Sparkles size={9} />{t("searchResults.sponsoredBadge")}</span>
                   )}
                   {l.isReal && (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: "#2FBF71" }}>{t("searchResults.newBadge")}</span>
+                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: "#0F1115" }}>{t("searchResults.newBadge")}</span>
                   )}
                 </div>
               </div>
-              <div className="p-3.5">
-                <p className="text-sm font-medium leading-snug line-clamp-2" style={{ color: "#1B2B24" }}>{l.title}</p>
+              <div className="p-3 sm:p-3.5 flex flex-col flex-1">
+                <p className="text-[13px] sm:text-sm font-semibold leading-snug line-clamp-2" style={{ color: "#0F1115" }}>{l.title}</p>
                 <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                  <p className="text-xs" style={{ color: "#6B6550" }}>{l.provider} · {l.city}</p>
+                  <p className="text-xs line-clamp-1" style={{ color: "#6B7280" }}>{l.provider} · {l.city}</p>
                   <LevelBadge level={l.level} />
                 </div>
-                <div className="flex items-center justify-between mt-2.5">
+                <div className="flex items-center justify-between flex-wrap gap-x-2 gap-y-1 mt-auto pt-2.5">
                   <div className="flex items-center gap-1">
                     <Stars value={l.rating} size={12} />
-                    <span className="text-xs" style={{ color: "#5C5744" }}>{l.reviewCount > 0 ? `(${l.reviewCount})` : t("searchResults.newListingLabel")}</span>
+                    <span className="text-xs" style={{ color: "#6B7280" }}>{l.reviewCount > 0 ? `(${l.reviewCount})` : t("searchResults.newListingLabel")}</span>
                   </div>
-                  <span className="text-sm font-medium" style={{ color: "#C2872B" }}>{l.price}</span>
+                  <span className="text-sm font-black truncate max-w-full" style={{ color: "#0F1115" }}>{l.price}</span>
                 </div>
               </div>
             </button>
@@ -5385,40 +5227,40 @@ function FavoritesView({ onBack, onSelectListing, onOpenJob, realListings, realJ
   const isEmpty = favoriteListings.length === 0 && favoriteJobs.length === 0;
   return (
     <div className="max-w-6xl mx-auto px-5 py-8">
-      <button onClick={onBack} className="flex items-center gap-1 text-sm mb-4" style={{ color: "#5C5744" }}>
+      <button onClick={onBack} className="flex items-center gap-1 text-sm mb-4" style={{ color: "#4B5563" }}>
         <ChevronLeft size={16} /> {t("common.back")}
       </button>
-      <h1 className="font-serif text-2xl mb-1" style={{ color: "#1B2B24" }}>{t("favorites.title")}</h1>
-      <p className="text-sm mb-6" style={{ color: "#5C5744" }}>{t("favorites.subtitle")}</p>
+      <h1 className="font-sans text-2xl sm:text-3xl font-black tracking-tight mb-1" style={{ color: "#0F1115" }}>{t("favorites.title")}</h1>
+      <p className="text-sm mb-6" style={{ color: "#4B5563" }}>{t("favorites.subtitle")}</p>
 
       {isEmpty ? (
-        <div className="rounded-xl border p-8 text-center" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
-          <Heart size={22} style={{ color: "#D9D0BA" }} className="mx-auto mb-2" />
-          <p className="text-sm" style={{ color: "#5C5744" }}>{t("favorites.empty")}</p>
+        <div className="rounded-xl border p-8 text-center" style={{ borderColor: "#E4E4E7", background: "#F7F7F8" }}>
+          <Heart size={22} style={{ color: "#E4E4E7" }} className="mx-auto mb-2" />
+          <p className="text-sm" style={{ color: "#4B5563" }}>{t("favorites.empty")}</p>
         </div>
       ) : (
         <>
           {favoriteListings.length > 0 && (
             <div className="mb-8">
-              <h2 className="text-sm font-bold mb-3" style={{ color: "#1B2B24" }}>{t("favorites.listingsHeading", { count: favoriteListings.length })}</h2>
+              <h2 className="text-sm font-bold mb-3" style={{ color: "#0F1115" }}>{t("favorites.listingsHeading", { count: favoriteListings.length })}</h2>
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {favoriteListings.map((l) => (
-                  <div key={l.id} className="rounded-xl overflow-hidden border" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
+                  <div key={l.id} className="rounded-xl overflow-hidden border" style={{ borderColor: "#E4E4E7", background: "#F7F7F8" }}>
                     <button onClick={() => onSelectListing(l)} className="w-full text-left">
                       <div className="relative h-40 overflow-hidden">
                         <img loading="lazy" decoding="async" src={l.img} alt={l.title} className="w-full h-full object-cover" />
                       </div>
                       <div className="p-3.5">
-                        <p className="text-sm font-medium leading-snug line-clamp-2" style={{ color: "#1B2B24" }}>{l.title}</p>
-                        <p className="text-xs mt-1" style={{ color: "#6B6550" }}>{l.provider} · {l.city}</p>
+                        <p className="text-sm font-medium leading-snug line-clamp-2" style={{ color: "#0F1115" }}>{l.title}</p>
+                        <p className="text-xs mt-1" style={{ color: "#6B7280" }}>{l.provider} · {l.city}</p>
                       </div>
                     </button>
                     <button
                       onClick={() => onToggleFavorite?.(l)}
                       className="w-full flex items-center justify-center gap-1.5 text-xs font-medium py-2 border-t"
-                      style={{ borderColor: "#D9D0BA", color: "#9C4A3C" }}
+                      style={{ borderColor: "#E4E4E7", color: "#DC2626" }}
                     >
-                      <Heart size={13} fill="#9C4A3C" /> {t("favorites.removeFavorite")}
+                      <Heart size={13} fill="#DC2626" /> {t("favorites.removeFavorite")}
                     </button>
                   </div>
                 ))}
@@ -5428,20 +5270,20 @@ function FavoritesView({ onBack, onSelectListing, onOpenJob, realListings, realJ
 
           {favoriteJobs.length > 0 && (
             <div>
-              <h2 className="text-sm font-bold mb-3" style={{ color: "#1B2B24" }}>{t("favorites.jobsHeading", { count: favoriteJobs.length })}</h2>
+              <h2 className="text-sm font-bold mb-3" style={{ color: "#0F1115" }}>{t("favorites.jobsHeading", { count: favoriteJobs.length })}</h2>
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {favoriteJobs.map((j) => (
-                  <div key={j.id} className="rounded-xl overflow-hidden border" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
+                  <div key={j.id} className="rounded-xl overflow-hidden border" style={{ borderColor: "#E4E4E7", background: "#F7F7F8" }}>
                     <button onClick={() => onOpenJob(j)} className="w-full text-left p-3.5">
-                      <p className="text-sm font-medium leading-snug line-clamp-2" style={{ color: "#1B2B24" }}>{j.title}</p>
-                      <p className="text-xs mt-1" style={{ color: "#6B6550" }}>{j.district} · {j.budget}</p>
+                      <p className="text-sm font-medium leading-snug line-clamp-2" style={{ color: "#0F1115" }}>{j.title}</p>
+                      <p className="text-xs mt-1" style={{ color: "#6B7280" }}>{j.district} · {j.budget}</p>
                     </button>
                     <button
                       onClick={() => onToggleJobFavorite?.(j)}
                       className="w-full flex items-center justify-center gap-1.5 text-xs font-medium py-2 border-t"
-                      style={{ borderColor: "#D9D0BA", color: "#9C4A3C" }}
+                      style={{ borderColor: "#E4E4E7", color: "#DC2626" }}
                     >
-                      <Heart size={13} fill="#9C4A3C" /> {t("favorites.removeFavorite")}
+                      <Heart size={13} fill="#DC2626" /> {t("favorites.removeFavorite")}
                     </button>
                   </div>
                 ))}
@@ -5460,13 +5302,24 @@ function PostJobView({ onBack, onSubmitted, onViewOffers, onMatchAI, userId, onJ
   // ettiği gerçek bir eksiklik — "balkon temizliğinden bahsetmeyi unutmuş,
   // düzenleyemiyor" gibi bir durumda tek çare ilanı silip yeniden girmekti).
   const isEditing = !!editingJob;
-  const [mode, setMode] = useState(editingJob?.mode || "local");
+  // "Ne arıyorsun?" ekranında eşleşme çıkmayınca kişinin kendi metni buraya hazır gelir (30 dk geçerli, bir kez okunur).
+  const [needPrefill] = useState(() => {
+    if (editingJob || typeof window === "undefined") return null;
+    try {
+      const raw = sessionStorage.getItem(NEED_PREFILL_KEY);
+      if (!raw) return null;
+      sessionStorage.removeItem(NEED_PREFILL_KEY);
+      const p = JSON.parse(raw);
+      return p && Date.now() - (p.ts || 0) < 30 * 60 * 1000 ? p : null;
+    } catch { return null; }
+  });
+  const [mode, setMode] = useState(editingJob?.mode || (needPrefill?.remote ? "remote" : "local"));
   const [step, setStep] = useState("form"); // form | success
-  const [title, setTitle] = useState(editingJob?.title || "");
-  const [categoryId, setCategoryId] = useState(editingJob?.category === "diger" ? CUSTOM_CATEGORY_ID : editingJob?.category || "");
+  const [title, setTitle] = useState(editingJob?.title || needPrefill?.title || "");
+  const [categoryId, setCategoryId] = useState(editingJob?.category === "diger" ? CUSTOM_CATEGORY_ID : editingJob?.category || (CATEGORIES.some((c) => c.id === needPrefill?.categorySlug) ? needPrefill.categorySlug : ""));
   const [customCategoryLabel, setCustomCategoryLabel] = useState(editingJob?.customCategoryLabel || ""); // categoryId === CUSTOM_CATEGORY_ID iken
-  const [desc, setDesc] = useState(editingJob?.desc || "");
-  const [cityId, setCityId] = useState(() => deriveCityIdFromLabel(editingJob?.city) || "istanbul");
+  const [desc, setDesc] = useState(editingJob?.desc || needPrefill?.desc || "");
+  const [cityId, setCityId] = useState(() => deriveCityIdFromLabel(editingJob?.city) || (CITIES.some((c) => c.id === needPrefill?.province) ? needPrefill.province : "istanbul"));
   const [district, setDistrict] = useState(() => (editingJob?.city || "").split(",")[0]?.trim() || "");
   const [minBudget, setMinBudget] = useState(editingJob?.budgetMin != null ? String(editingJob.budgetMin) : "");
   const [maxBudget, setMaxBudget] = useState(editingJob?.budgetMax != null ? String(editingJob.budgetMax) : "");
@@ -5673,18 +5526,18 @@ Aciliyet: ${urgencyLabel}${mode === "local" ? ` · Hizmet yeri: ${prefLabel}` : 
       : t(nearbyCount > 0 ? "postJob.successNotifiedRemoteCount" : "postJob.successNotifiedRemoteGeneric", { category: selectedCategory?.name, count: nearbyCount });
     return (
       <div className="max-w-md mx-auto px-5 py-24 text-center">
-        <div className="w-14 h-14 rounded-full mx-auto mb-5 flex items-center justify-center" style={{ background: "rgba(63,125,92,0.12)" }}>
-          <Send size={22} style={{ color: "#3F7D5C" }} />
+        <div className="w-14 h-14 rounded-full mx-auto mb-5 flex items-center justify-center" style={{ background: "rgba(22,163,74,0.12)" }}>
+          <Send size={22} style={{ color: "#2563EB" }} />
         </div>
-        <h2 className="font-serif text-xl mb-2" style={{ color: "#1B2B24" }}>{t("postJob.successTitle", { title })}</h2>
-        <p className="text-sm mb-1" style={{ color: "#5C5744" }}>
+        <h2 className="font-sans text-xl font-black tracking-tight mb-2" style={{ color: "#0F1115" }}>{t("postJob.successTitle", { title })}</h2>
+        <p className="text-sm mb-1" style={{ color: "#4B5563" }}>
           {notifiedText}
         </p>
-        <p className="text-xs mb-6" style={{ color: "#6B6550" }}>{t("postJob.etaHint", { eta })}</p>
+        <p className="text-xs mb-6" style={{ color: "#6B7280" }}>{t("postJob.etaHint", { eta })}</p>
         <button
           onClick={() => onMatchAI({ title, categoryId, desc, cityId, mode, urgency, homeServicePref, jobId: postedJob?.dbId })}
           className="w-full mb-3 py-3 rounded-full text-sm font-medium text-white flex items-center justify-center gap-2"
-          style={{ background: "#2FBF71" }}
+          style={{ background: "#2563EB" }}
         >
           <Sparkles size={15} /> {t("postJob.aiMatchButton")}
         </button>
@@ -5692,13 +5545,13 @@ Aciliyet: ${urgencyLabel}${mode === "local" ? ` · Hizmet yeri: ${prefLabel}` : 
           <button
             onClick={() => onViewOffers()}
             className="px-5 py-2.5 rounded-full text-sm font-medium text-white"
-            style={{ background: "#C2872B" }}
+            style={{ background: "#2563EB" }}
           >
             {t("postJob.viewOffersButton")}
           </button>
-          <button onClick={onSubmitted} className="px-5 py-2.5 rounded-full text-sm font-medium border" style={{ borderColor: "#D9D0BA", color: "#1B2B24" }}>{t("common.backToHome")}</button>
+          <button onClick={onSubmitted} className="px-5 py-2.5 rounded-full text-sm font-medium border" style={{ borderColor: "#E4E4E7", color: "#0F1115" }}>{t("common.backToHome")}</button>
         </div>
-        <p className="text-[11px] mt-4" style={{ color: "#6B6550" }}>
+        <p className="text-[11px] mt-4" style={{ color: "#6B7280" }}>
           {t("postJob.noteOffersDemo")}
         </p>
       </div>
@@ -5708,7 +5561,7 @@ Aciliyet: ${urgencyLabel}${mode === "local" ? ` · Hizmet yeri: ${prefLabel}` : 
   if (gateCheck.checking) {
     return (
       <div className="max-w-md mx-auto px-5 py-20 text-center">
-        <Loader2 size={20} className="animate-spin mx-auto" style={{ color: "#6B6550" }} />
+        <Loader2 size={20} className="animate-spin mx-auto" style={{ color: "#6B7280" }} />
       </div>
     );
   }
@@ -5716,14 +5569,14 @@ Aciliyet: ${urgencyLabel}${mode === "local" ? ` · Hizmet yeri: ${prefLabel}` : 
   if (!gateCheck.ok) {
     return (
       <div className="max-w-md mx-auto px-5 py-20 text-center">
-        <div className="w-14 h-14 rounded-full mx-auto mb-5 flex items-center justify-center" style={{ background: "rgba(194,135,43,0.15)" }}>
-          <AlertCircle size={22} style={{ color: "#C2872B" }} />
+        <div className="w-14 h-14 rounded-full mx-auto mb-5 flex items-center justify-center" style={{ background: "rgba(217,119,6,0.15)" }}>
+          <AlertCircle size={22} style={{ color: "#D97706" }} />
         </div>
-        <h2 className="font-serif text-xl mb-2" style={{ color: "#1B2B24" }}>{t("common.completeProfileFirst")}</h2>
-        <p className="text-sm mb-6" style={{ color: "#5C5744" }}>{gateCheck.reason}</p>
+        <h2 className="font-sans text-xl font-black tracking-tight mb-2" style={{ color: "#0F1115" }}>{t("common.completeProfileFirst")}</h2>
+        <p className="text-sm mb-6" style={{ color: "#4B5563" }}>{gateCheck.reason}</p>
         <div className="flex gap-2 justify-center">
           <button onClick={onGoToProfile || onBack} className="px-5 py-2.5 rounded-full text-sm font-medium text-white" style={{ background: "#2563EB" }}>{t("common.goToProfile")}</button>
-          <button onClick={onBack} className="px-5 py-2.5 rounded-full text-sm font-medium border" style={{ borderColor: "#D9D0BA", color: "#1B2B24" }}>{t("common.cancel")}</button>
+          <button onClick={onBack} className="px-5 py-2.5 rounded-full text-sm font-medium border" style={{ borderColor: "#E4E4E7", color: "#0F1115" }}>{t("common.cancel")}</button>
         </div>
       </div>
     );
@@ -5731,11 +5584,11 @@ Aciliyet: ${urgencyLabel}${mode === "local" ? ` · Hizmet yeri: ${prefLabel}` : 
 
   return (
     <div className="max-w-xl mx-auto px-5 py-10">
-      <button onClick={onBack} className="flex items-center gap-1 text-sm mb-5" style={{ color: "#5C5744" }}>
+      <button onClick={onBack} className="flex items-center gap-1 text-sm mb-5" style={{ color: "#4B5563" }}>
         <ChevronLeft size={16} /> {t("common.back")}
       </button>
-      <h1 className="font-serif text-2xl mb-1" style={{ color: "#1B2B24" }}>{isEditing ? t("postJob.editTitle") : t("postJob.createTitle")}</h1>
-      <p className="text-sm mb-6" style={{ color: "#5C5744" }}>{isEditing ? t("postJob.editSubtitle") : t("postJob.createSubtitle")}</p>
+      <h1 className="font-sans text-2xl sm:text-3xl font-black tracking-tight mb-1" style={{ color: "#0F1115" }}>{isEditing ? t("postJob.editTitle") : t("postJob.createTitle")}</h1>
+      <p className="text-sm mb-6" style={{ color: "#4B5563" }}>{isEditing ? t("postJob.editSubtitle") : t("postJob.createSubtitle")}</p>
 
       <div className="flex gap-2 mb-6">
         {[["local", t("postJob.modeLocal")], ["remote", t("postJob.modeRemote")]].map(([key, label]) => (
@@ -5743,7 +5596,7 @@ Aciliyet: ${urgencyLabel}${mode === "local" ? ` · Hizmet yeri: ${prefLabel}` : 
             key={key}
             onClick={() => { setMode(key); setCategoryId(""); }}
             className="flex-1 py-2.5 rounded-xl text-sm font-medium border"
-            style={mode === key ? { background: "#1B2B24", color: "#EFE8D8", borderColor: "#1B2B24" } : { borderColor: "#D9D0BA", color: "#5C5744" }}
+            style={mode === key ? { background: "#0F1115", color: "#FFFFFF", borderColor: "#0F1115" } : { borderColor: "#E4E4E7", color: "#4B5563" }}
           >
             {label}
           </button>
@@ -5752,12 +5605,12 @@ Aciliyet: ${urgencyLabel}${mode === "local" ? ` · Hizmet yeri: ${prefLabel}` : 
 
       <div className="space-y-4">
         <div>
-          <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("common.categoryLabel")}</label>
+          <label className="text-xs font-medium block mb-1.5" style={{ color: "#4B5563" }}>{t("common.categoryLabel")}</label>
           <select
             value={categoryId}
             onChange={(e) => setCategoryId(e.target.value)}
             className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
-            style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
+            style={{ borderColor: "#E4E4E7", background: "#F7F7F8", color: "#0F1115" }}
           >
             <option value="">{t("common.categorySelectPlaceholder")}</option>
             {PARENT_CATEGORIES.map((group) => {
@@ -5773,7 +5626,7 @@ Aciliyet: ${urgencyLabel}${mode === "local" ? ` · Hizmet yeri: ${prefLabel}` : 
             <option value={CUSTOM_CATEGORY_ID}>{t("common.categoryOther")}</option>
           </select>
           {categoryId && categoryId !== CUSTOM_CATEGORY_ID && (
-            <p className="text-xs mt-1.5" style={{ color: "#3F7D5C" }}>
+            <p className="text-xs mt-1.5" style={{ color: "#16A34A" }}>
               {mode === "local"
                 ? t("postJob.nearbyLocal", { city: cityName, count: nearbyCount })
                 : t("postJob.nearbyRemote", { count: nearbyCount > 0 ? nearbyCount : t("postJob.manyLabel") })}
@@ -5786,9 +5639,9 @@ Aciliyet: ${urgencyLabel}${mode === "local" ? ` · Hizmet yeri: ${prefLabel}` : 
                 onChange={(e) => setCustomCategoryLabel(e.target.value)}
                 placeholder={t("postJob.customCategoryPlaceholder")}
                 className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
-                style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
+                style={{ borderColor: "#E4E4E7", background: "#F7F7F8", color: "#0F1115" }}
               />
-              <p className="text-xs mt-1.5" style={{ color: "#6B6550" }}>
+              <p className="text-xs mt-1.5" style={{ color: "#6B7280" }}>
                 {t("postJob.customCategoryNote")}
               </p>
             </div>
@@ -5796,18 +5649,18 @@ Aciliyet: ${urgencyLabel}${mode === "local" ? ` · Hizmet yeri: ${prefLabel}` : 
         </div>
 
         <div>
-          <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("postJob.titleLabel")}</label>
+          <label className="text-xs font-medium block mb-1.5" style={{ color: "#4B5563" }}>{t("postJob.titleLabel")}</label>
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder={t("postJob.titlePlaceholder")}
             className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
-            style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
+            style={{ borderColor: "#E4E4E7", background: "#F7F7F8", color: "#0F1115" }}
           />
         </div>
 
         <div>
-          <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("postJob.urgencyLabel")}</label>
+          <label className="text-xs font-medium block mb-1.5" style={{ color: "#4B5563" }}>{t("postJob.urgencyLabel")}</label>
           <div className="flex gap-2">
             {[["now", t("postJob.urgencyNow")], ["today", t("postJob.urgencyToday")], ["flexible", t("postJob.urgencyFlexible")]].map(([key, label]) => (
               <button
@@ -5815,8 +5668,8 @@ Aciliyet: ${urgencyLabel}${mode === "local" ? ` · Hizmet yeri: ${prefLabel}` : 
                 onClick={() => setUrgency(key)}
                 className="flex-1 py-2 rounded-lg text-xs font-medium border flex items-center justify-center gap-1"
                 style={urgency === key
-                  ? { background: key === "now" ? "#9C4A3C" : "#1B2B24", color: "#EFE8D8", borderColor: "transparent" }
-                  : { borderColor: "#D9D0BA", color: "#5C5744" }}
+                  ? { background: key === "now" ? "#DC2626" : "#0F1115", color: "#FFFFFF", borderColor: "transparent" }
+                  : { borderColor: "#E4E4E7", color: "#4B5563" }}
               >
                 {key === "now" && <Clock size={12} />}
                 {label}
@@ -5827,7 +5680,7 @@ Aciliyet: ${urgencyLabel}${mode === "local" ? ` · Hizmet yeri: ${prefLabel}` : 
 
         {mode === "local" && (
           <div>
-            <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("postJob.whereLabel")}</label>
+            <label className="text-xs font-medium block mb-1.5" style={{ color: "#4B5563" }}>{t("postJob.whereLabel")}</label>
             <div className="flex gap-2">
               {[["evde", t("postJob.whereHome")], ["mekanda", t("postJob.whereVenue")], ["esnek", t("postJob.whereEither")]].map(([key, label]) => (
                 <button
@@ -5835,15 +5688,15 @@ Aciliyet: ${urgencyLabel}${mode === "local" ? ` · Hizmet yeri: ${prefLabel}` : 
                   onClick={() => setHomeServicePref(key)}
                   className="flex-1 py-2 rounded-lg text-xs font-medium border flex items-center justify-center gap-1"
                   style={homeServicePref === key
-                    ? { background: "#3F7D5C", color: "#EFE8D8", borderColor: "transparent" }
-                    : { borderColor: "#D9D0BA", color: "#5C5744" }}
+                    ? { background: "#0F1115", color: "#FFFFFF", borderColor: "transparent" }
+                    : { borderColor: "#E4E4E7", color: "#4B5563" }}
                 >
                   {key === "evde" && <Home size={12} />}
                   {label}
                 </button>
               ))}
             </div>
-            <p className="text-[11px] mt-1.5" style={{ color: "#6B6550" }}>
+            <p className="text-[11px] mt-1.5" style={{ color: "#6B7280" }}>
               {t("postJob.whereHint")}
             </p>
           </div>
@@ -5851,7 +5704,7 @@ Aciliyet: ${urgencyLabel}${mode === "local" ? ` · Hizmet yeri: ${prefLabel}` : 
 
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <label className="text-xs font-medium" style={{ color: "#5C5744" }}>{t("postJob.descLabel")}</label>
+            <label className="text-xs font-medium" style={{ color: "#4B5563" }}>{t("postJob.descLabel")}</label>
             <button
               onClick={writeWithAI}
               disabled={aiWriting}
@@ -5868,7 +5721,7 @@ Aciliyet: ${urgencyLabel}${mode === "local" ? ` · Hizmet yeri: ${prefLabel}` : 
             rows={4}
             placeholder={t("postJob.descPlaceholder")}
             className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none resize-none"
-            style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
+            style={{ borderColor: "#E4E4E7", background: "#F7F7F8", color: "#0F1115" }}
           />
         </div>
 
@@ -5878,12 +5731,12 @@ Aciliyet: ${urgencyLabel}${mode === "local" ? ` · Hizmet yeri: ${prefLabel}` : 
         {mode === "local" && (
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("common.cityLabel")}</label>
+              <label className="text-xs font-medium block mb-1.5" style={{ color: "#4B5563" }}>{t("common.cityLabel")}</label>
               <select
                 value={cityId}
                 onChange={(e) => setCityId(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
-                style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
+                style={{ borderColor: "#E4E4E7", background: "#F7F7F8", color: "#0F1115" }}
               >
                 {[["Türkiye", "turkey"], ["Hindistan", "india"], ["Avrupa", "europe"], ["Kuzey Amerika", "northAmerica"], ["Orta Doğu", "middleEast"], ["Asya-Pasifik", "asiaPacific"]].map(([region, regionKey]) => (
                   <optgroup key={region} label={t(`common.regions.${regionKey}`)}>
@@ -5895,13 +5748,13 @@ Aciliyet: ${urgencyLabel}${mode === "local" ? ` · Hizmet yeri: ${prefLabel}` : 
               </select>
             </div>
             <div>
-              <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("common.districtLabel")}</label>
+              <label className="text-xs font-medium block mb-1.5" style={{ color: "#4B5563" }}>{t("common.districtLabel")}</label>
               <input
                 value={district}
                 onChange={(e) => setDistrict(e.target.value)}
                 placeholder={t("common.districtPlaceholder")}
                 className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
-                style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
+                style={{ borderColor: "#E4E4E7", background: "#F7F7F8", color: "#0F1115" }}
               />
             </div>
           </div>
@@ -5909,38 +5762,38 @@ Aciliyet: ${urgencyLabel}${mode === "local" ? ` · Hizmet yeri: ${prefLabel}` : 
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("postJob.minBudgetLabel")}</label>
+            <label className="text-xs font-medium block mb-1.5" style={{ color: "#4B5563" }}>{t("postJob.minBudgetLabel")}</label>
             <input
               value={minBudget}
               onChange={(e) => setMinBudget(e.target.value)}
               placeholder="₺"
               inputMode="numeric"
               className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
-              style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
+              style={{ borderColor: "#E4E4E7", background: "#F7F7F8", color: "#0F1115" }}
             />
           </div>
           <div>
-            <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("postJob.maxBudgetLabel")}</label>
+            <label className="text-xs font-medium block mb-1.5" style={{ color: "#4B5563" }}>{t("postJob.maxBudgetLabel")}</label>
             <input
               value={maxBudget}
               onChange={(e) => setMaxBudget(e.target.value)}
               placeholder="₺"
               inputMode="numeric"
               className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
-              style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
+              style={{ borderColor: "#E4E4E7", background: "#F7F7F8", color: "#0F1115" }}
             />
           </div>
         </div>
 
         {error && (
-          <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{error}</p>
+          <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(220,38,38,0.1)", color: "#DC2626" }}>{error}</p>
         )}
 
         <button
           onClick={handleSubmit}
           disabled={submitting}
           className="w-full py-3 rounded-full text-sm font-medium text-white mt-2 flex items-center justify-center gap-2"
-          style={{ background: "#C2872B", opacity: submitting ? 0.7 : 1 }}
+          style={{ background: "#2563EB", opacity: submitting ? 0.7 : 1 }}
         >
           {submitting && <Loader2 size={14} className="animate-spin" />}
           {submitting ? (isEditing ? t("common.savingEllipsis") : t("common.publishingEllipsis")) : (isEditing ? t("common.saveChanges") : t("postJob.submitPublishJob"))}
@@ -6068,25 +5921,25 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
 
   return (
     <div className="max-w-2xl mx-auto px-5 py-8">
-      <button onClick={onBack} className="flex items-center gap-1 text-sm mb-4" style={{ color: "#5C5744" }}>
+      <button onClick={onBack} className="flex items-center gap-1 text-sm mb-4" style={{ color: "#4B5563" }}>
         <ChevronLeft size={16} /> {t("common.back")}
       </button>
       <div className="flex items-center gap-2 mb-1">
-        <Sparkles size={20} style={{ color: "#2FBF71" }} />
-        <h1 className="font-serif text-2xl" style={{ color: "#1B2B24" }}>{t("aiMatch.heading")}</h1>
+        <Sparkles size={20} style={{ color: "#2563EB" }} />
+        <h1 className="font-sans text-2xl sm:text-3xl font-black tracking-tight" style={{ color: "#0F1115" }}>{t("aiMatch.heading")}</h1>
       </div>
-      <p className="text-sm mb-6" style={{ color: "#5C5744" }}>{t("aiMatch.subheading", { title: job?.title })}</p>
+      <p className="text-sm mb-6" style={{ color: "#4B5563" }}>{t("aiMatch.subheading", { title: job?.title })}</p>
 
       {status === "loading" && (
-        <div className="rounded-xl border p-8 text-center" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
-          <div className="w-8 h-8 mx-auto mb-3 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "#2FBF71", borderTopColor: "transparent" }} />
-          <p className="text-sm" style={{ color: "#5C5744" }}>{t("aiMatch.loadingText")}</p>
+        <div className="rounded-xl border p-8 text-center" style={{ borderColor: "#E4E4E7", background: "#F7F7F8" }}>
+          <div className="w-8 h-8 mx-auto mb-3 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "#16A34A", borderTopColor: "transparent" }} />
+          <p className="text-sm" style={{ color: "#4B5563" }}>{t("aiMatch.loadingText")}</p>
         </div>
       )}
 
       {status === "error" && (
-        <div className="rounded-xl border p-6 text-center" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
-          <p className="text-sm" style={{ color: "#9C4A3C" }}>{errorMsg}</p>
+        <div className="rounded-xl border p-6 text-center" style={{ borderColor: "#E4E4E7", background: "#F7F7F8" }}>
+          <p className="text-sm" style={{ color: "#DC2626" }}>{errorMsg}</p>
         </div>
       )}
 
@@ -6105,31 +5958,31 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
                 }}
                 disabled={!listing}
                 className="w-full text-left rounded-xl border p-4 hover:shadow-md transition-shadow"
-                style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}
+                style={{ borderColor: "#E4E4E7", background: "#F7F7F8" }}
               >
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <span
                       className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold text-white shrink-0"
-                      style={{ background: i === 0 ? "#2FBF71" : "#1B2B24" }}
+                      style={{ background: i === 0 ? "#2563EB" : "#0F1115" }}
                     >
                       {i + 1}
                     </span>
-                    <p className="text-sm font-medium" style={{ color: "#1B2B24" }}>{m.name}</p>
+                    <p className="text-sm font-medium" style={{ color: "#0F1115" }}>{m.name}</p>
                   </div>
                   <span
                     className="text-xs font-bold px-2.5 py-1 rounded-full"
-                    style={{ background: "rgba(47,191,113,0.15)", color: "#2FBF71" }}
+                    style={{ background: "rgba(37,99,235,0.15)", color: "#16A34A" }}
                   >
                     {t("aiMatch.matchScoreLabel", { score: m.matchScore })}
                   </span>
                 </div>
-                <p className="text-xs leading-relaxed" style={{ color: "#5C5744" }}>{m.reason}</p>
-                {listing && <p className="text-xs font-medium mt-2" style={{ color: "#C2872B" }}>{listing.price}</p>}
+                <p className="text-xs leading-relaxed" style={{ color: "#4B5563" }}>{m.reason}</p>
+                {listing && <p className="text-xs font-medium mt-2" style={{ color: "#0F1115" }}>{listing.price}</p>}
               </button>
             );
           })}
-          <p className="text-xs mt-2" style={{ color: "#6B6550" }}>
+          <p className="text-xs mt-2" style={{ color: "#6B7280" }}>
             {t("aiMatch.disclaimer")}
           </p>
         </div>
@@ -6619,19 +6472,19 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
   if (activeId && active) {
     return (
       <div className="max-w-2xl mx-auto px-5 py-6 flex flex-col" style={{ height: `calc(${vvh ? vvh + "px" : "100dvh"} - 61px)` }}>
-        <button onClick={() => setActiveId(null)} className="flex items-center gap-1 text-sm mb-3 shrink-0" style={{ color: "#5C5744" }}>
+        <button onClick={() => setActiveId(null)} className="flex items-center gap-1 text-sm mb-3 shrink-0" style={{ color: "#4B5563" }}>
           <ArrowLeft size={16} /> {t("messages.backToList")}
         </button>
-        <div className="flex items-center gap-2.5 pb-3 border-b mb-3 shrink-0" style={{ borderColor: "#D9D0BA" }}>
-          <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-medium text-white shrink-0" style={{ background: "#1B2B24" }}>{active.initials}</div>
+        <div className="flex items-center gap-2.5 pb-3 border-b mb-3 shrink-0" style={{ borderColor: "#E4E4E7" }}>
+          <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-medium text-white shrink-0" style={{ background: "#0F1115" }}>{active.initials}</div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5">
-              <p className="text-sm font-medium" style={{ color: "#1B2B24" }}>{active.name}</p>
+              <p className="text-sm font-medium" style={{ color: "#0F1115" }}>{active.name}</p>
               {active.demo && (
-                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "#F0EAD6", color: "#6B6550" }}>{t("messages.demoBadge")}</span>
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "#F0EAD6", color: "#6B7280" }}>{t("messages.demoBadge")}</span>
               )}
             </div>
-            <p className="text-[11px]" style={{ color: "#6B6550" }}>{active.listingTitle}</p>
+            <p className="text-[11px]" style={{ color: "#6B7280" }}>{active.listingTitle}</p>
           </div>
           {!active.demo && (
             <div className="flex items-center gap-1 shrink-0">
@@ -6639,14 +6492,14 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
                 onClick={toggleBlock}
                 disabled={blockChecking}
                 className="text-[11px] font-medium px-2.5 py-1.5 rounded-full"
-                style={myBlockOfThem ? { background: "#3F7D5C", color: "white" } : { color: "#9C4A3C" }}
+                style={myBlockOfThem ? { background: "#2563EB", color: "white" } : { color: "#DC2626" }}
               >
                 {myBlockOfThem ? t("messages.unblock") : t("messages.block")}
               </button>
               <button
                 onClick={() => setShowReportForm((v) => !v)}
                 className="text-[11px] font-medium px-2.5 py-1.5 rounded-full"
-                style={{ color: "#6B6550" }}
+                style={{ color: "#6B7280" }}
               >
                 {t("messages.report")}
               </button>
@@ -6655,24 +6508,24 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
         </div>
 
         {blockError && (
-          <p className="text-xs mb-2 px-3 py-2 rounded-lg shrink-0" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{blockError}</p>
+          <p className="text-xs mb-2 px-3 py-2 rounded-lg shrink-0" style={{ background: "rgba(220,38,38,0.1)", color: "#DC2626" }}>{blockError}</p>
         )}
 
         {showReportForm && (
-          <div className="rounded-xl border p-3 mb-3 shrink-0" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
+          <div className="rounded-xl border p-3 mb-3 shrink-0" style={{ borderColor: "#E4E4E7", background: "#F7F7F8" }}>
             {reportSubmitted ? (
               <div className="text-center py-2">
-                <Check size={16} style={{ color: "#3F7D5C" }} className="mx-auto mb-1" />
-                <p className="text-xs" style={{ color: "#5C5744" }}>{t("messages.reportSubmitted")}</p>
+                <Check size={16} style={{ color: "#16A34A" }} className="mx-auto mb-1" />
+                <p className="text-xs" style={{ color: "#4B5563" }}>{t("messages.reportSubmitted")}</p>
               </div>
             ) : (
               <>
-                <p className="text-xs font-bold mb-2" style={{ color: "#1B2B24" }}>{t("messages.reportHeading")}</p>
+                <p className="text-xs font-bold mb-2" style={{ color: "#0F1115" }}>{t("messages.reportHeading")}</p>
                 <select
                   value={reportReason}
                   onChange={(e) => setReportReason(e.target.value)}
                   className="w-full px-3 py-2 rounded-lg border text-xs outline-none mb-2"
-                  style={{ borderColor: "#D9D0BA", background: "#FFFFFF", color: "#1B2B24" }}
+                  style={{ borderColor: "#E4E4E7", background: "#FFFFFF", color: "#0F1115" }}
                 >
                   <option value="uygunsuz_mesaj">{t("messages.reportReasonHarassment")}</option>
                   <option value="sahte_profil">{t("messages.reportReasonFakeProfile")}</option>
@@ -6685,14 +6538,14 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
                   placeholder={t("messages.reportDetailPlaceholder")}
                   rows={2}
                   className="w-full px-3 py-2 rounded-lg border text-xs outline-none mb-2"
-                  style={{ borderColor: "#D9D0BA", background: "#FFFFFF", color: "#1B2B24" }}
+                  style={{ borderColor: "#E4E4E7", background: "#FFFFFF", color: "#0F1115" }}
                 />
-                {reportError && <p className="text-xs mb-2" style={{ color: "#9C4A3C" }}>{reportError}</p>}
+                {reportError && <p className="text-xs mb-2" style={{ color: "#DC2626" }}>{reportError}</p>}
                 <button
                   onClick={submitReport}
                   disabled={reportSubmitting}
                   className="text-xs font-bold px-3.5 py-2 rounded-full text-white flex items-center gap-1.5"
-                  style={{ background: "#9C4A3C", opacity: reportSubmitting ? 0.7 : 1 }}
+                  style={{ background: "#DC2626", opacity: reportSubmitting ? 0.7 : 1 }}
                 >
                   {reportSubmitting && <Loader2 size={12} className="animate-spin" />}
                   {t("messages.reportSubmit")}
@@ -6710,7 +6563,7 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
             durumuna zaten geçmiş bir iş için bu şart aranmaz. */}
         {!active.demo && activeJob && (activeJob.state === "delivered" || activeMessages.some((m) => m.sender === "them") || (initialContact?.pastWork && activeJob.clientId === currentUserId)) && (
           activeJob.state === "delivered" ? (
-            <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-xs mb-3 shrink-0" style={{ background: "rgba(63,125,92,0.1)", color: "#3F7D5C" }}>
+            <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-xs mb-3 shrink-0" style={{ background: "rgba(22,163,74,0.1)", color: "#16A34A" }}>
               <span className="flex items-center gap-2">
                 <Check size={13} className="shrink-0" />
                 {activeJob.clientConfirmed && activeJob.providerConfirmed
@@ -6728,7 +6581,7 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
                   onClick={activeJob.clientId === currentUserId ? markDelivered : markProviderDelivered}
                   disabled={markingDelivered}
                   className="font-bold shrink-0 flex items-center gap-1"
-                  style={{ color: "#3F7D5C" }}
+                  style={{ color: "#16A34A" }}
                 >
                   {markingDelivered && <Loader2 size={11} className="animate-spin" />}
                   {activeJob.clientId === currentUserId ? t("messages.confirmAsClient") : t("messages.confirmAsProvider")}
@@ -6742,15 +6595,15 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
               )}
             </div>
           ) : activeJob.clientId === currentUserId ? (
-            <div className="rounded-lg p-2.5 mb-3 shrink-0" style={{ background: "#F8F4E9", border: "1px solid #D9D0BA" }}>
-              {activeJob.disputed && <p className="text-xs mb-1.5 font-semibold" style={{ color: "#9C4A3C" }}>{t("messages.disputedNote")}</p>}
-              <p className="text-xs mb-1.5" style={{ color: "#5C5744" }}>{t(initialContact?.pastWork ? "messages.pendingPastNote" : "messages.pendingClientNote")}</p>
-              {deliveredError && <p className="text-xs mb-1.5" style={{ color: "#9C4A3C" }}>{deliveredError}</p>}
+            <div className="rounded-lg p-2.5 mb-3 shrink-0" style={{ background: "#F7F7F8", border: "1px solid #E4E4E7" }}>
+              {activeJob.disputed && <p className="text-xs mb-1.5 font-semibold" style={{ color: "#DC2626" }}>{t("messages.disputedNote")}</p>}
+              <p className="text-xs mb-1.5" style={{ color: "#4B5563" }}>{t(initialContact?.pastWork ? "messages.pendingPastNote" : "messages.pendingClientNote")}</p>
+              {deliveredError && <p className="text-xs mb-1.5" style={{ color: "#DC2626" }}>{deliveredError}</p>}
               <button
                 onClick={markDelivered}
                 disabled={markingDelivered}
                 className="text-xs font-bold px-3 py-1.5 rounded-full text-white flex items-center gap-1.5"
-                style={{ background: "#3F7D5C", opacity: markingDelivered ? 0.7 : 1 }}
+                style={{ background: "#2563EB", opacity: markingDelivered ? 0.7 : 1 }}
               >
                 {markingDelivered && <Loader2 size={12} className="animate-spin" />}
                 {t("messages.markDelivered")}
@@ -6760,15 +6613,15 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
             // Adil olsun diye: müşteri onaylamazsa (unutursa, geciktirse)
             // sağlayıcının hiçbir hakkı yoktu, değerlendirme de hiç
             // açılmıyordu. Artık sağlayıcı da kendi tarafından işaretleyebiliyor.
-            <div className="rounded-lg p-2.5 mb-3 shrink-0" style={{ background: "#F8F4E9", border: "1px solid #D9D0BA" }}>
-              {activeJob.disputed && <p className="text-xs mb-1.5 font-semibold" style={{ color: "#9C4A3C" }}>{t("messages.disputedNote")}</p>}
-              <p className="text-xs mb-1.5" style={{ color: "#5C5744" }}>{t("messages.pendingProviderNote")}</p>
-              {deliveredError && <p className="text-xs mb-1.5" style={{ color: "#9C4A3C" }}>{deliveredError}</p>}
+            <div className="rounded-lg p-2.5 mb-3 shrink-0" style={{ background: "#F7F7F8", border: "1px solid #E4E4E7" }}>
+              {activeJob.disputed && <p className="text-xs mb-1.5 font-semibold" style={{ color: "#DC2626" }}>{t("messages.disputedNote")}</p>}
+              <p className="text-xs mb-1.5" style={{ color: "#4B5563" }}>{t("messages.pendingProviderNote")}</p>
+              {deliveredError && <p className="text-xs mb-1.5" style={{ color: "#DC2626" }}>{deliveredError}</p>}
               <button
                 onClick={markProviderDelivered}
                 disabled={markingDelivered}
                 className="text-xs font-bold px-3 py-1.5 rounded-full text-white flex items-center gap-1.5"
-                style={{ background: "#3F7D5C", opacity: markingDelivered ? 0.7 : 1 }}
+                style={{ background: "#2563EB", opacity: markingDelivered ? 0.7 : 1 }}
               >
                 {markingDelivered && <Loader2 size={12} className="animate-spin" />}
                 {t("messages.markProviderDelivered")}
@@ -6780,7 +6633,7 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
         <div className="flex-1 overflow-y-auto space-y-2.5 pr-1">
           {activeMessages.length === 0 && (
             <div className="text-center mt-8">
-              <p className="text-xs mb-2" style={{ color: "#6B6550" }}>{t("messages.emptyThread")}</p>
+              <p className="text-xs mb-2" style={{ color: "#6B7280" }}>{t("messages.emptyThread")}</p>
               {!active.demo && (
                 <button
                   onClick={suggestOpeningMessage}
@@ -6799,17 +6652,17 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
               <div
                 className="max-w-[75%] rounded-2xl px-3.5 py-2 text-sm"
                 style={m.sender === "me"
-                  ? { background: "#2FBF71", color: "#0F1F19", borderBottomRightRadius: 4 }
-                  : { background: "#F8F4E9", color: "#1B2B24", border: "1px solid #D9D0BA", borderBottomLeftRadius: 4 }}
+                  ? { background: "#2563EB", color: "#FFFFFF", borderBottomRightRadius: 4 }
+                  : { background: "#F7F7F8", color: "#0F1115", border: "1px solid #E4E4E7", borderBottomLeftRadius: 4 }}
               >
                 {m.text}
-                <p className="text-[10px] mt-1 opacity-60">{m.time}</p>
+                <p className="text-[11px] mt-1 opacity-60">{m.time}</p>
               </div>
             </div>
           ))}
           {typing && (
             <div className="flex justify-start">
-              <div className="rounded-2xl px-3.5 py-2 text-xs" style={{ background: "#F8F4E9", border: "1px solid #D9D0BA", color: "#6B6550" }}>
+              <div className="rounded-2xl px-3.5 py-2 text-xs" style={{ background: "#F7F7F8", border: "1px solid #E4E4E7", color: "#6B7280" }}>
                 {t("messages.typingIndicator")}
               </div>
             </div>
@@ -6833,12 +6686,12 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
           </div>
         )}
         {!active.demo && myBlockOfThem ? (
-          <div className="flex items-center justify-between gap-2 pt-3 mt-2 border-t shrink-0" style={{ borderColor: "#D9D0BA" }}>
-            <p className="text-xs" style={{ color: "#6B6550" }}>{t("messages.blockedNotice")}</p>
-            <button onClick={toggleBlock} className="text-xs font-bold shrink-0" style={{ color: "#3F7D5C" }}>{t("messages.unblock")}</button>
+          <div className="flex items-center justify-between gap-2 pt-3 mt-2 border-t shrink-0" style={{ borderColor: "#E4E4E7" }}>
+            <p className="text-xs" style={{ color: "#6B7280" }}>{t("messages.blockedNotice")}</p>
+            <button onClick={toggleBlock} className="text-xs font-bold shrink-0" style={{ color: "#16A34A" }}>{t("messages.unblock")}</button>
           </div>
         ) : (
-          <div className="flex items-center gap-2 pt-3 mt-2 border-t shrink-0" style={{ borderColor: "#D9D0BA" }}>
+          <div className="flex items-center gap-2 pt-3 mt-2 border-t shrink-0" style={{ borderColor: "#E4E4E7" }}>
             <input
               ref={msgInputRef}
               value={input}
@@ -6847,9 +6700,9 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
               onKeyDown={(e) => { if (e.key === "Enter") sendMessage(); }}
               placeholder={t("messages.inputPlaceholder")}
               className="flex-1 px-3.5 py-2.5 rounded-full border text-sm outline-none"
-              style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
+              style={{ borderColor: "#E4E4E7", background: "#F7F7F8", color: "#0F1115" }}
             />
-            <button onClick={sendMessage} disabled={sending} aria-label={t("common.sendAria")} className="w-10 h-10 rounded-full flex items-center justify-center text-white shrink-0" style={{ background: "#2FBF71", opacity: sending ? 0.6 : 1 }}>
+            <button onClick={sendMessage} disabled={sending} aria-label={t("common.sendAria")} className="w-10 h-10 rounded-full flex items-center justify-center text-white shrink-0" style={{ background: "#2563EB", opacity: sending ? 0.6 : 1 }}>
               {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
             </button>
           </div>
@@ -6860,14 +6713,14 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
 
   return (
     <div className="max-w-2xl mx-auto px-5 py-8">
-      <button onClick={onBack} className="flex items-center gap-1 text-sm mb-4" style={{ color: "#5C5744" }}>
+      <button onClick={onBack} className="flex items-center gap-1 text-sm mb-4" style={{ color: "#4B5563" }}>
         <ChevronLeft size={16} /> {t("common.back")}
       </button>
-      <h1 className="font-serif text-2xl mb-6" style={{ color: "#1B2B24" }}>{t("messages.title")}</h1>
+      <h1 className="font-sans text-2xl sm:text-3xl font-black tracking-tight mb-6" style={{ color: "#0F1115" }}>{t("messages.title")}</h1>
       {loading && (
         <div className="flex items-center gap-2 mb-4">
-          <Loader2 size={14} className="animate-spin" style={{ color: "#6B6550" }} />
-          <span className="text-xs" style={{ color: "#6B6550" }}>{t("messages.loadingConversations")}</span>
+          <Loader2 size={14} className="animate-spin" style={{ color: "#6B7280" }} />
+          <span className="text-xs" style={{ color: "#6B7280" }}>{t("messages.loadingConversations")}</span>
         </div>
       )}
       <div className="space-y-1">
@@ -6877,10 +6730,10 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
             onClick={() => setActiveId(c.id)}
             className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-black/5 text-left"
           >
-            <div className="w-11 h-11 rounded-full flex items-center justify-center text-sm font-medium text-white shrink-0 relative" style={{ background: "#1B2B24" }}>
+            <div className="w-11 h-11 rounded-full flex items-center justify-center text-sm font-medium text-white shrink-0 relative" style={{ background: "#0F1115" }}>
               {c.initials}
               {c.unread > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center text-white" style={{ background: "#9C4A3C" }}>
+                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-[10px] font-bold flex items-center justify-center text-white" style={{ background: "#DC2626" }}>
                   {c.unread}
                 </span>
               )}
@@ -6888,12 +6741,12 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5 min-w-0">
-                  <p className="text-sm font-medium truncate" style={{ color: "#1B2B24" }}>{c.name}</p>
+                  <p className="text-sm font-medium truncate" style={{ color: "#0F1115" }}>{c.name}</p>
                   {c.demo && (
-                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0" style={{ background: "#F0EAD6", color: "#6B6550" }}>{t("messages.demoBadge")}</span>
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0" style={{ background: "#F0EAD6", color: "#6B7280" }}>{t("messages.demoBadge")}</span>
                   )}
                 </div>
-                <span className="text-[11px] shrink-0" style={{ color: "#6B6550" }}>{c.time}</span>
+                <span className="text-[11px] shrink-0" style={{ color: "#6B7280" }}>{c.time}</span>
               </div>
               {/* Hangi ilan/vitrinle ilgili olduğu eskiden sadece konuşmayı
                   AÇINCA görünüyordu — birden fazla ilanı olan biri listeye
@@ -6902,7 +6755,7 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
               {c.listingTitle && (
                 <p className="text-[11px] truncate font-medium" style={{ color: "#2563EB" }}>{c.listingTitle}</p>
               )}
-              <p className="text-xs truncate" style={{ color: c.unread > 0 ? "#1B2B24" : "#6B6550" }}>{c.lastMessage}</p>
+              <p className="text-xs truncate" style={{ color: c.unread > 0 ? "#0F1115" : "#6B7280" }}>{c.lastMessage}</p>
             </div>
           </button>
         ))}
@@ -7121,7 +6974,7 @@ function ListingCoverPhotoField({ cover, hint }) {
           onCropped={uploadPhoto}
         />
       )}
-      <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("createListing.coverPhotoLabel")}</label>
+      <label className="text-xs font-medium block mb-1.5" style={{ color: "#4B5563" }}>{t("createListing.coverPhotoLabel")}</label>
       <div className="flex items-center gap-3">
         {photo && (
           <label className="relative w-16 h-16 rounded-lg overflow-hidden cursor-pointer shrink-0 group">
@@ -7137,7 +6990,7 @@ function ListingCoverPhotoField({ cover, hint }) {
         )}
         <label
           className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg border-2 border-dashed text-xs font-medium cursor-pointer"
-          style={{ borderColor: "#D9D0BA", color: "#5C5744", opacity: photoUploading ? 0.6 : 1 }}
+          style={{ borderColor: "#E4E4E7", color: "#4B5563", opacity: photoUploading ? 0.6 : 1 }}
         >
           {photoUploading ? <Loader2 size={14} className="animate-spin" /> : <UploadCloud size={14} />}
           {photoUploading ? t("createListing.photoUploading") : photo ? t("createListing.photoChange") : t("createListing.photoUpload")}
@@ -7145,19 +6998,19 @@ function ListingCoverPhotoField({ cover, hint }) {
         </label>
       </div>
       {photoError && (
-        <p className="text-[11px] mt-1.5" style={{ color: "#9C4A3C" }}>{photoError}</p>
+        <p className="text-[11px] mt-1.5" style={{ color: "#DC2626" }}>{photoError}</p>
       )}
       {moderation && (
         <p
           className="text-[11px] mt-1.5 flex items-center gap-1"
-          style={{ color: moderation.status === "checking" ? "#6B6550" : moderation.status === "approved" ? "#3F7D5C" : "#9C4A3C" }}
+          style={{ color: moderation.status === "checking" ? "#6B7280" : moderation.status === "approved" ? "#16A34A" : "#DC2626" }}
         >
           {moderation.status === "checking" && <><Loader2 size={11} className="animate-spin" /> {t("createListing.moderationChecking")}</>}
           {moderation.status === "approved" && <><ShieldCheck size={11} /> {t("createListing.moderationApproved")}</>}
           {moderation.status === "flagged" && <><AlertCircle size={11} /> {moderation.reason || t("createListing.moderationFlaggedDefault")}</>}
         </p>
       )}
-      {hint && <p className="text-[11px] mt-1.5" style={{ color: "#6B6550" }}>{hint}</p>}
+      {hint && <p className="text-[11px] mt-1.5" style={{ color: "#6B7280" }}>{hint}</p>}
     </div>
   );
 }
@@ -7253,26 +7106,24 @@ function TalentDiscoveryBanner({ onOpen }) {
     onOpen();
   };
   return (
-    <section className="max-w-6xl mx-auto px-5 mt-2 sm:mt-8">
+    <section className="max-w-6xl mx-auto px-5 mt-3 sm:mt-5">
       <div
-        className="w-full text-left rounded-3xl p-5 sm:p-8 flex flex-col sm:flex-row items-center gap-4 sm:gap-8"
-        style={{ background: "linear-gradient(135deg, #0F1E3F 0%, #172A5C 100%)" }}
+        className="w-full text-left rounded-3xl p-5 sm:p-6 flex flex-col sm:flex-row items-center gap-5 sm:gap-7 overflow-hidden"
+        style={{ background: "#0B0B0F" }}
       >
-        {/* Orijinal, AI ile üretilmiş ilham görsellerinden (örgü, ev yapımı
-            pasta, kumaş çiçek, hediye paketleme, web tasarımı, mikro-influencer,
-            bahçe dekorasyonu) oluşan sessiz döngü video — "bende de yapabilirim"
-            hissini metinden önce, görselle veriyor. Kullanıcının kararı
-            (2026-09-28): bu alan İşinn'in gerçek farkı, o yüzden küçük bir
-            simge değil, sayfanın odak noktalarından biri olmalı. */}
+        {/* 2026-10-17: Yeteneğini Keşfet ana sayfada kalır — kurucu: "yapay zekâmızın bel kemiklerinden". Yumuşak geçişli
+            döngü video, 8 premium kare; her kare ayrı renk dünyasında (hepsi turuncu-mor olunca kurucu "boğucu" buldu).
+            Beyaz yaka ve el emeği yan yana: herkes kendi işini görür (Instagram ilkesi). Zemin düz koyu; rengi video verir.
+            Video public/videos/yetenek-ilham-v3.mp4 (ffmpeg ile; önceki v2 yedek olarak duruyor). */}
         <LoopVideo
-          src="/videos/yetenek-ilham-sm.mp4"
-          poster="/videos/yetenek-ilham-poster.jpg"
-          className="w-full sm:w-[20rem] lg:w-[21rem] xl:w-[22rem] h-44 sm:h-52 lg:h-56 rounded-2xl object-cover shrink-0"
+          src="/videos/yetenek-ilham-v3.mp4"
+          poster="/videos/yetenek-ilham-v3-poster.jpg"
+          className="w-full sm:w-[18rem] lg:w-[20rem] aspect-[8/5] rounded-2xl object-cover shrink-0"
         />
-        <div className="flex-1 flex flex-col gap-4 w-full">
+        <div className="flex-1 flex flex-col gap-3 w-full">
           <div className="text-center sm:text-left">
-            <h2 className="text-xl sm:text-3xl font-black leading-tight" style={{ color: "#FFFFFF" }}>{t("talentDiscovery.navCardTitle")}</h2>
-            <p className="text-sm sm:text-lg mt-2" style={{ color: "#B8BCC4" }}>{t("talentDiscovery.navCardSubtitle")}</p>
+            <h2 className="text-xl sm:text-2xl lg:text-[28px] font-black leading-tight tracking-tight" style={{ color: "#FFFFFF" }}>{t("talentDiscovery.navCardTitle")}</h2>
+            <p className="text-sm sm:text-base mt-1.5" style={{ color: "#B8BCC4" }}>{t("talentDiscovery.navCardSubtitle")}</p>
           </div>
           {/* Ayrı bir sayfaya geçmeden başlayabilsin: ilk cümle burada yazılır,
               Yeteneğini Farket sayfası dolu açılır. */}
@@ -7286,19 +7137,19 @@ function TalentDiscoveryBanner({ onOpen }) {
               maxLength={200}
               placeholder={t("talentDiscovery.homeBoxPlaceholder")}
               aria-label={t("talentDiscovery.homeBoxPlaceholder")}
-              className="flex-1 rounded-xl px-4 py-3 text-sm sm:text-base outline-none"
+              className="flex-1 rounded-xl px-4 py-2.5 text-sm sm:text-base outline-none"
               style={{ background: "#FFFFFF", color: "#0F172A" }}
             />
             <button
               type="submit"
-              className="shrink-0 flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-bold text-sm sm:text-base whitespace-nowrap"
-              style={{ background: "#F5B544", color: "#0F1E3F" }}
+              className="shrink-0 flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm sm:text-base whitespace-nowrap"
+              style={{ background: "#2563EB", color: "#FFFFFF" }}
             >
               {t("talentDiscovery.homeBoxButton")}
               <ChevronRight size={18} />
             </button>
           </form>
-          <button type="button" onClick={() => go("")} className="text-sm font-bold text-center sm:text-left" style={{ color: "#F5B544" }}>
+          <button type="button" onClick={() => go("")} className="text-sm font-bold text-center sm:text-left" style={{ color: "#93C5FD" }}>
             {t("talentDiscovery.homeBoxUnknown")}
           </button>
           {/* Taranabilir iç bağlantılar: rehberler ana sayfadan da bulunur (yalnızca /rehber değil). */}
@@ -7318,16 +7169,16 @@ function TalentDiscoveryBanner({ onOpen }) {
 // kişiyi buradan yakalarız". Kapsam kasıtlı olarak kısmi (tüm ~50 kategori
 // değil, en sık çıkması beklenenler) — eşleşme yoksa görsel gösterilmez.
 const TALENT_INSPIRATION_IMAGES = {
-  "yemek": "/images/ilham/yemek.jpg",
-  "sosyal-medya": "/images/ilham/sosyal-medya.jpg",
-  "yazilim": "/images/ilham/yazilim-tasarim.jpg",
-  "tasarim": "/images/ilham/yazilim-tasarim.jpg",
-  "ogretmen": "/images/ilham/ogretmen-egitmen.jpg",
-  "egitmen": "/images/ilham/ogretmen-egitmen.jpg",
-  "bahce-bakim": "/images/ilham/bahce-bakim.jpg",
-  "moda-tekstil-tasarim": "/images/ilham/moda-tekstil.jpg",
-  "terzi": "/images/ilham/moda-tekstil.jpg",
-  "etkinlik-organizatoru": "/images/ilham/etkinlik-organizatoru.jpg",
+  "yemek": "/images/ilham/yemek-v2.jpg",
+  "sosyal-medya": "/images/ilham/sosyal-medya-v2.jpg",
+  "yazilim": "/images/ilham/yazilim-tasarim-v2.jpg",
+  "tasarim": "/images/ilham/yazilim-tasarim-v2.jpg",
+  "ogretmen": "/images/ilham/ogretmen-egitmen-v2.jpg",
+  "egitmen": "/images/ilham/ogretmen-egitmen-v2.jpg",
+  "bahce-bakim": "/images/ilham/bahce-bakim-v2.jpg",
+  "moda-tekstil-tasarim": "/images/ilham/moda-tekstil-v2.jpg",
+  "terzi": "/images/ilham/moda-tekstil-v2.jpg",
+  "etkinlik-organizatoru": "/images/ilham/etkinlik-organizatoru-v2.jpg",
 };
 
 // Boş metin kutusu bu kitlenin (özgüveni düşük, telefondan giren) en büyük
@@ -7530,17 +7381,18 @@ function TalentDiscoveryView({ onBack, onCreateListing, userId }) {
   };
 
   const inputCls = "w-full rounded-xl p-3 text-sm";
-  const inputStyle = { border: "1px solid #E5E7EB" };
+  const inputStyle = { border: "1px solid #E4E4E7" };
 
   return (
     <div className="max-w-xl mx-auto px-5 py-8">
       <button onClick={onBack} className="text-sm font-bold mb-6" style={{ color: "#2563EB" }}>{t("talentDiscovery.backLink")}</button>
+      {/* 2026-10-17: ana sayfadaki Yeteneğini Keşfet bandıyla aynı 8 karelik, her karesi ayrı renkte video. */}
       <LoopVideo
-        src="/videos/yetenek-ilham-sm.mp4"
-        poster="/videos/yetenek-ilham-poster.jpg"
-        className="w-full aspect-video rounded-2xl object-cover mb-6"
+        src="/videos/yetenek-ilham-v3.mp4"
+        poster="/videos/yetenek-ilham-v3-poster.jpg"
+        className="w-full aspect-[8/5] rounded-2xl object-cover mb-6"
       />
-      <h1 className="font-sans text-2xl font-black mb-2" style={{ color: "#0F1115" }}>{t("talentDiscovery.heroTitle")}</h1>
+      <h1 className="font-sans text-2xl sm:text-3xl font-black tracking-tight mb-2" style={{ color: "#0F1115" }}>{t("talentDiscovery.heroTitle")}</h1>
       <p className="text-sm mb-8" style={{ color: "#6B7280" }}>{t("talentDiscovery.heroSubtitle")}</p>
 
       {!suggestions && (
@@ -7552,7 +7404,7 @@ function TalentDiscoveryView({ onBack, onCreateListing, userId }) {
               onClick={() => setEntry(val)}
               aria-pressed={entry === val}
               className="text-left px-4 py-3 rounded-2xl text-sm font-bold border"
-              style={entry === val ? { background: "#EFF6FF", borderColor: "#2563EB", color: "#1D4ED8" } : { background: "#FFFFFF", borderColor: "#E5E7EB", color: "#374151" }}
+              style={entry === val ? { background: "#EFF6FF", borderColor: "#2563EB", color: "#1D4ED8" } : { background: "#FFFFFF", borderColor: "#E4E4E7", color: "#374151" }}
             >
               {t(`talentDiscovery.${key}`)}
             </button>
@@ -7665,7 +7517,7 @@ function TalentDiscoveryView({ onBack, onCreateListing, userId }) {
             onClick={handleSubmit}
             disabled={loading}
             className="text-sm font-bold py-3.5 rounded-full text-white flex items-center justify-center gap-2"
-            style={{ background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)" }}
+            style={{ background: "#2563EB" }}
           >
             {loading ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
             {loading ? t("talentDiscovery.loading") : t("talentDiscovery.submitButton")}
@@ -7697,7 +7549,7 @@ function TalentDiscoveryView({ onBack, onCreateListing, userId }) {
               const Icon = cat.icon;
               const inspImg = TALENT_INSPIRATION_IMAGES[s.categoryId];
               return (
-                <div key={s.categoryId} className="rounded-2xl overflow-hidden" style={{ border: "1px solid #F0F0F0" }}>
+                <div key={s.categoryId} className="rounded-2xl overflow-hidden" style={{ border: "1px solid #E4E4E7" }}>
                   {inspImg && (
                     <img src={inspImg} alt="" loading="lazy" className="w-full h-36 object-cover" />
                   )}
@@ -7706,7 +7558,7 @@ function TalentDiscoveryView({ onBack, onCreateListing, userId }) {
                     <Icon size={16} style={{ color: "#2563EB" }} />
                     <p className="text-sm font-black" style={{ color: "#0F1115" }}>{cat.name}</p>
                   </div>
-                  {s.draft && <p className="text-sm font-bold mb-1.5" style={{ color: "#16321F" }}>{t("talentDiscovery.firstOfferLabel")} {s.draft.title}</p>}
+                  {s.draft && <p className="text-sm font-bold mb-1.5" style={{ color: "#0F1115" }}>{t("talentDiscovery.firstOfferLabel")} {s.draft.title}</p>}
                   {s.userWords && <p className="text-xs mb-1.5 italic" style={{ color: "#374151" }}>{t("talentDiscovery.userWordsLabel")} “{s.userWords}”</p>}
                   <p className="text-xs mb-2" style={{ color: "#6B7280" }}>{s.reason}</p>
                   {s.firstStep && <p className="text-xs mb-3 rounded-xl px-3 py-2" style={{ background: "#F0FDF4", color: "#166534" }}><b>{t("talentDiscovery.firstStepLabel")}</b> {s.firstStep}</p>}
@@ -7795,7 +7647,7 @@ function TalentDiscoveryView({ onBack, onCreateListing, userId }) {
                   placeholder={t("talentDiscovery.notFitTextPlaceholder")}
                   maxLength={200}
                   className="w-full rounded-xl p-3 text-sm mb-3"
-                  style={{ border: "1px solid #E5E7EB", background: "#FFFFFF" }}
+                  style={{ border: "1px solid #E4E4E7", background: "#FFFFFF" }}
                 />
                 <button
                   onClick={handleNotFit}
@@ -7856,12 +7708,12 @@ function ListingCategoryField({ mode, categoryId, setCategoryId, customCategoryL
   const availableCategories = CATEGORIES.filter((c) => c.mode === mode || c.mode === "both");
   return (
     <div>
-      <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("common.categoryLabel")}</label>
+      <label className="text-xs font-medium block mb-1.5" style={{ color: "#4B5563" }}>{t("common.categoryLabel")}</label>
       <select
         value={categoryId}
         onChange={(e) => setCategoryId(e.target.value)}
         className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
-        style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
+        style={{ borderColor: "#E4E4E7", background: "#F7F7F8", color: "#0F1115" }}
       >
         <option value="">{t("common.categorySelectPlaceholder")}</option>
         {PARENT_CATEGORIES.map((group) => {
@@ -7883,9 +7735,9 @@ function ListingCategoryField({ mode, categoryId, setCategoryId, customCategoryL
             onChange={(e) => setCustomCategoryLabel(e.target.value)}
             placeholder={t("createListing.customCategoryPlaceholder")}
             className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
-            style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
+            style={{ borderColor: "#E4E4E7", background: "#F7F7F8", color: "#0F1115" }}
           />
-          <p className="text-xs mt-1.5" style={{ color: "#6B6550" }}>
+          <p className="text-xs mt-1.5" style={{ color: "#6B7280" }}>
             {t("createListing.customCategoryNote")}
           </p>
         </div>
@@ -7901,12 +7753,12 @@ function ListingLocationFields({ cityId, setCityId, district, setDistrict, homeS
     <>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("common.cityLabel")}</label>
+          <label className="text-xs font-medium block mb-1.5" style={{ color: "#4B5563" }}>{t("common.cityLabel")}</label>
           <select
             value={cityId}
             onChange={(e) => setCityId(e.target.value)}
             className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
-            style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
+            style={{ borderColor: "#E4E4E7", background: "#F7F7F8", color: "#0F1115" }}
           >
             {[["Türkiye", "turkey"], ["Hindistan", "india"], ["Avrupa", "europe"], ["Kuzey Amerika", "northAmerica"], ["Orta Doğu", "middleEast"], ["Asya-Pasifik", "asiaPacific"]].map(([region, regionKey]) => (
               <optgroup key={region} label={t(`common.regions.${regionKey}`)}>
@@ -7918,19 +7770,19 @@ function ListingLocationFields({ cityId, setCityId, district, setDistrict, homeS
           </select>
         </div>
         <div>
-          <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("common.districtLabel")}</label>
+          <label className="text-xs font-medium block mb-1.5" style={{ color: "#4B5563" }}>{t("common.districtLabel")}</label>
           <input
             value={district}
             onChange={(e) => setDistrict(e.target.value)}
             placeholder={t("common.districtPlaceholder")}
             className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
-            style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
+            style={{ borderColor: "#E4E4E7", background: "#F7F7F8", color: "#0F1115" }}
           />
         </div>
       </div>
 
       <div>
-        <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("createListing.whereLabel")}</label>
+        <label className="text-xs font-medium block mb-1.5" style={{ color: "#4B5563" }}>{t("createListing.whereLabel")}</label>
         <div className="flex gap-2">
           {[["evde", t("createListing.whereCustomer")], ["mekanda", t("createListing.whereOwn")], ["esnek", t("createListing.whereBoth")]].map(([key, label]) => (
             <button
@@ -7939,8 +7791,8 @@ function ListingLocationFields({ cityId, setCityId, district, setDistrict, homeS
               onClick={() => setHomeServiceVal(key)}
               className="flex-1 py-2 rounded-lg text-xs font-medium border"
               style={homeServiceVal === key
-                ? { background: "#3F7D5C", color: "#EFE8D8", borderColor: "transparent" }
-                : { borderColor: "#D9D0BA", color: "#5C5744" }}
+                ? { background: "#0F1115", color: "#FFFFFF", borderColor: "transparent" }
+                : { borderColor: "#E4E4E7", color: "#4B5563" }}
             >
               {label}
             </button>
@@ -8054,10 +7906,10 @@ ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return
     onSaved(data);
   };
 
-  const inputStyle = { borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" };
+  const inputStyle = { borderColor: "#E4E4E7", background: "#F7F7F8", color: "#0F1115" };
   return (
-    <div className="w-full max-w-xl rounded-xl border p-5" style={{ borderColor: "#D9D0BA", background: "#FFFFFF" }}>
-      <h2 className="font-serif text-lg mb-4" style={{ color: "#1B2B24" }}>{t("listingDetail.editInfoHeading")}</h2>
+    <div className="w-full max-w-xl rounded-xl border p-5" style={{ borderColor: "#E4E4E7", background: "#FFFFFF" }}>
+      <h2 className="font-sans text-lg font-black tracking-tight mb-4" style={{ color: "#0F1115" }}>{t("listingDetail.editInfoHeading")}</h2>
 
       <div className="flex gap-2 mb-4">
         {[["local", t("createListing.modeLocal")], ["remote", t("createListing.modeRemote")]].map(([key, label]) => (
@@ -8066,7 +7918,7 @@ ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return
             type="button"
             onClick={() => { if (key !== mode) { setMode(key); setCategoryId(""); } }}
             className="flex-1 py-2 rounded-xl text-sm font-medium border"
-            style={mode === key ? { background: "#1B2B24", color: "#EFE8D8", borderColor: "#1B2B24" } : { borderColor: "#D9D0BA", color: "#5C5744" }}
+            style={mode === key ? { background: "#0F1115", color: "#FFFFFF", borderColor: "#0F1115" } : { borderColor: "#E4E4E7", color: "#4B5563" }}
           >
             {label}
           </button>
@@ -8077,7 +7929,7 @@ ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return
         <ListingCoverPhotoField cover={cover} />
 
         <div>
-          <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("createListing.displayNameLabel")}</label>
+          <label className="text-xs font-medium block mb-1.5" style={{ color: "#4B5563" }}>{t("createListing.displayNameLabel")}</label>
           <input
             value={providerName}
             onChange={(e) => setProviderName(e.target.value)}
@@ -8085,7 +7937,7 @@ ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return
             className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
             style={inputStyle}
           />
-          <p className="text-[11px] mt-1.5" style={{ color: "#6B6550" }}>{t("createListing.displayNameHint")}</p>
+          <p className="text-[11px] mt-1.5" style={{ color: "#6B7280" }}>{t("createListing.displayNameHint")}</p>
         </div>
 
         <ListingCategoryField
@@ -8098,7 +7950,7 @@ ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return
 
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <label className="text-xs font-medium" style={{ color: "#5C5744" }}>{t("createListing.titleLabel")}</label>
+            <label className="text-xs font-medium" style={{ color: "#4B5563" }}>{t("createListing.titleLabel")}</label>
             <AiWriteButton onClick={writeWithAI} busy={aiWriting} />
           </div>
           <input
@@ -8111,7 +7963,7 @@ ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return
         </div>
 
         <div>
-          <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("createListing.descLabel")}</label>
+          <label className="text-xs font-medium block mb-1.5" style={{ color: "#4B5563" }}>{t("createListing.descLabel")}</label>
           <textarea
             value={desc}
             onChange={(e) => setDesc(e.target.value)}
@@ -8135,7 +7987,7 @@ ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return
         )}
 
         <div>
-          <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("listingDetail.editPriceTypeLabel")}</label>
+          <label className="text-xs font-medium block mb-1.5" style={{ color: "#4B5563" }}>{t("listingDetail.editPriceTypeLabel")}</label>
           <div className="flex gap-2 mb-2.5">
             {[["fixed", t("listingDetail.editPriceFixed")], ["hourly", t("listingDetail.editPriceHourly")], ["quote", t("listingDetail.editPriceQuote")]].map(([key, label]) => (
               <button
@@ -8144,8 +7996,8 @@ ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return
                 onClick={() => setPriceType(key)}
                 className="flex-1 py-2 rounded-lg text-xs font-medium border"
                 style={priceType === key
-                  ? { background: "#3F7D5C", color: "#EFE8D8", borderColor: "transparent" }
-                  : { borderColor: "#D9D0BA", color: "#5C5744" }}
+                  ? { background: "#0F1115", color: "#FFFFFF", borderColor: "transparent" }
+                  : { borderColor: "#E4E4E7", color: "#4B5563" }}
               >
                 {label}
               </button>
@@ -8165,7 +8017,7 @@ ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return
         </div>
 
         {error && (
-          <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{error}</p>
+          <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(220,38,38,0.1)", color: "#DC2626" }}>{error}</p>
         )}
 
         <div className="flex gap-2 pt-1">
@@ -8174,7 +8026,7 @@ ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return
             onClick={handleSave}
             disabled={saving || cover.photoUploading}
             className="flex-1 py-2.5 rounded-full text-sm font-medium flex items-center justify-center gap-2"
-            style={{ background: "#2FBF71", color: "#1B2B24", opacity: saving || cover.photoUploading ? 0.7 : 1 }}
+            style={{ background: "#2563EB", color: "#FFFFFF", opacity: saving || cover.photoUploading ? 0.7 : 1 }}
           >
             {saving && <Loader2 size={14} className="animate-spin" />}
             {saving ? t("common.savingEllipsis") : t("common.saveChanges")}
@@ -8184,7 +8036,7 @@ ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return
             onClick={onCancel}
             disabled={saving}
             className="px-5 py-2.5 rounded-full text-sm font-medium border"
-            style={{ borderColor: "#D9D0BA", color: "#1B2B24" }}
+            style={{ borderColor: "#E4E4E7", color: "#0F1115" }}
           >
             {t("common.cancel")}
           </button>
@@ -8204,12 +8056,12 @@ function OwnerVisibilityCard({ row, busy, error, onToggle, onGoToPlans }) {
   const active = row.active !== false;
   const billingClosed = !active && !!row.deactivated_for_billing_at;
   return (
-    <div className="mb-4 rounded-xl border px-4 py-3" style={{ borderColor: billingClosed ? "#C2872B" : "#D9D0BA", background: billingClosed ? "rgba(194,135,43,0.08)" : "#FFFFFF" }}>
+    <div className="mb-4 rounded-xl border px-4 py-3" style={{ borderColor: billingClosed ? "#2563EB" : "#E4E4E7", background: billingClosed ? "rgba(217,119,6,0.08)" : "#FFFFFF" }}>
       <div className="flex items-center gap-3 flex-wrap">
-        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: active ? "#2FBF71" : "#A8A08A" }} aria-hidden="true" />
+        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: active ? "#16A34A" : "#A1A1AA" }} aria-hidden="true" />
         <div className="flex-1 min-w-[12rem]">
-          <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>{billingClosed ? t(storeApp ? "listingDetail.visClosedTitleIos" : "listingDetail.visBillingClosedTitle") : active ? t("listingDetail.visPublished") : t("listingDetail.visUnpublished")}</p>
-          <p className="text-xs" style={{ color: "#5C5744" }}>
+          <p className="text-sm font-bold" style={{ color: "#0F1115" }}>{billingClosed ? t(storeApp ? "listingDetail.visClosedTitleIos" : "listingDetail.visBillingClosedTitle") : active ? t("listingDetail.visPublished") : t("listingDetail.visUnpublished")}</p>
+          <p className="text-xs" style={{ color: "#4B5563" }}>
             {billingClosed ? t(storeApp ? "listingDetail.visClosedBodyIos" : "listingDetail.visBillingClosedBody") : active ? t("listingDetail.visPublishedHint") : t("listingDetail.visUnpublishedHint")}
           </p>
         </div>
@@ -8219,7 +8071,7 @@ function OwnerVisibilityCard({ row, busy, error, onToggle, onGoToPlans }) {
             type="button"
             onClick={onGoToPlans}
             className="text-xs font-bold px-4 py-2 rounded-full text-white"
-            style={{ background: "#C2872B" }}
+            style={{ background: "#2563EB" }}
           >
             {t("listingDetail.visBillingPlans")}
           </button>
@@ -8232,9 +8084,9 @@ function OwnerVisibilityCard({ row, busy, error, onToggle, onGoToPlans }) {
             onClick={onToggle}
             disabled={busy}
             className="flex items-center gap-2 text-xs font-bold"
-            style={{ color: "#1B2B24", opacity: busy ? 0.6 : 1 }}
+            style={{ color: "#0F1115", opacity: busy ? 0.6 : 1 }}
           >
-            <span className="relative inline-block w-11 h-6 rounded-full transition-colors" style={{ background: active ? "#3F7D5C" : "#C9C1A8" }}>
+            <span className="relative inline-block w-11 h-6 rounded-full transition-colors" style={{ background: active ? "#2563EB" : "#D4D4D8" }}>
               <span className="absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all" style={{ left: active ? 22 : 2 }} />
             </span>
             {busy ? <Loader2 size={13} className="animate-spin" /> : active ? t("listingDetail.visActionUnpublish") : t("listingDetail.visActionPublish")}
@@ -8242,7 +8094,7 @@ function OwnerVisibilityCard({ row, busy, error, onToggle, onGoToPlans }) {
         )}
       </div>
       {error && (
-        <p className="text-xs mt-2 px-3 py-2 rounded-lg" role="alert" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{error}</p>
+        <p className="text-xs mt-2 px-3 py-2 rounded-lg" role="alert" style={{ background: "rgba(220,38,38,0.1)", color: "#DC2626" }}>{error}</p>
       )}
     </div>
   );
@@ -8263,9 +8115,9 @@ function ShareAfterPublish({ listingId, listingTitle, userId }) {
   const [text, setText] = useState(() => textFor("mahalle"));
   const pick = (k) => { setKind(k); setText(textFor(k)); setCopied(false); };
   return (
-    <div className="rounded-2xl border p-5 mb-6 text-left" style={{ borderColor: "#D9D0BA", background: "#FFFDF8" }}>
-      <p className="text-sm font-bold mb-1" style={{ color: "#1B2B24" }}>Vitrinini paylaş</p>
-      <p className="text-xs mb-3" style={{ color: "#5C5744" }}>Tanıdıklarına gönder; ilk müşterilerin en çok senin çevrenden gelir. Kime göndereceğini seç, metni istediğin gibi düzenle.</p>
+    <div className="rounded-2xl border p-5 mb-6 text-left" style={{ borderColor: "#E4E4E7", background: "#FFFDF8" }}>
+      <p className="text-sm font-bold mb-1" style={{ color: "#0F1115" }}>Vitrinini paylaş</p>
+      <p className="text-xs mb-3" style={{ color: "#4B5563" }}>Tanıdıklarına gönder; ilk müşterilerin en çok senin çevrenden gelir. Kime göndereceğini seç, metni istediğin gibi düzenle.</p>
       <div className="flex gap-2 flex-wrap mb-3" role="radiogroup" aria-label="Paylaşım kitlesi">
         {[["mahalle", "Mahalle / anne grubu"], ["instagram", "Instagram"], ["aile", "Aile ve arkadaş"]].map(([k, label]) => (
           <button
@@ -8275,7 +8127,7 @@ function ShareAfterPublish({ listingId, listingTitle, userId }) {
             aria-checked={kind === k}
             onClick={() => pick(k)}
             className="px-3 py-1.5 rounded-full text-xs font-medium border"
-            style={kind === k ? { background: "#1B2B24", borderColor: "#1B2B24", color: "#FFFFFF" } : { background: "#FFFFFF", borderColor: "#D9D0BA", color: "#1B2B24" }}
+            style={kind === k ? { background: "#0F1115", borderColor: "#0F1115", color: "#FFFFFF" } : { background: "#FFFFFF", borderColor: "#E4E4E7", color: "#0F1115" }}
           >{label}</button>
         ))}
       </div>
@@ -8284,7 +8136,7 @@ function ShareAfterPublish({ listingId, listingTitle, userId }) {
         onChange={(e) => { setText(e.target.value); setCopied(false); }}
         rows={4}
         className="w-full px-3 py-2.5 rounded-lg border text-xs outline-none resize-none mb-3"
-        style={{ borderColor: "#D9D0BA", background: "#FFFFFF", color: "#1B2B24" }}
+        style={{ borderColor: "#E4E4E7", background: "#FFFFFF", color: "#0F1115" }}
       />
       <div className="flex gap-2 flex-wrap">
         <a
@@ -8295,7 +8147,7 @@ function ShareAfterPublish({ listingId, listingTitle, userId }) {
         >WhatsApp'ta paylaş</a>
         <button
           onClick={async () => { try { await navigator.clipboard.writeText(text); setCopied(true); trackEvent("vitrin_shared", { via: "copy", audience: kind, listing_id: listingId, source: "after_publish" }, userId); } catch {} }}
-          className="px-4 py-2 rounded-full text-xs font-bold border" style={{ borderColor: "#D9D0BA", color: "#1B2B24" }}
+          className="px-4 py-2 rounded-full text-xs font-bold border" style={{ borderColor: "#E4E4E7", color: "#0F1115" }}
         >{copied ? "Kopyalandı" : "Metni kopyala"}</button>
       </div>
     </div>
@@ -8740,20 +8592,20 @@ ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return
 
   // Yayınlandı ekranında (yeni vitrin) tek seferde yüklenen medya bloğu.
   const mediaUploadSection = (
-    <div className="text-left rounded-2xl border p-5 mb-6" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
-      <p className="text-sm font-bold mb-4 text-center" style={{ color: "#1B2B24" }}>{t("createListing.mediaHeading")}</p>
+    <div className="text-left rounded-2xl border p-5 mb-6" style={{ borderColor: "#E4E4E7", background: "#F7F7F8" }}>
+      <p className="text-sm font-bold mb-4 text-center" style={{ color: "#0F1115" }}>{t("createListing.mediaHeading")}</p>
 
       <>
           {/* Tanıtım videosu */}
-          <div className="mb-4 pb-4 border-b" style={{ borderColor: "#EAE3CE" }}>
-            <p className="text-xs font-bold mb-2" style={{ color: "#5C5744" }}>{t("createListing.videoLabel")}</p>
+          <div className="mb-4 pb-4 border-b" style={{ borderColor: "#E4E4E7" }}>
+            <p className="text-xs font-bold mb-2" style={{ color: "#4B5563" }}>{t("createListing.videoLabel")}</p>
             {videoIntro ? (
-              <div className="flex items-center justify-between text-xs rounded-lg px-3 py-2" style={{ background: "#FFFFFF", border: "1px solid #EAE3CE" }}>
-                <span className="truncate" style={{ color: "#1B2B24" }}>{videoIntro.name}</span>
-                <Check size={14} style={{ color: "#2FBF71" }} />
+              <div className="flex items-center justify-between text-xs rounded-lg px-3 py-2" style={{ background: "#FFFFFF", border: "1px solid #E4E4E7" }}>
+                <span className="truncate" style={{ color: "#0F1115" }}>{videoIntro.name}</span>
+                <Check size={14} style={{ color: "#16A34A" }} />
               </div>
             ) : (
-              <label className="flex items-center justify-center gap-2 text-xs font-semibold px-4 py-2.5 rounded-full cursor-pointer" style={{ background: "#FFFFFF", border: "1px solid #D9D0BA", color: "#1B2B24" }}>
+              <label className="flex items-center justify-center gap-2 text-xs font-semibold px-4 py-2.5 rounded-full cursor-pointer" style={{ background: "#FFFFFF", border: "1px solid #E4E4E7", color: "#0F1115" }}>
                 {videoUploading ? <Loader2 size={14} className="animate-spin" /> : <UploadCloud size={14} />} {t("createListing.videoAdd")}
                 <input type="file" accept="video/*" className="hidden" onChange={handleVideoAdd} disabled={videoUploading} />
               </label>
@@ -8762,8 +8614,8 @@ ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return
           </div>
 
           {/* İş başında portföy */}
-          <div className="mb-4 pb-4 border-b" style={{ borderColor: "#EAE3CE" }}>
-            <p className="text-xs font-bold mb-2" style={{ color: "#5C5744" }}>{t("createListing.portfolioLabel", { count: portfolio.length, max: 9 })}</p>
+          <div className="mb-4 pb-4 border-b" style={{ borderColor: "#E4E4E7" }}>
+            <p className="text-xs font-bold mb-2" style={{ color: "#4B5563" }}>{t("createListing.portfolioLabel", { count: portfolio.length, max: 9 })}</p>
             {portfolio.length > 0 && (
               <div className="grid grid-cols-3 gap-2 mb-2">
                 {portfolio.map((p, i) => (
@@ -8772,7 +8624,7 @@ ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return
                     type="button"
                     onClick={() => setLightbox({ media: portfolio, index: i })}
                     className="aspect-square rounded-lg overflow-hidden relative"
-                    style={{ background: "#EAE3CE" }}
+                    style={{ background: "#E4E4E7" }}
                   >
                     {p.type === "video" ? (
                       <>
@@ -8789,7 +8641,7 @@ ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return
               </div>
             )}
             {portfolio.length < 9 && (
-              <label className="flex items-center justify-center gap-2 text-xs font-semibold px-4 py-2.5 rounded-full cursor-pointer" style={{ background: "#FFFFFF", border: "1px solid #D9D0BA", color: "#1B2B24" }}>
+              <label className="flex items-center justify-center gap-2 text-xs font-semibold px-4 py-2.5 rounded-full cursor-pointer" style={{ background: "#FFFFFF", border: "1px solid #E4E4E7", color: "#0F1115" }}>
                 {portfolioUploading ? <Loader2 size={14} className="animate-spin" /> : <UploadCloud size={14} />} {t("createListing.portfolioAdd")}
                 <input type="file" accept="image/*,video/*" multiple className="hidden" onChange={(e) => { setPortfolioConfirmed(false); handlePortfolioAdd(e); }} disabled={portfolioUploading} />
               </label>
@@ -8797,7 +8649,7 @@ ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return
             {portfolioError && <p className="text-[11px] mt-1.5" style={{ color: "#D14D4D" }}>{portfolioError}</p>}
             {portfolio.length > 0 && (
               portfolioConfirmed ? (
-                <p className="flex items-center gap-1.5 text-xs font-bold mt-2" style={{ color: "#2FBF71" }}>
+                <p className="flex items-center gap-1.5 text-xs font-bold mt-2" style={{ color: "#16A34A" }}>
                   <Check size={14} /> {t("createListing.portfolioSaved", { count: portfolio.length })}
                 </p>
               ) : (
@@ -8805,7 +8657,7 @@ ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return
                   onClick={() => setPortfolioConfirmed(true)}
                   disabled={portfolioUploading}
                   className="w-full mt-2 text-xs font-bold px-4 py-2.5 rounded-full text-white"
-                  style={{ background: "#2FBF71" }}
+                  style={{ background: "#2563EB" }}
                 >
                   {t("common.save")}
                 </button>
@@ -8814,20 +8666,20 @@ ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return
           </div>
 
           {/* Sertifika */}
-          <div className="mb-4 pb-4 border-b" style={{ borderColor: "#EAE3CE" }}>
-            <p className="text-xs font-bold mb-2" style={{ color: "#5C5744" }}>{t("createListing.certLabel", { count: certificates.length, max: 5 })}</p>
+          <div className="mb-4 pb-4 border-b" style={{ borderColor: "#E4E4E7" }}>
+            <p className="text-xs font-bold mb-2" style={{ color: "#4B5563" }}>{t("createListing.certLabel", { count: certificates.length, max: 5 })}</p>
             {certificates.length > 0 && (
               <div className="flex flex-col gap-1.5 mb-2">
                 {certificates.map((c) => (
-                  <div key={c.id} className="flex items-center gap-2 text-xs rounded-lg px-3 py-2" style={{ background: "#FFFFFF", border: "1px solid #EAE3CE" }}>
-                    <FileText size={13} style={{ color: "#6B6550" }} />
-                    <span className="truncate flex-1" style={{ color: "#1B2B24" }}>{c.name}</span>
+                  <div key={c.id} className="flex items-center gap-2 text-xs rounded-lg px-3 py-2" style={{ background: "#FFFFFF", border: "1px solid #E4E4E7" }}>
+                    <FileText size={13} style={{ color: "#6B7280" }} />
+                    <span className="truncate flex-1" style={{ color: "#0F1115" }}>{c.name}</span>
                   </div>
                 ))}
               </div>
             )}
             {certificates.length < 5 && (
-              <label className="flex items-center justify-center gap-2 text-xs font-semibold px-4 py-2.5 rounded-full cursor-pointer" style={{ background: "#FFFFFF", border: "1px solid #D9D0BA", color: "#1B2B24" }}>
+              <label className="flex items-center justify-center gap-2 text-xs font-semibold px-4 py-2.5 rounded-full cursor-pointer" style={{ background: "#FFFFFF", border: "1px solid #E4E4E7", color: "#0F1115" }}>
                 {certUploading ? <Loader2 size={14} className="animate-spin" /> : <UploadCloud size={14} />} {t("createListing.certAdd")}
                 <input type="file" accept="image/*,.pdf" multiple className="hidden" onChange={(e) => { setCertConfirmed(false); handleCertAdd(e); }} disabled={certUploading} />
               </label>
@@ -8835,7 +8687,7 @@ ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return
             {certError && <p className="text-[11px] mt-1.5" style={{ color: "#D14D4D" }}>{certError}</p>}
             {certificates.length > 0 && (
               certConfirmed ? (
-                <p className="flex items-center gap-1.5 text-xs font-bold mt-2" style={{ color: "#2FBF71" }}>
+                <p className="flex items-center gap-1.5 text-xs font-bold mt-2" style={{ color: "#16A34A" }}>
                   <Check size={14} /> {t("createListing.certSaved", { count: certificates.length })}
                 </p>
               ) : (
@@ -8843,7 +8695,7 @@ ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return
                   onClick={() => setCertConfirmed(true)}
                   disabled={certUploading}
                   className="w-full mt-2 text-xs font-bold px-4 py-2.5 rounded-full text-white"
-                  style={{ background: "#2FBF71" }}
+                  style={{ background: "#2563EB" }}
                 >
                   {t("common.save")}
                 </button>
@@ -8853,15 +8705,15 @@ ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return
 
           {/* CV */}
           <div>
-            <p className="text-xs font-bold mb-2" style={{ color: "#5C5744" }}>{t("createListing.cvLabel")}</p>
+            <p className="text-xs font-bold mb-2" style={{ color: "#4B5563" }}>{t("createListing.cvLabel")}</p>
             {cv ? (
-              <div className="flex items-center gap-2 text-xs rounded-lg px-3 py-2" style={{ background: "#FFFFFF", border: "1px solid #EAE3CE" }}>
-                <FileText size={13} style={{ color: "#6B6550" }} />
-                <span className="truncate flex-1" style={{ color: "#1B2B24" }}>{cv.name}</span>
-                <Check size={14} style={{ color: "#2FBF71" }} />
+              <div className="flex items-center gap-2 text-xs rounded-lg px-3 py-2" style={{ background: "#FFFFFF", border: "1px solid #E4E4E7" }}>
+                <FileText size={13} style={{ color: "#6B7280" }} />
+                <span className="truncate flex-1" style={{ color: "#0F1115" }}>{cv.name}</span>
+                <Check size={14} style={{ color: "#16A34A" }} />
               </div>
             ) : (
-              <label className="flex items-center justify-center gap-2 text-xs font-semibold px-4 py-2.5 rounded-full cursor-pointer" style={{ background: "#FFFFFF", border: "1px solid #D9D0BA", color: "#1B2B24" }}>
+              <label className="flex items-center justify-center gap-2 text-xs font-semibold px-4 py-2.5 rounded-full cursor-pointer" style={{ background: "#FFFFFF", border: "1px solid #E4E4E7", color: "#0F1115" }}>
                 {cvUploading ? <Loader2 size={14} className="animate-spin" /> : <UploadCloud size={14} />} {t("createListing.cvAdd")}
                 <input type="file" accept=".pdf,.doc,.docx" className="hidden" onChange={handleCvAdd} disabled={cvUploading} />
               </label>
@@ -8875,16 +8727,16 @@ ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return
   if (step === "success") {
     return (
       <div className="max-w-md mx-auto px-5 py-24 text-center">
-        <div className="w-14 h-14 rounded-full mx-auto mb-5 flex items-center justify-center" style={{ background: "rgba(47,191,113,0.15)" }}>
-          <Check size={22} style={{ color: "#2FBF71" }} />
+        <div className="w-14 h-14 rounded-full mx-auto mb-5 flex items-center justify-center" style={{ background: "rgba(37,99,235,0.15)" }}>
+          <Check size={22} style={{ color: "#16A34A" }} />
         </div>
-        <h2 className="font-serif text-xl mb-2" style={{ color: "#1B2B24" }}>{t("createListing.successTitleCreate")}</h2>
-        <p className="text-sm mb-6" style={{ color: "#5C5744" }}>
+        <h2 className="font-sans text-xl font-black tracking-tight mb-2" style={{ color: "#0F1115" }}>{t("createListing.successTitleCreate")}</h2>
+        <p className="text-sm mb-6" style={{ color: "#4B5563" }}>
           {t("createListing.successBodyCreate", { title: created?.title })}
         </p>
 
         {recLoading && !isFreePeriod() && (
-          <div className="rounded-2xl border p-4 mb-6 text-xs flex items-center justify-center gap-2" style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#6B6550" }}>
+          <div className="rounded-2xl border p-4 mb-6 text-xs flex items-center justify-center gap-2" style={{ borderColor: "#E4E4E7", background: "#F7F7F8", color: "#6B7280" }}>
             <Loader2 size={13} className="animate-spin" /> {t("createListing.recLoading")}
           </div>
         )}
@@ -8906,7 +8758,7 @@ ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return
             değildi. Artık hepsi burada, aynı yerde, sayfa değiştirmeden. */}
         {mediaUploadSection}
         {created?.dbId && (
-          <div className="text-left rounded-2xl border p-5 mb-6" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
+          <div className="text-left rounded-2xl border p-5 mb-6" style={{ borderColor: "#E4E4E7", background: "#F7F7F8" }}>
             <WorkLinkEditor bare serviceId={created.dbId} initialUrl="" userId={userId} source="create_success" />
           </div>
         )}
@@ -8914,7 +8766,7 @@ ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return
         {created?.dbId && <ShareAfterPublish listingId={created.dbId} listingTitle={created.title} userId={userId} />}
 
         <div className="flex gap-2 justify-center">
-          <button onClick={onBack} className="px-5 py-2.5 rounded-full text-sm font-medium text-white" style={{ background: "#C2872B" }}>{t("common.backToHome")}</button>
+          <button onClick={onBack} className="px-5 py-2.5 rounded-full text-sm font-medium text-white" style={{ background: "#2563EB" }}>{t("common.backToHome")}</button>
         </div>
       </div>
     );
@@ -8923,7 +8775,7 @@ ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return
   if (gateCheck.checking) {
     return (
       <div className="max-w-md mx-auto px-5 py-20 text-center">
-        <Loader2 size={20} className="animate-spin mx-auto" style={{ color: "#6B6550" }} />
+        <Loader2 size={20} className="animate-spin mx-auto" style={{ color: "#6B7280" }} />
       </div>
     );
   }
@@ -8931,14 +8783,14 @@ ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return
   if (!gateCheck.ok) {
     return (
       <div className="max-w-md mx-auto px-5 py-20 text-center">
-        <div className="w-14 h-14 rounded-full mx-auto mb-5 flex items-center justify-center" style={{ background: "rgba(194,135,43,0.15)" }}>
-          <AlertCircle size={22} style={{ color: "#C2872B" }} />
+        <div className="w-14 h-14 rounded-full mx-auto mb-5 flex items-center justify-center" style={{ background: "rgba(217,119,6,0.15)" }}>
+          <AlertCircle size={22} style={{ color: "#D97706" }} />
         </div>
-        <h2 className="font-serif text-xl mb-2" style={{ color: "#1B2B24" }}>{t("common.completeProfileFirst")}</h2>
-        <p className="text-sm mb-6" style={{ color: "#5C5744" }}>{gateCheck.reason}</p>
+        <h2 className="font-sans text-xl font-black tracking-tight mb-2" style={{ color: "#0F1115" }}>{t("common.completeProfileFirst")}</h2>
+        <p className="text-sm mb-6" style={{ color: "#4B5563" }}>{gateCheck.reason}</p>
         <div className="flex gap-2 justify-center">
           <button onClick={onGoToProfile || onBack} className="px-5 py-2.5 rounded-full text-sm font-medium text-white" style={{ background: "#2563EB" }}>{t("common.goToProfile")}</button>
-          <button onClick={onBack} className="px-5 py-2.5 rounded-full text-sm font-medium border" style={{ borderColor: "#D9D0BA", color: "#1B2B24" }}>{t("common.cancel")}</button>
+          <button onClick={onBack} className="px-5 py-2.5 rounded-full text-sm font-medium border" style={{ borderColor: "#E4E4E7", color: "#0F1115" }}>{t("common.cancel")}</button>
         </div>
       </div>
     );
@@ -8948,25 +8800,25 @@ ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return
   if (vitrinLimit.blocked && vitrinLimit.cap === 0) {
     return (
       <div className="max-w-md mx-auto px-5 py-20 text-center">
-        <button onClick={onBack} className="flex items-center gap-1 text-sm mb-8" style={{ color: "#5C5744" }}>
+        <button onClick={onBack} className="flex items-center gap-1 text-sm mb-8" style={{ color: "#4B5563" }}>
           <ChevronLeft size={16} /> {t("common.back")}
         </button>
         <div className="w-14 h-14 rounded-full mx-auto mb-5 flex items-center justify-center" style={{ background: "rgba(245,158,11,0.15)" }}>
-          <Sparkles size={22} style={{ color: "#F59E0B" }} />
+          <Sparkles size={22} style={{ color: "#2563EB" }} />
         </div>
-        <h2 className="font-serif text-xl mb-2" style={{ color: "#1B2B24" }}>{t("createListing.noSubscriptionTitle")}</h2>
-        <p className="text-sm mb-6" style={{ color: "#5C5744" }}>{storeApp ? t("createListing.noSubscriptionBodyIos") : t("createListing.noSubscriptionBody")}</p>
+        <h2 className="font-sans text-xl font-black tracking-tight mb-2" style={{ color: "#0F1115" }}>{t("createListing.noSubscriptionTitle")}</h2>
+        <p className="text-sm mb-6" style={{ color: "#4B5563" }}>{storeApp ? t("createListing.noSubscriptionBodyIos") : t("createListing.noSubscriptionBody")}</p>
         {!storeApp && (
         <button
           onClick={() => (onGoToPlans ? onGoToPlans() : onBack())}
           className="w-full py-2.5 rounded-full text-sm font-medium text-white"
-          style={{ background: "#F59E0B" }}
+          style={{ background: "#2563EB" }}
         >
           {t("createListing.noSubscriptionButton")}
         </button>
         )}
         {onGoToProfile && (
-          <button onClick={onGoToProfile} className="w-full mt-3 py-2.5 rounded-full text-sm font-medium border" style={{ borderColor: "#D9D0BA", color: "#1B2B24" }}>
+          <button onClick={onGoToProfile} className="w-full mt-3 py-2.5 rounded-full text-sm font-medium border" style={{ borderColor: "#E4E4E7", color: "#0F1115" }}>
             {t("createListing.noSubscriptionPhoneButton")}
           </button>
         )}
@@ -8978,14 +8830,14 @@ ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return
     const planNameDisplay = t(vitrinLimit.planName === "Pro Üyelik" ? "createListing.planNamePro" : "createListing.planNameStandard");
     return (
       <div className="max-w-md mx-auto px-5 py-20 text-center">
-        <button onClick={onBack} className="flex items-center gap-1 text-sm mb-8" style={{ color: "#5C5744" }}>
+        <button onClick={onBack} className="flex items-center gap-1 text-sm mb-8" style={{ color: "#4B5563" }}>
           <ChevronLeft size={16} /> {t("common.back")}
         </button>
         <div className="w-14 h-14 rounded-full mx-auto mb-5 flex items-center justify-center" style={{ background: "rgba(245,158,11,0.15)" }}>
-          <Sparkles size={22} style={{ color: "#F59E0B" }} />
+          <Sparkles size={22} style={{ color: "#2563EB" }} />
         </div>
-        <h2 className="font-serif text-xl mb-2" style={{ color: "#1B2B24" }}>{storeApp ? t("createListing.limitTitleIos") : t("createListing.limitTitle", { planName: planNameDisplay })}</h2>
-        <p className="text-sm mb-6" style={{ color: "#5C5744" }}>
+        <h2 className="font-sans text-xl font-black tracking-tight mb-2" style={{ color: "#0F1115" }}>{storeApp ? t("createListing.limitTitleIos") : t("createListing.limitTitle", { planName: planNameDisplay })}</h2>
+        <p className="text-sm mb-6" style={{ color: "#4B5563" }}>
           {storeApp
             ? t("createListing.limitBodyIos", { cap: vitrinLimit.cap })
             : vitrinLimit.planName === "Pro Üyelik"
@@ -8993,26 +8845,26 @@ ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return
             : t("createListing.limitBodyStandard", { cap: vitrinLimit.cap })}
         </p>
         {vitrinLimit.planName !== "Pro Üyelik" && !storeApp ? (
-          <div className="rounded-2xl border-2 p-5 mb-6 text-left" style={{ borderColor: "#F59E0B", background: "#FFFBEB" }}>
-            <p className="text-sm font-bold mb-1" style={{ color: "#1B2B24" }}>{t("createListing.proCardTitle")}</p>
-            <ul className="text-xs space-y-1 mb-4" style={{ color: "#5C5744" }}>
+          <div className="rounded-2xl border-2 p-5 mb-6 text-left" style={{ borderColor: "#2563EB", background: "#EFF6FF" }}>
+            <p className="text-sm font-bold mb-1" style={{ color: "#0F1115" }}>{t("createListing.proCardTitle")}</p>
+            <ul className="text-xs space-y-1 mb-4" style={{ color: "#4B5563" }}>
               <li>• {t("createListing.proCardBullet1")}</li>
               <li>• {t("createListing.proCardBullet2")}</li>
               <li>• {t("createListing.proCardBullet3")}</li>
             </ul>
-            {error && <p className="text-xs mb-3" style={{ color: "#9C4A3C" }}>{error}</p>}
+            {error && <p className="text-xs mb-3" style={{ color: "#DC2626" }}>{error}</p>}
             <button
               onClick={upgradeToPro}
               disabled={upgrading}
               className="w-full py-2.5 rounded-full text-sm font-medium text-white flex items-center justify-center gap-1.5"
-              style={{ background: "#F59E0B", opacity: upgrading ? 0.7 : 1 }}
+              style={{ background: "#2563EB", opacity: upgrading ? 0.7 : 1 }}
             >
               {upgrading && <Loader2 size={13} className="animate-spin" />}
               {t("createListing.proCardButton")}
             </button>
           </div>
         ) : null}
-        <button onClick={onBack} className="text-xs font-medium" style={{ color: "#6B6550" }}>{t("createListing.limitDismiss")}</button>
+        <button onClick={onBack} className="text-xs font-medium" style={{ color: "#6B7280" }}>{t("createListing.limitDismiss")}</button>
         {paytrToken && (
           <PaytrCheckoutModal
             token={paytrToken}
@@ -9026,11 +8878,11 @@ ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return
 
   return (
     <div className="max-w-xl mx-auto px-5 py-10">
-      <button onClick={onBack} className="flex items-center gap-1 text-sm mb-5" style={{ color: "#5C5744" }}>
+      <button onClick={onBack} className="flex items-center gap-1 text-sm mb-5" style={{ color: "#4B5563" }}>
         <ChevronLeft size={16} /> {t("common.back")}
       </button>
-      <h1 className="font-serif text-2xl mb-1" style={{ color: "#1B2B24" }}>{t("createListing.createTitle")}</h1>
-      <p className="text-sm mb-6" style={{ color: "#5C5744" }}>
+      <h1 className="font-sans text-2xl sm:text-3xl font-black tracking-tight mb-1" style={{ color: "#0F1115" }}>{t("createListing.createTitle")}</h1>
+      <p className="text-sm mb-6" style={{ color: "#4B5563" }}>
         {t("createListing.createSubtitle")}
       </p>
 
@@ -9040,7 +8892,7 @@ ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return
             key={key}
             onClick={() => { setMode(key); setCategoryId(""); }}
             className="flex-1 py-2.5 rounded-xl text-sm font-medium border"
-            style={mode === key ? { background: "#1B2B24", color: "#EFE8D8", borderColor: "#1B2B24" } : { borderColor: "#D9D0BA", color: "#5C5744" }}
+            style={mode === key ? { background: "#0F1115", color: "#FFFFFF", borderColor: "#0F1115" } : { borderColor: "#E4E4E7", color: "#4B5563" }}
           >
             {label}
           </button>
@@ -9049,15 +8901,15 @@ ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return
 
       <div className="space-y-4">
         <div>
-          <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("createListing.displayNameLabel")}</label>
+          <label className="text-xs font-medium block mb-1.5" style={{ color: "#4B5563" }}>{t("createListing.displayNameLabel")}</label>
           <input
             value={providerName}
             onChange={(e) => setProviderName(e.target.value)}
             placeholder={t("createListing.displayNamePlaceholder")}
             className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
-            style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
+            style={{ borderColor: "#E4E4E7", background: "#F7F7F8", color: "#0F1115" }}
           />
-          <p className="text-[11px] mt-1.5" style={{ color: "#6B6550" }}>{t("createListing.displayNameHint")}</p>
+          <p className="text-[11px] mt-1.5" style={{ color: "#6B7280" }}>{t("createListing.displayNameHint")}</p>
         </div>
 
         <ListingCategoryField
@@ -9095,7 +8947,7 @@ ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return
 
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <label className="text-xs font-medium" style={{ color: "#5C5744" }}>{t("createListing.titleLabel")}</label>
+            <label className="text-xs font-medium" style={{ color: "#4B5563" }}>{t("createListing.titleLabel")}</label>
             <AiWriteButton onClick={writeWithAI} busy={aiWriting} />
           </div>
           <input
@@ -9103,19 +8955,19 @@ ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return
             onChange={(e) => setTitle(e.target.value)}
             placeholder={t("createListing.titlePlaceholder")}
             className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
-            style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
+            style={{ borderColor: "#E4E4E7", background: "#F7F7F8", color: "#0F1115" }}
           />
         </div>
 
         <div>
-          <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("createListing.descLabel")}</label>
+          <label className="text-xs font-medium block mb-1.5" style={{ color: "#4B5563" }}>{t("createListing.descLabel")}</label>
           <textarea
             value={desc}
             onChange={(e) => setDesc(e.target.value)}
             rows={4}
             placeholder={t("createListing.descPlaceholder")}
             className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none resize-none"
-            style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
+            style={{ borderColor: "#E4E4E7", background: "#F7F7F8", color: "#0F1115" }}
           />
           <ListingDescLengthHint desc={desc} />
         </div>
@@ -9134,30 +8986,30 @@ ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return
         )}
 
         <div>
-          <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("createListing.priceLabel")}</label>
+          <label className="text-xs font-medium block mb-1.5" style={{ color: "#4B5563" }}>{t("createListing.priceLabel")}</label>
           <input
             value={price}
             onChange={(e) => setPrice(e.target.value)}
             placeholder={t("createListing.pricePlaceholder")}
             className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
-            style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
+            style={{ borderColor: "#E4E4E7", background: "#F7F7F8", color: "#0F1115" }}
           />
         </div>
 
         {error && (
-          <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{error}</p>
+          <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(220,38,38,0.1)", color: "#DC2626" }}>{error}</p>
         )}
 
         <button
           onClick={handleSubmit}
           disabled={submitting || photoUploading}
           className="w-full py-3 rounded-full text-sm font-medium text-white mt-2 flex items-center justify-center gap-2"
-          style={{ background: "#2FBF71", color: "#1B2B24", opacity: submitting || photoUploading ? 0.7 : 1 }}
+          style={{ background: "#2563EB", color: "#FFFFFF", opacity: submitting || photoUploading ? 0.7 : 1 }}
         >
           {submitting && <Loader2 size={14} className="animate-spin" />}
           {submitting ? t("common.publishingEllipsis") : t("createListing.submitPublish")}
         </button>
-        <p className="text-[11px] text-center" style={{ color: "#6B6550" }}>
+        <p className="text-[11px] text-center" style={{ color: "#6B7280" }}>
           {t("createListing.completeProfileHint")}
         </p>
       </div>
@@ -9383,7 +9235,7 @@ BİÇİM KURALI: Sadece **kalın**, "- " madde işareti ve aşağıdaki bağlant
 ${storeApp ? "BAĞLANTI KURALI: Kullanıcıyı bir ekrana yönlendirirken SADECE şu sözdizimini kullan: [Etiket](view:createListing) — view değerleri yalnızca createListing, post, profile, messages, favorites, map, support. Yasal sayfalar için [Etiket](page:gizlilik-politikasi) — page değerleri yalnızca gizlilik-politikasi, kullanim-sartlari, kvkk-aydinlatma-metni. ASLA kendi uydurduğun bir URL/adres yazma." : `BAĞLANTI KURALI: Kullanıcıyı bir ekrana yönlendirirken SADECE şu sözdizimini kullan: [Etiket](view:pricing) — view değerleri yalnızca pricing, createListing, post, profile, messages, favorites, map, support. Yasal sayfalar için [Etiket](page:iptal-iade-kosullari) — page değerleri yalnızca iptal-iade-kosullari, gizlilik-politikasi, kullanim-sartlari, kvkk-aydinlatma-metni, mesafeli-satis-sozlesmesi. ASLA isinn.com.tr/planlar gibi kendi uydurduğun bir URL/adres yazma (böyle sayfalar yok, 404 verir).`}
 
 ${storeApp ? "5) Plan ve fiyat bilgisi bu uygulamada yoktur; vitrin açmak için \"Hizmet Ekle\" yeterli." : `5) GÜNCEL KAMPANYA VE PLANLAR (canlı veri, Planlar ekranıyla aynı — bunlarla çelişme):
-${isFreePeriod() ? `Şu an "90 gün herkese ücretsiz" kampanyası var: ${new Date(FREE_PERIOD_UNTIL_ISO).toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" })} tarihine kadar tüm özellikler ücretsiz, bu süre içinde plan satın almak GEREKMİYOR. Kullanıcıya "üyelik planı seç/satın al" DEME; vitrin açmak için doğrudan "Hizmet Ekle" yeterli. Kampanya sonrası için kullanıcıya önceden haber verilecek.` : "Ücretsiz dönem bitti; vitrin açmak için aktif bir üyelik gerekir."}
+${isFreePeriod() ? `Şu an lansman kampanyası var: ${new Date(FREE_PERIOD_UNTIL_ISO).toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" })} tarihine kadar tüm özellikler ücretsiz, bu süre içinde plan satın almak GEREKMİYOR. Kullanıcıya "üyelik planı seç/satın al" DEME; vitrin açmak için doğrudan "Hizmet Ekle" yeterli. Kampanya sonrası için kullanıcıya önceden haber verilecek.` : "Ücretsiz dönem bitti; vitrin açmak için aktif bir üyelik gerekir."}
 ${plansInfo ? `Planlar (dönem sonrası geçerli fiyat/hak): ${plansInfo}. Fiyatı sorulursa SADECE bu rakamları söyle.` : "Plan fiyatları şu an okunamadı; rakam söyleme, Planlar ekranına yönlendir."}`}
 
 6) YÖNETİME BİLDİRME (gerçek mekanizma): Sen yönetime kendin mesaj GÖNDEREMEZSİN, ama bu ekranda her yanıtının altında "Sorun çözüldü mü?" sorusu ve **Hayır, yönetime bildir** butonu çıkar; kullanıcı ona dokununca bu yazışma özetlenip ekibe bir destek talebi olarak iletilir. Bir sorunun ekibe iletilmesi gerektiğinde (şikayet, dolandırıcılık şüphesi, çözemediğin teknik hata, bilmediğin para/hukuk konusu) kullanıcıya SADECE bu butona dokunmasını söyle. "Yönetime iletemiyorum", "e-posta at" ya da uydurma bir iletişim adresi/telefon verme.
@@ -9454,8 +9306,8 @@ ${convoText}`;
       <button onClick={onBack} className="flex items-center gap-1 text-sm mb-3 shrink-0" style={{ color: "#6B7280" }}>
         <ChevronLeft size={16} /> {t("common.back")}
       </button>
-      <div className="flex items-center gap-2.5 pb-3 border-b mb-3 shrink-0" style={{ borderColor: "#F0F0F0" }}>
-        <div className="w-9 h-9 rounded-full flex items-center justify-center text-white" style={{ background: "linear-gradient(135deg, #2563EB, #1D4ED8)" }}>
+      <div className="flex items-center gap-2.5 pb-3 border-b mb-3 shrink-0" style={{ borderColor: "#E4E4E7" }}>
+        <div className="w-9 h-9 rounded-full flex items-center justify-center text-white" style={{ background: "#2563EB" }}>
           <Bot size={16} />
         </div>
         <div>
@@ -9489,7 +9341,7 @@ ${convoText}`;
       {!reported ? (
         <>
           {messages.length === 1 && (
-            <div className="flex flex-wrap gap-2 pt-3 mt-2 border-t shrink-0" style={{ borderColor: "#F0F0F0" }}>
+            <div className="flex flex-wrap gap-2 pt-3 mt-2 border-t shrink-0" style={{ borderColor: "#E4E4E7" }}>
               {["quickVitrin", "quickJob", "quickMessages", ...(storeApp ? [] : ["quickPlans"])].map((k) => (
                 <button
                   key={k}
@@ -9503,7 +9355,7 @@ ${convoText}`;
               ))}
             </div>
           )}
-          <div className="flex items-center gap-2 pt-3 mt-2 border-t shrink-0" style={{ borderColor: "#F0F0F0" }}>
+          <div className="flex items-center gap-2 pt-3 mt-2 border-t shrink-0" style={{ borderColor: "#E4E4E7" }}>
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -9511,7 +9363,7 @@ ${convoText}`;
               placeholder={t("supportChat.inputPlaceholder")}
               disabled={sending}
               className="flex-1 px-3.5 py-2.5 rounded-full border text-sm outline-none"
-              style={{ borderColor: "#F0F0F0", background: "#F7F7F8", color: "#0F1115" }}
+              style={{ borderColor: "#E4E4E7", background: "#F7F7F8", color: "#0F1115" }}
             />
             <button onClick={sendMessage} disabled={sending} aria-label={t("common.sendAria")} className="w-10 h-10 rounded-full flex items-center justify-center text-white shrink-0" style={{ background: "#2563EB" }}>
               <Send size={16} />
@@ -9521,7 +9373,7 @@ ${convoText}`;
               önce "çözüldü mü?" soruluyor, bildirim sadece çözülmediyse öneriliyor. */}
           {messages.length > 1 && messages[messages.length - 1].sender === "ai" && !sending && !solved && (
             <div className="mt-3 rounded-2xl px-3.5 py-2.5" style={{ background: "#F7F7F8" }}>
-              <p className="text-xs font-medium mb-2" style={{ color: "#5C5744" }}>{t("supportChat.resolvedQuestion")}</p>
+              <p className="text-xs font-medium mb-2" style={{ color: "#4B5563" }}>{t("supportChat.resolvedQuestion")}</p>
               <div className="flex gap-2">
                 <button
                   onClick={() => setSolved(true)}
@@ -9545,7 +9397,7 @@ ${convoText}`;
           {reportError && <p className="text-xs mt-2 text-center" style={{ color: "#EF4444" }}>{reportError}</p>}
         </>
       ) : (
-        <div className="mt-3 pt-3 border-t text-center" style={{ borderColor: "#F0F0F0" }}>
+        <div className="mt-3 pt-3 border-t text-center" style={{ borderColor: "#E4E4E7" }}>
           <p className="text-xs font-medium flex items-center justify-center gap-1.5" style={{ color: "#059669" }}>
             <Check size={13} /> {t("supportChat.reportedConfirmation")}
           </p>
@@ -9737,7 +9589,7 @@ function AdminDashboardView({ onBack }) {
       onClick={detailKey ? () => setSelectedDetail((cur) => (cur === detailKey ? null : detailKey)) : undefined}
       className="rounded-2xl border p-4 text-left w-full transition-shadow"
       style={{
-        borderColor: selectedDetail === detailKey && detailKey ? accent : "#F0F0F0",
+        borderColor: selectedDetail === detailKey && detailKey ? accent : "#E4E4E7",
         background: "#FFFFFF",
         cursor: detailKey ? "pointer" : "default",
         boxShadow: selectedDetail === detailKey && detailKey ? `0 0 0 1.5px ${accent}` : "none",
@@ -9748,7 +9600,7 @@ function AdminDashboardView({ onBack }) {
       </div>
       <p className="text-2xl font-black" style={{ color: "#0F1115" }}>{value}</p>
       <p className="text-xs mt-0.5" style={{ color: "#6B7280" }}>{label}</p>
-      {detailKey && <p className="text-[10px] mt-1 font-bold" style={{ color: accent }}>{selectedDetail === detailKey ? "Kapat" : "Detay gör →"}</p>}
+      {detailKey && <p className="text-[11px] mt-1 font-bold" style={{ color: accent }}>{selectedDetail === detailKey ? "Kapat" : "Detay gör →"}</p>}
     </button>
   );
 
@@ -9809,7 +9661,7 @@ function AdminDashboardView({ onBack }) {
       {loading ? (
         <div className="flex items-center justify-center py-12"><Loader2 size={20} className="animate-spin" style={{ color: "#9CA3AF" }} /></div>
       ) : error ? (
-        <div className="rounded-2xl border p-6 text-center" style={{ borderColor: "#F0F0F0", background: "#FAFAFA" }}>
+        <div className="rounded-2xl border p-6 text-center" style={{ borderColor: "#E4E4E7", background: "#FAFAFA" }}>
           <p className="text-sm" style={{ color: "#EF4444" }}>Veriler yüklenemedi, tekrar dener misin?</p>
         </div>
       ) : (
@@ -9845,9 +9697,9 @@ function AdminDashboardView({ onBack }) {
           </p>
 
           {selectedDetail && (
-            <div ref={detailPanelRef} className="rounded-2xl border p-4 mb-4" style={{ borderColor: "#F0F0F0", background: "#FFFFFF" }}>
+            <div ref={detailPanelRef} className="rounded-2xl border p-4 mb-4" style={{ borderColor: "#E4E4E7", background: "#FFFFFF" }}>
               <div className="flex items-center justify-between mb-3">
-                <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>{detailTitle}</p>
+                <p className="text-sm font-bold" style={{ color: "#0F1115" }}>{detailTitle}</p>
                 <button onClick={() => setSelectedDetail(null)} className="p-2 -mr-2" style={{ color: "#9CA3AF" }} aria-label="Kapat"><X size={16} /></button>
               </div>
               {detailRows.length === 0 ? (
@@ -9858,7 +9710,7 @@ function AdminDashboardView({ onBack }) {
                     <div key={r.key} className="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5" style={{ background: "#FAFAFA" }}>
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-bold break-words" style={{ color: "#0F1115" }}>{r.name}</p>
-                        {r.sub && <p className="text-[11px] break-words" style={{ color: "#6B6550" }}>{r.sub}</p>}
+                        {r.sub && <p className="text-[11px] break-words" style={{ color: "#6B7280" }}>{r.sub}</p>}
                       </div>
                       <span className="text-[11px] font-bold shrink-0" style={{ color: "#6B7280" }}>{r.right}</span>
                     </div>
@@ -9868,10 +9720,10 @@ function AdminDashboardView({ onBack }) {
             </div>
           )}
 
-          <div className="rounded-2xl border p-4 mb-4" style={{ borderColor: "#F0F0F0", background: "#FAFAFA" }}>
+          <div className="rounded-2xl border p-4 mb-4" style={{ borderColor: "#E4E4E7", background: "#FAFAFA" }}>
             <div className="flex items-center gap-2">
               <Wallet size={15} style={{ color: "#9CA3AF" }} />
-              <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>Gelir</p>
+              <p className="text-sm font-bold" style={{ color: "#0F1115" }}>Gelir</p>
             </div>
             <p className="text-2xl font-black mt-2" style={{ color: "#0F1115" }}>{totalRevenue.toLocaleString("tr-TR")}₺</p>
             <p className="text-xs mt-1" style={{ color: "#9CA3AF" }}>
@@ -9879,9 +9731,9 @@ function AdminDashboardView({ onBack }) {
             </p>
           </div>
 
-          <div className="rounded-2xl border p-4 mb-4" style={{ borderColor: "#F0F0F0", background: "#FFFFFF" }}>
+          <div className="rounded-2xl border p-4 mb-4" style={{ borderColor: "#E4E4E7", background: "#FFFFFF" }}>
             <div className="flex items-center justify-between mb-3">
-              <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>Kayıt büyümesi</p>
+              <p className="text-sm font-bold" style={{ color: "#0F1115" }}>Kayıt büyümesi</p>
               <div className="flex items-center gap-1">
                 {[["day", "Günlük"], ["week", "Haftalık"], ["month", "Aylık"]].map(([key, label]) => (
                   <button
@@ -9889,8 +9741,8 @@ function AdminDashboardView({ onBack }) {
                     onClick={() => setRangeMode(key)}
                     className="text-[11px] font-bold px-2.5 py-1 rounded-full border"
                     style={rangeMode === key
-                      ? { background: "#1B2B24", color: "#EFE8D8", borderColor: "#1B2B24" }
-                      : { borderColor: "#D9D0BA", color: "#5C5744" }}
+                      ? { background: "#0F1115", color: "#FFFFFF", borderColor: "#0F1115" }
+                      : { borderColor: "#E4E4E7", color: "#4B5563" }}
                   >
                     {label}
                   </button>
@@ -9905,9 +9757,9 @@ function AdminDashboardView({ onBack }) {
                   <div key={key} className="flex-1 min-w-0 flex flex-col items-center gap-1" title={`${key}: ${count}`}>
                     <div
                       className="w-full rounded-t-md"
-                      style={{ height: `${Math.max(6, (count / maxBucket) * 80)}px`, background: "linear-gradient(180deg, #60A5FA, #2563EB)" }}
+                      style={{ height: `${Math.max(6, (count / maxBucket) * 80)}px`, background: "#2563EB" }}
                     />
-                    <span className="text-[9px]" style={{ color: "#9CA3AF" }}>{count}</span>
+                    <span className="text-[10px]" style={{ color: "#9CA3AF" }}>{count}</span>
                   </div>
                 ))}
               </div>
@@ -9917,10 +9769,10 @@ function AdminDashboardView({ onBack }) {
             </p>
           </div>
 
-          <div className="rounded-2xl border p-4" style={{ borderColor: "#F0F0F0", background: "#FFFFFF" }}>
+          <div className="rounded-2xl border p-4" style={{ borderColor: "#E4E4E7", background: "#FFFFFF" }}>
             <div className="flex items-center gap-2 mb-3">
-              <CalendarClock size={15} style={{ color: "#9C4A3C" }} />
-              <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>Yenilemesi yaklaşanlar (7 gün içinde)</p>
+              <CalendarClock size={15} style={{ color: "#DC2626" }} />
+              <p className="text-sm font-bold" style={{ color: "#0F1115" }}>Yenilemesi yaklaşanlar (7 gün içinde)</p>
             </div>
             {renewalsSoon.length === 0 ? (
               <p className="text-sm text-center py-4" style={{ color: "#9CA3AF" }}>Önümüzdeki 7 gün içinde yenilenecek abonelik yok.</p>
@@ -9930,9 +9782,9 @@ function AdminDashboardView({ onBack }) {
                   <div key={s.id} className="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5" style={{ background: "#FAFAFA" }}>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-bold break-words" style={{ color: "#0F1115" }}>{s.userName}</p>
-                      <p className="text-[11px]" style={{ color: "#6B6550" }}>{s.planName} · {s.billing_cycle === "yearly" ? "yıllık" : "aylık"}</p>
+                      <p className="text-[11px]" style={{ color: "#6B7280" }}>{s.planName} · {s.billing_cycle === "yearly" ? "yıllık" : "aylık"}</p>
                     </div>
-                    <span className="text-[11px] font-bold px-2 py-1 rounded-full shrink-0" style={{ background: "rgba(156,74,60,0.12)", color: "#9C4A3C" }}>
+                    <span className="text-[11px] font-bold px-2 py-1 rounded-full shrink-0" style={{ background: "rgba(220,38,38,0.12)", color: "#DC2626" }}>
                       {formatDaysUntilTr(s.current_period_end)}
                     </span>
                   </div>
@@ -9962,22 +9814,22 @@ function AdminModerationQueueView({ onBack, queue, onApprove, onReject }) {
       </p>
 
       {queue.length === 0 ? (
-        <div className="rounded-2xl border p-8 text-center" style={{ borderColor: "#F0F0F0", background: "#FAFAFA" }}>
+        <div className="rounded-2xl border p-8 text-center" style={{ borderColor: "#E4E4E7", background: "#FAFAFA" }}>
           <ShieldCheck size={28} className="mx-auto mb-2" style={{ color: "#D1D5DB" }} />
           <p className="text-sm" style={{ color: "#9CA3AF" }}>İncelemeyi bekleyen içerik yok.</p>
         </div>
       ) : (
         <div className="space-y-3">
           {queue.map((item) => (
-            <div key={item.id} className="rounded-2xl border p-4" style={{ borderColor: "#F0F0F0", background: "#FFFFFF" }}>
+            <div key={item.id} className="rounded-2xl border p-4" style={{ borderColor: "#E4E4E7", background: "#FFFFFF" }}>
               <video src={item.mediaUrl} controls className="w-full rounded-lg bg-black mb-3" style={{ maxHeight: "260px" }} />
               <p className="text-xs mb-1" style={{ color: "#6B7280" }}><span className="font-bold" style={{ color: "#0F1115" }}>{item.reviewerName}</span> → {item.providerName} için yorum ({item.listingTitle})</p>
               <p className="text-[11px] mb-3" style={{ color: "#9CA3AF" }}>{item.submittedAt}</p>
               <div className="flex gap-2">
-                <button onClick={() => onApprove(item)} className="flex-1 py-2 rounded-full text-xs font-bold text-white flex items-center justify-center gap-1" style={{ background: "#3F7D5C" }}>
+                <button onClick={() => onApprove(item)} className="flex-1 py-2 rounded-full text-xs font-bold text-white flex items-center justify-center gap-1" style={{ background: "#2563EB" }}>
                   <Check size={13} /> Uygun, Sağlayıcıya Gönder
                 </button>
-                <button onClick={() => onReject(item.id)} className="flex-1 py-2 rounded-full text-xs font-bold border flex items-center justify-center gap-1" style={{ borderColor: "#D9D0BA", color: "#9C4A3C" }}>
+                <button onClick={() => onReject(item.id)} className="flex-1 py-2 rounded-full text-xs font-bold border flex items-center justify-center gap-1" style={{ borderColor: "#E4E4E7", color: "#DC2626" }}>
                   <X size={13} /> Uygunsuz, Reddet
                 </button>
               </div>
@@ -10074,7 +9926,7 @@ function AdminReportsView({ onBack, reports, userId, isAdmin }) {
           <p className="text-xs mt-1" style={{ color: "#7F1D1D" }}>Oturumun düşmüş ya da yetkin değişmiş olabilir. Sayfayı yenileyip tekrar dene — kayıtlar silinmedi.</p>
         </div>
       ) : merged.length === 0 ? (
-        <div className="rounded-2xl border p-8 text-center" style={{ borderColor: "#F0F0F0", background: "#FAFAFA" }}>
+        <div className="rounded-2xl border p-8 text-center" style={{ borderColor: "#E4E4E7", background: "#FAFAFA" }}>
           <Inbox size={28} className="mx-auto mb-2" style={{ color: "#D1D5DB" }} />
           <p className="text-sm" style={{ color: "#9CA3AF" }}>{isAdmin ? "Henüz bildirilen bir destek talebi yok." : "Henüz bildirdiğin bir destek talebi yok."}</p>
         </div>
@@ -10083,13 +9935,13 @@ function AdminReportsView({ onBack, reports, userId, isAdmin }) {
           {merged.map((r) => {
             const meta = SUPPORT_CATEGORY_META[r.category] || SUPPORT_CATEGORY_META["diğer"];
             return (
-              <div key={r.id} className="rounded-2xl border p-4" style={{ borderColor: "#F0F0F0", background: "#FFFFFF" }}>
+              <div key={r.id} className="rounded-2xl border p-4" style={{ borderColor: "#E4E4E7", background: "#FFFFFF" }}>
                 <div className="flex items-center justify-between mb-1.5">
                   <p className="text-sm font-bold" style={{ color: "#0F1115" }}>{r.title}</p>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: `${meta.color}18`, color: meta.color }}>{meta.label}</span>
+                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-full" style={{ background: `${meta.color}18`, color: meta.color }}>{meta.label}</span>
                 </div>
                 {isAdmin && r.reporterName && (
-                  <p className="text-[11px] mb-1" style={{ color: "#6B6550" }}>Bildiren: <span className="font-medium">{r.reporterName}</span></p>
+                  <p className="text-[11px] mb-1" style={{ color: "#6B7280" }}>Bildiren: <span className="font-medium">{r.reporterName}</span></p>
                 )}
                 <p className="text-xs leading-relaxed mb-2" style={{ color: "#6B7280" }}>{r.summary}</p>
                 <p className="text-[11px] mb-2" style={{ color: "#9CA3AF" }}>{r.time}</p>
@@ -10102,8 +9954,8 @@ function AdminReportsView({ onBack, reports, userId, isAdmin }) {
                         disabled={updatingId === r.id}
                         className="text-[11px] font-bold px-2.5 py-1 rounded-full border"
                         style={(r.status || "open") === s
-                          ? { background: "#1B2B24", color: "#EFE8D8", borderColor: "#1B2B24" }
-                          : { borderColor: "#D9D0BA", color: "#5C5744" }}
+                          ? { background: "#0F1115", color: "#FFFFFF", borderColor: "#0F1115" }
+                          : { borderColor: "#E4E4E7", color: "#4B5563" }}
                       >
                         {s === "open" ? "Açık" : s === "reviewed" ? "İncelendi" : "Kapatıldı"}
                       </button>
@@ -10182,7 +10034,7 @@ function AdminUserReportsView({ onBack }) {
         <ChevronLeft size={16} /> Geri
       </button>
       <div className="flex items-center gap-2 mb-1">
-        <ShieldCheck size={20} style={{ color: "#9C4A3C" }} />
+        <ShieldCheck size={20} style={{ color: "#DC2626" }} />
         <h1 className="font-sans text-2xl font-black" style={{ color: "#0F1115" }}>Kullanıcı Şikayetleri (Yönetim)</h1>
       </div>
       <p className="text-sm mb-6" style={{ color: "#6B7280" }}>Kullanıcıların mesajlaşma ekranından bildirdiği şikayetler</p>
@@ -10197,17 +10049,17 @@ function AdminUserReportsView({ onBack }) {
           <p className="text-xs mt-1" style={{ color: "#7F1D1D" }}>Oturumun düşmüş ya da yetkin değişmiş olabilir. Sayfayı yenileyip tekrar dene — kayıtlar silinmedi.</p>
         </div>
       ) : reports.length === 0 ? (
-        <div className="rounded-2xl border p-8 text-center" style={{ borderColor: "#F0F0F0", background: "#FAFAFA" }}>
+        <div className="rounded-2xl border p-8 text-center" style={{ borderColor: "#E4E4E7", background: "#FAFAFA" }}>
           <ShieldCheck size={28} className="mx-auto mb-2" style={{ color: "#D1D5DB" }} />
           <p className="text-sm" style={{ color: "#9CA3AF" }}>Henüz bir şikayet yok.</p>
         </div>
       ) : (
         <div className="space-y-3">
           {reports.map((r) => (
-            <div key={r.id} className="rounded-2xl border p-4" style={{ borderColor: "#F0F0F0", background: "#FFFFFF" }}>
+            <div key={r.id} className="rounded-2xl border p-4" style={{ borderColor: "#E4E4E7", background: "#FFFFFF" }}>
               <div className="flex items-center justify-between mb-1.5">
                 <p className="text-sm font-bold" style={{ color: "#0F1115" }}>{r.reporterName} → {r.reportedName}</p>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "rgba(156,74,60,0.12)", color: "#9C4A3C" }}>
+                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full" style={{ background: "rgba(220,38,38,0.12)", color: "#DC2626" }}>
                   {REPORT_REASON_LABELS[r.reason] || r.reason}
                 </span>
               </div>
@@ -10221,8 +10073,8 @@ function AdminUserReportsView({ onBack }) {
                     disabled={updatingId === r.id}
                     className="text-[11px] font-bold px-2.5 py-1 rounded-full border"
                     style={(r.status || "open") === s
-                      ? { background: "#1B2B24", color: "#EFE8D8", borderColor: "#1B2B24" }
-                      : { borderColor: "#D9D0BA", color: "#5C5744" }}
+                      ? { background: "#0F1115", color: "#FFFFFF", borderColor: "#0F1115" }
+                      : { borderColor: "#E4E4E7", color: "#4B5563" }}
                   >
                     {s === "open" ? "Açık" : s === "reviewed" ? "İncelendi" : "Kapatıldı"}
                   </button>
@@ -10305,7 +10157,7 @@ function AdminListingReportsView({ onBack }) {
         <ChevronLeft size={16} /> Geri
       </button>
       <div className="flex items-center gap-2 mb-1">
-        <AlertCircle size={20} style={{ color: "#9C4A3C" }} />
+        <AlertCircle size={20} style={{ color: "#DC2626" }} />
         <h1 className="font-sans text-2xl font-black" style={{ color: "#0F1115" }}>İlan Şikayetleri (Yönetim)</h1>
       </div>
       <p className="text-sm mb-6" style={{ color: "#6B7280" }}>Vitrin/iş ilanlarının kendisi için bildirilen şikayetler (yanlış kategori, sahte, kopya vb.)</p>
@@ -10320,24 +10172,24 @@ function AdminListingReportsView({ onBack }) {
           <p className="text-xs mt-1" style={{ color: "#7F1D1D" }}>Oturumun düşmüş ya da yetkin değişmiş olabilir. Sayfayı yenileyip tekrar dene — kayıtlar silinmedi.</p>
         </div>
       ) : reports.length === 0 ? (
-        <div className="rounded-2xl border p-8 text-center" style={{ borderColor: "#F0F0F0", background: "#FAFAFA" }}>
+        <div className="rounded-2xl border p-8 text-center" style={{ borderColor: "#E4E4E7", background: "#FAFAFA" }}>
           <AlertCircle size={28} className="mx-auto mb-2" style={{ color: "#D1D5DB" }} />
           <p className="text-sm" style={{ color: "#9CA3AF" }}>Henüz bir ilan şikayeti yok.</p>
         </div>
       ) : (
         <div className="space-y-3">
           {reports.map((r) => (
-            <div key={r.id} className="rounded-2xl border p-4" style={{ borderColor: "#F0F0F0", background: "#FFFFFF" }}>
+            <div key={r.id} className="rounded-2xl border p-4" style={{ borderColor: "#E4E4E7", background: "#FFFFFF" }}>
               <div className="flex items-center justify-between mb-1.5">
                 <p className="text-sm font-bold" style={{ color: "#0F1115" }}>
-                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded mr-1.5" style={{ background: "#F0F0F0", color: "#6B7280" }}>{r.listingKind}</span>
+                  <span className="text-[11px] font-bold px-1.5 py-0.5 rounded mr-1.5" style={{ background: "#E4E4E7", color: "#6B7280" }}>{r.listingKind}</span>
                   {r.listingTitle}
                 </p>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0" style={{ background: "rgba(156,74,60,0.12)", color: "#9C4A3C" }}>
+                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full shrink-0" style={{ background: "rgba(220,38,38,0.12)", color: "#DC2626" }}>
                   {LISTING_REPORT_REASON_LABELS[r.reason] || r.reason}
                 </span>
               </div>
-              <p className="text-[11px] mb-1" style={{ color: "#6B6550" }}>Bildiren: <span className="font-medium">{r.reporterName}</span></p>
+              <p className="text-[11px] mb-1" style={{ color: "#6B7280" }}>Bildiren: <span className="font-medium">{r.reporterName}</span></p>
               {r.detail && <p className="text-xs leading-relaxed mb-2" style={{ color: "#6B7280" }}>{r.detail}</p>}
               <p className="text-[11px] mb-2" style={{ color: "#9CA3AF" }}>{formatRelativeTr(r.created_at)}</p>
               <div className="flex items-center gap-2">
@@ -10348,8 +10200,8 @@ function AdminListingReportsView({ onBack }) {
                     disabled={updatingId === r.id}
                     className="text-[11px] font-bold px-2.5 py-1 rounded-full border"
                     style={(r.status || "open") === s
-                      ? { background: "#1B2B24", color: "#EFE8D8", borderColor: "#1B2B24" }
-                      : { borderColor: "#D9D0BA", color: "#5C5744" }}
+                      ? { background: "#0F1115", color: "#FFFFFF", borderColor: "#0F1115" }
+                      : { borderColor: "#E4E4E7", color: "#4B5563" }}
                   >
                     {s === "open" ? "Açık" : s === "reviewed" ? "İncelendi" : "Kapatıldı"}
                   </button>
@@ -10425,7 +10277,7 @@ function AdminContentFlagsView({ onBack }) {
         <ChevronLeft size={16} /> Geri
       </button>
       <div className="flex items-center gap-2 mb-1">
-        <ShieldCheck size={20} style={{ color: "#9C4A3C" }} />
+        <ShieldCheck size={20} style={{ color: "#DC2626" }} />
         <h1 className="font-sans text-2xl font-black" style={{ color: "#0F1115" }}>İçerik Uyarıları (Yönetim)</h1>
       </div>
       <p className="text-sm mb-6" style={{ color: "#6B7280" }}>AI'nin şüpheli bulduğu mesaj/vitrin/iş ilanı metinleri — hiçbiri otomatik engellenmedi</p>
@@ -10440,23 +10292,23 @@ function AdminContentFlagsView({ onBack }) {
           <p className="text-xs mt-1" style={{ color: "#7F1D1D" }}>Oturumun düşmüş ya da yetkin değişmiş olabilir. Sayfayı yenileyip tekrar dene — kayıtlar silinmedi.</p>
         </div>
       ) : flags.length === 0 ? (
-        <div className="rounded-2xl border p-8 text-center" style={{ borderColor: "#F0F0F0", background: "#FAFAFA" }}>
+        <div className="rounded-2xl border p-8 text-center" style={{ borderColor: "#E4E4E7", background: "#FAFAFA" }}>
           <ShieldCheck size={28} className="mx-auto mb-2" style={{ color: "#D1D5DB" }} />
           <p className="text-sm" style={{ color: "#9CA3AF" }}>Henüz işaretlenen bir içerik yok.</p>
         </div>
       ) : (
         <div className="space-y-3">
           {flags.map((f) => (
-            <div key={f.id} className="rounded-2xl border p-4" style={{ borderColor: "#F0F0F0", background: "#FFFFFF" }}>
+            <div key={f.id} className="rounded-2xl border p-4" style={{ borderColor: "#E4E4E7", background: "#FFFFFF" }}>
               <div className="flex items-center justify-between mb-1.5">
                 <p className="text-sm font-bold" style={{ color: "#0F1115" }}>
-                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded mr-1.5" style={{ background: "#F0F0F0", color: "#6B7280" }}>
+                  <span className="text-[11px] font-bold px-1.5 py-0.5 rounded mr-1.5" style={{ background: "#E4E4E7", color: "#6B7280" }}>
                     {CONTENT_FLAG_TYPE_LABELS[f.content_type] || f.content_type}
                   </span>
                   {f.profileName || "Bilinmiyor"}
                 </p>
               </div>
-              <p className="text-xs mb-1" style={{ color: "#9C4A3C" }}>{f.reason}</p>
+              <p className="text-xs mb-1" style={{ color: "#DC2626" }}>{f.reason}</p>
               {f.excerpt && <p className="text-xs leading-relaxed mb-2 italic" style={{ color: "#6B7280" }}>"{f.excerpt}"</p>}
               <p className="text-[11px] mb-2" style={{ color: "#9CA3AF" }}>{formatRelativeTr(f.created_at)}</p>
               <div className="flex items-center gap-2">
@@ -10467,8 +10319,8 @@ function AdminContentFlagsView({ onBack }) {
                     disabled={updatingId === f.id}
                     className="text-[11px] font-bold px-2.5 py-1 rounded-full border"
                     style={(f.status || "open") === s
-                      ? { background: "#1B2B24", color: "#EFE8D8", borderColor: "#1B2B24" }
-                      : { borderColor: "#D9D0BA", color: "#5C5744" }}
+                      ? { background: "#0F1115", color: "#FFFFFF", borderColor: "#0F1115" }
+                      : { borderColor: "#E4E4E7", color: "#4B5563" }}
                   >
                     {s === "open" ? "Açık" : s === "reviewed" ? "İncelendi" : "Kapatıldı"}
                   </button>
@@ -10511,8 +10363,8 @@ function PaytrCheckoutModal({ token, onClose, onSuccess }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(15,17,21,0.7)" }}>
       <div className="rounded-2xl overflow-hidden w-full flex flex-col" style={{ maxWidth: 480, height: "min(85dvh, 720px)", background: "#fff" }}>
-        <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: "#F0F0F0" }}>
-          <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>Güvenli ödeme — PayTR</p>
+        <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: "#E4E4E7" }}>
+          <p className="text-sm font-bold" style={{ color: "#0F1115" }}>Güvenli ödeme — PayTR</p>
           <button onClick={onClose} className="p-2 -mr-2" style={{ color: "#9CA3AF" }} aria-label="Kapat"><X size={18} /></button>
         </div>
         <iframe
@@ -10714,28 +10566,28 @@ function PricingView({ onBack, onJoined, userId }) {
         <div className="w-14 h-14 rounded-full mx-auto mb-5 flex items-center justify-center" style={{ background: "rgba(37,99,235,0.12)" }}>
           <Check size={22} style={{ color: "#2563EB" }} />
         </div>
-        <h2 className="font-serif text-xl mb-2" style={{ color: "#1B2B24" }}>{t("pricing.paymentReceivedTitle")}</h2>
-        <p className="text-sm mb-6" style={{ color: "#5C5744" }}>
+        <h2 className="font-sans text-xl font-black tracking-tight mb-2" style={{ color: "#0F1115" }}>{t("pricing.paymentReceivedTitle")}</h2>
+        <p className="text-sm mb-6" style={{ color: "#4B5563" }}>
           {checkoutIntent?.kind === "boost"
             ? t("pricing.activatedBoost", { name: boostDuration === "weekly" ? getPlanName(WEEKLY_BOOST_PACKAGE, t) : getPlanName(BOOST_PACKAGE, t) })
             : t("pricing.activatedPlan", { name: getPlanName(plan, t), priceLabel: cycle === "monthly" ? t("pricing.perMonthPrice", { price: basePrice }) : t("pricing.perYearPrice", { price: basePrice }) })} {t("pricing.noCommissionNote")}
         </p>
         <div className="flex gap-2 justify-center">
           <button onClick={onJoined} className="px-5 py-2.5 rounded-full text-sm font-medium text-white" style={{ background: "#2563EB" }}>{t("pricing.completeProfileButton")}</button>
-          <button onClick={onBack} className="px-5 py-2.5 rounded-full text-sm font-medium border" style={{ borderColor: "#D9D0BA", color: "#1B2B24" }}>{t("common.backToHome")}</button>
+          <button onClick={onBack} className="px-5 py-2.5 rounded-full text-sm font-medium border" style={{ borderColor: "#E4E4E7", color: "#0F1115" }}>{t("common.backToHome")}</button>
         </div>
       </div>
     );
   }
 
-  // 90 günlük "herkese ücretsiz" dönem: planlar mat/kapalı gösterilir, satın alma yok
+  // Ücretsiz lansman dönemi: planlar mat/kapalı gösterilir, satın alma yok
   // (sunucu rotaları da reddeder). Süre dolunca kendiliğinden yeniden açılır.
   const freePeriod = isFreePeriod();
   const freeUntilLabel = new Date(FREE_PERIOD_UNTIL_ISO).toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" });
 
   return (
     <div className="max-w-md mx-auto px-5 py-14">
-      <button onClick={onBack} className="flex items-center gap-1 text-sm mb-6" style={{ color: "#5C5744" }}>
+      <button onClick={onBack} className="flex items-center gap-1 text-sm mb-6" style={{ color: "#4B5563" }}>
         <ChevronLeft size={16} /> {t("common.back")}
       </button>
       {freePeriod && (
@@ -10749,28 +10601,28 @@ function PricingView({ onBack, onJoined, userId }) {
         style={freePeriod ? { opacity: 0.45, filter: "grayscale(1)", pointerEvents: "none", userSelect: "none" } : undefined}
       >
       <div className="flex justify-center mb-6">
-        <div className="inline-flex items-center gap-1 p-1 rounded-full" style={{ background: "#F8F4E9", border: "1px solid #D9D0BA" }}>
+        <div className="inline-flex items-center gap-1 p-1 rounded-full" style={{ background: "#F7F7F8", border: "1px solid #E4E4E7" }}>
           {[["monthly", t("pricing.monthly")], ["yearly", t("pricing.yearly")]].map(([key, label]) => (
             <button
               key={key}
               onClick={() => setCycle(key)}
               className="text-sm font-bold px-4 py-1.5 rounded-full transition-all"
-              style={cycle === key ? { background: "#2563EB", color: "#FFFFFF" } : { color: "#6B6550" }}
+              style={cycle === key ? { background: "#2563EB", color: "#FFFFFF" } : { color: "#6B7280" }}
             >
-              {label} {key === "yearly" && <span className="text-[10px]" style={{ color: cycle === key ? "#DBEAFE" : "#2563EB" }}>{t("pricing.firstYearDeal")}</span>}
+              {label} {key === "yearly" && <span className="text-[11px]" style={{ color: cycle === key ? "#DBEAFE" : "#2563EB" }}>{t("pricing.firstYearDeal")}</span>}
             </button>
           ))}
         </div>
       </div>
 
-      <div className="rounded-2xl border-2 p-6 flex flex-col mb-4" style={{ borderColor: "#2563EB", background: "#F8F4E9" }}>
-        <p className="font-serif text-lg mb-1" style={{ color: "#1B2B24" }}>{getPlanName(plan, t)}</p>
-        <p className="text-xs mb-4" style={{ color: "#6B6550" }}>{getPlanTagline(plan, t)}</p>
+      <div className="rounded-2xl border-2 p-6 flex flex-col mb-4" style={{ borderColor: "#2563EB", background: "#F7F7F8" }}>
+        <p className="font-sans text-lg font-black tracking-tight mb-1" style={{ color: "#0F1115" }}>{getPlanName(plan, t)}</p>
+        <p className="text-xs mb-4" style={{ color: "#6B7280" }}>{getPlanTagline(plan, t)}</p>
         <div className="mb-1 flex items-baseline gap-1">
-          <span className="font-serif text-4xl" style={{ color: "#1B2B24" }}>{basePrice}₺</span>
-          <span className="text-sm" style={{ color: "#6B6550" }}>{period}</span>
+          <span className="font-sans text-4xl font-black tracking-tight" style={{ color: "#0F1115" }}>{basePrice}₺</span>
+          <span className="text-sm" style={{ color: "#6B7280" }}>{period}</span>
           {cycle === "yearly" && (
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "#DBEAFE", color: "#1D4ED8" }}>{t("pricing.firstYearDeal")}</span>
+            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full" style={{ background: "#DBEAFE", color: "#1D4ED8" }}>{t("pricing.firstYearDeal")}</span>
           )}
         </div>
         <p className="text-xs font-medium mb-4" style={{ color: "#059669" }}>{t("pricing.trialThenPrice", { months: plan.trialMonths })}</p>
@@ -10783,7 +10635,7 @@ function PricingView({ onBack, onJoined, userId }) {
           ))}
         </div>
         {joinError && (
-          <p className="text-xs mb-3 px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{joinError}</p>
+          <p className="text-xs mb-3 px-3 py-2 rounded-lg" style={{ background: "rgba(220,38,38,0.1)", color: "#DC2626" }}>{joinError}</p>
         )}
         <button
           onClick={payForStandart}
@@ -10805,7 +10657,7 @@ function PricingView({ onBack, onJoined, userId }) {
             {joining && savedCardMode === "standart" ? t("pricing.processing") : t("pricing.payWithSavedCard")}
           </button>
         )}
-        <p className="text-[11px] mt-2 text-center" style={{ color: "#6B6550" }}>
+        <p className="text-[11px] mt-2 text-center" style={{ color: "#6B7280" }}>
           {t("pricing.standartHintNote")}
         </p>
       </div>
@@ -10814,31 +10666,31 @@ function PricingView({ onBack, onJoined, userId }) {
           ayında kimseye zorla satmamak için küçük, tıklanmadan açılmayan bir
           nota gizlenmişti; artık Ek Vitrin Paketi de var, Pro'nun değeri daha
           net olduğu için tam kart olarak gösteriliyor (kullanıcının kararı). */}
-      <div className="rounded-2xl border-2 p-6 flex flex-col mb-6" style={{ borderColor: proJoined ? "#2FBF71" : "#8B5CF6", background: "#F8F4E9" }}>
+      <div className="rounded-2xl border-2 p-6 flex flex-col mb-6" style={{ borderColor: proJoined ? "#16A34A" : "#0F1115", background: "#FFFFFF" }}>
         <div className="flex items-center justify-between mb-1">
-          <p className="font-serif text-lg" style={{ color: "#1B2B24" }}>{getPlanName(PRO_PACKAGE, t)}</p>
+          <p className="font-sans text-lg font-black tracking-tight" style={{ color: "#0F1115" }}>{getPlanName(PRO_PACKAGE, t)}</p>
           {proJoined && (
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: "#2FBF71" }}>{t("pricing.activeBadge")}</span>
+            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: "#16A34A" }}>{t("pricing.activeBadge")}</span>
           )}
         </div>
-        <p className="text-xs mb-4" style={{ color: "#6B6550" }}>{t("pricing.proTaglineFull", { tagline: getPlanTagline(PRO_PACKAGE, t) })}</p>
+        <p className="text-xs mb-4" style={{ color: "#6B7280" }}>{t("pricing.proTaglineFull", { tagline: getPlanTagline(PRO_PACKAGE, t) })}</p>
         <div className="mb-4 flex items-baseline gap-1">
-          <span className="font-serif text-2xl" style={{ color: "#1B2B24" }}>{proPrice}₺</span>
-          <span className="text-sm" style={{ color: "#6B6550" }}>{period}</span>
+          <span className="font-sans text-2xl sm:text-3xl font-black tracking-tight" style={{ color: "#0F1115" }}>{proPrice}₺</span>
+          <span className="text-sm" style={{ color: "#6B7280" }}>{period}</span>
           {cycle === "yearly" && (
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "#EDE9FE", color: "#6D28D9" }}>{t("pricing.firstYearDeal")}</span>
+            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full" style={{ background: "#EDE9FE", color: "#6D28D9" }}>{t("pricing.firstYearDeal")}</span>
           )}
         </div>
         <div className="space-y-2 mb-4">
           {getPlanFeatures(PRO_PACKAGE, t).map((f, i) => (
             <div key={i} className="flex items-start gap-2 text-xs" style={{ color: "#3D3B30" }}>
-              <Sparkles size={13} style={{ color: "#8B5CF6" }} className="mt-0.5 shrink-0" />
+              <Sparkles size={13} style={{ color: "#0F1115" }} className="mt-0.5 shrink-0" />
               {f}
             </div>
           ))}
         </div>
         {proError && (
-          <p className="text-xs mb-3 px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{proError}</p>
+          <p className="text-xs mb-3 px-3 py-2 rounded-lg" style={{ background: "rgba(220,38,38,0.1)", color: "#DC2626" }}>{proError}</p>
         )}
         <p className="text-[11px] mb-2 text-center" style={{ color: "#6B7280" }}>
           Ücretli Standart üyeysen, kalan sürenin değeri Pro fiyatından otomatik düşülür.
@@ -10847,7 +10699,7 @@ function PricingView({ onBack, onJoined, userId }) {
           onClick={joinPro}
           disabled={proJoining || proJoined}
           className="w-full py-2.5 rounded-full text-sm font-medium text-white flex items-center justify-center gap-1.5"
-          style={{ background: "#8B5CF6", opacity: proJoining ? 0.7 : proJoined ? 0.6 : 1 }}
+          style={{ background: "#0F1115", opacity: proJoining ? 0.7 : proJoined ? 0.6 : 1 }}
         >
           {proJoining && savedCardMode !== "pro" && <Loader2 size={13} className="animate-spin" />}
           {proJoined ? t("pricing.proJoinedLabel") : proJoining && savedCardMode === "pro" ? t("pricing.processing") : t("pricing.proJoinButton")}
@@ -10857,7 +10709,7 @@ function PricingView({ onBack, onJoined, userId }) {
             onClick={joinProSaved}
             disabled={proJoining}
             className="w-full py-2 mt-2 rounded-full text-xs font-medium border flex items-center justify-center gap-1.5"
-            style={{ borderColor: "#8B5CF6", color: "#8B5CF6", opacity: proJoining ? 0.6 : 1 }}
+            style={{ borderColor: "#0F1115", color: "#0F1115", opacity: proJoining ? 0.6 : 1 }}
           >
             {proJoining && savedCardMode === "pro" && <Loader2 size={12} className="animate-spin" />}
             {proJoining && savedCardMode === "pro" ? t("pricing.processing") : t("pricing.payWithSavedCard")}
@@ -10875,9 +10727,9 @@ function PricingView({ onBack, onJoined, userId }) {
           seçeneği, hangisine tıklarsan o hem seçilir hem eklenir. Aynı
           seçeneğe tekrar tıklamak kaldırır. Standart bir "plan seç" deseni —
           sayfanın en üstündeki Aylık/Yıllık toggle'ıyla aynı mantık. */}
-      <div className="w-full rounded-2xl border-2 p-6 flex flex-col mb-6" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
-        <p className="font-serif text-lg mb-1" style={{ color: "#1B2B24" }}>{getPlanName(BOOST_PACKAGE, t)}</p>
-        <p className="text-xs mb-4" style={{ color: "#6B6550" }}>{t("pricing.boostTaglineFull", { tagline: getPlanTagline(BOOST_PACKAGE, t) })}</p>
+      <div className="w-full rounded-2xl border-2 p-6 flex flex-col mb-6" style={{ borderColor: "#E4E4E7", background: "#F7F7F8" }}>
+        <p className="font-sans text-lg font-black tracking-tight mb-1" style={{ color: "#0F1115" }}>{getPlanName(BOOST_PACKAGE, t)}</p>
+        <p className="text-xs mb-4" style={{ color: "#6B7280" }}>{t("pricing.boostTaglineFull", { tagline: getPlanTagline(BOOST_PACKAGE, t) })}</p>
 
         <div className="grid grid-cols-2 gap-2.5 mb-4">
           {[
@@ -10895,19 +10747,19 @@ function PricingView({ onBack, onJoined, userId }) {
                   setBoostSelected(true);
                 }}
                 className="rounded-xl border-2 p-3 text-left transition-colors"
-                style={isActive ? { borderColor: "#F59E0B", background: "#FFFBEB" } : { borderColor: "#D9D0BA", background: "#FFFFFF" }}
+                style={isActive ? { borderColor: "#2563EB", background: "#EFF6FF" } : { borderColor: "#E4E4E7", background: "#FFFFFF" }}
               >
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-bold" style={{ color: "#1B2B24" }}>{opt.label}</span>
+                  <span className="text-xs font-bold" style={{ color: "#0F1115" }}>{opt.label}</span>
                   {isActive && (
-                    <div className="w-4 h-4 rounded-full flex items-center justify-center shrink-0" style={{ background: "#F59E0B" }}>
+                    <div className="w-4 h-4 rounded-full flex items-center justify-center shrink-0" style={{ background: "#2563EB" }}>
                       <Check size={10} className="text-white" />
                     </div>
                   )}
                 </div>
                 <div className="flex items-baseline gap-0.5">
-                  <span className="font-serif text-lg" style={{ color: "#1B2B24" }}>+{opt.price}₺</span>
-                  <span className="text-[11px]" style={{ color: "#6B6550" }}>{opt.unit}</span>
+                  <span className="font-sans text-lg font-black tracking-tight" style={{ color: "#0F1115" }}>+{opt.price}₺</span>
+                  <span className="text-[11px]" style={{ color: "#6B7280" }}>{opt.unit}</span>
                 </div>
               </button>
             );
@@ -10917,7 +10769,7 @@ function PricingView({ onBack, onJoined, userId }) {
         <div className="space-y-2 mb-4">
           {getPlanFeatures(BOOST_PACKAGE, t).map((f, i) => (
             <div key={i} className="flex items-start gap-2 text-xs" style={{ color: "#3D3B30" }}>
-              <Sparkles size={13} style={{ color: "#F59E0B" }} className="mt-0.5 shrink-0" />
+              <Sparkles size={13} style={{ color: "#2563EB" }} className="mt-0.5 shrink-0" />
               {f}
             </div>
           ))}
@@ -10937,13 +10789,13 @@ function PricingView({ onBack, onJoined, userId }) {
         )}
 
         {joinError && (
-          <p className="text-xs mb-3 px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{joinError}</p>
+          <p className="text-xs mb-3 px-3 py-2 rounded-lg" style={{ background: "rgba(220,38,38,0.1)", color: "#DC2626" }}>{joinError}</p>
         )}
         <button
           onClick={payForBoost}
           disabled={joining || !boostSelected || myVitrins.length === 0}
           className="w-full py-2.5 rounded-full text-sm font-medium text-white flex items-center justify-center gap-1.5"
-          style={{ background: "#F59E0B", opacity: joining || !boostSelected || myVitrins.length === 0 ? 0.5 : 1 }}
+          style={{ background: "#2563EB", opacity: joining || !boostSelected || myVitrins.length === 0 ? 0.5 : 1 }}
         >
           {joining && savedCardMode !== "boost" && <Loader2 size={13} className="animate-spin" />}
           {!boostSelected ? t("pricing.chooseDurationFirst") : myVitrins.length === 0 ? t("pricing.chooseVitrinFirst") : joining && savedCardMode === "boost" ? t("pricing.processing") : joining ? t("pricing.redirecting") : t("pricing.payNowWithPrice", { price: boostPrice })}
@@ -10953,7 +10805,7 @@ function PricingView({ onBack, onJoined, userId }) {
             onClick={payForBoostSaved}
             disabled={joining}
             className="w-full py-2 mt-2 rounded-full text-xs font-medium border flex items-center justify-center gap-1.5"
-            style={{ borderColor: "#F59E0B", color: "#B45309", opacity: joining ? 0.6 : 1 }}
+            style={{ borderColor: "#2563EB", color: "#2563EB", opacity: joining ? 0.6 : 1 }}
           >
             {joining && savedCardMode === "boost" && <Loader2 size={12} className="animate-spin" />}
             {joining && savedCardMode === "boost" ? t("pricing.processing") : t("pricing.payWithSavedCard")}
@@ -10973,7 +10825,7 @@ function PricingView({ onBack, onJoined, userId }) {
         />
       )}
 
-      <p className="text-xs text-center mt-6" style={{ color: "#6B6550" }}>
+      <p className="text-xs text-center mt-6" style={{ color: "#6B7280" }}>
         {t("pricing.footerNote")}
       </p>
       </div>
@@ -11019,18 +10871,18 @@ function SubscriptionCard({ userId, onGoToPlans }) {
   const endLabel = sub ? new Date(sub.current_period_end).toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" }) : "";
 
   return (
-    <div className="rounded-2xl border p-4 mb-3" style={{ borderColor: "#D9D0BA", background: "#FFFFFF" }}>
-      <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>Üyeliğim</p>
+    <div className="rounded-2xl border p-4 mb-3" style={{ borderColor: "#E4E4E7", background: "#FFFFFF" }}>
+      <p className="text-sm font-bold" style={{ color: "#0F1115" }}>Üyeliğim</p>
       {!sub ? (
         <>
-          <p className="text-xs mt-1 mb-3" style={{ color: "#6B6550" }}>Şu an aktif bir üyeliğin yok, bu yüzden vitrinlerin yayında değil. {storeApp ? "Telefon numaranı doğrulayarak ücretsiz denemeyi başlatabilirsin." : "Telefon numaranı doğrulayarak ücretsiz denemeyi başlatabilir ya da bir plan seçebilirsin."}</p>
+          <p className="text-xs mt-1 mb-3" style={{ color: "#6B7280" }}>Şu an aktif bir üyeliğin yok, bu yüzden vitrinlerin yayında değil. {storeApp ? "Telefon numaranı doğrulayarak ücretsiz denemeyi başlatabilirsin." : "Telefon numaranı doğrulayarak ücretsiz denemeyi başlatabilir ya da bir plan seçebilirsin."}</p>
           {onGoToPlans && !storeApp && (
-            <button onClick={onGoToPlans} className="px-4 py-2 rounded-full text-xs font-bold text-white" style={{ background: "#F59E0B" }}>Planlara Git</button>
+            <button onClick={onGoToPlans} className="px-4 py-2 rounded-full text-xs font-bold text-white" style={{ background: "#2563EB" }}>Planlara Git</button>
           )}
         </>
       ) : (
         <>
-          <p className="text-xs mt-1" style={{ color: "#5C5744" }}>
+          <p className="text-xs mt-1" style={{ color: "#4B5563" }}>
             {sub.subscription_plans?.name || "Üyelik"} · {sub.status === "trialing" ? "Ücretsiz deneme" : sub.billing_cycle === "yearly" ? "Yıllık" : "Aylık"} · Bitiş: {endLabel}
           </p>
           {sub.cancel_at_period_end ? (
@@ -11039,7 +10891,7 @@ function SubscriptionCard({ userId, onGoToPlans }) {
                 Üyeliğin iptal edildi. {endLabel} tarihine kadar vitrinlerin yayında kalır; o tarihte üyeliğin sona erer ve vitrinlerin yayından kaldırılır.
               </p>
               <button onClick={() => run("resume_subscription", "İptal geri alındı, üyeliğin devam edecek.")} disabled={busy}
-                className="mt-3 px-4 py-2 rounded-full text-xs font-bold text-white" style={{ background: "#1B2B24", opacity: busy ? 0.6 : 1 }}>
+                className="mt-3 px-4 py-2 rounded-full text-xs font-bold text-white" style={{ background: "#0F1115", opacity: busy ? 0.6 : 1 }}>
                 {busy ? "İşleniyor…" : "İptali Geri Al"}
               </button>
             </>
@@ -11049,7 +10901,7 @@ function SubscriptionCard({ userId, onGoToPlans }) {
                 Üyeliğin {endLabel} tarihinde sona erecek ve o gün vitrinlerin yayından kaldırılacak. Kalan süre için iade yapılmaz, sonraki dönem için ücret alınmaz. Emin misin?
               </p>
               <div className="flex gap-2 mt-3">
-                <button onClick={() => setConfirming(false)} disabled={busy} className="px-4 py-2 rounded-full text-xs font-bold border" style={{ borderColor: "#D9D0BA", color: "#1B2B24" }}>Vazgeç</button>
+                <button onClick={() => setConfirming(false)} disabled={busy} className="px-4 py-2 rounded-full text-xs font-bold border" style={{ borderColor: "#E4E4E7", color: "#0F1115" }}>Vazgeç</button>
                 <button onClick={() => run("cancel_subscription", "Üyeliğin iptal edildi; ödenen dönem bitene kadar kullanmaya devam edebilirsin.")} disabled={busy}
                   className="px-4 py-2 rounded-full text-xs font-bold text-white" style={{ background: "#B91C1C", opacity: busy ? 0.6 : 1 }}>
                   {busy ? "İşleniyor…" : "Evet, iptal et"}
@@ -11057,7 +10909,7 @@ function SubscriptionCard({ userId, onGoToPlans }) {
               </div>
             </div>
           ) : (
-            <button onClick={() => setConfirming(true)} className="mt-3 px-4 py-2 rounded-full text-xs font-bold border" style={{ borderColor: "#D9D0BA", color: "#9C4A3C" }}>
+            <button onClick={() => setConfirming(true)} className="mt-3 px-4 py-2 rounded-full text-xs font-bold border" style={{ borderColor: "#E4E4E7", color: "#DC2626" }}>
               Üyeliği İptal Et
             </button>
           )}
@@ -11101,7 +10953,7 @@ function DeleteAccountCard() {
       <p className="text-sm font-bold" style={{ color: "#7F1D1D" }}>Hesabımı sil</p>
       {!open ? (
         <>
-          <p className="text-xs mt-1 mb-3" style={{ color: "#5C5744" }}>Hesabın, vitrinlerin, mesajların ve yorumların kalıcı olarak silinir. Yasal saklama zorunluluğu olan ödeme kayıtları kimliksiz olarak saklanır.</p>
+          <p className="text-xs mt-1 mb-3" style={{ color: "#4B5563" }}>Hesabın, vitrinlerin, mesajların ve yorumların kalıcı olarak silinir. Yasal saklama zorunluluğu olan ödeme kayıtları kimliksiz olarak saklanır.</p>
           <button onClick={() => setOpen(true)} className="px-4 py-2 rounded-full text-xs font-bold border" style={{ borderColor: "#FCA5A5", color: "#B91C1C" }}>Hesabı silmek istiyorum</button>
         </>
       ) : (
@@ -11109,7 +10961,7 @@ function DeleteAccountCard() {
           <p className="text-xs mb-2" style={{ color: "#7F1D1D" }}>Bu işlem geri alınamaz. Onaylamak için aşağıya <b>SİL</b> yaz.</p>
           <input value={confirmText} onChange={(e) => setConfirmText(e.target.value)} className="w-full px-3 py-2 rounded-lg border text-sm outline-none" style={{ borderColor: "#FCA5A5" }} aria-label="Silme onayı" />
           <div className="flex gap-2 mt-3">
-            <button onClick={() => { setOpen(false); setConfirmText(""); setError(""); }} disabled={busy} className="px-4 py-2 rounded-full text-xs font-bold border" style={{ borderColor: "#D9D0BA", color: "#1B2B24" }}>Vazgeç</button>
+            <button onClick={() => { setOpen(false); setConfirmText(""); setError(""); }} disabled={busy} className="px-4 py-2 rounded-full text-xs font-bold border" style={{ borderColor: "#E4E4E7", color: "#0F1115" }}>Vazgeç</button>
             <button onClick={remove} disabled={busy || confirmText.trim().toLocaleUpperCase("tr-TR") !== "SİL"} className="px-4 py-2 rounded-full text-xs font-bold text-white" style={{ background: "#B91C1C", opacity: busy || confirmText.trim().toLocaleUpperCase("tr-TR") !== "SİL" ? 0.5 : 1 }}>
               {busy ? "Siliniyor…" : "Hesabımı kalıcı olarak sil"}
             </button>
@@ -11538,7 +11390,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
           onCropped={uploadPhoto}
         />
       )}
-      <button onClick={onBack} className="flex items-center gap-1 text-sm mb-5" style={{ color: "#5C5744" }}>
+      <button onClick={onBack} className="flex items-center gap-1 text-sm mb-5" style={{ color: "#4B5563" }}>
         <ChevronLeft size={16} /> {t("common.back")}
       </button>
       <div className="flex items-center gap-4 mb-8">
@@ -11546,7 +11398,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
           {profilePhoto ? (
             <img src={profilePhoto.url} alt="" className="w-16 h-16 rounded-full object-cover" />
           ) : (
-            <div className="w-16 h-16 rounded-full flex items-center justify-center text-lg font-medium text-white" style={{ background: "#1B2B24" }}>
+            <div className="w-16 h-16 rounded-full flex items-center justify-center text-lg font-medium text-white" style={{ background: "#0F1115" }}>
               {(profile?.full_name || "?").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
             </div>
           )}
@@ -11556,23 +11408,23 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
           <input type="file" accept="image/*" className="hidden" onChange={handlePhotoAdd} disabled={photoUploading} />
         </label>
         <div>
-          <h1 className="font-serif text-xl" style={{ color: "#1B2B24" }}>
+          <h1 className="font-sans text-xl font-black tracking-tight" style={{ color: "#0F1115" }}>
             {profileLoading ? t("common.loading") : profile?.full_name || t("profile.completeYourProfile")}
           </h1>
-          <p className="text-sm" style={{ color: "#5C5744" }}>
+          <p className="text-sm" style={{ color: "#4B5563" }}>
             {profile?.city ? `${profile.city} · ` : ""}{joinedLabel ? t("profile.memberSince", { date: joinedLabel }) : ""}
           </p>
           {photoModeration && (
             <p
               className="flex items-center gap-1 text-xs mt-1"
-              style={{ color: photoModeration.status === "checking" ? "#6B6550" : photoModeration.status === "approved" ? "#3F7D5C" : "#9C4A3C" }}
+              style={{ color: photoModeration.status === "checking" ? "#6B7280" : photoModeration.status === "approved" ? "#16A34A" : "#DC2626" }}
             >
               {photoModeration.status === "checking" && <><Loader2 size={11} className="animate-spin" /> {t("createListing.moderationChecking")}</>}
               {photoModeration.status === "approved" && <><ShieldCheck size={11} /> {t("createListing.moderationApproved")}</>}
               {photoModeration.status === "flagged" && <><AlertCircle size={11} /> {photoModeration.reason || t("createListing.moderationFlaggedDefault")}</>}
             </p>
           )}
-          {photoError && <p className="text-xs mt-1" style={{ color: "#9C4A3C" }}>{photoError}</p>}
+          {photoError && <p className="text-xs mt-1" style={{ color: "#DC2626" }}>{photoError}</p>}
         </div>
       </div>
       <div className="grid grid-cols-3 gap-3 mb-8">
@@ -11581,50 +11433,50 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
           [myRating ? String(myRating.count) : "0", t("profile.statReviews")],
           [myRating ? myRating.avg : "—", t("profile.statRating")],
         ].map(([val, label]) => (
-          <div key={label} className="rounded-xl border p-4 text-center" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
-            <p className="font-serif text-xl" style={{ color: "#1B2B24" }}>{val}</p>
-            <p className="text-xs mt-1" style={{ color: "#6B6550" }}>{label}</p>
+          <div key={label} className="rounded-xl border p-3 sm:p-4 text-center" style={{ borderColor: "#E4E4E7", background: "#F7F7F8" }}>
+            <p className="font-sans text-xl font-black tracking-tight" style={{ color: "#0F1115" }}>{val}</p>
+            <p className="text-xs mt-1" style={{ color: "#6B7280" }}>{label}</p>
           </div>
         ))}
       </div>
 
-      <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
+      <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#E4E4E7", background: "#F7F7F8" }}>
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-2">
-            <Users size={16} style={{ color: "#2FBF71" }} />
-            <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("profile.infoHeading")}</h2>
+            <Users size={16} style={{ color: "#2563EB" }} />
+            <h2 className="text-sm font-bold" style={{ color: "#0F1115" }}>{t("profile.infoHeading")}</h2>
           </div>
           {!editing && (
             <button onClick={() => setEditing(true)} className="text-xs font-bold" style={{ color: "#2563EB" }}>{t("profile.edit")}</button>
           )}
         </div>
         {profileLoading ? (
-          <p className="text-xs mt-3" style={{ color: "#6B6550" }}>{t("common.loading")}</p>
+          <p className="text-xs mt-3" style={{ color: "#6B7280" }}>{t("common.loading")}</p>
         ) : !editing ? (
           <div className="mt-3 space-y-1.5 text-sm" style={{ color: "#3D3B30" }}>
-            <p><span style={{ color: "#6B6550" }}>{t("profile.fieldFullName")}</span> {profile?.full_name || "—"}</p>
-            <p><span style={{ color: "#6B6550" }}>{t("profile.fieldCity")}</span> {profile?.city || "—"}</p>
-            <p><span style={{ color: "#6B6550" }}>{t("profile.fieldBio")}</span> {profile?.bio || "—"}</p>
-            {saveDone && <p className="text-xs" style={{ color: "#2FBF71" }}>{t("profile.savedCheck")}</p>}
+            <p><span style={{ color: "#6B7280" }}>{t("profile.fieldFullName")}</span> {profile?.full_name || "—"}</p>
+            <p><span style={{ color: "#6B7280" }}>{t("profile.fieldCity")}</span> {profile?.city || "—"}</p>
+            <p><span style={{ color: "#6B7280" }}>{t("profile.fieldBio")}</span> {profile?.bio || "—"}</p>
+            {saveDone && <p className="text-xs" style={{ color: "#16A34A" }}>{t("profile.savedCheck")}</p>}
           </div>
         ) : (
           <div className="mt-3 space-y-3">
             <div>
-              <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("profile.labelFullName")}</label>
+              <label className="text-xs font-medium block mb-1.5" style={{ color: "#4B5563" }}>{t("profile.labelFullName")}</label>
               <input
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
-                style={{ borderColor: "#D9D0BA", background: "#FFFFFF", color: "#1B2B24" }}
+                style={{ borderColor: "#E4E4E7", background: "#FFFFFF", color: "#0F1115" }}
               />
             </div>
             <div>
-              <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("profile.labelCity")}</label>
+              <label className="text-xs font-medium block mb-1.5" style={{ color: "#4B5563" }}>{t("profile.labelCity")}</label>
               <select
                 value={cityId}
                 onChange={(e) => setCityId(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
-                style={{ borderColor: "#D9D0BA", background: "#FFFFFF", color: "#1B2B24" }}
+                style={{ borderColor: "#E4E4E7", background: "#FFFFFF", color: "#0F1115" }}
               >
                 {[["Türkiye", "turkey"], ["Hindistan", "india"], ["Avrupa", "europe"], ["Kuzey Amerika", "northAmerica"], ["Orta Doğu", "middleEast"], ["Asya-Pasifik", "asiaPacific"]].map(([region, regionKey]) => (
                   <optgroup key={region} label={t(`common.regions.${regionKey}`)}>
@@ -11636,25 +11488,25 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
               </select>
             </div>
             <div>
-              <label className="text-xs font-medium block mb-1.5" style={{ color: "#5C5744" }}>{t("profile.labelBio")}</label>
+              <label className="text-xs font-medium block mb-1.5" style={{ color: "#4B5563" }}>{t("profile.labelBio")}</label>
               <textarea
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
                 rows={3}
                 placeholder={t("profile.bioPlaceholder")}
                 className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none resize-none"
-                style={{ borderColor: "#D9D0BA", background: "#FFFFFF", color: "#1B2B24" }}
+                style={{ borderColor: "#E4E4E7", background: "#FFFFFF", color: "#0F1115" }}
               />
             </div>
             {saveError && (
-              <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{saveError}</p>
+              <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(220,38,38,0.1)", color: "#DC2626" }}>{saveError}</p>
             )}
             <div className="flex gap-2">
               <button
                 onClick={saveProfile}
                 disabled={saving}
                 className="flex-1 py-2.5 rounded-full text-sm font-medium text-white flex items-center justify-center gap-2"
-                style={{ background: "#2FBF71", color: "#1B2B24", opacity: saving ? 0.7 : 1 }}
+                style={{ background: "#2563EB", color: "#FFFFFF", opacity: saving ? 0.7 : 1 }}
               >
                 {saving && <Loader2 size={14} className="animate-spin" />}
                 {saving ? t("common.savingEllipsis") : t("common.save")}
@@ -11668,7 +11520,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
                   setSaveError("");
                 }}
                 className="px-4 py-2.5 rounded-full text-sm font-medium border"
-                style={{ borderColor: "#D9D0BA", color: "#5C5744" }}
+                style={{ borderColor: "#E4E4E7", color: "#4B5563" }}
               >
                 {t("common.cancel")}
               </button>
@@ -11677,20 +11529,20 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
         )}
       </div>
 
-      <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
+      <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#E4E4E7", background: "#F7F7F8" }}>
         <div className="flex items-center gap-2 mb-1">
-          <Phone size={16} style={{ color: myPhone?.verified ? "#3F7D5C" : "#C2872B" }} />
-          <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("profile.phoneHeading")}</h2>
+          <Phone size={16} style={{ color: myPhone?.verified ? "#16A34A" : "#2563EB" }} />
+          <h2 className="text-sm font-bold" style={{ color: "#0F1115" }}>{t("profile.phoneHeading")}</h2>
           {myPhone?.verified && (
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: "#3F7D5C" }}>{t("profile.phoneVerifiedBadge")}</span>
+            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: "#16A34A" }}>{t("profile.phoneVerifiedBadge")}</span>
           )}
         </div>
-        <p className="text-xs mb-4" style={{ color: "#6B6550" }}>
+        <p className="text-xs mb-4" style={{ color: "#6B7280" }}>
           {t("profile.phoneIntro")}
         </p>
 
         {phoneError && (
-          <p className="text-xs mb-3 px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{phoneError}</p>
+          <p className="text-xs mb-3 px-3 py-2 rounded-lg" style={{ background: "rgba(220,38,38,0.1)", color: "#DC2626" }}>{phoneError}</p>
         )}
         {phoneNotConfigured && (
           <p className="text-xs mb-3 px-3 py-2 rounded-lg flex items-center gap-1.5" style={{ background: "#FFFBEB", color: "#92640B" }}>
@@ -11700,8 +11552,8 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
 
         {myPhone?.verified && !changingPhone ? (
           <div>
-            <p className="text-sm mb-3" style={{ color: "#1B2B24" }}>{myPhone.phone}</p>
-            <label className="flex items-center gap-2 text-xs mb-3" style={{ color: "#5C5744" }}>
+            <p className="text-sm mb-3" style={{ color: "#0F1115" }}>{myPhone.phone}</p>
+            <label className="flex items-center gap-2 text-xs mb-3" style={{ color: "#4B5563" }}>
               <input
                 type="checkbox"
                 checked={!!myPhone.show_publicly}
@@ -11712,7 +11564,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
             <button
               onClick={() => { setChangingPhone(true); setPhoneInput(""); setPhoneError(""); }}
               className="text-xs font-bold underline"
-              style={{ color: "#3A5BA0" }}
+              style={{ color: "#2563EB" }}
             >
               {t("profile.phoneChange")}
             </button>
@@ -11725,13 +11577,13 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
               placeholder={t("profile.otpPlaceholder")}
               inputMode="numeric"
               className="flex-1 px-3.5 py-2.5 rounded-lg border text-sm outline-none"
-              style={{ borderColor: "#D9D0BA", background: "#FFFFFF", color: "#1B2B24" }}
+              style={{ borderColor: "#E4E4E7", background: "#FFFFFF", color: "#0F1115" }}
             />
             <button
               onClick={verifyPhoneCode}
               disabled={phoneStage === "verifying" || !otpInput.trim()}
               className="px-4 py-2.5 rounded-full text-sm font-medium text-white flex items-center gap-1.5"
-              style={{ background: "#3F7D5C", opacity: phoneStage === "verifying" ? 0.7 : 1 }}
+              style={{ background: "#2563EB", opacity: phoneStage === "verifying" ? 0.7 : 1 }}
             >
               {phoneStage === "verifying" && <Loader2 size={13} className="animate-spin" />}
               {t("profile.verifyButton")}
@@ -11746,13 +11598,13 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
               onChange={(e) => setPhoneInput(e.target.value)}
               placeholder={t("profile.phonePlaceholder")}
               className="flex-1 px-3.5 py-2.5 rounded-lg border text-sm outline-none"
-              style={{ borderColor: "#D9D0BA", background: "#FFFFFF", color: "#1B2B24" }}
+              style={{ borderColor: "#E4E4E7", background: "#FFFFFF", color: "#0F1115" }}
             />
             <button
               onClick={sendPhoneCode}
               disabled={phoneStage === "sending"}
               className="px-4 py-2.5 rounded-full text-sm font-medium text-white flex items-center gap-1.5 shrink-0"
-              style={{ background: "#C2872B", opacity: phoneStage === "sending" ? 0.7 : 1 }}
+              style={{ background: "#2563EB", opacity: phoneStage === "sending" ? 0.7 : 1 }}
             >
               {phoneStage === "sending" && <Loader2 size={13} className="animate-spin" />}
               {t("profile.sendCodeButton")}
@@ -11765,7 +11617,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
             <button
               onClick={async () => { setChangingPhone(false); setPhoneStage("idle"); setOtpInput(""); setPhoneError(""); await loadMyPhone(); }}
               className="text-xs font-bold underline"
-              style={{ color: "#5C5744" }}
+              style={{ color: "#4B5563" }}
             >
               {t("common.cancel")}
             </button>
@@ -11774,18 +11626,18 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
       </div>
 
       {savedSearches.length > 0 && (
-        <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
+        <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#E4E4E7", background: "#F7F7F8" }}>
           <div className="flex items-center gap-2 mb-3">
             <Bell size={16} style={{ color: "#2563EB" }} />
-            <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("profile.savedSearchesHeading", { count: savedSearches.length })}</h2>
+            <h2 className="text-sm font-bold" style={{ color: "#0F1115" }}>{t("profile.savedSearchesHeading", { count: savedSearches.length })}</h2>
           </div>
-          <p className="text-xs mb-3" style={{ color: "#6B6550" }}>{t("profile.savedSearchesIntro")}</p>
+          <p className="text-xs mb-3" style={{ color: "#6B7280" }}>{t("profile.savedSearchesIntro")}</p>
           <div className="space-y-2">
             {savedSearches.map((s) => (
-              <div key={s.id} className="flex items-center justify-between gap-2 p-2.5 rounded-lg" style={{ background: "#EFE8D8" }}>
-                <span className="text-xs font-medium" style={{ color: "#1B2B24" }}>"{s.query}"</span>
-                <button onClick={() => deleteSavedSearch(s.id)} className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" title={t("common.remove")} aria-label={t("common.remove")}>
-                  <X size={13} style={{ color: "#6B6550" }} />
+              <div key={s.id} className="flex items-center justify-between gap-2 p-2.5 rounded-lg" style={{ background: "#F4F4F5" }}>
+                <span className="text-xs font-medium" style={{ color: "#0F1115" }}>"{s.query}"</span>
+                <button onClick={() => deleteSavedSearch(s.id)} className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" title={t("common.remove")} aria-label={t("common.remove")}>
+                  <X size={13} style={{ color: "#6B7280" }} />
                 </button>
               </div>
             ))}
@@ -11793,11 +11645,11 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
         </div>
       )}
 
-      <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
+      <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#E4E4E7", background: "#F7F7F8" }}>
         <div className="flex items-center justify-between gap-2 mb-3">
           <div className="flex items-center gap-2">
-            <Briefcase size={16} style={{ color: "#2FBF71" }} />
-            <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>
+            <Briefcase size={16} style={{ color: "#2563EB" }} />
+            <h2 className="text-sm font-bold" style={{ color: "#0F1115" }}>
               {vitrinCap
                 ? t("profile.listingsHeadingWithCap", { count: myListings.length, cap: vitrinCap.cap })
                 : t("profile.listingsHeadingNoCap", { count: myListings.length })}
@@ -11815,28 +11667,28 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
             <button
               onClick={onCreateListing}
               className="text-[11px] font-bold px-2.5 py-1.5 rounded-full text-white shrink-0"
-              style={{ background: "#2FBF71" }}
+              style={{ background: "#2563EB" }}
             >
               {t("profile.addListingButton")}
             </button>
           )}
         </div>
         {actionError && (
-          <p className="text-xs mb-2 px-3 py-2 rounded-lg" role="alert" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{actionError}</p>
+          <p className="text-xs mb-2 px-3 py-2 rounded-lg" role="alert" style={{ background: "rgba(220,38,38,0.1)", color: "#DC2626" }}>{actionError}</p>
         )}
         {deleteError && (
-          <p className="text-xs mb-2 px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{deleteError}</p>
+          <p className="text-xs mb-2 px-3 py-2 rounded-lg" style={{ background: "rgba(220,38,38,0.1)", color: "#DC2626" }}>{deleteError}</p>
         )}
         {profileLoading ? (
-          <p className="text-xs" style={{ color: "#6B6550" }}>{t("common.loading")}</p>
+          <p className="text-xs" style={{ color: "#6B7280" }}>{t("common.loading")}</p>
         ) : myListings.length === 0 ? (
           <div>
-            <p className="text-xs mb-3" style={{ color: "#6B6550" }}>{t("profile.noListings")}</p>
+            <p className="text-xs mb-3" style={{ color: "#6B7280" }}>{t("profile.noListings")}</p>
             {onCreateListing && (
               <button
                 onClick={onCreateListing}
                 className="text-xs font-bold px-3.5 py-2 rounded-full text-white"
-                style={{ background: "#2FBF71" }}
+                style={{ background: "#2563EB" }}
               >
                 {t("profile.createFirstListingButton")}
               </button>
@@ -11856,14 +11708,14 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
                   if (onViewListing) onViewListing(full);
                 }}
                 className="flex items-center gap-3 p-2.5 rounded-lg cursor-pointer"
-                style={{ background: "#EFE8D8" }}
+                style={{ background: "#F4F4F5" }}
               >
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium truncate" style={{ color: "#1B2B24" }}>
+                  <p className="text-xs font-medium truncate" style={{ color: "#0F1115" }}>
                     {l.title}
-                    {l.active === false && <span className="ml-2 text-[10px] font-bold px-1.5 py-0.5 rounded-full align-middle" style={{ background: "#E4DEC9", color: "#5C5744" }}>{t("profile.unpublishedBadge")}</span>}
+                    {l.active === false && <span className="ml-2 text-[11px] font-bold px-1.5 py-0.5 rounded-full align-middle" style={{ background: "#E4DEC9", color: "#4B5563" }}>{t("profile.unpublishedBadge")}</span>}
                   </p>
-                  <p className="text-[11px] truncate" style={{ color: "#6B6550" }}>
+                  <p className="text-[11px] truncate" style={{ color: "#6B7280" }}>
                     {l.is_remote ? t("profile.remoteLabel") : l.city || "—"} · {formatPriceLabel(l.price, l.price_type)}
                   </p>
                 </div>
@@ -11873,7 +11725,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
                       onClick={() => deleteListing(l.id)}
                       disabled={deletingId === l.id}
                       className="text-[11px] font-bold px-2.5 py-1.5 rounded-full text-white flex items-center gap-1"
-                      style={{ background: "#9C4A3C", opacity: deletingId === l.id ? 0.6 : 1 }}
+                      style={{ background: "#DC2626", opacity: deletingId === l.id ? 0.6 : 1 }}
                     >
                       {deletingId === l.id && <Loader2 size={11} className="animate-spin" />}
                       {t("profile.confirmDeleteYes")}
@@ -11882,7 +11734,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
                       onClick={() => setConfirmDeleteId(null)}
                       disabled={deletingId === l.id}
                       className="text-[11px] font-medium px-2.5 py-1.5 rounded-full"
-                      style={{ color: "#5C5744" }}
+                      style={{ color: "#4B5563" }}
                     >
                       {t("common.cancel")}
                     </button>
@@ -11899,7 +11751,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
                       title={t("profile.deleteListingTitle")}
                       aria-label={t("profile.deleteListingTitle")}
                     >
-                      <Trash2 size={14} style={{ color: "#9C4A3C" }} />
+                      <Trash2 size={14} style={{ color: "#DC2626" }} />
                     </button>
                   </div>
                 )}
@@ -11913,38 +11765,38 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
           kullanıcı "profilimde görünmüyor" diye haklı olarak şaşırdı. Artık
           gerçek bir vitrini olan her sağlayıcının profilinde görünüyor. */}
       {myListings.length > 0 && (
-        <div className="rounded-xl border p-5 mb-4 flex items-center gap-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
+        <div className="rounded-xl border p-5 mb-4 flex items-center gap-4" style={{ borderColor: "#E4E4E7", background: "#F7F7F8" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/rozet.svg" alt={t("profile.verifiedProviderBadgeAlt")} width={140} height={40} className="shrink-0" />
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-bold mb-1" style={{ color: "#1B2B24" }}>{t("profile.badgeReadyTitle")}</p>
-            <p className="text-[11px] mb-2" style={{ color: "#6B6550" }}>{t("profile.badgeReadyDesc")}</p>
-            <a href="/rozet" target="_blank" rel="noopener noreferrer" className="text-[11px] font-bold underline" style={{ color: "#3A5BA0" }}>
+            <p className="text-xs font-bold mb-1" style={{ color: "#0F1115" }}>{t("profile.badgeReadyTitle")}</p>
+            <p className="text-[11px] mb-2" style={{ color: "#6B7280" }}>{t("profile.badgeReadyDesc")}</p>
+            <a href="/rozet" target="_blank" rel="noopener noreferrer" className="text-[11px] font-bold underline" style={{ color: "#2563EB" }}>
               {t("profile.getBadgeLink")}
             </a>
           </div>
         </div>
       )}
 
-      <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}>
+      <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#E4E4E7", background: "#F7F7F8" }}>
         <div className="flex items-center gap-2 mb-3">
-          <Megaphone size={16} style={{ color: "#C2872B" }} />
-          <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("profile.jobsHeading", { count: myJobs.length })}</h2>
+          <Megaphone size={16} style={{ color: "#2563EB" }} />
+          <h2 className="text-sm font-bold" style={{ color: "#0F1115" }}>{t("profile.jobsHeading", { count: myJobs.length })}</h2>
         </div>
         {jobsError && (
-          <p className="text-xs mb-2 px-3 py-2 rounded-lg" style={{ background: "rgba(156,74,60,0.1)", color: "#9C4A3C" }}>{jobsError}</p>
+          <p className="text-xs mb-2 px-3 py-2 rounded-lg" style={{ background: "rgba(220,38,38,0.1)", color: "#DC2626" }}>{jobsError}</p>
         )}
         {profileLoading ? (
-          <p className="text-xs" style={{ color: "#6B6550" }}>{t("common.loading")}</p>
+          <p className="text-xs" style={{ color: "#6B7280" }}>{t("common.loading")}</p>
         ) : myJobs.length === 0 ? (
-          <p className="text-xs" style={{ color: "#6B6550" }}>{t("profile.noJobs")}</p>
+          <p className="text-xs" style={{ color: "#6B7280" }}>{t("profile.noJobs")}</p>
         ) : (
           <div className="space-y-2">
             {myJobs.map((j) => (
-              <div key={j.id} className="flex items-center gap-3 p-2.5 rounded-lg" style={{ background: "#EFE8D8" }}>
+              <div key={j.id} className="flex items-center gap-3 p-2.5 rounded-lg" style={{ background: "#F4F4F5" }}>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium truncate" style={{ color: "#1B2B24" }}>{j.title}</p>
-                  <p className="text-[11px] truncate" style={{ color: "#6B6550" }}>
+                  <p className="text-xs font-medium truncate" style={{ color: "#0F1115" }}>{j.title}</p>
+                  <p className="text-[11px] truncate" style={{ color: "#6B7280" }}>
                     {j.is_remote ? t("profile.remoteLabel") : j.city || "—"}
                     {(j.budget_min != null || j.budget_max != null) &&
                       ` · ${j.budget_min != null ? Number(j.budget_min).toLocaleString("tr-TR") + "₺" : ""}${j.budget_min != null && j.budget_max != null ? "–" : ""}${j.budget_max != null ? Number(j.budget_max).toLocaleString("tr-TR") + "₺" : ""}`}
@@ -11956,7 +11808,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
                       onClick={() => deactivateJob(j.id)}
                       disabled={deactivatingJobId === j.id}
                       className="text-[11px] font-bold px-2.5 py-1.5 rounded-full text-white flex items-center gap-1"
-                      style={{ background: "#9C4A3C", opacity: deactivatingJobId === j.id ? 0.6 : 1 }}
+                      style={{ background: "#DC2626", opacity: deactivatingJobId === j.id ? 0.6 : 1 }}
                     >
                       {deactivatingJobId === j.id && <Loader2 size={11} className="animate-spin" />}
                       {t("profile.confirmDeactivateYes")}
@@ -11965,7 +11817,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
                       onClick={() => setConfirmDeactivateJobId(null)}
                       disabled={deactivatingJobId === j.id}
                       className="text-[11px] font-medium px-2.5 py-1.5 rounded-full"
-                      style={{ color: "#5C5744" }}
+                      style={{ color: "#4B5563" }}
                     >
                       {t("common.cancel")}
                     </button>
@@ -11981,7 +11833,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
                       className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
                       title={t("profile.editJobTitle")}
                     >
-                      <Pencil size={14} style={{ color: "#5C5744" }} />
+                      <Pencil size={14} style={{ color: "#4B5563" }} />
                     </button>
                     <button
                       onClick={() => setConfirmDeactivateJobId(j.id)}
@@ -11989,7 +11841,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
                       title={t("profile.removeJobTitle")}
                       aria-label={t("profile.removeJobTitle")}
                     >
-                      <Trash2 size={14} style={{ color: "#9C4A3C" }} />
+                      <Trash2 size={14} style={{ color: "#DC2626" }} />
                     </button>
                   </div>
                 )}
@@ -12003,10 +11855,10 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
       {((pendingMediaApprovals && pendingMediaApprovals.length > 0) || realPendingMedia.length > 0) && (
         <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#F59E0B", background: "#FFFBEB" }}>
           <div className="flex items-center gap-2 mb-1">
-            <AlertCircle size={16} style={{ color: "#F59E0B" }} />
-            <h2 className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("profile.pendingMediaHeading", { count: (pendingMediaApprovals?.length || 0) + realPendingMedia.length })}</h2>
+            <AlertCircle size={16} style={{ color: "#2563EB" }} />
+            <h2 className="text-sm font-bold" style={{ color: "#0F1115" }}>{t("profile.pendingMediaHeading", { count: (pendingMediaApprovals?.length || 0) + realPendingMedia.length })}</h2>
           </div>
-          <p className="text-xs mb-4" style={{ color: "#6B6550" }}>
+          <p className="text-xs mb-4" style={{ color: "#6B7280" }}>
             {t("profile.pendingMediaIntro")}
           </p>
           <div className="space-y-3">
@@ -12018,10 +11870,10 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
                   <img loading="lazy" decoding="async" src={item.mediaUrl} alt="" className="w-14 h-14 rounded-lg object-cover shrink-0" />
                 )}
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-bold truncate" style={{ color: "#1B2B24" }}>{item.reviewerName}</p>
-                  <p className="text-[11px] truncate" style={{ color: "#6B6550" }}>{item.listingTitle} · {item.submittedAt}</p>
+                  <p className="text-xs font-bold truncate" style={{ color: "#0F1115" }}>{item.reviewerName}</p>
+                  <p className="text-[11px] truncate" style={{ color: "#6B7280" }}>{item.listingTitle} · {item.submittedAt}</p>
                   {item.isVideo && (
-                    <p className="text-[10px]" style={{ color: "#9C4A3C" }}>{t("profile.pendingMediaVideoWarning")}</p>
+                    <p className="text-[11px]" style={{ color: "#DC2626" }}>{t("profile.pendingMediaVideoWarning")}</p>
                   )}
                 </div>
                 <div className="flex gap-1.5 shrink-0">
@@ -12029,7 +11881,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
                     onClick={() => (item.real ? decideRealMedia(item.dbId, true) : onApproveMedia(item.id))}
                     disabled={item.real && mediaActionId === item.dbId}
                     className="w-8 h-8 rounded-full flex items-center justify-center"
-                    style={{ background: "#3F7D5C", opacity: item.real && mediaActionId === item.dbId ? 0.6 : 1 }}
+                    style={{ background: "#2563EB", opacity: item.real && mediaActionId === item.dbId ? 0.6 : 1 }}
                   >
                     <Check size={14} className="text-white" />
                   </button>
@@ -12038,9 +11890,9 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
                     disabled={item.real && mediaActionId === item.dbId}
                     aria-label={t("common.remove")}
                     className="w-8 h-8 rounded-full flex items-center justify-center border"
-                    style={{ borderColor: "#D9D0BA", opacity: item.real && mediaActionId === item.dbId ? 0.6 : 1 }}
+                    style={{ borderColor: "#E4E4E7", opacity: item.real && mediaActionId === item.dbId ? 0.6 : 1 }}
                   >
-                    <X size={14} style={{ color: "#6B6550" }} />
+                    <X size={14} style={{ color: "#6B7280" }} />
                   </button>
                 </div>
               </div>
@@ -12054,7 +11906,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
       <button
         onClick={() => { unregisterPush().finally(() => supabase.auth.signOut()); }}
         className="w-full mb-3 py-3 rounded-2xl border text-sm font-bold flex items-center justify-center gap-2"
-        style={{ borderColor: "#D9D0BA", background: "#FFFFFF", color: "#9C4A3C" }}
+        style={{ borderColor: "#E4E4E7", background: "#FFFFFF", color: "#DC2626" }}
       >
         <LogOut size={16} /> {t("header.logout")}
       </button>
@@ -12063,32 +11915,32 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
       <button
         onClick={onOpenAdminReports}
         className="w-full rounded-xl border p-5 mb-4 text-left flex items-center gap-3 hover:shadow-sm transition-shadow"
-        style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}
+        style={{ borderColor: "#E4E4E7", background: "#F7F7F8" }}
       >
         <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: "rgba(37,99,235,0.12)" }}>
           <Inbox size={16} style={{ color: "#2563EB" }} />
         </div>
         <div className="flex-1">
-          <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>{isAdmin ? t("profile.supportRequestsAdmin") : t("profile.supportRequestsMine")}</p>
-          <p className="text-xs" style={{ color: "#6B6550" }}>{isAdmin ? t("profile.supportRequestsAdminDesc") : t("profile.supportRequestsMineDesc")}</p>
+          <p className="text-sm font-bold" style={{ color: "#0F1115" }}>{isAdmin ? t("profile.supportRequestsAdmin") : t("profile.supportRequestsMine")}</p>
+          <p className="text-xs" style={{ color: "#6B7280" }}>{isAdmin ? t("profile.supportRequestsAdminDesc") : t("profile.supportRequestsMineDesc")}</p>
         </div>
-        <ChevronRight size={16} style={{ color: "#6B6550" }} />
+        <ChevronRight size={16} style={{ color: "#6B7280" }} />
       </button>
 
       {isAdmin && (
         <button
           onClick={onOpenDashboard}
           className="w-full rounded-xl border p-5 mb-4 text-left flex items-center gap-3 hover:shadow-sm transition-shadow"
-          style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}
+          style={{ borderColor: "#E4E4E7", background: "#F7F7F8" }}
         >
           <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: "rgba(37,99,235,0.12)" }}>
             <BarChart3 size={16} style={{ color: "#2563EB" }} />
           </div>
           <div className="flex-1">
-            <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("profile.adminDashboardTitle")}</p>
-            <p className="text-xs" style={{ color: "#6B6550" }}>{t("profile.adminDashboardDesc")}</p>
+            <p className="text-sm font-bold" style={{ color: "#0F1115" }}>{t("profile.adminDashboardTitle")}</p>
+            <p className="text-xs" style={{ color: "#6B7280" }}>{t("profile.adminDashboardDesc")}</p>
           </div>
-          <ChevronRight size={16} style={{ color: "#6B6550" }} />
+          <ChevronRight size={16} style={{ color: "#6B7280" }} />
         </button>
       )}
 
@@ -12096,16 +11948,16 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
         <button
           onClick={onOpenUserReports}
           className="w-full rounded-xl border p-5 mb-4 text-left flex items-center gap-3 hover:shadow-sm transition-shadow"
-          style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}
+          style={{ borderColor: "#E4E4E7", background: "#F7F7F8" }}
         >
-          <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: "rgba(156,74,60,0.12)" }}>
-            <ShieldCheck size={16} style={{ color: "#9C4A3C" }} />
+          <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: "rgba(220,38,38,0.12)" }}>
+            <ShieldCheck size={16} style={{ color: "#DC2626" }} />
           </div>
           <div className="flex-1">
-            <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("profile.userReportsTitle")}</p>
-            <p className="text-xs" style={{ color: "#6B6550" }}>{t("profile.userReportsDesc")}</p>
+            <p className="text-sm font-bold" style={{ color: "#0F1115" }}>{t("profile.userReportsTitle")}</p>
+            <p className="text-xs" style={{ color: "#6B7280" }}>{t("profile.userReportsDesc")}</p>
           </div>
-          <ChevronRight size={16} style={{ color: "#6B6550" }} />
+          <ChevronRight size={16} style={{ color: "#6B7280" }} />
         </button>
       )}
 
@@ -12113,16 +11965,16 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
         <button
           onClick={onOpenListingReports}
           className="w-full rounded-xl border p-5 mb-4 text-left flex items-center gap-3 hover:shadow-sm transition-shadow"
-          style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}
+          style={{ borderColor: "#E4E4E7", background: "#F7F7F8" }}
         >
-          <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: "rgba(156,74,60,0.12)" }}>
-            <AlertCircle size={16} style={{ color: "#9C4A3C" }} />
+          <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: "rgba(220,38,38,0.12)" }}>
+            <AlertCircle size={16} style={{ color: "#DC2626" }} />
           </div>
           <div className="flex-1">
-            <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("profile.listingReportsTitle")}</p>
-            <p className="text-xs" style={{ color: "#6B6550" }}>{t("profile.listingReportsDesc")}</p>
+            <p className="text-sm font-bold" style={{ color: "#0F1115" }}>{t("profile.listingReportsTitle")}</p>
+            <p className="text-xs" style={{ color: "#6B7280" }}>{t("profile.listingReportsDesc")}</p>
           </div>
-          <ChevronRight size={16} style={{ color: "#6B6550" }} />
+          <ChevronRight size={16} style={{ color: "#6B7280" }} />
         </button>
       )}
 
@@ -12130,16 +11982,16 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
         <button
           onClick={onOpenContentFlags}
           className="w-full rounded-xl border p-5 mb-4 text-left flex items-center gap-3 hover:shadow-sm transition-shadow"
-          style={{ borderColor: "#D9D0BA", background: "#F8F4E9" }}
+          style={{ borderColor: "#E4E4E7", background: "#F7F7F8" }}
         >
-          <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: "rgba(156,74,60,0.12)" }}>
-            <ShieldCheck size={16} style={{ color: "#9C4A3C" }} />
+          <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: "rgba(220,38,38,0.12)" }}>
+            <ShieldCheck size={16} style={{ color: "#DC2626" }} />
           </div>
           <div className="flex-1">
-            <p className="text-sm font-bold" style={{ color: "#1B2B24" }}>{t("profile.contentFlagsTitle")}</p>
-            <p className="text-xs" style={{ color: "#6B6550" }}>{t("profile.contentFlagsDesc")}</p>
+            <p className="text-sm font-bold" style={{ color: "#0F1115" }}>{t("profile.contentFlagsTitle")}</p>
+            <p className="text-xs" style={{ color: "#6B7280" }}>{t("profile.contentFlagsDesc")}</p>
           </div>
-          <ChevronRight size={16} style={{ color: "#6B6550" }} />
+          <ChevronRight size={16} style={{ color: "#6B7280" }} />
         </button>
       )}
 
@@ -12166,7 +12018,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
 const RESTORABLE_VIEWS = new Set([
   "home", "profile", "createListing", "map", "post", "pricing", "messages",
   "search", "support", "adminReports", "adminModeration", "adminDashboard", "favorites",
-  "talentDiscovery",
+  "talentDiscovery", "needMatch",
 ]);
 
 function getInitialView() {
@@ -12267,7 +12119,7 @@ function DraggableSupportButton({ onClick, quietOnTop = false }) {
       onClick={handleClick}
       aria-label={t("common.supportAria")}
       className={"z-40 w-14 h-14 rounded-full flex items-center justify-center text-white shadow-2xl hover:scale-105 transition-all" + (hidden ? " opacity-0 pointer-events-none" : "")}
-      style={{ ...style, background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)" }}
+      style={{ ...style, background: "#2563EB" }}
     >
       <LifeBuoy size={22} />
     </button>
@@ -12942,14 +12794,14 @@ export default function IsinnPrototype({ session, onRequireAuth, discoveryPopula
   return (
     <div className="min-h-[100dvh]" style={{ background: "#FFFFFF", fontFamily: "ui-sans-serif, system-ui" }}>
       {favError && (
-        <div role="alert" className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-max max-w-[calc(100vw-2rem)] text-center px-4 py-2.5 rounded-2xl text-xs font-medium text-white shadow-lg" style={{ background: "#9C4A3C" }}>{favError}</div>
+        <div role="alert" className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-max max-w-[calc(100vw-2rem)] text-center px-4 py-2.5 rounded-2xl text-xs font-medium text-white shadow-lg" style={{ background: "#DC2626" }}>{favError}</div>
       )}
       {userId && <DeliveryConfirmGate userId={userId} />}
-      <Header onNav={handleNav} onSearch={runSearch} pendingCount={pendingMediaApprovals.length + staffModerationQueue.length} session={session} onNotificationClick={handleNotificationClick} />
+      <Header onNav={handleNav} onSearch={runSearch} pendingCount={pendingMediaApprovals.length + staffModerationQueue.length} session={session} onNotificationClick={handleNotificationClick} hideSearch={view === "home"} />
       {!storeApp && !trialBannerDismissed && trialBanner?.status === "trialing" && trialBanner.daysLeft <= 7 && (
         <div className="flex items-center gap-3 px-5 py-2.5" style={{ background: "#FFFBEB", borderBottom: "1px solid #F0E4C4" }}>
-          <AlertCircle size={15} style={{ color: "#C2872B" }} className="shrink-0" />
-          <p className="text-xs flex-1" style={{ color: "#5C5744" }}>
+          <AlertCircle size={15} style={{ color: "#D97706" }} className="shrink-0" />
+          <p className="text-xs flex-1" style={{ color: "#4B5563" }}>
             {trialBanner.daysLeft <= 0
               ? t("trialBanner.endingToday")
               : trialBanner.daysLeft === 1
@@ -12957,9 +12809,9 @@ export default function IsinnPrototype({ session, onRequireAuth, discoveryPopula
               : t("trialBanner.endingInDays", { days: trialBanner.daysLeft })}{" "}
             {t("trialBanner.continuesAs", { planName: trialBanner.planName, priceLabel: trialBanner.priceLabel })}
           </p>
-          <button onClick={() => handleNav("pricing")} className="text-xs font-bold shrink-0" style={{ color: "#C2872B" }}>{t("header.plans")}</button>
+          <button onClick={() => handleNav("pricing")} className="text-xs font-bold shrink-0" style={{ color: "#2563EB" }}>{t("header.plans")}</button>
           <button onClick={() => setTrialBannerDismissed(true)} className="shrink-0 p-2 -mr-2" aria-label={t("common.closeAria")}>
-            <X size={14} style={{ color: "#6B6550" }} />
+            <X size={14} style={{ color: "#6B7280" }} />
           </button>
         </div>
       )}
@@ -13004,6 +12856,15 @@ export default function IsinnPrototype({ session, onRequireAuth, discoveryPopula
           initialNote={talentPrefill?.note}
           initialTitle={talentPrefill?.title}
           initialDesc={talentPrefill?.desc}
+        />
+      )}
+      {view === "needMatch" && (
+        <NeedMatchView
+          realListings={realListings}
+          userId={userId}
+          onBack={() => goBack()}
+          onSelectListing={(l) => { setSelected(l); setView("detail"); }}
+          onPostRequest={() => handleNav("post")}
         />
       )}
       {view === "talentDiscovery" && (
@@ -13171,7 +13032,8 @@ export default function IsinnPrototype({ session, onRequireAuth, discoveryPopula
       {view === "adminDashboard" && isAdmin && <AdminDashboardView onBack={() => goBack()} />}
 
       <AiConsentModal />
-      {view !== "support" && <DraggableSupportButton onClick={() => setView("support")} quietOnTop={view === "home"} />}
+      {/* Mesajlarda gizli: telefonda gönder düğmesinin üstünü kapatıyordu. */}
+      {view !== "support" && view !== "messages" && <DraggableSupportButton onClick={() => setView("support")} quietOnTop={view === "home"} />}
     </div>
   );
 }

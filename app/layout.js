@@ -11,7 +11,7 @@ export const metadata = {
   metadataBase: new URL("https://www.isinn.com.tr"),
   robots: { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1, "max-video-preview": -1 } },
   title: "İşinn | Yerel Hizmet Keşif Platformu, Komisyonsuz Vitrin",
-  description: "Yakınındaki hizmet verenleri keşfet, becerinden hizmet vitrini aç. İşinn komisyon almaz, ürün satmaz; hizmet verenler için 20 Aralık 2026'ya kadar ücretsiz.",
+  description: "Yakınındaki hizmet verenleri keşfet, becerinden hizmet vitrini aç. İşinn komisyon almaz, ürün satmaz; hizmet verenler için 1 Ocak 2027'ye kadar ücretsiz.",
   // Mobil uygulama çalışmasının (bkz. docs/mobile-app.md) yan ürünü — site
   // artık gerçek bir PWA da (telefon tarayıcısından "Ana ekrana ekle").
   // Asıl mağaza dağıtımı Capacitor/Codemagic üzerinden, bu sadece bonus.
@@ -43,7 +43,7 @@ export const metadata = {
 };
 
 export const viewport = {
-  themeColor: "#16321F",
+  themeColor: "#FFFFFF",
 };
 
 // Ana sayfa için FAQPage yapılandırılmış verisi — Google'da zengin sonuç

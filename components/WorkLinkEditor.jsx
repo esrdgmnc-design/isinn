@@ -37,9 +37,9 @@ export default function WorkLinkEditor({ serviceId, initialUrl, userId, source, 
   };
 
   return (
-    <div className={bare ? "" : "mt-5 pt-4 border-t"} style={bare ? undefined : { borderColor: "#EAE3CE" }}>
-      <label className="text-xs font-bold block mb-1" style={{ color: "#5C5744" }}>{t("listingDetail.workLinkEditLabel")}</label>
-      <p className="text-[11px] mb-2" style={{ color: "#6B6550" }}>{t("listingDetail.workLinkEditHelp")}</p>
+    <div className={bare ? "" : "mt-5 pt-4 border-t"} style={bare ? undefined : { borderColor: "#E4E4E7" }}>
+      <label className="text-xs font-bold block mb-1" style={{ color: "#4B5563" }}>{t("listingDetail.workLinkEditLabel")}</label>
+      <p className="text-[11px] mb-2" style={{ color: "#6B7280" }}>{t("listingDetail.workLinkEditHelp")}</p>
       <input
         type="text"
         inputMode="url"
@@ -51,7 +51,7 @@ export default function WorkLinkEditor({ serviceId, initialUrl, userId, source, 
         onChange={(e) => { setValue(e.target.value); setStatus(""); setError(""); }}
         placeholder={t("listingDetail.workLinkPlaceholder")}
         className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
-        style={{ borderColor: "#D9D0BA", background: "#F8F4E9", color: "#1B2B24" }}
+        style={{ borderColor: "#E4E4E7", background: "#F7F7F8", color: "#0F1115" }}
       />
       {handleOnly && (
         <div className="flex gap-2 mt-2" role="radiogroup" aria-label={t("listingDetail.workLinkPlatformLabel")}>
@@ -63,7 +63,7 @@ export default function WorkLinkEditor({ serviceId, initialUrl, userId, source, 
               aria-checked={platform === p}
               onClick={() => setPlatform(p)}
               className="px-3 py-1.5 rounded-full text-xs font-medium border"
-              style={platform === p ? { background: "#1B2B24", borderColor: "#1B2B24", color: "#FFFFFF" } : { background: "#FFFFFF", borderColor: "#D9D0BA", color: "#1B2B24" }}
+              style={platform === p ? { background: "#0F1115", borderColor: "#0F1115", color: "#FFFFFF" } : { background: "#FFFFFF", borderColor: "#E4E4E7", color: "#0F1115" }}
             >
               {t(`listingDetail.workLinkPlatform_${p}`)}
             </button>
@@ -71,9 +71,9 @@ export default function WorkLinkEditor({ serviceId, initialUrl, userId, source, 
         </div>
       )}
       {parsed.ok && parsed.url && (
-        <p className="text-[11px] mt-1.5" style={{ color: "#6B6550" }}>{t("listingDetail.workLinkPreview", { url: parsed.url.replace(/^https:\/\//, "") })}</p>
+        <p className="text-[11px] mt-1.5" style={{ color: "#6B7280" }}>{t("listingDetail.workLinkPreview", { url: parsed.url.replace(/^https:\/\//, "") })}</p>
       )}
-      <p className="text-[10px] mt-1.5" style={{ color: "#8A8470" }}>{t("listingDetail.workLinkVisibleNote")}</p>
+      <p className="text-[11px] mt-1.5" style={{ color: "#8A8470" }}>{t("listingDetail.workLinkVisibleNote")}</p>
       {error && <p className="text-[11px] mt-1.5" style={{ color: "#D14D4D" }}>{error}</p>}
       <div className="flex items-center gap-2 mt-2">
         <button
@@ -81,7 +81,7 @@ export default function WorkLinkEditor({ serviceId, initialUrl, userId, source, 
           onClick={save}
           disabled={saving}
           className="px-4 py-2 rounded-full text-xs font-bold border flex items-center gap-1.5"
-          style={{ borderColor: "#D9D0BA", color: "#1B2B24", background: "#FFFFFF" }}
+          style={{ borderColor: "#E4E4E7", color: "#0F1115", background: "#FFFFFF" }}
         >
           {saving ? <Loader2 size={12} className="animate-spin" /> : null}
           {t("listingDetail.workLinkSave")}

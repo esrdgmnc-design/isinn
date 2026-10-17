@@ -27,28 +27,29 @@ export default function HizmetVerPage({ searchParams }) {
       <p className="text-xs mb-4" style={{ color: "#9CA3AF" }}>İşinn, hizmet almak isteyenlerle hizmet vermek isteyenleri buluşturan, fayda ve güven odaklı bir platformdur.</p>
       <span
         className="inline-block text-xs font-bold px-4 py-2 rounded-full text-white mb-8"
-        style={{ background: "linear-gradient(135deg, #F59E0B 0%, #D97706 100%)" }}
+        style={{ background: "#2563EB" }}
       >
-        İlk 3 Ay Ücretsiz
+        {/* 2026-10-17: eski "İlk 3 Ay Ücretsiz" metni yanlıştı; ücretsiz lansman dönemi 1 Ocak 2027e kadar (lib/freePeriod.js). */}
+        1 Ocak 2027&apos;ye kadar ücretsiz
       </span>
 
-      <div className="rounded-2xl border p-5 mb-8 text-left space-y-3" style={{ borderColor: "#F0F0F0" }}>
+      <div className="rounded-2xl border p-5 mb-8 text-left space-y-3" style={{ borderColor: "#E4E4E7" }}>
         {[
-          "İlk 3 ay tamamen ücretsiz — kart bilgisi talep edilmez",
+          "Lansman sürecinde ücretsiz — kart bilgisi talep edilmez",
           "Komisyon uygulanmaz — kazancınızın tamamı size kalır",
           "Teklif ya da mesaj başına ücret alınmaz",
           "Vitrininiz dışında, müşterilerin paylaştığı açık iş ilanlarına da teklif verebilirsiniz",
         ].map((t, i) => (
           <div key={i} className="flex items-start gap-2">
             <span className="mt-1 w-1.5 h-1.5 rounded-full shrink-0" style={{ background: "#2563EB" }} />
-            <p className="text-sm" style={{ color: "#1B2B24" }}>{t}</p>
+            <p className="text-sm" style={{ color: "#0F1115" }}>{t}</p>
           </div>
         ))}
       </div>
 
       <div className="rounded-2xl p-5 mb-8 text-left" style={{ background: "#EFF6FF" }}>
         <p className="text-sm font-bold mb-1" style={{ color: "#1D4ED8" }}>Sosyal medya hesabınız zaten mı var?</p>
-        <p className="text-sm mb-4" style={{ color: "#1B2B24" }}>İşinn onun yerine geçmez, tamamlar: sosyal medyada sizi zaten bilenler görür; İşinn'de o an tam olarak sizin hizmetinizi arayan, sizi hiç tanımayan yeni müşterilere ulaşırsınız.</p>
+        <p className="text-sm mb-4" style={{ color: "#0F1115" }}>İşinn onun yerine geçmez, tamamlar: sosyal medyada sizi zaten bilenler görür; İşinn'de o an tam olarak sizin hizmetinizi arayan, sizi hiç tanımayan yeni müşterilere ulaşırsınız.</p>
         <div className="space-y-3">
           {[
             "Müşteriler uygulama içinde sizi harita üzerinden ve kategoriye göre filtreleyerek hemen bulur.",
@@ -57,7 +58,7 @@ export default function HizmetVerPage({ searchParams }) {
           ].map((t, i) => (
             <div key={i} className="flex items-start gap-2">
               <span className="mt-1 w-1.5 h-1.5 rounded-full shrink-0" style={{ background: "#2563EB" }} />
-              <p className="text-sm" style={{ color: "#1B2B24" }}>{t}</p>
+              <p className="text-sm" style={{ color: "#0F1115" }}>{t}</p>
             </div>
           ))}
         </div>

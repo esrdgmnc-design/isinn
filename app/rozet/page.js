@@ -21,7 +21,7 @@ export default function RozetPage() {
         İşinn'de aktif bir vitrini olan sağlayıcı mısın? Bu rozeti kendi web sitene, Instagram bio linkine ya da e-posta imzana ekleyerek müşterilerine İşinn'de bir vitrinin olduğunu gösterebilirsin. Rozet kimlik ya da belge doğrulaması anlamına gelmez.
       </p>
 
-      <div className="rounded-2xl p-8 flex justify-center mb-8" style={{ border: "1px solid #F0F0F0", background: "#F8F4E9" }}>
+      <div className="rounded-2xl p-8 flex justify-center mb-8" style={{ border: "1px solid #E4E4E7", background: "#F7F7F8" }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/rozet.svg" alt="İşinn Sağlayıcısı" width={220} height={64} />
       </div>

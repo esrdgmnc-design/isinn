@@ -38,8 +38,8 @@ export default class ErrorBoundary extends Component {
       return (
         <div className="min-h-screen flex items-center justify-center px-5" style={{ background: "#FFFFFF" }}>
           <div className="max-w-sm text-center">
-            <p className="font-serif text-xl mb-2" style={{ color: "#1B2B24" }}>Bir şeyler ters gitti</p>
-            <p className="text-sm mb-6" style={{ color: "#5C5744" }}>
+            <p className="font-sans text-xl font-black tracking-tight mb-2" style={{ color: "#0F1115" }}>Bir şeyler ters gitti</p>
+            <p className="text-sm mb-6" style={{ color: "#4B5563" }}>
               Beklenmeyen bir hata oluştu. Endişelenme, verilerin güvende — ana sayfaya dönüp tekrar deneyebilirsin.
             </p>
             <button

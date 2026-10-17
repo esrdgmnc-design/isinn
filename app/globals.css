@@ -98,3 +98,103 @@ html.isinn-booted #isinn-boot { opacity: 0; pointer-events: none; }
 @media (min-width: 2500px) {
   html { font-size: 137.5%; }
 }
+
+/* Açık talep kartları: kategori grubuna göre renk + akan geçiş (video yok).
+   Katman yalnızca transform ile kayar (kompozitör; yeniden boyama yok).
+   Fareli cihazda üzerine gelince hızlanır; hareket azaltılmışsa durur. */
+.job-aura { position: relative; overflow: hidden; isolation: isolate; }
+.job-aura::before {
+  content: ""; position: absolute; inset: 0 -100% 0 0; z-index: -1;
+  background: linear-gradient(110deg, var(--aura-a) 0%, var(--aura-b) 25%, var(--aura-a) 50%, var(--aura-b) 75%, var(--aura-a) 100%);
+  animation: job-aura-flow 9s linear infinite;
+}
+.job-aura::after {
+  content: ""; position: absolute; top: 0; bottom: 0; left: -60%; width: 45%; z-index: -1;
+  background: linear-gradient(100deg, transparent, rgba(255,255,255,0.28), transparent);
+  transform: translateX(0) skewX(-12deg); opacity: 0;
+}
+@keyframes job-aura-flow { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@keyframes job-aura-sheen { from { transform: translateX(0) skewX(-12deg); opacity: 1; } to { transform: translateX(420%) skewX(-12deg); opacity: 0; } }
+@media (hover: hover) {
+  .group:hover .job-aura::before { animation-duration: 3s; }
+  .group:hover .job-aura::after { animation: job-aura-sheen 0.9s ease-out; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .job-aura::before, .job-aura::after { animation: none !important; }
+}
+
+/* "Ne arıyorsun?" sağ paneli: görsel onaylanana kadar ücretsiz CSS sanatı — meslek renkleri tek ışıkta buluşur. */
+.need-art {
+  background:
+    radial-gradient(40% 35% at 30% 30%, rgba(124,58,237,0.75), transparent 70%),
+    radial-gradient(35% 30% at 70% 35%, rgba(8,145,178,0.7), transparent 70%),
+    radial-gradient(38% 32% at 40% 70%, rgba(192,38,211,0.6), transparent 70%),
+    radial-gradient(30% 28% at 72% 72%, rgba(217,119,6,0.65), transparent 70%),
+    radial-gradient(25% 22% at 50% 50%, rgba(37,99,235,0.9), transparent 70%);
+  filter: blur(18px) saturate(1.2);
+  transform: scale(1.15);
+  animation: need-art-drift 18s ease-in-out infinite alternate;
+}
+@keyframes need-art-drift { from { transform: scale(1.15) rotate(0deg); } to { transform: scale(1.3) rotate(8deg); } }
+@media (prefers-reduced-motion: reduce) { .need-art { animation: none; } }
+
+/* Ana sayfa bento (2026-10-17, Freelancer kalıbı; bkz. components/HomeBento.jsx). */
+.bento { display: grid; grid-template-columns: 2fr 1fr 1fr; grid-template-rows: 240px 240px; gap: 14px; }
+.bento-big, .bento-tile { position: relative; border-radius: 14px; overflow: hidden; background: #15161B; text-align: left; cursor: pointer; display: block; padding: 0; border: 0; }
+.bento-big-cell { grid-row: 1 / 3; position: relative; }
+.bento-big { width: 100%; height: 100%; }
+/* Video durdur/oynat (WCAG 2.2.2) — büyük kutucuğun dışında ayrı düğme, sağ üst köşe */
+.bento-pause { position: absolute; top: 10px; right: 10px; z-index: 6; width: 44px; height: 44px; border-radius: 9999px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.55); color: #fff; border: 1px solid rgba(255,255,255,.25); }
+.bento-pause:hover { background: rgba(0,0,0,.75); }
+.bento-frame { position: absolute; inset: 0; background-size: cover; background-position: center; opacity: 0; transition: opacity .35s ease; filter: saturate(.85) brightness(.5); }
+.bento-frame.on { opacity: 1; }
+.bento-big::before { content: ""; position: absolute; inset: 0; z-index: 2; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(0,0,0,.2) 0 1px, transparent 1px 3px); }
+.bento-headline { position: absolute; inset: 0; z-index: 3; display: flex; align-items: center; justify-content: center; text-align: center; padding: 0 28px;
+  text-transform: uppercase; letter-spacing: .01em; font-size: clamp(48px, 7.2vw, 116px); line-height: .88;
+  /* LED/ekran dokusu: harflerin içinde yatay tarama çizgileri + mavi ışıma (Freelancer'daki büyük başlık gibi) */
+  color: transparent; background: repeating-linear-gradient(180deg, #A9D6FF 0 2px, #4F9BFF 2px 4px); -webkit-background-clip: text; background-clip: text;
+  filter: drop-shadow(0 0 5px rgba(96,165,250,.9)) drop-shadow(0 0 20px rgba(37,99,235,.65)) drop-shadow(0 0 44px rgba(37,99,235,.45)); }
+.bento-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: saturate(.85) brightness(.55); }
+.bento-bar { position: absolute; left: 0; right: 0; bottom: 0; z-index: 4; background: #fff; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px; transform: translateY(100%); transition: transform .35s ease; }
+.bento-bar-text { font-size: 14px; color: #0F1115; }
+.bento-btn { display: inline-flex; align-items: center; gap: 4px; color: #fff; font-weight: 800; font-size: 13px; padding: 8px 13px; border-radius: 8px; white-space: nowrap; }
+.bento-media { position: absolute; inset: 0; transition: bottom .35s ease; overflow: hidden; }
+.bento-media img, .bento-noimg { width: 100%; height: 100%; object-fit: cover; display: block; transition: filter .35s ease, transform .6s ease; }
+.bento-noimg { background: linear-gradient(135deg, #1F2028, #2A2B33); }
+.bento-tint { position: absolute; inset: 0; background: var(--tint); mix-blend-mode: color; opacity: 0; transition: opacity .35s ease; }
+.bento-media::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 40%, rgba(0,0,0,.6)); opacity: 0; transition: opacity .35s; }
+.bento-title { position: absolute; left: 16px; right: 16px; bottom: 14px; z-index: 2; color: #fff; text-transform: uppercase; letter-spacing: .01em; font-size: clamp(22px, 2.5vw, 36px); line-height: .92; overflow-wrap: anywhere;
+  opacity: 0; transform: translateY(8px); transition: opacity .3s ease, transform .3s ease; text-shadow: 0 2px 12px rgba(0,0,0,.35); }
+.bento-panel { position: absolute; left: 0; right: 0; bottom: 0; z-index: 3; background: #fff; padding: 12px 16px 14px; transform: translateY(100%); transition: transform .35s ease; }
+.bento-panel-text { display: block; font-size: 13px; color: #0F1115; line-height: 1.35; margin-bottom: 8px; }
+@media (hover: hover) {
+  .bento-big:hover .bento-bar, .bento-big:focus-visible .bento-bar { transform: none; }
+  .bento-tile:hover .bento-media, .bento-tile:focus-visible .bento-media { bottom: 92px; }
+  .bento-tile:hover .bento-media img, .bento-tile:focus-visible .bento-media img { filter: grayscale(1) contrast(1.1) brightness(1.05); transform: scale(1.04); }
+  .bento-tile:hover .bento-tint, .bento-tile:focus-visible .bento-tint,
+  .bento-tile:hover .bento-media::after, .bento-tile:focus-visible .bento-media::after { opacity: 1; }
+  .bento-tile:hover .bento-title, .bento-tile:focus-visible .bento-title { opacity: 1; transform: none; }
+  .bento-tile:hover .bento-panel, .bento-tile:focus-visible .bento-panel { transform: none; }
+}
+/* Dokunmatik: başlık hep görünür, renk ve panel yok (dokununca doğrudan açılır). */
+@media (hover: none) {
+  .bento-title { opacity: 1; transform: none; }
+  .bento-media::after { opacity: 1; }
+  .bento-bar { transform: none; }
+}
+@media (max-width: 767px) {
+  .bento { grid-template-columns: 1fr 1fr; grid-template-rows: 300px 170px 170px; gap: 10px; }
+  .bento-big-cell { grid-column: 1 / 3; grid-row: auto; }
+  .bento-title { font-size: 22px; left: 12px; right: 12px; bottom: 10px; }
+  .bento-bar { padding: 10px 12px; }
+  .bento-bar-text { font-size: 12px; }
+}
+@media (prefers-reduced-motion: reduce) { .bento-frame { transition: none; } }
+
+/* "Ne arıyorsun?" neon duvarı: yavaş, yumuşak titreme (sert yanıp sönme yok, saniyede birden az). */
+.neon-flicker { animation: neon-flicker 6s ease-in-out infinite; }
+@keyframes neon-flicker { 0%, 100% { opacity: 1; } 46% { opacity: 1; } 48% { opacity: .55; } 50% { opacity: .95; } 52% { opacity: .7; } 54% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .neon-flicker { animation: none; } }
+
+
+

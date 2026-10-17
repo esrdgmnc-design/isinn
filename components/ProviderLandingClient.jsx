@@ -32,7 +32,7 @@ export default function ProviderLandingClient({ audienceSlug }) {
         href="/"
         onClick={() => trackEvent("provider_landing_cta_click", { audience: audienceSlug, cta: "ilanlara_bak" })}
         className="inline-block text-center text-sm font-bold px-7 py-3.5 rounded-full border"
-        style={{ borderColor: "#D9D0BA", color: "#1B2B24" }}
+        style={{ borderColor: "#E4E4E7", color: "#0F1115" }}
       >
         Açık İş İlanlarını İnceleyin
       </a>

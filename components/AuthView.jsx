@@ -186,16 +186,16 @@ export default function AuthView({ onAuthenticated, onCancel }) {
             placeholder={t("auth.resetEmailPlaceholder")}
             required
             className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none mb-4"
-            style={{ borderColor: "#E5E7EB", background: "#F9FAFB", color: "#0F1115" }}
+            style={{ borderColor: "#E4E4E7", background: "#F9FAFB", color: "#0F1115" }}
           />
           {error && (
-            <p className="text-xs mb-4 px-3 py-2 rounded-lg" style={{ background: "#FEF2F2", color: "#9C4A3C" }}>{error}</p>
+            <p className="text-xs mb-4 px-3 py-2 rounded-lg" style={{ background: "#FEF2F2", color: "#DC2626" }}>{error}</p>
           )}
           <button
             type="submit"
             disabled={loading}
             className="w-full py-3 rounded-full text-sm font-bold text-white mb-4"
-            style={{ background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)", opacity: loading ? 0.6 : 1 }}
+            style={{ background: "#2563EB", opacity: loading ? 0.6 : 1 }}
           >
             {loading ? t("auth.resetSubmitLoading") : t("auth.resetSubmit")}
           </button>
@@ -261,7 +261,7 @@ export default function AuthView({ onAuthenticated, onCancel }) {
             onChange={(e) => setFullName(e.target.value)}
             placeholder={t("auth.fullNamePlaceholder")}
             className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none mb-3"
-            style={{ borderColor: "#E5E7EB", background: "#F9FAFB", color: "#0F1115" }}
+            style={{ borderColor: "#E4E4E7", background: "#F9FAFB", color: "#0F1115" }}
           />
         )}
         <input
@@ -271,7 +271,7 @@ export default function AuthView({ onAuthenticated, onCancel }) {
           placeholder={t("auth.emailPlaceholder")}
           required
           className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none mb-3"
-          style={{ borderColor: "#E5E7EB", background: "#F9FAFB", color: "#0F1115" }}
+          style={{ borderColor: "#E4E4E7", background: "#F9FAFB", color: "#0F1115" }}
         />
         <input
           type="password"
@@ -281,7 +281,7 @@ export default function AuthView({ onAuthenticated, onCancel }) {
           required
           minLength={6}
           className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none mb-2"
-          style={{ borderColor: "#E5E7EB", background: "#F9FAFB", color: "#0F1115" }}
+          style={{ borderColor: "#E4E4E7", background: "#F9FAFB", color: "#0F1115" }}
         />
         {mode === "login" && (
           <div className="flex justify-end mb-4">
@@ -315,7 +315,7 @@ export default function AuthView({ onAuthenticated, onCancel }) {
         )}
 
         {error && (
-          <p className="text-xs mb-4 px-3 py-2 rounded-lg" style={{ background: "#FEF2F2", color: "#9C4A3C" }}>
+          <p className="text-xs mb-4 px-3 py-2 rounded-lg" style={{ background: "#FEF2F2", color: "#DC2626" }}>
             {error}
           </p>
         )}
@@ -324,7 +324,7 @@ export default function AuthView({ onAuthenticated, onCancel }) {
           type="submit"
           disabled={loading || (mode === "signup" && !agreedToTerms)}
           className="w-full py-3 rounded-full text-sm font-bold text-white mb-4"
-          style={{ background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)", opacity: loading || (mode === "signup" && !agreedToTerms) ? 0.6 : 1 }}
+          style={{ background: "#2563EB", opacity: loading || (mode === "signup" && !agreedToTerms) ? 0.6 : 1 }}
         >
           {loading ? t("auth.submitLoading") : mode === "login" ? t("auth.submitLogin") : t("auth.submitSignup")}
         </button>
@@ -340,9 +340,9 @@ export default function AuthView({ onAuthenticated, onCancel }) {
 
         {!storeApp && (<>
         <div className="flex items-center gap-3 mb-5">
-          <div className="flex-1 h-px" style={{ background: "#E5E7EB" }} />
+          <div className="flex-1 h-px" style={{ background: "#E4E4E7" }} />
           <span className="text-[11px] font-medium" style={{ color: "#9CA3AF" }}>{t("auth.or")}</span>
-          <div className="flex-1 h-px" style={{ background: "#E5E7EB" }} />
+          <div className="flex-1 h-px" style={{ background: "#E4E4E7" }} />
         </div>
 
         <button
@@ -350,7 +350,7 @@ export default function AuthView({ onAuthenticated, onCancel }) {
           onClick={handleGoogleAuth}
           disabled={loading}
           className="w-full py-3 rounded-full text-sm font-bold flex items-center justify-center gap-2.5 border"
-          style={{ borderColor: "#E5E7EB", color: "#1F2937", opacity: loading ? 0.6 : 1 }}
+          style={{ borderColor: "#E4E4E7", color: "#1F2937", opacity: loading ? 0.6 : 1 }}
         >
           <svg width="18" height="18" viewBox="0 0 18 18">
             <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.56 2.68-3.87 2.68-6.62z" />

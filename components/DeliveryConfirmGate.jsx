@@ -101,7 +101,7 @@ export default function DeliveryConfirmGate({ userId }) {
             <h2 id="delivery-gate-title" className="text-lg font-black mb-2 pr-8" style={{ color: "#0F1115" }}>{t(role === "provider" ? "deliveryGate.providerTitle" : "deliveryGate.clientTitle")}</h2>
             <p id="delivery-gate-body" className="text-sm leading-relaxed mb-1" style={{ color: "#374151" }}>{t(role === "provider" ? "deliveryGate.providerBody" : "deliveryGate.clientBody", { title })}</p>
             <p className="text-xs leading-relaxed mb-4" style={{ color: "#6B7280" }}>{t("deliveryGate.honestNote")}</p>
-            {error && <p role="alert" className="text-xs mb-3" style={{ color: "#9C4A3C" }}>{error}</p>}
+            {error && <p role="alert" className="text-xs mb-3" style={{ color: "#DC2626" }}>{error}</p>}
             <div className="flex flex-col gap-2">
               <button onClick={() => run("confirm_job_delivery", "delivery_gate_confirmed")} disabled={busy} className="w-full py-3 rounded-full text-sm font-bold text-white flex items-center justify-center gap-2" style={{ background: "#2563EB", opacity: busy ? 0.7 : 1 }}>
                 {busy && <Loader2 size={14} className="animate-spin" />}
@@ -117,9 +117,9 @@ export default function DeliveryConfirmGate({ userId }) {
           <>
             <h2 id="delivery-gate-title" className="text-lg font-black mb-2 pr-8" style={{ color: "#0F1115" }}>{t("deliveryGate.sureTitle")}</h2>
             <p id="delivery-gate-body" className="text-sm leading-relaxed mb-4" style={{ color: "#374151" }}>{t("deliveryGate.sureBody", { title })}</p>
-            {error && <p role="alert" className="text-xs mb-3" style={{ color: "#9C4A3C" }}>{error}</p>}
+            {error && <p role="alert" className="text-xs mb-3" style={{ color: "#DC2626" }}>{error}</p>}
             <div className="flex flex-col gap-2">
-              <button onClick={() => run("dispute_job_delivery", "delivery_gate_disputed")} disabled={busy} className="w-full py-3 rounded-full text-sm font-bold text-white flex items-center justify-center gap-2" style={{ background: "#9C4A3C", opacity: busy ? 0.7 : 1 }}>
+              <button onClick={() => run("dispute_job_delivery", "delivery_gate_disputed")} disabled={busy} className="w-full py-3 rounded-full text-sm font-bold text-white flex items-center justify-center gap-2" style={{ background: "#DC2626", opacity: busy ? 0.7 : 1 }}>
                 {busy && <Loader2 size={14} className="animate-spin" />}
                 {t("deliveryGate.sureYes")}
               </button>

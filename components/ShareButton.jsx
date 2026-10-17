@@ -32,7 +32,7 @@ export default function ShareButton({ url, title }) {
       type="button"
       onClick={handleShare}
       className="inline-flex items-center gap-1.5 text-sm font-bold px-4 py-3 rounded-full"
-      style={{ border: "1px solid #D9D0BA", color: "#0F1115" }}
+      style={{ border: "1px solid #E4E4E7", color: "#0F1115" }}
     >
       {copied ? "Link kopyalandı ✓" : "Paylaş"}
     </button>

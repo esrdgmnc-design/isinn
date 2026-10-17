@@ -58,7 +58,7 @@ export default function ResetPasswordPage() {
         <div style={{ maxWidth: 380, width: "100%", textAlign: "center" }}>
           <h1 style={{ fontFamily: "sans-serif", fontWeight: 900, fontSize: 22, color: "#0F1115", margin: "0 0 10px" }}>Şifren güncellendi</h1>
           <p style={{ color: "#6B7280", fontSize: 14, lineHeight: 1.6, margin: "0 0 22px" }}>Artık yeni şifrenle giriş yapabilirsin.</p>
-          <a href="/" style={{ display: "inline-block", background: "linear-gradient(135deg,#2563EB,#1D4ED8)", color: "#fff", fontWeight: 700, fontSize: 14, padding: "12px 28px", borderRadius: 999, textDecoration: "none" }}>
+          <a href="/" style={{ display: "inline-block", background: "#2563EB", color: "#fff", fontWeight: 700, fontSize: 14, padding: "12px 28px", borderRadius: 999, textDecoration: "none" }}>
             İşinn'e dön
           </a>
         </div>
@@ -74,7 +74,7 @@ export default function ResetPasswordPage() {
           <p style={{ color: "#6B7280", fontSize: 14, lineHeight: 1.6, margin: "0 0 22px" }}>
             Bu bağlantı süresi dolmuş ya da daha önce kullanılmış olabilir. Girişten "Şifremi unuttum" diyerek yeni bir bağlantı isteyebilirsin.
           </p>
-          <a href="/" style={{ display: "inline-block", background: "linear-gradient(135deg,#2563EB,#1D4ED8)", color: "#fff", fontWeight: 700, fontSize: 14, padding: "12px 28px", borderRadius: 999, textDecoration: "none" }}>
+          <a href="/" style={{ display: "inline-block", background: "#2563EB", color: "#fff", fontWeight: 700, fontSize: 14, padding: "12px 28px", borderRadius: 999, textDecoration: "none" }}>
             İşinn'e dön
           </a>
         </div>
@@ -96,7 +96,7 @@ export default function ResetPasswordPage() {
           placeholder="Yeni şifre (en az 6 karakter)"
           required
           minLength={6}
-          style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid #E5E7EB", background: "#F9FAFB", color: "#0F1115", fontSize: 14, marginBottom: 12, outline: "none", boxSizing: "border-box" }}
+          style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid #E4E4E7", background: "#F9FAFB", color: "#0F1115", fontSize: 14, marginBottom: 12, outline: "none", boxSizing: "border-box" }}
         />
         <input
           type="password"
@@ -105,15 +105,15 @@ export default function ResetPasswordPage() {
           placeholder="Yeni şifre (tekrar)"
           required
           minLength={6}
-          style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid #E5E7EB", background: "#F9FAFB", color: "#0F1115", fontSize: 14, marginBottom: 16, outline: "none", boxSizing: "border-box" }}
+          style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid #E4E4E7", background: "#F9FAFB", color: "#0F1115", fontSize: 14, marginBottom: 16, outline: "none", boxSizing: "border-box" }}
         />
         {error && (
-          <p style={{ fontSize: 12, marginBottom: 16, padding: "8px 12px", borderRadius: 8, background: "#FEF2F2", color: "#9C4A3C" }}>{error}</p>
+          <p style={{ fontSize: 12, marginBottom: 16, padding: "8px 12px", borderRadius: 8, background: "#FEF2F2", color: "#DC2626" }}>{error}</p>
         )}
         <button
           type="submit"
           disabled={loading}
-          style={{ width: "100%", padding: "12px 0", borderRadius: 999, border: "none", fontSize: 14, fontWeight: 700, color: "#fff", cursor: "pointer", background: "linear-gradient(135deg,#2563EB,#1D4ED8)", opacity: loading ? 0.6 : 1 }}
+          style={{ width: "100%", padding: "12px 0", borderRadius: 999, border: "none", fontSize: 14, fontWeight: 700, color: "#fff", cursor: "pointer", background: "#2563EB", opacity: loading ? 0.6 : 1 }}
         >
           {loading ? "Kaydediliyor..." : "Şifreyi Güncelle"}
         </button>

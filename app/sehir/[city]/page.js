@@ -111,7 +111,7 @@ export default async function CityPage({ params }) {
         </p>
 
         {services.length === 0 ? (
-          <div className="rounded-2xl p-8 text-center" style={{ border: "1px solid #F0F0F0" }}>
+          <div className="rounded-2xl p-8 text-center" style={{ border: "1px solid #E4E4E7" }}>
             <p className="text-sm mb-4" style={{ color: "#6B7280" }}>{meta.name} bölgesinde henüz aktif bir vitrin yok — ilk sen ol.</p>
             <Link href="/?view=createListing" className="inline-block text-sm font-bold px-6 py-3 rounded-full text-white" style={{ background: "#2563EB" }}>
               Hizmet Ekle
@@ -123,7 +123,7 @@ export default async function CityPage({ params }) {
               const provider = getProviderName(row);
               const img = (Array.isArray(row.images) && row.images[0]) || FALLBACK_IMG;
               return (
-                <div key={row.id} className="rounded-2xl overflow-hidden" style={{ border: "1px solid #F0F0F0" }}>
+                <div key={row.id} className="rounded-2xl overflow-hidden" style={{ border: "1px solid #E4E4E7" }}>
                   <Link href={`/vitrin/${row.id}`} className="block relative w-full h-40">
                     <Image src={img} alt={row.title} fill priority={cardIdx < 2} sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
                   </Link>
@@ -151,7 +151,7 @@ export default async function CityPage({ params }) {
           const cats = SEO_CATEGORIES.filter((c) => c.slug !== "diger").map((c) => ({ ...c, n: real.filter((r) => r.categories?.slug === c.slug).length })).filter((c) => c.n >= MIN_COMBO_LISTINGS);
           if (cats.length === 0) return null;
           return (
-            <div className="mt-10 pt-8 border-t" style={{ borderColor: "#F0F0F0" }}>
+            <div className="mt-10 pt-8 border-t" style={{ borderColor: "#E4E4E7" }}>
               <h2 className="font-sans text-lg font-black mb-3" style={{ color: "#0F1115" }}>{meta.name} için kategoriler</h2>
               <div className="flex flex-wrap gap-2">
                 {cats.map((c) => (
@@ -163,7 +163,7 @@ export default async function CityPage({ params }) {
         })()}
 
         {cityFaq && (
-          <div className="mt-10 pt-8 border-t" style={{ borderColor: "#F0F0F0" }}>
+          <div className="mt-10 pt-8 border-t" style={{ borderColor: "#E4E4E7" }}>
             <h2 className="font-sans text-lg font-black mb-4" style={{ color: "#0F1115" }}>Sıkça Sorulan Sorular</h2>
             <div className="space-y-4">
               {cityFaq.map((f, i) => (

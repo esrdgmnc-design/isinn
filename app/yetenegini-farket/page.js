@@ -48,7 +48,7 @@ const FAQ = [
   },
   {
     q: "Aracı kullanmak ücretli mi?",
-    a: "Aracı denemek için üyelik ya da giriş gerekmez. Vitrin yayınlamak için hesap açılır. İşinn kazandığın işten komisyon almaz; hizmet verenler sabit üyelik öder ve üyelik 20 Aralık 2026'ya kadar ücretsizdir.",
+    a: "Aracı denemek için üyelik ya da giriş gerekmez. Vitrin yayınlamak için hesap açılır. İşinn kazandığın işten komisyon almaz; hizmet verenler sabit üyelik öder ve üyelik 1 Ocak 2027'ye kadar ücretsizdir.",
   },
   {
     q: "Hiçbir yeteneğim yok, ne yapabilirim?",
@@ -144,7 +144,7 @@ export default function YeteneginiFarketPage() {
           ].map((c) => (
             <div key={c.cat} className="rounded-2xl p-4" style={{ border: "1px solid #F0F0F0" }}>
               <p className="text-sm font-black mb-1" style={{ color: "#0F1115" }}>{c.cat}</p>
-              <p className="text-sm font-bold mb-1.5" style={{ color: "#16321F" }}>İlk teklifin: {c.offer}</p>
+              <p className="text-sm font-bold mb-1.5" style={{ color: "#0F1115" }}>İlk teklifin: {c.offer}</p>
               {c.words && <p className="text-xs mb-1.5 italic" style={{ color: "#374151" }}>Senin sözlerin: “{c.words}”</p>}
               <p className="text-xs mb-2" style={{ color: "#6B7280" }}>{c.reason}</p>
               <p className="text-xs rounded-xl px-3 py-2" style={{ background: "#F0FDF4", color: "#166534" }}><b>Bu hafta ilk adım:</b> {c.step}</p>
