@@ -1621,7 +1621,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
           bölümlerle aynı hizada (max-w-6xl + px-5); Yeteneğini Keşfet ilk ekranda görünsün diye hero kompakt.
           Kurucu "genel hava çok sade" dedi; koyu bant denendi ("çok koyu oldu"). Duman efekti de denendi, minimalist
           sadelikte kaldırıldı: düz beyaz zemin. */}
-      <div className="pb-14 sm:pb-16" style={{ background: "#FFFFFF" }}>
+      <div style={{ background: "#FFFFFF" }}>
       {/* Hero (2026-10-17): tam beyaz zemin, siyah yazı, ince siyah kenarlıklar; mavi yalnızca ana düğmede (logodaki nokta gibi). */}
       <section className="max-w-6xl mx-auto px-5 pt-3 sm:pt-5 pb-1 relative">
         {/* Sağdaki yelpaze deste iki yana ~50px taşar (döndürülmüş yan kartlar); lg:pr-14 sağ kartı içerik hizasında tutar. */}
@@ -1825,7 +1825,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
       {/* Yeteneğini Keşfet (yapay zekânın bel kemiği; kurucu kararıyla ana sayfada kalır) — hero'nun hemen altında. */}
       <TalentDiscoveryBanner onOpen={() => onNav("talentDiscovery")} />
       {/* Güven şeridi (2026-10-17: kurucu isteğiyle hero'dan Yeteneğini Keşfet kartının altına taşındı, ortalı tek satır). Ücretsiz bilgisi yalnızca ücretsiz dönemde ve gerçek bitiş tarihiyle (lib/freePeriod.js); iOS'ta üyelik/fiyat ima etmemek için gizli. */}
-      <div className="max-w-6xl mx-auto px-5 mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-xs font-medium" style={{ color: "#6B7280" }}>
+      <div className="max-w-6xl mx-auto px-5 mt-3 flex flex-wrap items-center gap-x-5 gap-y-1 text-xs font-medium sm:pl-11" style={{ color: "#6B7280" }}>
         <span>✓ {t("home.trustNoCommission")}</span>
         {!storeApp && isFreePeriod() && <span>✓ {t("home.trustFree", { date: new Date(FREE_PERIOD_UNTIL_ISO).toLocaleDateString(language === "en" ? "en-GB" : "tr-TR", { day: "numeric", month: "long", year: "numeric" }) })}</span>}
         <span>✓ {t("home.trustPhonePrivate")}</span>
@@ -1902,7 +1902,13 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
           Yeteneğini Keşfet kartı gibi ortak sütunda (max-w-6xl + px-5) yuvarlak köşeli tek koyu kart. */}
       <div className="max-w-6xl mx-auto px-5 mt-14 sm:mt-16">
       <div className="rounded-3xl overflow-hidden" style={{ background: "#0B0B0F" }}>
-      <HomeBento onOpen={(example) => { try { if (example) sessionStorage.setItem(NEED_TEXT_KEY, example); } catch {} onNav("needMatch"); }} />
+      {/* "Ne arıyorsun?" AI eşleştirmesi KVKK sözleşmesine kadar kapalı (NEXT_PUBLIC_NEED_MATCH_ENABLED yoksa): kutucuklar
+          üzerlerindeki "Talep oluştur" yazısına uygun olarak doğrudan talep formunu açar — kapalı özelliğe hata sayfası göstermez. */}
+      <HomeBento onOpen={(example) => {
+        if (process.env.NEXT_PUBLIC_NEED_MATCH_ENABLED !== "1") { onNav("post"); return; }
+        try { if (example) sessionStorage.setItem(NEED_TEXT_KEY, example); } catch {}
+        onNav("needMatch");
+      }} />
 
       {/* "Nasıl çalışıyoruz" (2026-10-17): kenardan kenara tam genişlik, üstteki bento bandıyla aynı zemin — tek akış. */}
       <section className="w-full">

@@ -33,6 +33,12 @@ export default function NeedMatchView({ realListings, onSelectListing, onBack, o
     try {
       const res = await aiFetch("/api/need-match", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: q }) });
       const data = await res.json().catch(() => ({}));
+      // Özellik kapalıysa (503 disabled) hata yerine yazılanla talep formuna geç.
+      if (res.status === 503 && data.error === "disabled") {
+        try { sessionStorage.setItem(NEED_PREFILL_KEY, JSON.stringify({ title: q.split(/[.!?\n]/)[0].slice(0, 80), desc: q.slice(0, 500), categorySlug: "", province: "", remote: false, ts: Date.now() })); } catch {}
+        onPostRequest();
+        return;
+      }
       if (!res.ok && !data.kind) {
         setState({ status: "done", kind: res.status === 429 ? "rate" : "busy", results: [], prefill: null });
         return;
