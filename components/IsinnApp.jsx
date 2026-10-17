@@ -1676,7 +1676,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
               </button>
             </div>
           </form>
-          <div className="mt-3 max-w-lg flex items-center gap-2 overflow-x-auto sm:overflow-visible sm:flex-wrap lg:hidden -mx-5 px-5 sm:mx-0 sm:px-0 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="hidden mt-3 max-w-lg items-center gap-2 overflow-x-auto sm:overflow-visible sm:flex-wrap -mx-5 px-5 sm:mx-0 sm:px-0 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {(Array.isArray(popularSearches) ? popularSearches : []).map((item) => {
               // "etiket|aranacak kök": çekimli kelimelerde (danışmanlık → danışman) arama kökü ile sonuç bulunur
               const [w, term] = String(item).split("|");
