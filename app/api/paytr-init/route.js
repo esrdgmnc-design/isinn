@@ -39,9 +39,9 @@ export async function POST(request) {
   // Vitrin Paketi, Öne Çıkarma vb., addon_products) — ikisi de aynı akıştan
   // geçiyor, sadece fiyatı hangi tablodan okuduğumuz değişiyor. Addon'lar
   // şu an sadece aylık (addon_products'ta price_yearly yok).
-  // 90 günlük herkese ücretsiz dönemde plan/paket satışı kapalı (bkz. lib/freePeriod.js).
+  // Ücretsiz lansman döneminde plan/paket satışı kapalı (bkz. lib/freePeriod.js).
   if (isFreePeriod()) {
-    return Response.json({ ok: false, message: "Şu an herkese 90 gün ücretsiz dönemdeyiz, plan satın almana gerek yok." }, { status: 403 });
+    return Response.json({ ok: false, message: "Şu an lansman sürecindeyiz, plan satın almana gerek yok." }, { status: 403 });
   }
 
   const { planSlug, addonSlug, billingCycle, serviceId } = await request.json();

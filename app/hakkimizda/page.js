@@ -25,7 +25,7 @@ const DOES = [
   "Becerini fark etmene yardım eder: Yeteneğini Farket aracı yazdıklarından 1-2 hizmet fikri ve hazır bir vitrin taslağı önerir.",
   "Hizmetini fotoğraflı bir vitrinde sergilemeni sağlar; şirket kurman gerekmez.",
   "Hizmet arayanların vitrinleri kategori, şehir ve konuma göre bulmasını ve doğrudan iletişime geçmesini sağlar.",
-  "Hizmet arayanlar için ücretsizdir; hizmet verenlerden sabit üyelik ücreti alır (20 Aralık 2026'ya kadar ücretsiz).",
+  "Hizmet arayanlar için ücretsizdir; hizmet verenlerden sabit üyelik ücreti alır (1 Ocak 2027'ye kadar ücretsiz).",
 ];
 const DOESNT = [
   "Komisyon almaz: kazandığın işten İşinn'e pay vermezsin.",
@@ -37,7 +37,7 @@ const DOESNT = [
 const FAQ = [
   { q: "İşinn nedir?", a: "İşinn, insanların becerilerini fark edip hizmet vitrinine dönüştürmesine ve Türkiye'de yerel ya da uzaktan hizmet arayanlarla buluşmasına yardım eden bir hizmet keşif platformudur." },
   { q: "İşinn güvenilir mi?", a: "İşinn, Code G Teknoloji ve Ticaret Limited Şirketi'nin markasıdır ve şirket bilgileri bu sayfada yer alır. Hizmet verenlerin telefon numarası SMS ile doğrulanır; bu bir kimlik ya da kalite doğrulaması değildir. İşinn ödemeye aracılık etmediği için karar vermeden önce vitrini ve değerlendirmeleri incelemeni, ücret ve iptal koşullarını yazılı netleştirmeni öneririz." },
-  { q: "İşinn komisyon alıyor mu?", a: "Hayır. Hizmet verenler sabit üyelik ücreti öder, kazandıkları işten komisyon ödemez. Üyelik 20 Aralık 2026'ya kadar ücretsizdir." },
+  { q: "İşinn komisyon alıyor mu?", a: "Hayır. Hizmet verenler sabit üyelik ücreti öder, kazandıkları işten komisyon ödemez. Üyelik 1 Ocak 2027'ye kadar ücretsizdir." },
 ];
 
 export default function HakkimizdaPage() {

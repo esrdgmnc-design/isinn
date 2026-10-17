@@ -28,7 +28,7 @@ export async function GET() {
   const lines = [];
   lines.push("# İşinn — Tam İçerik (AI Arama Motorları İçin)");
   lines.push("");
-  lines.push("> İşinn, becerini fark edip hizmet vitrinine dönüştürmene ve Türkiye'de yerel ya da uzaktan hizmet sağlayıcıları (temizlikçi, usta, özel ders öğretmeni, bakıcı, tasarımcı, yazılımcı ve çok sayıda başka kategori) bulmana yardım eden, sıfır komisyonlu bir hizmet keşif platformudur. Hizmet verenler sabit abonelik öder (20 Aralık 2026'ya kadar ücretsiz), kazandıkları işten platforma ayrıca komisyon vermez. İşinn CODE G LTD (Code G Teknoloji ve Ticaret Limited Şirketi) markasıdır, İstanbul/Türkiye merkezlidir.");
+  lines.push("> İşinn, becerini fark edip hizmet vitrinine dönüştürmene ve Türkiye'de yerel ya da uzaktan hizmet sağlayıcıları (temizlikçi, usta, özel ders öğretmeni, bakıcı, tasarımcı, yazılımcı ve çok sayıda başka kategori) bulmana yardım eden, sıfır komisyonlu bir hizmet keşif platformudur. Hizmet verenler sabit abonelik öder (1 Ocak 2027'ye kadar ücretsiz), kazandıkları işten platforma ayrıca komisyon vermez. İşinn CODE G LTD (Code G Teknoloji ve Ticaret Limited Şirketi) markasıdır, İstanbul/Türkiye merkezlidir.");
   lines.push("");
   lines.push("Kategori sayfaları: " + BASE_URL + "/kategori/<slug>, şehir sayfaları: " + BASE_URL + "/sehir/<slug>, vitrin (ilan) sayfaları: " + BASE_URL + "/vitrin/<id>. Güncel liste için " + BASE_URL + "/sitemap.xml.");
   lines.push("");

@@ -232,7 +232,7 @@ export async function GET(request) {
   // günkü cron çalışmasında tekrar denenip (kartla) gerçekten reddedilirse
   // o zaman kapanır. En kötü ihtimalle bu bir günlük bir gecikme demek,
   // erken/sahte bir kapatmadan daha güvenli bir taraf tutma.
-  // 90 günlük herkese ücretsiz dönemde tahsilat ve ödeme kaynaklı kapatma yok
+  // Ücretsiz lansman döneminde tahsilat ve ödeme kaynaklı kapatma yok
   // (aboneliklerin bitişi zaten dönem sonuna çekildi). Kapasite taraması ve uyarılar sürer.
   const freePeriod = isFreePeriod();
   const { data: dueSubs, error } = await admin

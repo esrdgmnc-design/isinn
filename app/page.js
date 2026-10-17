@@ -10,7 +10,7 @@ import { MIN_CATEGORY_LISTINGS } from "../lib/seoFormat";
 // ayrı sayfa sayılmasın) ve SSS şeması yalnızca burada.
 export const metadata = {
   title: "İşinn | Yerel Hizmet Keşif Platformu, Komisyonsuz Vitrin",
-  description: "Yakınındaki hizmet verenleri keşfet, becerinden hizmet vitrini aç. İşinn komisyon almaz, ürün satmaz; hizmet verenler için 20 Aralık 2026'ya kadar ücretsiz.",
+  description: "Yakınındaki hizmet verenleri keşfet, becerinden hizmet vitrini aç. İşinn komisyon almaz, ürün satmaz; hizmet verenler için 1 Ocak 2027'ye kadar ücretsiz.",
   alternates: { canonical: "/" },
 };
 

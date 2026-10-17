@@ -12,7 +12,7 @@ export async function GET() {
   const lines = [];
   lines.push("# İşinn");
   lines.push("");
-  lines.push("> İşinn, becerini fark edip hizmet vitrinine dönüştürmene ve Türkiye'de yerel ya da uzaktan hizmet sağlayıcıları bulmana yardım eden bir hizmet keşif platformudur. Komisyon almaz, kullanıcılar arasındaki ödemeye aracılık etmez, ürün satışı yapmaz. Hizmet verenler sabit üyelik öder; üyelik 20 Aralık 2026'ya kadar ücretsizdir.");
+  lines.push("> İşinn, becerini fark edip hizmet vitrinine dönüştürmene ve Türkiye'de yerel ya da uzaktan hizmet sağlayıcıları bulmana yardım eden bir hizmet keşif platformudur. Komisyon almaz, kullanıcılar arasındaki ödemeye aracılık etmez, ürün satışı yapmaz. Hizmet verenler sabit üyelik öder; üyelik 1 Ocak 2027'ye kadar ücretsizdir.");
   lines.push("");
   lines.push("İşinn, CODE G LTD (Code G Teknoloji ve Ticaret Limited Şirketi) markasıdır, İstanbul/Türkiye merkezlidir.");
   lines.push("");

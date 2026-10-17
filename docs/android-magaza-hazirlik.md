@@ -27,7 +27,7 @@ Android derlemesi bu bilgisayarda denenmedi (JDK/Android Studio yok); ilk derlem
 8. İlk yüklemeden sonra "App signing key certificate" SHA-256'yı kopyala (herkese açık, gizli değil) → bana ver, `assetlinks.json` hazırlanır (v1.1).
 9. Üretim: kademeli yayın %5-10 ile başla, Android vitals'ı izle.
 
-Karar gerekenler: destek e-postası Play'de herkese açık görünür (hangisi?); iOS ve Android'de geliştirici kimliği tutarlılığı (iOS ve Play ikisi de kişisel hesap); 20 Aralık sonrası Android'de ödeme (Play Faturalandırma ya da ücretsiz kalma).
+Karar gerekenler: destek e-postası Play'de herkese açık görünür (hangisi?); iOS ve Android'de geliştirici kimliği tutarlılığı (iOS ve Play ikisi de kişisel hesap); 1 Ocak sonrası Android'de ödeme (Play Faturalandırma ya da ücretsiz kalma).
 
 ## 3. Mağaza metinleri (Türkçe, yapıştırmaya hazır)
 **Ad (24):** İşinn: İşin Gücün Burada (App Store ile aynı; eski "Uzman Bul, Vitrin Aç" adı artık kullanılmıyor)
@@ -96,7 +96,7 @@ Gizlilik: isinn.com.tr/gizlilik-politikasi
 **Test kanalı (KİŞİSEL hesap):** Kişisel hesaplarda üretime çıkmadan önce kapalı testte en az 12 test kullanıcısı 14 gün kesintisiz kabul etmiş (katılmış) olmalı. Test kullanıcıları Gmail hesabı olan tanıdıklar olabilir. Kesin koşulu ve sayacı Console > Üretim erişimi bölümünde DOĞRULA. Bu yüzden ilk iş kapalı testi başlatmak: yayın tarihi buna bağlı.
 
 ## 5. Bilinen riskler ve ertelenenler
-- **Plan/ödeme (Play Faturalandırma):** Android'de gizli. 20 Aralık 2026 sonrası seçenekler: Play Faturalandırma entegrasyonu (WebView'da zor), Android'de ücretsiz kalma, hukuk danışmanlığı. Aralıktan önce karar ver.
+- **Plan/ödeme (Play Faturalandırma):** Android'de gizli. 1 Ocak 2027 sonrası seçenekler: Play Faturalandırma entegrasyonu (WebView'da zor), Android'de ücretsiz kalma, hukuk danışmanlığı. Aralıktan önce karar ver.
 - **Push (Android):** bu sürümde yok (FCM + google-services.json + sunucu gönderici gerekir). v1.1.
 - **Derin bağlantı / assetlinks.json:** v1.1 (App signing SHA-256 gerekir).
 - **Kenardan kenara (Android 15/16):** üst/alt çubuk boşlukları CSS ile eklendi, gerçek cihazda doğrulanmadı.

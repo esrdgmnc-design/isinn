@@ -19,7 +19,7 @@ export async function POST(request) {
   }
 
   if (isFreePeriod()) {
-    return Response.json({ ok: false, message: "Şu an herkese 90 gün ücretsiz dönemdeyiz, plan satın almana gerek yok." }, { status: 403 });
+    return Response.json({ ok: false, message: "Şu an lansman sürecindeyiz, plan satın almana gerek yok." }, { status: 403 });
   }
 
   const { planSlug, addonSlug, billingCycle } = await request.json();

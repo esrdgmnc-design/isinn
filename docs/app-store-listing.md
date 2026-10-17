@@ -184,7 +184,7 @@ Demo account credentials are provided in the Sign-In Information fields.
 - **Yapay zekâ onayı reddedilirse** vitrine fotoğraf eklenemiyor (fotoğraf denetimi yapay zekâyla yapılıyor). İnceleme
   bunu "temel özellik onaya bağlanmış" (5.1.1) diye sorabilir. Red gelirse fotoğrafları onaysız durumda elle
   denetime düşürmek gerekir.
-- **Ücretsiz dönem bitince (20.12.2026)** vitrin açmak web'den alınan üyeliğe bağlanıyor. O tarihten sonraki
+- **Ücretsiz dönem bitince (1.1.2027)** vitrin açmak web'den alınan üyeliğe bağlanıyor. O tarihten sonraki
   güncellemelerde Apple 3.1.3 kapsamında soru sorabilir; o zamana kadar bir yol belirlemek gerekir.
 - **5.1.1(v) Hesap silme**: Uygulama içinden yapılabiliyor; demo hesapla denenebilir olduğundan emin ol
   (inceleyen kişi demo hesabı silerse yenisini açman gerekir).
