@@ -1574,6 +1574,8 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
   const [featuredIndex, setFeaturedIndex] = useState(0);
   // Kullanıcı karta dokunurken/üzerindeyken/klavye odağındayken döngü durur — yoksa basarken kart değişip yanlış vitrin açılıyordu.
   const [featuredPaused, setFeaturedPaused] = useState(false);
+  // Telefonda parmakla kaydırma (2026-10-17): sola/sağa kaydırınca sonraki/önceki vitrin; kaydırma tıklama sayılmaz.
+  const featuredTouch = useRef({ x: 0, y: 0, swiped: false });
   const pauseFeatured = { onMouseEnter: () => setFeaturedPaused(true), onMouseLeave: () => setFeaturedPaused(false), onTouchStart: () => setFeaturedPaused(true), onFocus: () => setFeaturedPaused(true), onBlur: () => setFeaturedPaused(false) };
   // Gerçek ilanlar da en az bir değerlendirmeyle 4.5+ puana ulaşınca "Öne Çıkan"a
   // girebiliyor — sabit demo listesine hapsolmuyor, gerçekten hak ederek çıkıyor.
@@ -1840,12 +1842,25 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
             const p = featured[featuredIndex];
             return (
               <button
-                onClick={() => onSelectListing(p)}
-                className="w-full text-left rounded-2xl overflow-hidden flex flex-col sm:flex-row hover:shadow-xl transition-shadow shadow-md"
+                onClick={() => { if (featuredTouch.current.swiped) { featuredTouch.current.swiped = false; return; } onSelectListing(p); }}
+                onTouchStart={(e) => { const t0 = e.touches[0]; featuredTouch.current = { x: t0.clientX, y: t0.clientY, swiped: false }; }}
+                onTouchEnd={(e) => {
+                  const t1 = e.changedTouches[0];
+                  const dx = t1.clientX - featuredTouch.current.x;
+                  const dy = t1.clientY - featuredTouch.current.y;
+                  if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
+                    featuredTouch.current.swiped = true;
+                    setFeaturedIndex((i) => (i + (dx < 0 ? 1 : -1) + featured.length) % featured.length);
+                  }
+                }}
+                className="w-full text-left rounded-2xl overflow-hidden flex flex-col sm:flex-row hover:shadow-xl transition-shadow shadow-md touch-pan-y select-none"
                 style={{ border: "1px solid #E4E4E7", background: "#FFFFFF" }}
               >
-                <div className="sm:w-64 h-44 sm:h-auto shrink-0 relative overflow-hidden">
-                  <img loading="lazy" decoding="async" src={p.img} alt={p.title} className="w-full h-full object-cover" />
+                {/* Sabit ölçü: her vitrinde aynı kutu. Görsel kesilmeden sığar (logo/afiş görselleri de tam görünür),
+                    arkasında aynı görselin bulanık hali boşluğu doldurur. */}
+                <div className="sm:w-64 aspect-[16/10] sm:aspect-auto shrink-0 relative overflow-hidden" style={{ background: "#0F1115" }}>
+                  <img loading="lazy" decoding="async" src={p.img} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover scale-110 blur-xl opacity-60" />
+                  <img loading="lazy" decoding="async" src={p.img} alt={p.title} className="relative w-full h-full object-contain" />
                   <span
                     className="absolute top-2 left-2 text-[11px] font-bold px-2 py-0.5 rounded-full text-white flex items-center gap-1"
                     style={{ background: "#2563EB" }}
@@ -1853,7 +1868,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
                     <Award size={11} /> {getLevelLabel("top-rated", t)}
                   </span>
                 </div>
-                <div className="p-5 flex-1 flex flex-col justify-center min-h-[228px]">
+                <div className="p-5 flex-1 flex flex-col justify-center h-[212px] sm:h-[228px]">
                   <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
                     <ModeTag mode={p.mode} />
                   </div>
@@ -1862,16 +1877,16 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
                       döndüğü için (aşağıdaki setInterval), altındaki her şey
                       periyodik olarak zıplıyordu ("kayma", kullanıcı 2026-09-16'da
                       fark etti). line-clamp + sabit min-height ile sınırlandı. */}
-                  <p className="font-sans text-lg font-bold mb-1 line-clamp-2" style={{ color: "#0F1115" }}>{p.title}</p>
+                  <p className="font-sans text-lg font-bold mb-1 line-clamp-2 min-h-[3.5rem] leading-7" style={{ color: "#0F1115" }}>{p.title}</p>
                   <p className="text-xs mb-2" style={{ color: "#6B7280" }}>{p.provider} · {p.city}</p>
-                  <p className="text-xs leading-relaxed line-clamp-2 mb-3" style={{ color: "#6B7280" }}>{p.desc}</p>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5">
+                  <p className="text-xs leading-relaxed line-clamp-2 min-h-[2.5rem] mb-3" style={{ color: "#6B7280" }}>{p.desc}</p>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 min-w-0">
                       <Stars value={p.rating} size={13} />
-                      <span className="text-xs font-bold" style={{ color: "#0F1115" }}>{p.rating}</span>
-                      <span className="text-xs" style={{ color: "#6B7280" }}>{t("listingDetail.reviewCount", { count: p.reviewCount })}</span>
+                      <span className="text-xs font-bold shrink-0" style={{ color: "#0F1115" }}>{p.rating}</span>
+                      <span className="text-xs truncate" style={{ color: "#6B7280" }}>{t("listingDetail.reviewCount", { count: p.reviewCount })}</span>
                     </div>
-                    <span className="text-sm font-black" style={{ color: "#0F1115" }}>{p.price}</span>
+                    <span className="text-sm font-black whitespace-nowrap shrink-0" style={{ color: "#0F1115" }}>{p.price}</span>
                   </div>
                 </div>
               </button>
