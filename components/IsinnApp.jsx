@@ -7120,10 +7120,10 @@ function TalentDiscoveryBanner({ onOpen }) {
         {/* 2026-10-17: Yeteneğini Keşfet ana sayfada kalır — kurucu: "yapay zekâmızın bel kemiklerinden". Yumuşak geçişli
             döngü video, 8 premium kare; her kare ayrı renk dünyasında (hepsi turuncu-mor olunca kurucu "boğucu" buldu).
             Beyaz yaka ve el emeği yan yana: herkes kendi işini görür (Instagram ilkesi). Zemin düz koyu; rengi video verir.
-            Video public/videos/yetenek-ilham-v3.mp4 (ffmpeg ile; önceki v2 yedek olarak duruyor). */}
+            Video public/videos/yetenek-ilham-v4.mp4 (ffmpeg ile; önceki v2 yedek olarak duruyor). */}
         <LoopVideo
-          src="/videos/yetenek-ilham-v3.mp4"
-          poster="/videos/yetenek-ilham-v3-poster.jpg"
+          src="/videos/yetenek-ilham-v4.mp4"
+          poster="/videos/yetenek-ilham-v4-poster.jpg"
           className="w-full sm:w-[18rem] lg:w-[20rem] aspect-[8/5] rounded-2xl object-cover shrink-0"
         />
         <div className="flex-1 flex flex-col gap-3 w-full">
@@ -7394,8 +7394,8 @@ function TalentDiscoveryView({ onBack, onCreateListing, userId }) {
       <button onClick={onBack} className="text-sm font-bold mb-6" style={{ color: "#2563EB" }}>{t("talentDiscovery.backLink")}</button>
       {/* 2026-10-17: ana sayfadaki Yeteneğini Keşfet bandıyla aynı 8 karelik, her karesi ayrı renkte video. */}
       <LoopVideo
-        src="/videos/yetenek-ilham-v3.mp4"
-        poster="/videos/yetenek-ilham-v3-poster.jpg"
+        src="/videos/yetenek-ilham-v4.mp4"
+        poster="/videos/yetenek-ilham-v4-poster.jpg"
         className="w-full aspect-[8/5] rounded-2xl object-cover mb-6"
       />
       <h1 className="font-sans text-2xl sm:text-3xl font-black tracking-tight mb-2" style={{ color: "#0F1115" }}>{t("talentDiscovery.heroTitle")}</h1>
