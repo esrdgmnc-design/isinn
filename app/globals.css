@@ -182,6 +182,9 @@ html.isinn-booted #isinn-boot { opacity: 0; pointer-events: none; }
   .bento-media::after { opacity: 1; }
   .bento-bar { transform: none; }
 }
+/* 2026-10-18 kurucu: kutucuk başlıkları masaüstünde de her zaman görünür (önceden yalnızca üzerine gelince). */
+.bento-title { opacity: 1; transform: none; }
+.bento-media::after { opacity: 1; }
 @media (max-width: 767px) {
   .bento { grid-template-columns: 1fr 1fr; grid-template-rows: 300px 170px 170px; gap: 10px; }
   .bento-big-cell { grid-column: 1 / 3; grid-row: auto; }
