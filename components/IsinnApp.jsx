@@ -9495,6 +9495,20 @@ function AdminDashboardView({ onBack }) {
   const [grantErrors, setGrantErrors] = useState([]); // ödeme alındı ama ürün verilemedi
   const [rangeMode, setRangeMode] = useState("day"); // day | week | month
   const [selectedDetail, setSelectedDetail] = useState(null); // "users" | "providers" | "newThisWeek" | "subs" | null
+  // Kuzey yıldızı (2026-10-18): iki taraflı onaylı iş sunucuda sayılır (jobs RLS ile yalnızca taraflara açık).
+  const [northStar, setNorthStar] = useState(null);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) return;
+        const res = await fetch("/api/admin/north-star", { headers: { Authorization: `Bearer ${session.access_token}` } });
+        if (res.ok && !cancelled) setNorthStar(await res.json());
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, []);
   const detailPanelRef = useRef(null);
   // Detay paneli kart ızgarasının HEMEN ALTINDA açılıyor — tıklanan kartın
   // kendi içinde değil. Ekranda görünmeyebilir (özellikle mobilde, ızgara
@@ -9717,6 +9731,8 @@ function AdminDashboardView({ onBack }) {
           <div className="grid grid-cols-2 gap-3 mb-4">
             <StatCard icon={<Users size={15} style={{ color: "#2563EB" }} />} label="Toplam kayıtlı kullanıcı" value={totalUsers} accent="#2563EB" detailKey="users" />
             <StatCard icon={<Briefcase size={15} style={{ color: "#16321F" }} />} label="Aktif sağlayıcı (vitrin açan)" value={totalProviders} accent="#16321F" detailKey="providers" />
+            <StatCard icon={<BadgeCheck size={15} style={{ color: "#16A34A" }} />} label="İki taraflı onaylı iş (kuzey yıldızı)" value={northStar ? northStar.bothConfirmed : "—"} accent="#16A34A" />
+            <StatCard icon={<MessageCircle size={15} style={{ color: "#2563EB" }} />} label={`Vitrin görüşmesi${northStar ? ` · tek taraflı onay: ${northStar.oneSide}` : ""}`} value={northStar ? northStar.threads : "—"} accent="#2563EB" />
             <StatCard icon={<Briefcase size={15} style={{ color: "#0EA5E9" }} />} label={`Toplam vitrin (${services.filter((s) => s.active).length} yayında)`} value={services.length} accent="#0EA5E9" detailKey="vitrins" />
             <StatCard icon={<TrendingUp size={15} style={{ color: "#34D399" }} />} label="Son 7 gün yeni kayıt" value={newThisWeek} accent="#34D399" detailKey="newThisWeek" />
             <StatCard icon={<Award size={15} style={{ color: "#F59E0B" }} />} label="Aktif Pro/Standart plan" value={activeSubs} accent="#F59E0B" detailKey="subs" />

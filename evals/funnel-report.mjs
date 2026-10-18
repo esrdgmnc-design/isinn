@@ -48,6 +48,12 @@ const b = (k) => sr.filter((e) => e.props?.bucket === k).length;
 console.log(`  arama sonucu olayı: ${sr.length} (0 sonuç: ${b("0")}, 1-2: ${b("1-2")}, 3+: ${b("3+")})  ← sıfır sonuç oranı arz boşluğunu gösterir`);
 console.log(`  vitrin görüntüleme (tekil oturum): ${sess(["listing_view"])}, mesaj gönderimi: ${count("message_sent")}, iş ilanı: ${count("job_posted")}`);
 console.log(`  vitrin paylaşımı: ${count("vitrin_shared")}, çalışma bağlantısı tıklaması: ${count("portfolio_link_click")}`);
+// "Ne arıyorsun?" yapay zekâ eşleştirmesi (2026-10-18 canlıya açıldı)
+const nr = ext.filter((e) => e.name === "need_result");
+const nk = (k) => nr.filter((e) => e.props?.kind === k).length;
+console.log('\n"Ne arıyorsun?" (AI eşleştirme):');
+console.log(`  ihtiyaç yazan (tekil oturum): ${sess(["need_submit"])}, sonuç: ${nr.length} (eşleşme: ${nk("match")}, sonuç yok: ${nk("none")}, belirsiz: ${nk("vague")})`);
+console.log(`  sonuçtan vitrine tıklama: ${count("need_card_click")}, "talep olarak yayınla": ${count("need_publish_click")}`);
 
 // --- kaynak grupları (yönlendiren site / utm). Not: bazı yapay zekâ asistanları yönlendiren bilgisi göndermez, o trafik "doğrudan"
 // görünür; Google AI Özetleri tıklamaları ise Search Console'da normal Google trafiğine karışır, burada ayrıştırılamaz.
