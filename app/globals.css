@@ -7,6 +7,9 @@ html, body {
   margin: 0;
 }
 
+/* Ana sayfa krem zemin (2026-10-18, LinkedIn afişleriyle aynı dil): üst çubuk da zeminle aynı tonda. */
+.home-cream header.sticky { background-color: rgba(247, 244, 238, 0.96) !important; }
+
 /* Sayfa hiçbir zaman yatay kaymasın (uzun kelime/dekor taşması telefonda sayfayı
    sağa-sola oynatıyordu). `clip` yapışkan (sticky) elemanları bozmaz. */
 html, body {

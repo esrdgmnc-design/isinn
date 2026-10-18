@@ -1631,8 +1631,8 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
       {/* Hero (2026-10-17): çerçeveli kutu ve renk geçişi denendi, kurucu ikisini de kaldırttı. Kenarlar alttaki tüm
           bölümlerle aynı hizada (max-w-6xl + px-5); Yeteneğini Keşfet ilk ekranda görünsün diye hero kompakt.
           Kurucu "genel hava çok sade" dedi; koyu bant denendi ("çok koyu oldu"). Duman efekti de denendi, minimalist
-          sadelikte kaldırıldı: düz beyaz zemin. */}
-      <div style={{ background: "#FFFFFF" }}>
+          sadelikte kaldırıldı. 2026-10-18: ana sayfa zemini krem (#F7F4EE, kök div'de), kartlar beyaz kalır. */}
+      <div>
       {/* Hero (2026-10-17): tam beyaz zemin, siyah yazı, ince siyah kenarlıklar; mavi yalnızca ana düğmede (logodaki nokta gibi). */}
       <section className="max-w-6xl mx-auto px-5 pt-3 sm:pt-5 pb-1 relative">
         {/* Sağdaki yelpaze deste iki yana ~50px taşar (döndürülmüş yan kartlar); lg:pr-14 sağ kartı içerik hizasında tutar. */}
@@ -12855,7 +12855,7 @@ export default function IsinnPrototype({ session, onRequireAuth, discoveryPopula
   }, [userId]);
 
   return (
-    <div className="min-h-[100dvh]" style={{ background: "#FFFFFF", fontFamily: "ui-sans-serif, system-ui" }}>
+    <div className={`min-h-[100dvh]${view === "home" ? " home-cream" : ""}`} style={{ background: view === "home" ? "#F7F4EE" : "#FFFFFF", fontFamily: "ui-sans-serif, system-ui" }}>
       {favError && (
         <div role="alert" className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-max max-w-[calc(100vw-2rem)] text-center px-4 py-2.5 rounded-2xl text-xs font-medium text-white shadow-lg" style={{ background: "#DC2626" }}>{favError}</div>
       )}
