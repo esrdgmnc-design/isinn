@@ -1546,6 +1546,12 @@ const HomeListingCard = memo(function HomeListingCard({ l, isFavorite, onSelectL
           </p>
           <p className="text-[10px] truncate" style={{ color: "rgba(255,255,255,0.75)" }}>{l.provider}</p>
         </div>
+        {/* Dokunmatik ekranda (hover yok) branş her zaman görünür (2026-10-17, kurucu: "tıklamadan branşları yazmıyor"). */}
+        {(getCategoryName(l.category, t) || l.provider) && (
+          <span className="hidden [@media(hover:none)]:block absolute inset-x-0 bottom-0 px-1.5 pb-1 pt-5 text-[11px] font-semibold leading-tight text-white truncate pointer-events-none" style={{ background: "linear-gradient(180deg, transparent, rgba(0,0,0,0.78))" }}>
+            {getCategoryName(l.category, t) || l.provider}
+          </span>
+        )}
         {isFavorite && (
           <button
             onClick={(e) => { e.stopPropagation(); onToggleFavorite?.(l); }}
@@ -12162,6 +12168,10 @@ export default function IsinnPrototype({ session, onRequireAuth, discoveryPopula
   }, []);
   useEffect(() => { captureAttribution(); trackEvent("app_open", {}, null); }, []);
   const [selected, setSelected] = useState(null);
+  // Vitrin açılınca sayfa en üstten başlasın (2026-10-17, kurucu: "profil alttan açılıyor, yukarı kaydırmak gerekiyor").
+  useEffect(() => {
+    if (view === "detail" && selected) window.scrollTo(0, 0);
+  }, [view, selected?.id]);
   // "Yeteneğini Keşfet"te bir öneri seçilince Hizmet Ekle'ye kategori+not
   // önceden dolu gitsin diye — bkz. TalentDiscoveryView/CreateListingView.
   const [talentPrefill, setTalentPrefill] = useState(null); // { categoryId, note }
