@@ -1602,7 +1602,10 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
   // sürekli yeniden render ediyor — filtre/sıralama/karıştırma her tikte tekrar koşmasın.
   const featured = useMemo(() => {
     const eligible = homeListings.filter((l) => l.isBoosted || (l.reviewCount > 0 && l.rating >= 4.5));
-    return seededDailyShuffle(eligible).slice(0, FEATURED_SLOT_CAP);
+    // Günlük karışık sıra korunur; "yoga-koc" (sağlık/terapi iddiası taşıyabilir) ilk sıraya düşmesin diye sona alınır.
+    const shuffled = seededDailyShuffle(eligible);
+    const ordered = [...shuffled.filter((l) => l.category !== "yoga-koc"), ...shuffled.filter((l) => l.category === "yoga-koc")];
+    return ordered.slice(0, FEATURED_SLOT_CAP);
   }, [homeListings]);
   const filtered = useMemo(() => {
     const all = homeListings;
@@ -1799,7 +1802,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
                       {l.isDemo && (
                         <span className="absolute top-2 right-2 text-[11px] font-black px-2 py-0.5 rounded-full text-white tracking-wide" style={{ background: "#DC2626" }}>{t("searchResults.demoBadge")}</span>
                       )}
-                      {isCenter && (
+                      {isCenter && l.isBoosted && (
                         <span
                           className="absolute top-2.5 left-2.5 text-[11px] font-bold px-2.5 py-1 rounded-full text-white flex items-center gap-1"
                           style={{ background: "#0F1115" }}
@@ -1867,12 +1870,6 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
                 <div className="sm:w-64 aspect-[16/10] sm:aspect-auto shrink-0 relative overflow-hidden" style={{ background: "#0F1115" }}>
                   <img loading="lazy" decoding="async" src={p.img} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover scale-110 blur-xl opacity-60" />
                   <img loading="lazy" decoding="async" src={p.img} alt={p.title} className="relative w-full h-full object-contain" />
-                  <span
-                    className="absolute top-2 left-2 text-[11px] font-bold px-2 py-0.5 rounded-full text-white flex items-center gap-1"
-                    style={{ background: "#2563EB" }}
-                  >
-                    <Award size={11} /> {getLevelLabel("top-rated", t)}
-                  </span>
                 </div>
                 <div className="p-5 flex-1 flex flex-col justify-center h-[212px] sm:h-[228px]">
                   <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
@@ -1887,11 +1884,16 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
                   <p className="text-xs mb-2" style={{ color: "#6B7280" }}>{p.provider} · {p.city}</p>
                   <p className="text-xs leading-relaxed line-clamp-2 min-h-[2.5rem] mb-3" style={{ color: "#6B7280" }}>{p.desc}</p>
                   <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <Stars value={p.rating} size={13} />
-                      <span className="text-xs font-bold shrink-0" style={{ color: "#0F1115" }}>{p.rating}</span>
-                      <span className="text-xs truncate" style={{ color: "#6B7280" }}>{t("listingDetail.reviewCount", { count: p.reviewCount })}</span>
-                    </div>
+                    {/* 3'ten az değerlendirmede yıldız gösterilmez (jüri: tek 5 yıldız, onaylı iş yokken inandırıcı değil). */}
+                    {p.reviewCount >= 3 ? (
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <Stars value={p.rating} size={13} />
+                        <span className="text-xs font-bold shrink-0" style={{ color: "#0F1115" }}>{p.rating}</span>
+                        <span className="text-xs truncate" style={{ color: "#6B7280" }}>{t("listingDetail.reviewCount", { count: p.reviewCount })}</span>
+                      </div>
+                    ) : (
+                      <span className="text-xs font-semibold" style={{ color: "#6B7280" }}>{t("searchResults.newListingLabel")}</span>
+                    )}
                     <span className="text-sm font-black whitespace-nowrap shrink-0" style={{ color: "#0F1115" }}>{p.price}</span>
                   </div>
                 </div>
@@ -2039,8 +2041,6 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
                 <p className="text-xs flex items-center gap-1.5 mb-5" style={{ color: "#6B7280" }}>
                   <MapPin size={12} className="shrink-0" />
                   <span className="truncate">{job.district}</span>
-                  <span aria-hidden="true">·</span>
-                  <span className="shrink-0">{job.postedTime}</span>
                   {isNew && (
                     <span className="ml-1 text-[11px] font-bold px-1.5 py-0.5 rounded shrink-0" style={{ background: "#ECFDF3", color: "#15803D" }}>{t("searchResults.newBadge")}</span>
                   )}
@@ -5058,7 +5058,8 @@ function SearchResultsView({ query, cityFilter, onBack, onSelectListing, realLis
   // birleşik sorguları hiç yakalamıyordu. Şimdi şehir kendi başına, AND
   // mantığıyla ayrı bir filtre.
   const cityQ = (cityFilter || "").trim().toLocaleLowerCase("tr-TR");
-  const pool = realListings || [];
+  // DEMO vitrinler arama sonuçlarında gösterilmez (jüri incelemesi: "site bitmemiş" izlenimi veriyordu).
+  const pool = (realListings || []).filter((l) => !l.isDemo);
   const literalResults = pool
     .filter((l) => {
       const haystack = [l.title, l.provider, l.city, l.desc || "", CATEGORIES.find((c) => c.id === l.category)?.name || ""]
@@ -5228,10 +5229,14 @@ function SearchResultsView({ query, cityFilter, onBack, onSelectListing, realLis
                   <LevelBadge level={l.level} />
                 </div>
                 <div className="flex items-center justify-between flex-wrap gap-x-2 gap-y-1 mt-auto pt-2.5">
-                  <div className="flex items-center gap-1">
-                    <Stars value={l.rating} size={12} />
-                    <span className="text-xs" style={{ color: "#6B7280" }}>{l.reviewCount > 0 ? `(${l.reviewCount})` : t("searchResults.newListingLabel")}</span>
-                  </div>
+                  {l.reviewCount >= 3 ? (
+                    <div className="flex items-center gap-1">
+                      <Stars value={l.rating} size={12} />
+                      <span className="text-xs" style={{ color: "#6B7280" }}>({l.reviewCount})</span>
+                    </div>
+                  ) : (
+                    <span className="text-xs" style={{ color: "#6B7280" }}>{t("searchResults.newListingLabel")}</span>
+                  )}
                   <span className="text-sm font-black truncate max-w-full" style={{ color: "#0F1115" }}>{l.price}</span>
                 </div>
               </div>
