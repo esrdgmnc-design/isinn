@@ -5217,9 +5217,6 @@ function SearchResultsView({ query, cityFilter, onBack, onSelectListing, realLis
                   {l.isBoosted && (
                     <span className="text-[11px] font-bold px-2 py-0.5 rounded-full text-white flex items-center gap-0.5" style={{ background: "#2563EB" }}><Sparkles size={9} />{t("searchResults.sponsoredBadge")}</span>
                   )}
-                  {l.isReal && (
-                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: "#0F1115" }}>{t("searchResults.newBadge")}</span>
-                  )}
                 </div>
               </div>
               <div className="p-3 sm:p-3.5 flex flex-col flex-1">
@@ -5234,9 +5231,9 @@ function SearchResultsView({ query, cityFilter, onBack, onSelectListing, realLis
                       <Stars value={l.rating} size={12} />
                       <span className="text-xs" style={{ color: "#6B7280" }}>({l.reviewCount})</span>
                     </div>
-                  ) : (
+                  ) : l.level !== "new" ? (
                     <span className="text-xs" style={{ color: "#6B7280" }}>{t("searchResults.newListingLabel")}</span>
-                  )}
+                  ) : <span />}
                   <span className="text-sm font-black truncate max-w-full" style={{ color: "#0F1115" }}>{l.price}</span>
                 </div>
               </div>
