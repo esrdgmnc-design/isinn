@@ -17,10 +17,13 @@ export const NEED_TEXT_KEY = "isinn_need_text";
 
 export default function NeedMatchView({ realListings, onSelectListing, onBack, onPostRequest, userId }) {
   const { t } = useLanguage();
-  const [text, setText] = useState(() => {
+  // Kutucuktan gelen örnek cümle yazı olarak değil, soluk ipucu olarak durur; kutuya dokununca kaybolur (kurucu, 2026-10-18).
+  const [hint] = useState(() => {
     if (typeof window === "undefined") return "";
     try { const v = sessionStorage.getItem(NEED_TEXT_KEY) || ""; sessionStorage.removeItem(NEED_TEXT_KEY); return v.slice(0, 500); } catch { return ""; }
   });
+  const [text, setText] = useState("");
+  const [focused, setFocused] = useState(false);
   const [state, setState] = useState({ status: "idle" }); // idle | loading | done | error
   const examples = t("needMatch.examples");
 
@@ -93,9 +96,11 @@ export default function NeedMatchView({ realListings, onSelectListing, onBack, o
               onChange={(e) => setText(e.target.value)}
               maxLength={500}
               rows={3}
-              placeholder={Array.isArray(examples) ? examples[0] : ""}
+              onFocus={() => setFocused(true)}
+              onBlur={() => setFocused(false)}
+              placeholder={focused ? "" : hint || (Array.isArray(examples) ? examples[0] : "")}
               aria-label={t("needMatch.inputLabel")}
-              className="w-full rounded-md px-4 py-3 text-[15px] leading-relaxed outline-none resize-y focus:ring-2 focus:ring-[#3B82F6]"
+              className="w-full rounded-md px-4 py-3 text-[15px] leading-relaxed outline-none resize-y focus:ring-2 focus:ring-[#3B82F6] placeholder:text-[#8B8D98]"
               style={{ background: "#1E2029", border: "2px solid #3B82F6", color: "#F9FAFB" }}
             />
             <p className="mt-2.5 text-xs leading-relaxed" style={{ color: "#8B8D98" }}>{t("needMatch.privacyNote")}</p>
