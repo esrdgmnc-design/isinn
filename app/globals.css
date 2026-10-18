@@ -201,3 +201,6 @@ html.isinn-booted #isinn-boot { opacity: 0; pointer-events: none; }
 
 
 
+
+/* Planlar: ücretsiz lansman döneminde ödeme düğmeleri ve deneme ifadeleri gösterilmez (2026-10-18). */
+.free-preview button, .free-preview .trial-copy { display: none !important; }

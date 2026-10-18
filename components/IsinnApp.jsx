@@ -4033,9 +4033,13 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
           <p className="text-lg font-medium mb-4" style={{ color: "#0F1115" }}>{listing.price}</p>
           {!ownerMode && (
             <>
-              <button onClick={onContact} className="w-full py-2.5 rounded-full text-sm font-medium text-white mb-2" style={{ background: "#2563EB" }}>
+              <button onClick={onContact} className="w-full py-2.5 rounded-full text-sm font-medium text-white mb-1" style={{ background: "#2563EB" }}>
                 {t("listingDetail.contactButton")}
               </button>
+              {/* 2026-10-18 (değerlendirme): giriş yapmamış ziyaretçi düğmeye basınca giriş ekranına gidiyor; önceden söyle. */}
+              {!currentUserId && (
+                <p className="text-[11px] text-center mb-2" style={{ color: "#6B7280" }}>{t("listingDetail.contactLoginHint")}</p>
+              )}
               <button
                 onClick={() => onToggleFavorite?.(listing)}
                 className="w-full py-2.5 rounded-full text-sm font-medium border flex items-center justify-center gap-1.5"
@@ -7989,6 +7993,7 @@ ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return
             className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
             style={inputStyle}
           />
+          <p className="text-[11px] mt-1" style={{ color: "#6B7280" }}>{t("createListing.titleHint")}</p>
         </div>
 
         <div>
@@ -8001,6 +8006,7 @@ ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return
             className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none resize-none"
             style={inputStyle}
           />
+          <p className="text-[11px] mt-1" style={{ color: "#6B7280" }}>{t("createListing.descHint")}</p>
           <ListingDescLengthHint desc={desc} />
         </div>
 
@@ -8986,6 +8992,7 @@ ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return
             className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
             style={{ borderColor: "#E4E4E7", background: "#F7F7F8", color: "#0F1115" }}
           />
+          <p className="text-[11px] mt-1" style={{ color: "#6B7280" }}>{t("createListing.titleHint")}</p>
         </div>
 
         <div>
@@ -8998,6 +9005,7 @@ ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return
             className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none resize-none"
             style={{ borderColor: "#E4E4E7", background: "#F7F7F8", color: "#0F1115" }}
           />
+          <p className="text-[11px] mt-1" style={{ color: "#6B7280" }}>{t("createListing.descHint")}</p>
           <ListingDescLengthHint desc={desc} />
         </div>
 
@@ -9255,7 +9263,7 @@ ${storeApp ? "2) Bu mobil uygulamada İşinn'e yapılan üyelik, plan, fiyat ya 
 
 4) GERÇEK EKRAN ADIMLARI (yönlendirirken SADECE bunları kullan, olmayan bir buton/seçenek/adres UYDURMA):
 - Kayıt: sağ üstteki "Giriş Yap" → altta "Hesabın yok mu? Kayıt ol" → Ad Soyad, e-posta, şifre (en az 6 karakter), KVKK/Gizlilik/Kullanım Şartları onay kutusu → "Kayıt Ol". ${storeApp ? "" : `Alternatif: "Google ile devam et". `}E-postana gelen onay linkine tıklayıp giriş yapılır. Kayıtta "hizmet sağlayıcı / müşteri" diye bir seçenek YOKTUR — aynı hesapla hem hizmet alınır hem verilir.
-- Vitrin (hizmet sunan sayfa) açmak: giriş yaptıktan sonra üst menüdeki (telefonda ☰ menüsündeki) "Hizmet Ekle" → [Hizmet Ekle](view:createListing). İş ilanı vermek (hizmet ARAYAN için): "İlan Ver" → [İlan Ver](view:post).
+- Vitrin (hizmet sunan sayfa) açmak: giriş yaptıktan sonra üst menüdeki (telefonda ☰ menüsündeki) "Vitrin Aç" → [Vitrin Aç](view:createListing). İş ilanı vermek (hizmet ARAYAN için): "İlan Ver" → [İlan Ver](view:post).
 ${storeApp ? "" : `- Planlar ekranı: üst menüde "Planlar" → [Planlar](view:pricing).`}
 - Diğer ekranlar: [Mesajlar](view:messages), [Profilim](view:profile), [Favorilerim](view:favorites), [Haritada Gör](view:map).
 
@@ -9263,7 +9271,7 @@ BİÇİM KURALI: Sadece **kalın**, "- " madde işareti ve aşağıdaki bağlant
 
 ${storeApp ? "BAĞLANTI KURALI: Kullanıcıyı bir ekrana yönlendirirken SADECE şu sözdizimini kullan: [Etiket](view:createListing) — view değerleri yalnızca createListing, post, profile, messages, favorites, map, support. Yasal sayfalar için [Etiket](page:gizlilik-politikasi) — page değerleri yalnızca gizlilik-politikasi, kullanim-sartlari, kvkk-aydinlatma-metni. ASLA kendi uydurduğun bir URL/adres yazma." : `BAĞLANTI KURALI: Kullanıcıyı bir ekrana yönlendirirken SADECE şu sözdizimini kullan: [Etiket](view:pricing) — view değerleri yalnızca pricing, createListing, post, profile, messages, favorites, map, support. Yasal sayfalar için [Etiket](page:iptal-iade-kosullari) — page değerleri yalnızca iptal-iade-kosullari, gizlilik-politikasi, kullanim-sartlari, kvkk-aydinlatma-metni, mesafeli-satis-sozlesmesi. ASLA isinn.com.tr/planlar gibi kendi uydurduğun bir URL/adres yazma (böyle sayfalar yok, 404 verir).`}
 
-${storeApp ? "5) Plan ve fiyat bilgisi bu uygulamada yoktur; vitrin açmak için \"Hizmet Ekle\" yeterli." : `5) GÜNCEL KAMPANYA VE PLANLAR (canlı veri, Planlar ekranıyla aynı — bunlarla çelişme):
+${storeApp ? "5) Plan ve fiyat bilgisi bu uygulamada yoktur; vitrin açmak için \"Vitrin Aç\" yeterli." : `5) GÜNCEL KAMPANYA VE PLANLAR (canlı veri, Planlar ekranıyla aynı — bunlarla çelişme):
 ${isFreePeriod() ? `Şu an lansman kampanyası var: ${new Date(FREE_PERIOD_UNTIL_ISO).toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" })} tarihine kadar tüm özellikler ücretsiz, bu süre içinde plan satın almak GEREKMİYOR. Kullanıcıya "üyelik planı seç/satın al" DEME; vitrin açmak için doğrudan "Hizmet Ekle" yeterli. Kampanya sonrası için kullanıcıya önceden haber verilecek.` : "Ücretsiz dönem bitti; vitrin açmak için aktif bir üyelik gerekir."}
 ${plansInfo ? `Planlar (dönem sonrası geçerli fiyat/hak): ${plansInfo}. Fiyatı sorulursa SADECE bu rakamları söyle.` : "Plan fiyatları şu an okunamadı; rakam söyleme, Planlar ekranına yönlendir."}`}
 
@@ -10641,9 +10649,15 @@ function PricingView({ onBack, onJoined, userId }) {
           <p className="text-sm mt-1" style={{ color: "#047857" }}>{t("pricing.freePeriodBody", { date: freeUntilLabel })}</p>
         </div>
       )}
+      {/* 2026-10-18 (değerlendirme: "Şimdi Öde" ile "1 Ocak'a kadar ücretsiz" çelişiyordu): ücretsiz dönemde ödeme düğmeleri ve
+          deneme ifadeleri gizli (globals.css .free-preview); kartlar yalnızca ileride geçerli olacak fiyatı gösterir. */}
+      {freePeriod && (
+        <p className="text-sm text-center mb-4 font-semibold" style={{ color: "#4B5563" }}>{t("pricing.futurePricesNote", { date: freeUntilLabel })}</p>
+      )}
       <div
+        className={freePeriod ? "free-preview" : undefined}
         aria-hidden={freePeriod ? "true" : undefined}
-        style={freePeriod ? { opacity: 0.45, filter: "grayscale(1)", pointerEvents: "none", userSelect: "none" } : undefined}
+        style={freePeriod ? { opacity: 0.55, filter: "grayscale(1)", pointerEvents: "none", userSelect: "none" } : undefined}
       >
       <div className="flex justify-center mb-6">
         <div className="inline-flex items-center gap-1 p-1 rounded-full" style={{ background: "#F7F7F8", border: "1px solid #E4E4E7" }}>
@@ -10670,7 +10684,7 @@ function PricingView({ onBack, onJoined, userId }) {
             <span className="text-[11px] font-bold px-2 py-0.5 rounded-full" style={{ background: "#DBEAFE", color: "#1D4ED8" }}>{t("pricing.firstYearDeal")}</span>
           )}
         </div>
-        <p className="text-xs font-medium mb-4" style={{ color: "#059669" }}>{t("pricing.trialThenPrice", { months: plan.trialMonths })}</p>
+        <p className="trial-copy text-xs font-medium mb-4" style={{ color: "#059669" }}>{t("pricing.trialThenPrice", { months: plan.trialMonths })}</p>
         <div className="space-y-2.5 mb-4">
           {getPlanFeatures(plan, t).map((f, i) => (
             <div key={i} className="flex items-start gap-2 text-xs" style={{ color: "#3D3B30" }}>
@@ -10702,7 +10716,7 @@ function PricingView({ onBack, onJoined, userId }) {
             {joining && savedCardMode === "standart" ? t("pricing.processing") : t("pricing.payWithSavedCard")}
           </button>
         )}
-        <p className="text-[11px] mt-2 text-center" style={{ color: "#6B7280" }}>
+        <p className="trial-copy text-[11px] mt-2 text-center" style={{ color: "#6B7280" }}>
           {t("pricing.standartHintNote")}
         </p>
       </div>
@@ -10718,7 +10732,7 @@ function PricingView({ onBack, onJoined, userId }) {
             <span className="text-[11px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: "#16A34A" }}>{t("pricing.activeBadge")}</span>
           )}
         </div>
-        <p className="text-xs mb-4" style={{ color: "#6B7280" }}>{t("pricing.proTaglineFull", { tagline: getPlanTagline(PRO_PACKAGE, t) })}</p>
+        <p className="text-xs mb-4" style={{ color: "#6B7280" }}>{freePeriod ? getPlanTagline(PRO_PACKAGE, t) : t("pricing.proTaglineFull", { tagline: getPlanTagline(PRO_PACKAGE, t) })}</p>
         <div className="mb-4 flex items-baseline gap-1">
           <span className="font-sans text-2xl sm:text-3xl font-black tracking-tight" style={{ color: "#0F1115" }}>{proPrice}₺</span>
           <span className="text-sm" style={{ color: "#6B7280" }}>{period}</span>
@@ -10774,7 +10788,7 @@ function PricingView({ onBack, onJoined, userId }) {
           sayfanın en üstündeki Aylık/Yıllık toggle'ıyla aynı mantık. */}
       <div className="w-full rounded-2xl border-2 p-6 flex flex-col mb-6" style={{ borderColor: "#E4E4E7", background: "#F7F7F8" }}>
         <p className="font-sans text-lg font-black tracking-tight mb-1" style={{ color: "#0F1115" }}>{getPlanName(BOOST_PACKAGE, t)}</p>
-        <p className="text-xs mb-4" style={{ color: "#6B7280" }}>{t("pricing.boostTaglineFull", { tagline: getPlanTagline(BOOST_PACKAGE, t) })}</p>
+        <p className="text-xs mb-4" style={{ color: "#6B7280" }}>{freePeriod ? getPlanTagline(BOOST_PACKAGE, t) : t("pricing.boostTaglineFull", { tagline: getPlanTagline(BOOST_PACKAGE, t) })}</p>
 
         <div className="grid grid-cols-2 gap-2.5 mb-4">
           {[
