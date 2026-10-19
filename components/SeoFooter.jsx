@@ -26,7 +26,7 @@ export default async function SeoFooter() {
   const link = { color: "#2563EB" };
   return (
     <footer className="max-w-2xl mx-auto px-5 pb-12 pt-6 mt-6 border-t text-xs" style={{ borderColor: "#E5E7EB", color: "#6B7280" }} aria-label="Site bağlantıları">
-      <p className="mb-3">İşinn (isinn.com.tr), Türkiye'de komisyonsuz yerel hizmet keşif platformudur; bir banka, işe alım/personel arama sitesi ya da ürün satış sitesi değildir.</p>
+      <p className="mb-3">İşinn (isinn.com.tr), Türkiye'de <Link href="/" style={link}>freelance uzman ve hizmet bulma</Link> platformudur; komisyon almaz. Bir banka, işe alım/personel arama sitesi ya da ürün satış sitesi değildir.</p>
       <div className="flex flex-wrap gap-x-4 gap-y-1.5 mb-3 font-bold">
         <Link href="/" style={link}>Ana sayfa</Link>
         <Link href="/yetenegini-farket" style={link}>Yeteneğini Farket</Link>

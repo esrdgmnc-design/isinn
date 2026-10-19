@@ -10,8 +10,8 @@ import { jsonLdString } from "../lib/jsonLd";
 export const metadata = {
   metadataBase: new URL("https://www.isinn.com.tr"),
   robots: { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1, "max-video-preview": -1 } },
-  title: "İşinn | Yerel Hizmet Keşif Platformu, Komisyonsuz Vitrin",
-  description: "Yakınındaki hizmet verenleri keşfet, becerinden hizmet vitrini aç. İşinn komisyon almaz, ürün satmaz; hizmet verenler için 1 Ocak 2027'ye kadar ücretsiz.",
+  title: "İşinn | Freelance Uzman ve Hizmet Bul, Vitrinini Aç",
+  description: "Yazılım, tasarım, çeviri, danışmanlıktan yakınındaki hizmetlere; freelance uzmanları keşfet ya da yeteneğini vitrininde sergile. İşinn komisyon almaz.",
   // Mobil uygulama çalışmasının (bkz. docs/mobile-app.md) yan ürünü — site
   // artık gerçek bir PWA da (telefon tarayıcısından "Ana ekrana ekle").
   // Asıl mağaza dağıtımı Capacitor/Codemagic üzerinden, bu sadece bonus.
@@ -28,8 +28,8 @@ export const metadata = {
   // (özel dosya kuralı) otomatik bağlanıyor, burada ayrıca belirtmeye
   // gerek yok.
   openGraph: {
-    title: "İşinn — Yeteneğini Farket, Hizmet Vitrinini Aç",
-    description: "Becerilerinden hizmet fikirleri ve hazır vitrin taslağı al; yakınındaki hizmetleri bul. Komisyonsuz yerel hizmet platformu.",
+    title: "İşinn | Freelance Uzman ve Hizmet Bul, Vitrinini Aç",
+    description: "Yazılım, tasarım, çeviri, danışmanlıktan yakınındaki hizmetlere; freelance uzmanları keşfet ya da yeteneğini vitrininde sergile. İşinn komisyon almaz.",
     url: "https://www.isinn.com.tr",
     siteName: "İşinn",
     locale: "tr_TR",
@@ -37,8 +37,8 @@ export const metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "İşinn — Yeteneğini Farket, Hizmet Vitrinini Aç",
-    description: "Becerilerinden hizmet fikirleri ve hazır vitrin taslağı al; yakınındaki hizmetleri bul. Komisyonsuz yerel hizmet platformu.",
+    title: "İşinn | Freelance Uzman ve Hizmet Bul, Vitrinini Aç",
+    description: "Yazılım, tasarım, çeviri, danışmanlıktan yakınındaki hizmetlere; freelance uzmanları keşfet ya da yeteneğini vitrininde sergile. İşinn komisyon almaz.",
   },
 };
 

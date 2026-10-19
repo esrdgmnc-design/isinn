@@ -9,8 +9,8 @@ import { MIN_CATEGORY_LISTINGS } from "../lib/seoFormat";
 // Ana sayfa artık sunucu bileşeni: kanonik adres "/" (parametreli ?vitrin=… gibi URL'ler
 // ayrı sayfa sayılmasın) ve SSS şeması yalnızca burada.
 export const metadata = {
-  title: "İşinn | Yerel Hizmet Keşif Platformu, Komisyonsuz Vitrin",
-  description: "Yakınındaki hizmet verenleri keşfet, becerinden hizmet vitrini aç. İşinn komisyon almaz, ürün satmaz; hizmet verenler için 1 Ocak 2027'ye kadar ücretsiz.",
+  title: "İşinn | Freelance Uzman ve Hizmet Bul, Vitrinini Aç",
+  description: "Yazılım, tasarım, çeviri, danışmanlıktan yakınındaki hizmetlere; freelance uzmanları keşfet ya da yeteneğini vitrininde sergile. İşinn komisyon almaz.",
   alternates: { canonical: "/" },
 };
 

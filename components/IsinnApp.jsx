@@ -7189,7 +7189,9 @@ function TalentDiscoveryBanner({ onOpen }) {
           <p className="text-xs text-center sm:text-left" style={{ color: "#B8BCC4" }}>
             {t("talentDiscovery.navGuidesLabel")}{" "}
             <a href="/rehber/becerilerimi-nasil-degerlendirebilirim" className="underline">{t("talentDiscovery.navGuideEval")}</a>{" · "}
-            <a href="/rehber/ilk-vitrinini-nasil-hazirlarsin" className="underline">{t("talentDiscovery.navGuideFirst")}</a>
+            <a href="/rehber/ilk-vitrinini-nasil-hazirlarsin" className="underline">{t("talentDiscovery.navGuideFirst")}</a>{" · "}
+            <a href="/rehber/freelance-musteri-nasil-bulunur-komisyonsuz-yollar" className="underline">{t("talentDiscovery.navGuideFreelanceClients")}</a>{" · "}
+            <a href="/rehber/freelancer-ile-calismadan-once-brief-nasil-hazirlanir" className="underline">{t("talentDiscovery.navGuideBrief")}</a>
           </p>
         </div>
       </div>
@@ -11830,7 +11832,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
           <div className="flex-1 min-w-0">
             <p className="text-xs font-bold mb-1" style={{ color: "#0F1115" }}>{t("profile.badgeReadyTitle")}</p>
             <p className="text-[11px] mb-2" style={{ color: "#6B7280" }}>{t("profile.badgeReadyDesc")}</p>
-            <a href="/rozet" target="_blank" rel="noopener noreferrer" className="text-[11px] font-bold underline" style={{ color: "#2563EB" }}>
+            <a href={`/rozet?vitrin=${(myListings.find((l) => l.active) || myListings[0]).id}`} target="_blank" rel="noopener noreferrer" className="text-[11px] font-bold underline" style={{ color: "#2563EB" }}>
               {t("profile.getBadgeLink")}
             </a>
           </div>

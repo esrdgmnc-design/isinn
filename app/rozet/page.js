@@ -1,7 +1,13 @@
 const BASE_URL = "https://www.isinn.com.tr";
-const EMBED_CODE = `<a href="${BASE_URL}" target="_blank" rel="noopener">
+// Profildeki "Rozeti al" bağlantısı ?vitrin=<id> ile gelir: gömme kodu ana sayfaya değil
+// kişinin kendi vitrinine bağlanır (her rozet o vitrine bir dış bağlantı olur). Yalnızca UUID kabul edilir.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function embedCode(vitrinId) {
+  const href = vitrinId ? `${BASE_URL}/vitrin/${vitrinId}` : BASE_URL;
+  return `<a href="${href}" target="_blank" rel="noopener">
   <img src="${BASE_URL}/rozet.svg" alt="İşinn Sağlayıcısı" width="220" height="64" />
 </a>`;
+}
 
 export const metadata = {
   title: "Sağlayıcı Rozeti — İşinn",
@@ -10,7 +16,10 @@ export const metadata = {
   robots: { index: false, follow: true },
 };
 
-export default function RozetPage() {
+export default function RozetPage({ searchParams }) {
+  const raw = typeof searchParams?.vitrin === "string" ? searchParams.vitrin : "";
+  const vitrinId = UUID_RE.test(raw) ? raw : null;
+  const EMBED_CODE = embedCode(vitrinId);
   return (
     <div className="max-w-2xl mx-auto px-5 py-10">
       <a href="/" className="text-sm font-bold" style={{ color: "#2563EB" }}>← İşinn</a>
@@ -34,7 +43,7 @@ export default function RozetPage() {
 
       <h2 className="text-sm font-bold mb-2" style={{ color: "#0F1115" }}>Web siten yoksa</h2>
       <p className="text-sm mb-6" style={{ color: "#6B7280" }}>
-        Yukarıdaki rozet görselini (rozet.svg) indirip Instagram hikayende ya da gönderinde paylaşabilir, bio linkine isinn.com.tr'yi ya da kendi vitrin linkini ekleyebilirsin.
+        Yukarıdaki rozet görselini (rozet.svg) indirip Instagram hikayende ya da gönderinde paylaşabilir, bio linkine kendi vitrin linkini ekleyebilirsin.
       </p>
 
       <a
