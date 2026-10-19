@@ -32,11 +32,23 @@ export function LanguageProvider({ children }) {
   const [language, setLanguageState] = useState("tr");
 
   useEffect(() => {
+    let saved = null;
+    try { saved = localStorage.getItem(STORAGE_KEY); } catch {}
+    if (saved === "tr" || saved === "en") { setLanguageState(saved); return; }
+    // Kayıtlı seçim yoksa (2026-10-19, yurt dışı hazırlığı): tarayıcının dil listesinde Türkçe yoksa ve
+    // saat dilimi İstanbul değilse İngilizce aç. Telefonu İngilizce olan Türkiye'deki kullanıcı Türkçe kalır.
+    // Seçim kaydedilmez; kullanıcı TR/EN anahtarına basınca kalıcı olur.
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved === "tr" || saved === "en") setLanguageState(saved);
+      const langs = (navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || ""]).map((l) => String(l).toLowerCase());
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+      if (!langs.some((l) => l.startsWith("tr")) && tz !== "Europe/Istanbul") setLanguageState("en");
     } catch {}
   }, []);
+
+  // <html lang> seçilen dile uysun: ekran okuyucular ve CSS büyük harf dönüşümü (ör. "CLEANİNG" hatası) için.
+  useEffect(() => {
+    try { document.documentElement.lang = language; } catch {}
+  }, [language]);
 
   const setLanguage = useCallback((lang) => {
     setLanguageState(lang);

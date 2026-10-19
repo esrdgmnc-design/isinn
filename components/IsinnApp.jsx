@@ -827,13 +827,18 @@ function mapJobRowToPin(job) {
   };
 }
 
+// Kullanıcıya gösterilen tarihler arayüz diline uysun (LanguageProvider <html lang>'i günceller).
+function uiDateLocale() {
+  try { return document.documentElement.lang === "en" ? "en-GB" : "tr-TR"; } catch { return "tr-TR"; }
+}
+
 function formatMessageTime(iso) {
   const d = new Date(iso);
   const now = new Date();
   if (d.toDateString() === now.toDateString()) {
     return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
   }
-  return d.toLocaleDateString("tr-TR", { day: "2-digit", month: "2-digit" });
+  return d.toLocaleDateString(uiDateLocale(), { day: "2-digit", month: "2-digit" });
 }
 
 // İlan/iş ilanı oluşturma ve mesaj gönderme gibi "eylemler" için ortak telefon
@@ -2135,11 +2140,11 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
           aynı vitrinler Keşfet ızgarasında bağlantılı duruyor ve vitrin sayısı öngörülemez kalmalı. */}
       {discoveryPopularCategories?.length > 0 && (
         <section className="max-w-6xl mx-auto px-5 mt-14 sm:mt-16">
-          <h2 className="font-sans text-2xl sm:text-3xl font-black tracking-tight mb-5" style={{ color: "#0F1115" }}>Popüler Kategoriler</h2>
+          <h2 className="font-sans text-2xl sm:text-3xl font-black tracking-tight mb-5" style={{ color: "#0F1115" }}>{t("home.popularCategoriesTitle")}</h2>
           <div className="flex flex-wrap gap-2">
             {discoveryPopularCategories.map((c) => (
               <Link key={c.slug} href={`/kategori/${c.slug}`} className="text-sm font-bold px-4 py-2 rounded-full transition-colors hover:bg-black hover:text-white" style={{ border: "1px solid #0F1115", color: "#0F1115" }}>
-                {c.name}
+                {(language === "en" && getCategoryName(c.slug, t)) || c.name}
               </Link>
             ))}
           </div>
@@ -2149,11 +2154,11 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
       {/* SSS (2026-10-17): iki sütun — başlık solda, sorular sağa yaslı. */}
       <section className="max-w-6xl mx-auto px-5 mt-14 sm:mt-16 mb-14 sm:mb-16 grid md:grid-cols-[1fr_1.6fr] gap-6 md:gap-12">
         <div>
-          <h2 className="font-sans text-2xl sm:text-3xl font-black tracking-tight" style={{ color: "#0F1115" }}>Sıkça Sorulan Sorular</h2>
-          <p className="text-sm mt-2" style={{ color: "#6B7280" }}>Aradığın cevabı bulamazsan Destek Asistanı'na yazabilirsin.</p>
+          <h2 className="font-sans text-2xl sm:text-3xl font-black tracking-tight" style={{ color: "#0F1115" }}>{t("home.faqTitle")}</h2>
+          <p className="text-sm mt-2" style={{ color: "#6B7280" }}>{t("home.faqSubtitle")}</p>
         </div>
         <div className="space-y-2">
-          {faqJsonLd.mainEntity.map((f) => (
+          {(language === "en" && Array.isArray(t("home.faqItems")) ? t("home.faqItems").map((x) => ({ name: x.q, acceptedAnswer: { text: x.a } })) : faqJsonLd.mainEntity).map((f) => (
             <details key={f.name} className="group rounded-xl border px-4 py-3" style={{ borderColor: "#E4E4E7" }}>
               <summary className="text-sm font-bold cursor-pointer list-none [&::-webkit-details-marker]:hidden flex items-center justify-between gap-3 min-h-[28px]" style={{ color: "#0F1115" }}>
                 {f.name}
@@ -2886,7 +2891,7 @@ function OwnerVitrinPanelBody({ userId, serviceId, onListingsChanged, onReviewSe
           </div>
           <p className="text-[11px] mb-3" style={{ color: "#6B7280" }}>
             {funnel.measured_since
-              ? t("vitrinMedia.funnelMeasuredSince", { date: new Date(funnel.measured_since).toLocaleDateString("tr-TR") })
+              ? t("vitrinMedia.funnelMeasuredSince", { date: new Date(funnel.measured_since).toLocaleDateString(uiDateLocale()) })
               : t("vitrinMedia.funnelNotMeasuredYet")}
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -10644,7 +10649,7 @@ function PricingView({ onBack, onJoined, userId }) {
   // Ücretsiz lansman dönemi: planlar mat/kapalı gösterilir, satın alma yok
   // (sunucu rotaları da reddeder). Süre dolunca kendiliğinden yeniden açılır.
   const freePeriod = isFreePeriod();
-  const freeUntilLabel = new Date(FREE_PERIOD_UNTIL_ISO).toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" });
+  const freeUntilLabel = new Date(FREE_PERIOD_UNTIL_ISO).toLocaleDateString(uiDateLocale(), { day: "numeric", month: "long", year: "numeric" });
 
   return (
     <div className="max-w-md mx-auto px-5 py-14">
@@ -10935,7 +10940,7 @@ function SubscriptionCard({ userId, onGoToPlans }) {
   };
 
   if (sub === undefined) return null;
-  const endLabel = sub ? new Date(sub.current_period_end).toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" }) : "";
+  const endLabel = sub ? new Date(sub.current_period_end).toLocaleDateString(uiDateLocale(), { day: "numeric", month: "long", year: "numeric" }) : "";
 
   return (
     <div className="rounded-2xl border p-4 mb-3" style={{ borderColor: "#E4E4E7", background: "#FFFFFF" }}>
@@ -11395,7 +11400,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
   };
 
   const joinedLabel = profile?.created_at
-    ? new Date(profile.created_at).toLocaleDateString("tr-TR", { month: "long", year: "numeric" })
+    ? new Date(profile.created_at).toLocaleDateString(uiDateLocale(), { month: "long", year: "numeric" })
     : null;
 
   // Profil fotoğrafı yuvarlak gösteriliyor (bkz. aşağıdaki rounded-full img) —

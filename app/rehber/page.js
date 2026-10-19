@@ -61,7 +61,7 @@ export default function RehberIndexPage() {
   const rest = REHBER_POSTS.filter((p) => !used.has(p.slug) && p.lang !== "en");
   if (rest.length) groups.push({ title: "Diğer rehberler", posts: rest });
   const english = REHBER_POSTS.filter((p) => p.lang === "en");
-  if (english.length) groups.push({ title: "Guides in English: finding freelance work", posts: english, lang: "en" });
+  if (english.length) groups.push({ title: "Guides in English: freelancing and hiring freelancers", posts: english, lang: "en" });
 
   const jsonLd = {
     "@context": "https://schema.org",

@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { Anton } from "next/font/google";
 import { ChevronRight, Pause, Play } from "lucide-react";
-import { BENTO_BIG, BENTO_HEADING, BENTO_TILES } from "../lib/homeBento";
+import { BENTO_BIG, BENTO_HEADING, BENTO_HEADING_EN, BENTO_TILES } from "../lib/homeBento";
+import { useLanguage } from "../lib/i18n/LanguageContext";
 
 // Freelancer'daki dar, kalın başlık yazısının karşılığı; latin-ext Türkçe harfleri (İ, Ş, Ğ, ı) içerir.
 // Yalnızca bento'da kullanılır, tek ağırlık; next/font kendi sunucumuzdan verir (Google'a istek gitmez).
@@ -19,6 +20,10 @@ const display = Anton({ weight: "400", subsets: ["latin", "latin-ext"], display:
 //   belirir ve alttan tek cümle + düğme açılır. Dokunmatikte başlık hep görünür, dokununca açılır.
 // İçerik ve görsel yolları lib/homeBento.js'te (kurucu seçer; vitrin kapağı kullanılmaz).
 export default function HomeBento({ onOpen }) {
+  const { language } = useLanguage();
+  const isEn = language === "en";
+  const L = (o, k) => (isEn && o[k + "En"]) || o[k];
+  const heading = isEn ? BENTO_HEADING_EN : BENTO_HEADING;
   const frames = BENTO_BIG.frames || [];
   const video = BENTO_BIG.video || null;
   const [frame, setFrame] = useState(0);
@@ -59,13 +64,13 @@ export default function HomeBento({ onOpen }) {
   }, [allowMotion, video]);
 
   return (
-    <section className="pt-7 sm:pt-10 pb-8" aria-label={BENTO_BIG.title}>
+    <section className="pt-7 sm:pt-10 pb-8" aria-label={L(BENTO_BIG, "title")}>
       <h2 className="px-5 sm:px-8 mb-5 sm:mb-6 font-sans text-[22px] sm:text-3xl font-black tracking-tight [text-wrap:balance]" style={{ color: "#FFFFFF" }}>
-        {BENTO_HEADING.lead} <span style={{ color: "#60A5FA" }}>{BENTO_HEADING.accent}</span>
+        {heading.lead} <span style={{ color: "#60A5FA" }}>{heading.accent}</span>
       </h2>
       <div className="bento px-5 sm:px-8">
         <div className="bento-big-cell">
-        <button type="button" ref={bigRef} className="bento-big" onClick={() => onOpen(BENTO_BIG.example)}>
+        <button type="button" ref={bigRef} className="bento-big" onClick={() => onOpen(L(BENTO_BIG, "example"))}>
           {video ? (
             allowMotion ? (
               <video ref={videoRef} className="bento-video" muted loop playsInline preload="none" poster={video.poster} aria-hidden="true">
@@ -80,20 +85,20 @@ export default function HomeBento({ onOpen }) {
               <span key={u} className={`bento-frame${i === frame ? " on" : ""}`} style={{ backgroundImage: `url("${u}")` }} aria-hidden="true" />
             ))
           )}
-          <span className={`bento-headline ${display.className}`} lang="tr">{BENTO_BIG.title}</span>
+          <span className={`bento-headline ${display.className}`} lang={language}>{L(BENTO_BIG, "title")}</span>
           <span className="bento-bar">
-            <span className="bento-bar-text">{BENTO_BIG.pitch}</span>
-            <span className="bento-btn" style={{ background: "#2563EB" }}>{BENTO_BIG.cta} <ChevronRight size={14} /></span>
+            <span className="bento-bar-text">{L(BENTO_BIG, "pitch")}</span>
+            <span className="bento-btn" style={{ background: "#2563EB" }}>{L(BENTO_BIG, "cta")} <ChevronRight size={14} /></span>
           </span>
         </button>
         {video && allowMotion && (
-          <button type="button" onClick={toggleVideo} className="bento-pause" aria-label={userPaused ? "Videoyu oynat" : "Videoyu durdur"}>
+          <button type="button" onClick={toggleVideo} className="bento-pause" aria-label={userPaused ? (isEn ? "Play video" : "Videoyu oynat") : (isEn ? "Pause video" : "Videoyu durdur")}>
             {userPaused ? <Play size={16} /> : <Pause size={16} />}
           </button>
         )}
         </div>
         {BENTO_TILES.map((tile) => (
-          <button type="button" key={tile.id} className="bento-tile" style={{ "--tint": tile.color }} onClick={() => onOpen(tile.example)}>
+          <button type="button" key={tile.id} className="bento-tile" style={{ "--tint": tile.color }} onClick={() => onOpen(L(tile, "example"))}>
             <span className="bento-media">
               {tile.image ? (
                 <Image src={tile.image} alt="" fill sizes="(max-width: 767px) 50vw, 25vw" className="bento-img" />
@@ -101,11 +106,11 @@ export default function HomeBento({ onOpen }) {
                 <span className="bento-noimg" style={{ background: `linear-gradient(140deg, ${tile.color} 0%, #0B0B0F 85%)` }} />
               )}
               <span className="bento-tint" />
-              <span className={`bento-title ${display.className}`} lang="tr">{tile.title}</span>
+              <span className={`bento-title ${display.className}`} lang={language}>{L(tile, "title")}</span>
             </span>
             <span className="bento-panel">
-              <span className="bento-panel-text">{tile.pitch}</span>
-              <span className="bento-btn" style={{ background: tile.color }}>{tile.cta} <ChevronRight size={13} /></span>
+              <span className="bento-panel-text">{L(tile, "pitch")}</span>
+              <span className="bento-btn" style={{ background: tile.color }}>{L(tile, "cta")} <ChevronRight size={13} /></span>
             </span>
           </button>
         ))}
