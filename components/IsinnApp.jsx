@@ -844,8 +844,14 @@ function formatMessageTime(iso) {
 // QuotaGuard Static proxy üzerinden sabit IP'den, doğru kullanıcı adı/şifre
 // çiftiyle) gerçekten çalışıyor — canlı testte SMS telefona ulaştı. Önceki
 // "geçici kapatma" notu artık geçersiz, buradan silindi.
+// 2026-10-19 kurucu kararı: ücretsiz dönemde vitrin, mesaj ve yorum için yalnızca e-posta doğrulaması yeter
+// (yurt dışından gelen kullanıcılar Türk numarasıyla SMS doğrulayamıyor). Telefon doğrulama profilde isteğe
+// bağlı olarak durur; şartı geri açmak için bunu true yapmak yeterli.
+const REQUIRE_PHONE_VERIFICATION = false;
+
 async function checkPhoneGate(userId, { allowFirstMessage = false } = {}) {
   if (!userId) return { ok: false, reason: "Giriş yapmış olmalısın." };
+  if (!REQUIRE_PHONE_VERIFICATION) return { ok: true };
   // Müşterinin İLK mesajı doğrulamasız gider (ilk mesaja kadar kapı sayısı azalır);
   // ikinci mesajdan itibaren telefon doğrulaması gerekir. Spam için hız sınırı ve
   // şüpheli içerik taraması zaten var.
@@ -3644,8 +3650,8 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
     if (!currentUserId) return { ok: false, reason: t("listingDetail.errNeedLogin") };
     if (currentUserId === listing.providerId) return { ok: false, reason: t("listingDetail.errCannotReviewSelf") };
 
-    let smsConfigured = true;
-    try {
+    let smsConfigured = REQUIRE_PHONE_VERIFICATION;
+    if (smsConfigured) try {
       const cfgRes = await fetch("/api/send-otp");
       smsConfigured = (await cfgRes.json()).configured;
     } catch {
