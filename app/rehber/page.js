@@ -37,6 +37,7 @@ const GROUPS = [
       "instagramda-calismalarini-gosteriyorsan-yerelde-nasil-bulunursun",
       "ek-gelir-ve-freelance-is-yollari",
       "birkac-bin-takipci-ile-yerel-isletmelerden-sponsorluk",
+      "freelance-iste-revizyon-hakki-kac-olmali",
     ],
   },
   {
@@ -47,6 +48,8 @@ const GROUPS = [
       "lgs-hazirlik-sureci-nasil-planlanir",
       "ev-tadilatinda-usta-secerken-nelere-dikkat-edilmeli",
       "cocuk-bakicisi-secerken-sorulmasi-gereken-sorular",
+      "freelancer-ile-calismadan-once-sorulacak-sorular",
+      "cevirmen-secerken-nelere-dikkat-edilmeli",
     ],
   },
 ];
