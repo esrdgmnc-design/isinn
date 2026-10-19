@@ -46,7 +46,7 @@ export async function generateMetadata({ params }) {
   if (!meta) return { title: "Kategori bulunamadı — İşinn" };
   const { services } = await getServices(params.slug);
   const url = `${BASE_URL}/kategori/${params.slug}`;
-  const title = `${categorySeoName(meta)} Hizmeti Bul — İşinn`;
+  const title = `${meta.seoTitle || `${categorySeoName(meta)} Hizmeti Bul`} — İşinn`;
   const realCount = services.filter(isIndexableListing).length;
   const intro = getCategoryIntro(meta.name, params.slug);
   const description = realCount > 0 ? `${intro} İşinn'de şu an ${realCount} aktif vitrin var.`.slice(0, 200) : intro;
@@ -104,7 +104,7 @@ export default async function CategoryPage({ params }) {
       <div className="max-w-5xl mx-auto px-5 py-10">
         <Link href="/" className="text-sm font-bold" style={{ color: "#2563EB" }}>← İşinn</Link>
         <h1 className="font-sans text-2xl md:text-3xl font-black mt-4 mb-2" style={{ color: "#0F1115" }}>
-          {categorySeoName(meta)} Hizmeti Bul
+          {meta.seoTitle || `${categorySeoName(meta)} Hizmeti Bul`}
         </h1>
         <p className="text-sm mb-8" style={{ color: "#6B7280" }}>
           {getCategoryIntro(meta.name, params.slug)}
