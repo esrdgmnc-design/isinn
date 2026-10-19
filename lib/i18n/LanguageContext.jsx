@@ -1,7 +1,6 @@
 "use client";
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
 import { tr } from "./tr";
-import { en } from "./en";
 
 // Client-side dil sistemi — IsinnApp.jsx gerçek Next.js route'ları
 // (app/[locale]/ gibi) kullanmadığı, tek bir "use client" bileşeni içinde
@@ -11,7 +10,10 @@ import { en } from "./en";
 // "tr" — mevcut kullanıcılar, SEO ve marka sesi Türkçe kalmaya devam ediyor,
 // İngilizce eklenen bir seçenek, bir değiştirme değil.
 const STORAGE_KEY = "isinn_language";
-const DICTS = { tr, en };
+// İngilizce sözlük (~21 KB gzip) yalnızca İngilizce seçilince indirilir (2026-10-19): Türkçe kullanıcı hiç yüklemez.
+// Yüklenene kadar arayüz Türkçe kalır; "language" dışarıya etkin dili verir, böylece metin ve tarih biçimi karışmaz.
+let enCache = null;
+const loadEn = () => (enCache ? Promise.resolve(enCache) : import("./en").then((m) => (enCache = m.en)));
 
 const LanguageContext = createContext({
   language: "tr",
@@ -29,7 +31,15 @@ function interpolate(value, vars) {
 }
 
 export function LanguageProvider({ children }) {
-  const [language, setLanguageState] = useState("tr");
+  const [wanted, setLanguageState] = useState("tr");
+  const [enDict, setEnDict] = useState(enCache);
+  useEffect(() => {
+    if (wanted !== "en" || enDict) return;
+    let alive = true;
+    loadEn().then((d) => { if (alive) setEnDict(d); }).catch(() => {});
+    return () => { alive = false; };
+  }, [wanted, enDict]);
+  const language = wanted === "en" && enDict ? "en" : "tr";
 
   useEffect(() => {
     let saved = null;
@@ -56,15 +66,15 @@ export function LanguageProvider({ children }) {
   }, []);
 
   const t = useCallback((key, vars) => {
-    const dict = DICTS[language] || DICTS.tr;
+    const dict = language === "en" && enDict ? enDict : tr;
     let value = getFromDict(dict, key);
     // Phase 1 sadece bazı ekranları kapsıyor — henüz çevrilmemiş bir key
     // istenirse (örn. mesajlaşma/ilan oluşturma) sessizce tr'ye düşer,
     // İngilizce modda boş/garip bir metin yerine hâlâ okunabilir bir şey görünür.
-    if (value === undefined) value = getFromDict(DICTS.tr, key);
+    if (value === undefined) value = getFromDict(tr, key);
     if (value === undefined) return key;
     return interpolate(value, vars);
-  }, [language]);
+  }, [language, enDict]);
 
   const value = useMemo(() => ({ language, setLanguage, t }), [language, setLanguage, t]);
 

@@ -11,7 +11,7 @@ import { MIN_CATEGORY_LISTINGS } from "../lib/seoFormat";
 export const metadata = {
   title: "İşinn | Freelance Uzman ve Hizmet Bul, Vitrinini Aç",
   description: "Yazılım, tasarım, çeviri, danışmanlıktan yakınındaki hizmetlere; freelance uzmanları keşfet ya da yeteneğini vitrininde sergile. İşinn komisyon almaz.",
-  alternates: { canonical: "/" },
+  alternates: { canonical: "/", languages: { tr: "/", en: "/en", "x-default": "/" } },
 };
 
 // SEO denetiminde bulunan en kritik sorun: <HomeClient/> tamamen "use client"

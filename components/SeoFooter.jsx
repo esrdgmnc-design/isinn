@@ -32,6 +32,7 @@ export default async function SeoFooter() {
         <Link href="/yetenegini-farket" style={link}>Yeteneğini Farket</Link>
         <Link href="/rehber" style={link}>Rehberler</Link>
         <Link href="/hakkimizda" style={link}>Hakkımızda</Link>
+        <Link href="/en" hrefLang="en" style={link}>English</Link>
       </div>
       {cats.length > 0 && (
         <p className="mb-2">
