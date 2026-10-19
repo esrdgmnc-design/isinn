@@ -50,6 +50,10 @@ const GROUPS = [
       "cocuk-bakicisi-secerken-sorulmasi-gereken-sorular",
       "freelancer-ile-calismadan-once-sorulacak-sorular",
       "cevirmen-secerken-nelere-dikkat-edilmeli",
+      "freelancer-nerede-bulunur-bionluk-armut-linkedin-isinn",
+      "web-sitesi-freelancer-mi-ajans-mi",
+      "logo-tasarimcisi-secerken-nelere-dikkat-edilmeli",
+      "yasli-bakicisi-ile-gorusmede-sorulacak-sorular",
     ],
   },
 ];

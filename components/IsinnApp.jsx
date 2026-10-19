@@ -755,6 +755,13 @@ function mapServiceRowToPin(row, listing) {
 
 function formatRelativeTr(iso) {
   const diffMin = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+  if (uiDateLocale() === "en-GB") {
+    if (diffMin < 1) return "just now";
+    if (diffMin < 60) return `${diffMin} min ago`;
+    const h = Math.round(diffMin / 60);
+    if (h < 24) return `${h} h ago`;
+    return `${Math.round(h / 24)} d ago`;
+  }
   if (diffMin < 1) return "az önce";
   if (diffMin < 60) return `${diffMin} dakika önce`;
   const diffH = Math.round(diffMin / 60);
@@ -1077,7 +1084,7 @@ function NotificationPopover({ notif, onNavigate }) {
               className="w-full text-left px-4 py-3 border-b hover:bg-black/[0.03] transition-colors"
               style={{ borderColor: "#F7F7F8", background: n.read_at ? "transparent" : "rgba(37,99,235,0.04)" }}
             >
-              <p className="text-xs font-bold mb-0.5" style={{ color: "#0F1115" }}>{n.title}</p>
+              <p className="text-xs font-bold mb-0.5" style={{ color: "#0F1115" }}>{n.type === "new_message" ? t("notifications.newMessageTitle") : n.title}</p>
               <p className="text-xs leading-snug" style={{ color: "#6B7280" }}>{n.body}</p>
               <p className="text-[11px] mt-1" style={{ color: "#9CA3AF" }}>{formatRelativeTr(n.created_at)}</p>
             </button>
