@@ -7117,6 +7117,7 @@ async function requestTalentSuggestions({ skills, hours, budget, remote, remoteK
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         skills, hours, budget, remote, remoteKey, experience, district, excludeIds, objection,
+        lang: uiDateLocale() === "en-GB" ? "en" : "tr",
         categoryIds: CATEGORIES.map((c) => c.id).filter((id) => !TALENT_BLOCKED_IDS.has(id)),
       }),
       signal: controller.signal,
@@ -7609,7 +7610,7 @@ function TalentDiscoveryView({ onBack, onCreateListing, userId }) {
                   <div className="p-4">
                   <div className="flex items-center gap-2 mb-1.5">
                     <Icon size={16} style={{ color: "#2563EB" }} />
-                    <p className="text-sm font-black" style={{ color: "#0F1115" }}>{cat.name}</p>
+                    <p className="text-sm font-black" style={{ color: "#0F1115" }}>{getCategoryName(cat.id, t) || cat.name}</p>
                   </div>
                   {s.draft && <p className="text-sm font-bold mb-1.5" style={{ color: "#0F1115" }}>{t("talentDiscovery.firstOfferLabel")} {s.draft.title}</p>}
                   {s.userWords && <p className="text-xs mb-1.5 italic" style={{ color: "#374151" }}>{t("talentDiscovery.userWordsLabel")} “{s.userWords}”</p>}

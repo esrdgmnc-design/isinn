@@ -9,7 +9,7 @@ import { logAiCall, aiCapReached } from "../../../lib/aiLog";
 import { scrubPII } from "../../../lib/piiScrub";
 
 // İstem/doğrulama davranışı değişince artır: ai_calls günlüğünde hangi sürümün ne ürettiği görülür.
-const PROMPT_VERSION = "talent-v3";
+const PROMPT_VERSION = "talent-v4";
 
 // Taslaklı yanıt ~15-25 sn sürüyor; Vercel'in varsayılan fonksiyon süresi bunu keserdi.
 export const maxDuration = 60;
@@ -73,7 +73,8 @@ export async function POST(request) {
   const allowed = allowedTalentCategories(pool, { excludeIds, remoteKey });
   if (allowed.length < 3) return Response.json({ error: "invalid" }, { status: 422 });
 
-  const { system, user, userText } = buildTalentPrompt({ input, allowed, excludeIds, objection });
+  const lang = body?.lang === "en" ? "en" : "tr";
+  const { system, user, userText } = buildTalentPrompt({ input, allowed, excludeIds, objection, lang });
 
   const started = Date.now();
   // Her yanıta bir kimlik: istemci gösterim/kabul/ret olaylarını bu kimlikle ilişkilendirir (içerik değil, yalnızca kimlik).
