@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
-export const alt = "İşinn: Becerinden Hizmet Vitrini";
+export const alt = "İşinn: Freelance Uzman ve Hizmet Bul, Vitrinini Aç";
 
 // Link paylaşıldığında (WhatsApp, Instagram, Twitter/X, LinkedIn) çıkan
 // önizleme kartı. Next.js bunu otomatik olarak <meta property="og:image">
@@ -29,11 +29,11 @@ export default function OpengraphImage() {
           <span style={{ color: "#2563EB", fontSize: 72, fontWeight: 800 }}>.</span>
         </div>
         <div style={{ color: "#D1D5DB", fontSize: 34, fontWeight: 500, maxWidth: 820, lineHeight: 1.35 }}>
-          Becerinden hizmet vitrini: ihtiyacın olan hizmeti bul ya da kendi hizmetini sun.
+          Freelance uzman ve hizmet bul. Ya da yeteneğini vitrininde sergile.
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 44 }}>
           <div style={{ background: "#2563EB", color: "#fff", fontSize: 22, fontWeight: 700, padding: "12px 26px", borderRadius: 999 }}>
-            Sıfır Komisyon
+            Vitrinini Aç
           </div>
           <div style={{ color: "#9CA3AF", fontSize: 24, fontWeight: 600 }}>isinn.com.tr</div>
         </div>
