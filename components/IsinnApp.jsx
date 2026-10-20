@@ -113,6 +113,8 @@ const CATEGORIES = [
   { id: "bocek-ilaclama", name: "Böcek İlaçlama (Haşere Kontrolü)", mode: "local", icon: Bug },
   { id: "veteriner", name: "Veteriner", mode: "local", icon: Stethoscope },
   { id: "avukat", name: "Avukat / Hukuki Danışmanlık", mode: "both", icon: Scale },
+  // 2026-10-20 (kurucu): tanıtımlarda anılan genel danışmanlık kategorisi yoktu. bkz. supabase/categories_seed_v9.sql.
+  { id: "danismanlik", name: "Danışmanlık & Mentorluk", mode: "both", icon: Briefcase },
   // Gerçek kullanıcı bildirimi (2026-09-30): direksiyon dersi vermek isteyen
   // bir eğitmen, sabit listede uygun bir kategori bulamayıp vitrin açamamıştı
   // ("Diğer" seçeneğini fark etmemiş) — bu, genel "Eğitmen" kategorisinin
@@ -151,7 +153,7 @@ const PARENT_CATEGORIES = [
   { id: "saglik", name: "Sağlık", icon: HeartPulse, categoryIds: ["hasta-bakici", "hemsire", "fizyoterapist", "diyetisyen", "psikolog", "yoga-koc", "spor-egitmeni", "veteriner"] },
   { id: "egitim-aile", name: "Eğitim & Aile", icon: GraduationCap, categoryIds: ["ogretmen", "egitmen", "bakici", "logusa-bakicisi", "emzirme-danismani", "etkinlik-organizatoru", "muzik-egitmeni", "oyun-ablasi", "direksiyon-egitmeni"] },
   { id: "atolye-kurs", name: "Atölye & Kurslar", icon: Brush, categoryIds: ["el-sanatlari-atolyesi", "seramik-atolyesi", "dikis-orgu-atolyesi", "resim-sanat-atolyesi", "mutfak-atolyesi", "cocuk-atolyesi", "geleneksel-sanatlar-atolyesi", "kodlama-egitmeni", "dans-egitmeni", "satranc-egitmeni", "diksiyon-hitabet-egitmeni", "ofis-programlari-egitmeni"] },
-  { id: "profesyonel", name: "Profesyonel Hizmetler", icon: Briefcase, categoryIds: ["tasarim", "yazilim", "dijital", "muhasebe", "ceviri", "icerik-yazarligi", "video-duzenleme", "seslendirme", "sanal-asistan", "moda-tekstil-tasarim", "avukat"] },
+  { id: "profesyonel", name: "Profesyonel Hizmetler", icon: Briefcase, categoryIds: ["tasarim", "yazilim", "dijital", "muhasebe", "ceviri", "icerik-yazarligi", "video-duzenleme", "seslendirme", "sanal-asistan", "moda-tekstil-tasarim", "avukat", "danismanlik"] },
   { id: "diger", name: "Diğer", icon: MoreHorizontal, categoryIds: ["bahce-bakim", "muhendis", "sosyal-medya", "profesyonel-fotograf", "evcil-hayvan"] },
 ];
 
