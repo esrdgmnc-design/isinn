@@ -3142,6 +3142,60 @@ function LoopVideo({ src, poster, className, style }) {
   );
 }
 
+// Randevu talebi (2026-10-20, kurucu kararı: en basit hâli). Ayrı tablo/takvim YOK: müşteri gün + zaman dilimi seçer,
+// talep mesaj kutusuna hazır metin olarak düşer, kendisi gönderir; bildirim/e-posta mevcut mesaj akışıyla gider. Saat
+// yazışarak kesinleşir, vitrin sahibi kendi defterine elle girer. Serbest not alanı bilerek yok (sağlık verisi riski,
+// KVKK); sağlık kategorilerinde ve uzaktan vitrinlerde gösterilmez.
+const APPOINTMENT_EXCLUDED_CATEGORIES = new Set(["psikolog", "diyetisyen", "fizyoterapist", "hemsire", "hasta-bakici", "emzirme-danismani", "logusa-bakicisi"]);
+const APPOINTMENT_DRAFT_PREFIX = "📅";
+function canRequestAppointment(listing) {
+  return !!listing && listing.isReal && !listing.isDemo && listing.mode === "local" && !APPOINTMENT_EXCLUDED_CATEGORIES.has(listing.category);
+}
+function AppointmentRequestBox({ listing, onSubmit }) {
+  const { t } = useLanguage();
+  const [open, setOpen] = useState(false);
+  const [day, setDay] = useState("");
+  const [slot, setSlot] = useState("any");
+  const today = new Date();
+  const minDay = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  const slots = ["morning", "noon", "evening", "any"];
+  const submit = () => {
+    const dayLabel = day
+      ? new Date(`${day}T12:00:00`).toLocaleDateString(uiDateLocale(), { weekday: "long", day: "numeric", month: "long" })
+      : t("appointment.dayFlexible");
+    const draft = t("appointment.draft", { prefix: APPOINTMENT_DRAFT_PREFIX, title: listing.title, day: dayLabel, slot: t(`appointment.slot_${slot}`) });
+    trackEvent("appointment_request_started", { listing_id: listing.dbId, has_day: !!day, slot }, null);
+    onSubmit(draft);
+  };
+  if (!open) {
+    return (
+      <button onClick={() => setOpen(true)} className="w-full py-2.5 rounded-full text-sm font-medium border mb-2 flex items-center justify-center gap-1.5" style={{ borderColor: "#2563EB", color: "#2563EB" }}>
+        <CalendarClock size={14} /> {t("appointment.button")}
+      </button>
+    );
+  }
+  return (
+    <div className="rounded-xl border p-3 mb-2" style={{ borderColor: "#BFDBFE", background: "#F8FAFF" }}>
+      <p className="text-sm font-bold mb-2" style={{ color: "#0F1115" }}>{t("appointment.title")}</p>
+      <label className="block text-xs font-medium mb-1" style={{ color: "#4B5563" }}>{t("appointment.dayLabel")}</label>
+      <input type="date" min={minDay} value={day} onChange={(e) => setDay(e.target.value)} className="w-full rounded-lg border px-3 py-2 text-sm mb-2" style={{ borderColor: "#E4E4E7", background: "#fff" }} />
+      <p className="text-xs font-medium mb-1" style={{ color: "#4B5563" }}>{t("appointment.slotLabel")}</p>
+      <div className="grid grid-cols-2 gap-1.5 mb-2">
+        {slots.map((s) => (
+          <button key={s} onClick={() => setSlot(s)} className="py-1.5 rounded-lg text-xs font-medium border" style={slot === s ? { borderColor: "#2563EB", background: "#2563EB", color: "#fff" } : { borderColor: "#E4E4E7", background: "#fff", color: "#0F1115" }}>
+            {t(`appointment.slot_${s}`)}
+          </button>
+        ))}
+      </div>
+      <p className="text-[11px] mb-2" style={{ color: "#6B7280" }}>{t("appointment.note")}</p>
+      <div className="flex gap-2">
+        <button onClick={() => setOpen(false)} className="flex-1 py-2 rounded-full text-xs font-medium border" style={{ borderColor: "#E4E4E7", color: "#4B5563" }}>{t("appointment.cancel")}</button>
+        <button onClick={submit} className="flex-[2] py-2 rounded-full text-xs font-bold text-white" style={{ background: "#2563EB" }}>{t("appointment.submit")}</button>
+      </div>
+    </div>
+  );
+}
+
 // Sağlayıcı geçmişte çalıştığı birine gönderebilsin: bağlantı vitrini açar, giriş sonrası doğrudan "işi onayla" ekranına götürür.
 function PastWorkInvite({ serviceId, userId }) {
   const { t } = useLanguage();
@@ -4057,6 +4111,9 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
               {/* 2026-10-18 (değerlendirme): giriş yapmamış ziyaretçi düğmeye basınca giriş ekranına gidiyor; önceden söyle. */}
               {!currentUserId && (
                 <p className="text-[11px] text-center mb-2" style={{ color: "#6B7280" }}>{t("listingDetail.contactLoginHint")}</p>
+              )}
+              {canRequestAppointment(listing) && (
+                <AppointmentRequestBox listing={listing} onSubmit={(draft) => onContact({ appointmentDraft: draft })} />
               )}
               <button
                 onClick={() => onToggleFavorite?.(listing)}
@@ -6260,6 +6317,8 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
         return merged;
       });
       setActiveId(jobId);
+      // Randevu talebi: hazır metin kutuya düşer, müşteri isterse düzenleyip kendisi gönderir.
+      if (initialContact.draft) setInput(initialContact.draft);
       setLoading(false);
     })();
     return () => { cancelled = true; };
@@ -6507,6 +6566,7 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
     setInput("");
     setRiskWarnBody("");
     trackEvent("message_sent", {}, currentUserId);
+    if (body.startsWith(APPOINTMENT_DRAFT_PREFIX)) trackEvent("appointment_request_sent", { job_id: activeId }, currentUserId);
     const time = formatMessageTime(data.created_at);
     setThreads((t) => ({ ...t, [activeId]: [...(t[activeId] || []), { id: data.id, sender: "me", text: body, time }] }));
     setConversations((cs) => cs.map((c) => (c.id === activeId ? { ...c, lastMessage: body, time } : c)));
@@ -12976,6 +13036,7 @@ export default function IsinnPrototype({ session, onRequireAuth, discoveryPopula
               categoryId: selected.categoryDbId,
               listingId: selected.dbId,
               pastWork: past,
+              draft: (opts && typeof opts.appointmentDraft === "string") ? opts.appointmentDraft : null,
             });
             setView("messages");
           }}
