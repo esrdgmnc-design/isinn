@@ -24,17 +24,43 @@ import { serve } from "https://deno.land/std@0.203.0/http/server.ts";
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const FROM_ADDRESS = Deno.env.get("NOTIFICATION_FROM_ADDRESS") || "İşinn <onboarding@resend.dev>";
 // Güvenlik (2026-10-20): önceden anon anahtarı bilen herkes (anahtar sitede herkese açık) bu fonksiyonla İşinn adına
-// istediği adrese istediği e-postayı gönderebiliyordu. Artık yalnızca service_role anahtarıyla çağrılabilir:
-// DB tetikleyicisi anahtarı Vault'tan okur (supabase/notify_email_service_role_2026_10_20.sql), sunucu rotaları ortam
-// değişkeninden. SUPABASE_SERVICE_ROLE_KEY Edge Function'lara Supabase tarafından otomatik verilir.
+// istediği adrese istediği e-postayı gönderebiliyordu. Artık iki yoldan biri şart:
+//   - sunucu rotaları (ör. paytr-callback): Authorization = service_role anahtarı;
+//   - DB tetikleyicisi: x-notify-secret başlığı = Vault'taki 'notify_hook_secret' (veritabanı kendisi üretti, kimse elle
+//     taşımadı; bkz. supabase/notify_email_service_role_2026_10_20.sql). Fonksiyon değeri service_role ile
+//     get_notify_hook_secret() RPC'sinden okur. SUPABASE_URL ve SUPABASE_SERVICE_ROLE_KEY Supabase tarafından otomatik verilir.
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+let hookSecret: string | null = null;
+
+async function getHookSecret(): Promise<string | null> {
+  if (hookSecret) return hookSecret;
+  if (!SUPABASE_URL || !SERVICE_ROLE_KEY) return null;
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_notify_hook_secret`, {
+    method: "POST",
+    headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, "Content-Type": "application/json" },
+    body: "{}",
+  });
+  if (!r.ok) return null;
+  const v = await r.json();
+  hookSecret = typeof v === "string" && v.length >= 32 ? v : null;
+  return hookSecret;
+}
+
+async function isAuthorized(req: Request): Promise<boolean> {
+  if (SERVICE_ROLE_KEY && req.headers.get("Authorization") === `Bearer ${SERVICE_ROLE_KEY}`) return true;
+  const given = req.headers.get("x-notify-secret");
+  if (!given) return false;
+  const expected = await getHookSecret();
+  return !!expected && given === expected;
+}
 
 serve(async (req) => {
   if (req.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
   }
 
-  if (!SERVICE_ROLE_KEY || req.headers.get("Authorization") !== `Bearer ${SERVICE_ROLE_KEY}`) {
+  if (!(await isAuthorized(req))) {
     return new Response(JSON.stringify({ error: "Yetkisiz." }), { status: 401, headers: { "Content-Type": "application/json" } });
   }
 

@@ -1,23 +1,35 @@
 -- GÜVENLİK (2026-10-20): send-notification-email Edge Function'ı açık e-posta rölesiydi. Herkese açık anon anahtarı bilen
--- herkes İşinn adına istediği adrese e-posta gönderebiliyordu. Fonksiyon artık yalnızca service_role anahtarını kabul ediyor.
--- Bu dosya mesaj bildirimi tetikleyicisini service_role anahtarını Supabase Vault'tan okuyacak şekilde günceller
--- (anahtar SQL kaynağında DÜZ METİN olarak durmaz). İki dilli metinler notify_new_message_bilingual_2026_10_19.sql ile aynı;
--- o dosya henüz çalıştırılmadıysa artık GEREK YOK, bu dosya onu da kapsar.
+-- herkes İşinn adına istediği adrese e-posta gönderebiliyordu. Fonksiyonun yeni sürümü yalnızca şunları kabul eder:
+--   - sunucu rotaları: service_role anahtarı (Authorization başlığı);
+--   - bu tetikleyici: x-notify-secret başlığında Vault'taki 'notify_hook_secret' değeri.
+-- Gizli değeri veritabanı KENDİSİ üretir; kimse bir anahtarı kopyalayıp yapıştırmaz. Fonksiyon değeri service_role ile
+-- get_notify_hook_secret() RPC'sinden okur (anon/authenticated bu RPC'yi çağıramaz).
+-- İki dilli metinler notify_new_message_bilingual_2026_10_19.sql ile aynı; o dosya artık GEREKSİZ, bu dosya onu kapsar.
 --
--- SIRA ÖNEMLİ:
---   1) ÖNCE aşağıdaki tek satırı, <SERVICE_ROLE_KEY> yerine Project Settings → API → service_role anahtarını yapıştırarak
---      SQL editöründe AYRI çalıştır (bu satırı dosyaya kaydetme / commit etme):
---        select vault.create_secret('<SERVICE_ROLE_KEY>', 'service_role_key');
---   2) SONRA bu dosyanın geri kalanını çalıştır.
---   3) EN SON Edge Function'ı yeni koduyla deploy et (supabase/functions/send-notification-email/index.ts).
--- Bu sıra bozulmazsa e-postalar hiç kesilmez: eski fonksiyon da service_role anahtarını kabul eder.
+-- SIRA: önce bu dosya (eski fonksiyon fazladan başlığı yok sayar, e-postalar kesilmez), sonra Edge Function'ın yeni kodu.
+-- Tekrar çalıştırmak güvenli (idempotent).
+
+select vault.create_secret(encode(extensions.gen_random_bytes(32), 'hex'), 'notify_hook_secret')
+where not exists (select 1 from vault.secrets where name = 'notify_hook_secret');
+
+create or replace function public.get_notify_hook_secret()
+returns text
+language sql
+security definer
+set search_path = vault, public
+as $$
+  select decrypted_secret from vault.decrypted_secrets where name = 'notify_hook_secret' limit 1;
+$$;
+
+revoke execute on function public.get_notify_hook_secret() from public, anon, authenticated;
+grant execute on function public.get_notify_hook_secret() to service_role;
 
 create or replace function notify_new_message()
 returns trigger as $$
 declare
   v_to_email text;
   v_sender_name text;
-  v_key text;
+  v_secret text;
 begin
   insert into notifications (profile_id, type, title, body, related_job_id)
   values (
@@ -32,15 +44,16 @@ begin
   select email into v_to_email from auth.users where id = new.receiver_id;
   select coalesce(business_name, full_name, 'Bir kullanıcı') into v_sender_name
     from profiles where id = new.sender_id;
-  select decrypted_secret into v_key from vault.decrypted_secrets where name = 'service_role_key' limit 1;
+  select decrypted_secret into v_secret from vault.decrypted_secrets where name = 'notify_hook_secret' limit 1;
 
-  -- Anahtar Vault'ta yoksa e-posta atlanır; uygulama içi bildirim yine oluşur, mesaj gönderimi asla bozulmaz.
-  if v_to_email is not null and v_key is not null then
+  if v_to_email is not null then
     perform net.http_post(
       url := 'https://djnegowgtcffyjksnuly.supabase.co/functions/v1/send-notification-email',
       headers := jsonb_build_object(
         'Content-Type', 'application/json',
-        'Authorization', 'Bearer ' || v_key
+        -- Anon anahtarı yalnızca Supabase ağ geçidinin JWT kontrolü için; yetki x-notify-secret ile verilir.
+        'Authorization', 'Bearer ' || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqbmVnb3dndGNmZnlqa3NudWx5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg1OTA4ODgsImV4cCI6MjEwNDE2Njg4OH0.JohPWXd5_hWoi_VhQc0VFlF2WopFlC99u8QB4xGSoJM',
+        'x-notify-secret', coalesce(v_secret, '')
       ),
       body := jsonb_build_object(
         'to', v_to_email,
