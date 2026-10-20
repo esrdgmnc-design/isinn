@@ -76,7 +76,8 @@ async function sendReceiptEmail(admin, order, totalAmountKurus) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+        // 2026-10-20: fonksiyon artık yalnızca service_role anahtarını kabul ediyor (açık e-posta rölesi kapatıldı).
+        Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
       },
       body: JSON.stringify({
         to: email,

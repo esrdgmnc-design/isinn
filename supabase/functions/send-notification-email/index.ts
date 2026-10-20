@@ -23,10 +23,19 @@ import { serve } from "https://deno.land/std@0.203.0/http/server.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const FROM_ADDRESS = Deno.env.get("NOTIFICATION_FROM_ADDRESS") || "İşinn <onboarding@resend.dev>";
+// Güvenlik (2026-10-20): önceden anon anahtarı bilen herkes (anahtar sitede herkese açık) bu fonksiyonla İşinn adına
+// istediği adrese istediği e-postayı gönderebiliyordu. Artık yalnızca service_role anahtarıyla çağrılabilir:
+// DB tetikleyicisi anahtarı Vault'tan okur (supabase/notify_email_service_role_2026_10_20.sql), sunucu rotaları ortam
+// değişkeninden. SUPABASE_SERVICE_ROLE_KEY Edge Function'lara Supabase tarafından otomatik verilir.
+const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
 serve(async (req) => {
   if (req.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
+  }
+
+  if (!SERVICE_ROLE_KEY || req.headers.get("Authorization") !== `Bearer ${SERVICE_ROLE_KEY}`) {
+    return new Response(JSON.stringify({ error: "Yetkisiz." }), { status: 401, headers: { "Content-Type": "application/json" } });
   }
 
   if (!RESEND_API_KEY) {
