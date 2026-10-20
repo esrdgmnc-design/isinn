@@ -957,7 +957,7 @@ function VerifiedBadges({ items, compact }) {
   if (compact) {
     return (
       <span className="inline-flex items-center gap-1 text-[11px] font-medium" style={{ color: "#16A34A" }}>
-        <ShieldCheck size={12} /> {t("common.verifiedBadge")}
+        <ShieldCheck size={12} /> <span title={t("profile.phoneVerifiedTooltip")}>{t("common.verifiedBadge")}</span>
       </span>
     );
   }
@@ -4142,20 +4142,15 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
           {listing.verified && listing.verified.length > 0 && (
             <div className="mb-4 pb-4 border-b" style={{ borderColor: "#E4E4E7" }}>
               <VerifiedBadges items={listing.verified} />
-              <p className="text-[11px] mt-2" style={{ color: "#6B7280" }}>{t("listingDetail.docsDisclaimer")}</p>
             </div>
           )}
-          {/* Meslek odası/sicil no — Seçenek A, şeffaflık katmanı (2026-09-14).
-              Bilerek VerifiedBadges'ten ayrı ve farklı stilde: biz bunu
-              doğrulamadık, sağlayıcının kendi beyanı — o yüzden yeşil
-              "doğrulanmış" rengiyle değil, nötr bir tonla ve açık etiketle. */}
+          {/* Meslek odası/sicil no / eğitim — sağlayıcının kendi yazdığı bilgi (2026-09-14). Bilerek yeşil "doğrulanmış"
+              rengiyle değil nötr tonla gösteriliyor. 2026-10-20 (kurucu): altındaki "sağlayıcı beyanı, doğrulanmadı" uyarısı
+              kaldırıldı — LinkedIn gibi profil bilgisini olduğu gibi gösteriyoruz; "doğrulandı" iddiası zaten yok. */}
           {listing.professionalCredential && (
             <div className="mb-4 pb-4 border-b flex items-start gap-1.5" style={{ borderColor: "#E4E4E7" }}>
               <BadgeCheck size={14} style={{ color: "#6B7280" }} className="mt-0.5 shrink-0" />
-              <p className="text-xs" style={{ color: "#4B5563" }}>
-                {listing.professionalCredential}
-                <span className="block text-[11px] mt-0.5" style={{ color: "#6B7280" }}>{t("listingDetail.credentialDisclaimer")}</span>
-              </p>
+              <p className="text-xs" style={{ color: "#4B5563" }}>{listing.professionalCredential}</p>
             </div>
           )}
           <p className="text-lg font-medium mb-4" style={{ color: "#0F1115" }}>{listing.price}</p>
@@ -4182,7 +4177,6 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
             </>
           )}
 
-          <p className="text-[11px] mt-2 text-center" style={{ color: "#8A8470" }}>{t("listingDetail.verifiedNote")}</p>
           {["bakici", "hasta-bakici", "logusa-bakicisi", "oyun-ablasi", "cocuk-atolyesi"].includes(listing.category) && (
             <details className="mt-3 rounded-xl border px-3 py-2 text-xs" style={{ borderColor: "#E4E4E7", background: "#F7F7F8", color: "#0F1115" }}>
               <summary className="cursor-pointer font-medium">{t("listingDetail.safetyTitle")}</summary>
@@ -11730,7 +11724,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
           <Phone size={16} style={{ color: myPhone?.verified ? "#16A34A" : "#2563EB" }} />
           <h2 className="text-sm font-bold" style={{ color: "#0F1115" }}>{t("profile.phoneHeading")}</h2>
           {myPhone?.verified && (
-            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: "#16A34A" }}>{t("profile.phoneVerifiedBadge")}</span>
+            <span title={t("profile.phoneVerifiedTooltip")} className="text-[11px] font-bold px-2 py-0.5 rounded-full text-white cursor-help" style={{ background: "#16A34A" }}>{t("profile.phoneVerifiedBadge")}</span>
           )}
         </div>
         <p className="text-xs mb-4" style={{ color: "#6B7280" }}>

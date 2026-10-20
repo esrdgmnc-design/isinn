@@ -273,7 +273,6 @@ export default async function VitrinPage({ params }) {
                   </div>
                 ))}
               </dl>
-              <p className="text-xs mt-3" style={{ color: "#9CA3AF" }}>Bilgiler sağlayıcının kendi beyanıdır; İşinn içeriği doğrulamaz.</p>
             </section>
           );
         })()}
