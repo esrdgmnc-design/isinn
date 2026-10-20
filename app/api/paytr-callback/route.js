@@ -72,12 +72,17 @@ async function sendReceiptEmail(admin, order, totalAmountKurus) {
     const tl = (Number(totalAmountKurus) / 100).toLocaleString("tr-TR", { minimumFractionDigits: 2 });
     const itemLabel = order.order_type === "addon" ? order.plan_slug : `${order.plan_slug === "pro" ? "Pro Üyelik" : order.plan_slug} Üyelik`;
 
+    // 2026-10-20: açık e-posta rölesi kapatıldı; fonksiyon artık Vault'taki gizli değeri (x-notify-secret) ister.
+    // Değeri yalnızca service_role okuyabilir (supabase/notify_email_service_role_2026_10_20.sql).
+    const { data: hookSecret } = await admin.rpc("get_notify_hook_secret");
+    if (!hookSecret) return;
+
     await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/send-notification-email`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        // 2026-10-20: fonksiyon artık yalnızca service_role anahtarını kabul ediyor (açık e-posta rölesi kapatıldı).
-        Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+        Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+        "x-notify-secret": hookSecret,
       },
       body: JSON.stringify({
         to: email,
