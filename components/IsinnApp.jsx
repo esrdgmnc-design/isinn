@@ -2742,6 +2742,36 @@ function OwnerVitrinPanelBody({ userId, serviceId, onListingsChanged, onReviewSe
     return () => { cancelled = true; };
   }, [serviceId, shareReviews, userId]);
 
+  // Randevu/görüşme talebi butonu tercihi (supabase/appointment_toggle_2026_10_20.sql). Ayrı sorgu: kolon yoksa yalnızca
+  // bu kart görünmez. Sağlık kategorilerinde kart hiç çıkmaz (buton orada zaten yok).
+  const [appt, setAppt] = useState(null); // { on, mode } | null
+  const [apptSaving, setApptSaving] = useState(false);
+  const [apptError, setApptError] = useState("");
+  useEffect(() => {
+    if (!serviceId) return;
+    let cancelled = false;
+    supabase.from("services").select("appointment_requests, is_remote, categories(slug)").eq("id", serviceId).maybeSingle().then(({ data, error }) => {
+      if (cancelled || error || !data || APPOINTMENT_EXCLUDED_CATEGORIES.has(data.categories?.slug)) return;
+      const mode = data.is_remote ? "remote" : "local";
+      setAppt({ on: data.appointment_requests ?? appointmentDefaultOn(mode), mode });
+    }, () => {});
+    return () => { cancelled = true; };
+  }, [serviceId]);
+  const toggleAppt = async (val) => {
+    setApptSaving(true);
+    setApptError("");
+    setAppt((a) => ({ ...a, on: val }));
+    const { data: updated, error } = await supabase.from("services").update({ appointment_requests: val }).eq("id", serviceId).select("id");
+    setApptSaving(false);
+    if (error || !updated?.length) {
+      setAppt((a) => ({ ...a, on: !val }));
+      setApptError(t("common.errActionFailed", { message: error?.message || t("common.errNoPermission") }));
+      return;
+    }
+    trackEvent("appointment_toggle", { service_id: serviceId, on: val }, userId);
+    onListingsChanged?.();
+  };
+
   const [shareReviewsError, setShareReviewsError] = useState("");
   const toggleShareReviews = async (val) => {
     setShareReviewsSaving(true);
@@ -2944,6 +2974,23 @@ function OwnerVitrinPanelBody({ userId, serviceId, onListingsChanged, onReviewSe
         {shareReviewsError && <p className="text-[11px] mt-2" role="alert" style={{ color: "#DC2626" }}>{shareReviewsError}</p>}
       </div>
 
+      {appt && (
+        <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#E4E4E7", background: "#F7F7F8" }}>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-bold" style={{ color: "#0F1115" }}>{t(appt.mode === "remote" ? "appointment.meeting_toggleHeading" : "appointment.toggleHeading")}</p>
+              <p className="text-xs mt-0.5" style={{ color: "#6B7280" }}>{t(appt.mode === "remote" ? "appointment.meeting_toggleNote" : "appointment.toggleNote")}</p>
+            </div>
+            <label className="flex items-center gap-2 text-xs shrink-0 cursor-pointer" style={{ color: "#4B5563" }}>
+              {apptSaving && <Loader2 size={12} className="animate-spin" />}
+              <input type="checkbox" checked={appt.on} onChange={(e) => toggleAppt(e.target.checked)} />
+              {t(appt.on ? "appointment.toggleOn" : "appointment.toggleOff")}
+            </label>
+          </div>
+          {apptError && <p className="text-[11px] mt-2" role="alert" style={{ color: "#DC2626" }}>{apptError}</p>}
+        </div>
+      )}
+
       <div className="rounded-xl border p-5 mb-4" style={{ borderColor: "#E4E4E7", background: "#F7F7F8" }}>
         <div className="flex items-center gap-2 mb-1">
           <BadgeCheck size={16} style={{ color: "#2563EB" }} />
@@ -3145,14 +3192,21 @@ function LoopVideo({ src, poster, className, style }) {
 // Randevu talebi (2026-10-20, kurucu kararı: en basit hâli). Ayrı tablo/takvim YOK: müşteri gün + zaman dilimi seçer,
 // talep mesaj kutusuna hazır metin olarak düşer, kendisi gönderir; bildirim/e-posta mevcut mesaj akışıyla gider. Saat
 // yazışarak kesinleşir, vitrin sahibi kendi defterine elle girer. Serbest not alanı bilerek yok (sağlık verisi riski,
-// KVKK); sağlık kategorilerinde ve uzaktan vitrinlerde gösterilmez.
+// KVKK); sağlık kategorilerinde hiç gösterilmez. Vitrin sahibi açıp kapatır (services.appointment_requests); null ise
+// varsayılan: yerinde vitrinde açık ("Randevu iste"), uzaktan vitrinde kapalı (açılırsa "Görüşme iste").
 const APPOINTMENT_EXCLUDED_CATEGORIES = new Set(["psikolog", "diyetisyen", "fizyoterapist", "hemsire", "hasta-bakici", "emzirme-danismani", "logusa-bakicisi"]);
 const APPOINTMENT_DRAFT_PREFIX = "📅";
+function appointmentDefaultOn(mode) {
+  return mode !== "remote";
+}
 function canRequestAppointment(listing) {
-  return !!listing && listing.isReal && !listing.isDemo && listing.mode === "local" && !APPOINTMENT_EXCLUDED_CATEGORIES.has(listing.category);
+  if (!listing || !listing.isReal || listing.isDemo || APPOINTMENT_EXCLUDED_CATEGORIES.has(listing.category)) return false;
+  return listing.appointmentRequests ?? appointmentDefaultOn(listing.mode);
 }
 function AppointmentRequestBox({ listing, onSubmit }) {
   const { t } = useLanguage();
+  const kind = listing.mode === "remote" ? "meeting" : "appointment";
+  const k = (key) => (kind === "meeting" ? `appointment.meeting_${key}` : `appointment.${key}`);
   const [open, setOpen] = useState(false);
   const [day, setDay] = useState("");
   const [slot, setSlot] = useState("any");
@@ -3163,20 +3217,20 @@ function AppointmentRequestBox({ listing, onSubmit }) {
     const dayLabel = day
       ? new Date(`${day}T12:00:00`).toLocaleDateString(uiDateLocale(), { weekday: "long", day: "numeric", month: "long" })
       : t("appointment.dayFlexible");
-    const draft = t("appointment.draft", { prefix: APPOINTMENT_DRAFT_PREFIX, title: listing.title, day: dayLabel, slot: t(`appointment.slot_${slot}`) });
-    trackEvent("appointment_request_started", { listing_id: listing.dbId, has_day: !!day, slot }, null);
+    const draft = t(k("draft"), { prefix: APPOINTMENT_DRAFT_PREFIX, title: listing.title, day: dayLabel, slot: t(`appointment.slot_${slot}`) });
+    trackEvent("appointment_request_started", { listing_id: listing.dbId, has_day: !!day, slot, kind }, null);
     onSubmit(draft);
   };
   if (!open) {
     return (
       <button onClick={() => setOpen(true)} className="w-full py-2.5 rounded-full text-sm font-medium border mb-2 flex items-center justify-center gap-1.5" style={{ borderColor: "#2563EB", color: "#2563EB" }}>
-        <CalendarClock size={14} /> {t("appointment.button")}
+        <CalendarClock size={14} /> {t(k("button"))}
       </button>
     );
   }
   return (
     <div className="rounded-xl border p-3 mb-2" style={{ borderColor: "#BFDBFE", background: "#F8FAFF" }}>
-      <p className="text-sm font-bold mb-2" style={{ color: "#0F1115" }}>{t("appointment.title")}</p>
+      <p className="text-sm font-bold mb-2" style={{ color: "#0F1115" }}>{t(k("title"))}</p>
       <label className="block text-xs font-medium mb-1" style={{ color: "#4B5563" }}>{t("appointment.dayLabel")}</label>
       <input type="date" min={minDay} value={day} onChange={(e) => setDay(e.target.value)} className="w-full rounded-lg border px-3 py-2 text-sm mb-2" style={{ borderColor: "#E4E4E7", background: "#fff" }} />
       <p className="text-xs font-medium mb-1" style={{ color: "#4B5563" }}>{t("appointment.slotLabel")}</p>
@@ -3187,7 +3241,7 @@ function AppointmentRequestBox({ listing, onSubmit }) {
           </button>
         ))}
       </div>
-      <p className="text-[11px] mb-2" style={{ color: "#6B7280" }}>{t("appointment.note")}</p>
+      <p className="text-[11px] mb-2" style={{ color: "#6B7280" }}>{t(k("note"))}</p>
       <div className="flex gap-2">
         <button onClick={() => setOpen(false)} className="flex-1 py-2 rounded-full text-xs font-medium border" style={{ borderColor: "#E4E4E7", color: "#4B5563" }}>{t("appointment.cancel")}</button>
         <button onClick={submit} className="flex-[2] py-2 rounded-full text-xs font-bold text-white" style={{ background: "#2563EB" }}>{t("appointment.submit")}</button>
