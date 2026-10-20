@@ -11,7 +11,7 @@ export const metadata = {
   metadataBase: new URL("https://www.isinn.com.tr"),
   robots: { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1, "max-video-preview": -1 } },
   title: "İşinn | Freelance Uzman ve Hizmet Bul, Vitrinini Aç",
-  description: "Yazılım, tasarım, çeviri, danışmanlıktan yakınındaki hizmetlere; freelance uzmanları keşfet ya da yeteneğini vitrininde sergile. İşinn komisyon almaz.",
+  description: "İhtiyacın olan uzmanı bul: yazılımdan tasarıma, güzellikten özel derse vitrinleri incele, doğrudan mesaj at. Ya da yeteneğini vitrininde sergile.",
   // Mobil uygulama çalışmasının (bkz. docs/mobile-app.md) yan ürünü — site
   // artık gerçek bir PWA da (telefon tarayıcısından "Ana ekrana ekle").
   // Asıl mağaza dağıtımı Capacitor/Codemagic üzerinden, bu sadece bonus.
@@ -29,7 +29,7 @@ export const metadata = {
   // gerek yok.
   openGraph: {
     title: "İşinn | Freelance Uzman ve Hizmet Bul, Vitrinini Aç",
-    description: "Yazılım, tasarım, çeviri, danışmanlıktan yakınındaki hizmetlere; freelance uzmanları keşfet ya da yeteneğini vitrininde sergile. İşinn komisyon almaz.",
+    description: "İhtiyacın olan uzmanı bul: yazılımdan tasarıma, güzellikten özel derse vitrinleri incele, doğrudan mesaj at. Ya da yeteneğini vitrininde sergile.",
     url: "https://www.isinn.com.tr",
     siteName: "İşinn",
     locale: "tr_TR",
@@ -38,7 +38,7 @@ export const metadata = {
   twitter: {
     card: "summary_large_image",
     title: "İşinn | Freelance Uzman ve Hizmet Bul, Vitrinini Aç",
-    description: "Yazılım, tasarım, çeviri, danışmanlıktan yakınındaki hizmetlere; freelance uzmanları keşfet ya da yeteneğini vitrininde sergile. İşinn komisyon almaz.",
+    description: "İhtiyacın olan uzmanı bul: yazılımdan tasarıma, güzellikten özel derse vitrinleri incele, doğrudan mesaj at. Ya da yeteneğini vitrininde sergile.",
   },
 };
 
@@ -77,7 +77,9 @@ const organizationJsonLd = {
   alternateName: ["Isinn", "isinn.com.tr"],
   url: "https://www.isinn.com.tr",
   logo: "https://www.isinn.com.tr/icons/icon-512.webp",
-  description: "İşinn, becerini fark edip hizmet vitrinine dönüştürmene ve yakınındaki hizmetleri bulmana yardım eden bir hizmet keşif platformudur. Komisyon almaz, ödemeye aracılık etmez, ürün satmaz. İşinn (isinn.com.tr) bir banka, işe alım/personel arama sitesi ya da ürün satış sitesi değildir.",
+  description: "İşinn, Türkiye'de freelance uzmanların ve hizmet verenlerin vitrin açtığı, hizmet arayanların bu vitrinleri inceleyip doğrudan mesajlaştığı bir hizmet keşif platformudur. Komisyon almaz, ödemeye aracılık etmez.",
+  // Marka ayrıştırması (2026-10-20): görünür metinden çıkarıldı (arama sonucu açıklamasına sızıyordu), makineler için burada.
+  disambiguatingDescription: "İşinn (isinn.com.tr) bir hizmet keşif platformudur; banka ya da banka ürünü, iş ilanı ve personel arama sitesi veya ürün satış sitesi değildir.",
   // Konum/hizmet alanı bilgisi eskiden hiç yoktu — AI arama motorlarının ve
   // Google'ın İşinn'i "Türkiye'de yerleşik, yerel" bir varlık olarak
   // çözümlemesini (Knowledge Panel'de adres/harita gösterimi dahil)

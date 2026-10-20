@@ -10,7 +10,7 @@ import { MIN_CATEGORY_LISTINGS } from "../lib/seoFormat";
 // ayrı sayfa sayılmasın) ve SSS şeması yalnızca burada.
 export const metadata = {
   title: "İşinn | Freelance Uzman ve Hizmet Bul, Vitrinini Aç",
-  description: "Yazılım, tasarım, çeviri, danışmanlıktan yakınındaki hizmetlere; freelance uzmanları keşfet ya da yeteneğini vitrininde sergile. İşinn komisyon almaz.",
+  description: "İhtiyacın olan uzmanı bul: yazılımdan tasarıma, güzellikten özel derse vitrinleri incele, doğrudan mesaj at. Ya da yeteneğini vitrininde sergile.",
   alternates: { canonical: "/", languages: { tr: "/", en: "/en", "x-default": "/" } },
 };
 

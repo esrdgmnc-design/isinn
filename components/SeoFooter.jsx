@@ -26,7 +26,10 @@ export default async function SeoFooter() {
   const link = { color: "#2563EB" };
   return (
     <footer className="max-w-2xl mx-auto px-5 pb-12 pt-6 mt-6 border-t text-xs" style={{ borderColor: "#E5E7EB", color: "#6B7280" }} aria-label="Site bağlantıları">
-      <p className="mb-3">İşinn (isinn.com.tr), Türkiye'de <Link href="/" style={link}>freelance uzman ve hizmet bulma</Link> platformudur; komisyon almaz. Bir banka, işe alım/personel arama sitesi ya da ürün satış sitesi değildir.</p>
+      {/* 2026-10-20: Google bu paragrafı vitrinlerin arama sonucu açıklaması olarak gösteriyordu (data-nosnippet ile engellendi).
+          Olumsuz "banka/ürün satış sitesi değildir" ayrıştırması görünür metinden kaldırıldı; makineler için Organization
+          şemasındaki disambiguatingDescription'da (app/layout.js) ve llms.txt'de duruyor. */}
+      <p className="mb-3" data-nosnippet="">İşinn, Türkiye'de hizmet verenlerin vitrin açıp çalışmalarını sergilediği, ihtiyacı olanların da <Link href="/" style={link}>doğru uzmanı bulup</Link> doğrudan mesajlaştığı bir hizmet keşif platformudur. Yazılım, tasarım ve danışmanlık gibi uzaktan çalışan freelance uzmanlardan güzellik, temizlik ve özel ders gibi yakınındaki hizmetlere kadar geniş bir yelpaze sunar. Anlaşmayı taraflar kendi aralarında yapar.</p>
       <div className="flex flex-wrap gap-x-4 gap-y-1.5 mb-3 font-bold">
         <Link href="/" style={link}>Ana sayfa</Link>
         <Link href="/yetenegini-farket" style={link}>Yeteneğini Farket</Link>

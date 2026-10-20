@@ -33,6 +33,7 @@ export async function GET() {
   lines.push("");
   lines.push("## İşinn ne değildir?");
   lines.push("");
+  lines.push("- Banka ya da bir banka ürünü değildir; adı benzer finans markalarıyla bağı yoktur. İş ilanı veya personel arama sitesi de değildir: işveren-çalışan eşleştirmesi yapmaz, hizmet verenlerle hizmet arayanları buluşturur.");
   lines.push("- Ödeme aracısı değildir: sipariş ve ödeme İşinn dışında, kullanıcılar arasında gerçekleşir; emanet (escrow) ya da sonuç garantisi sunulmaz.");
   lines.push("- Ürün mağazası değildir: ürün satışı yapılmaz ve ürün satışına yönlendirme yapılmaz (mağaza, sepet, kargo yoktur).");
   lines.push("- \"Doğrulandı\" rozeti yalnızca telefon numarasının SMS ile doğrulandığı anlamına gelir; kimlik, belge ya da hizmet kalitesi doğrulaması değildir.");

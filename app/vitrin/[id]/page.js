@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { supabase } from "../../../lib/supabaseClient";
 import ShareButton from "../../../components/ShareButton";
 import { formatPrice, getProviderName, isIndexableListing } from "../../../lib/seoFormat";
-import { socialMeta, clamp, optimizedImageUrl } from "../../../lib/seoMeta";
+import { socialMeta, clamp, optimizedImageUrl, vitrinMetaDescription } from "../../../lib/seoMeta";
 import { SEO_CITIES, matchesCitySlug } from "../../../lib/seoTaxonomy";
 import { jsonLdString } from "../../../lib/jsonLd";
 import { safeWorkLink } from "../../../lib/workLink";
@@ -103,8 +103,14 @@ export async function generateMetadata({ params }) {
   // Aynı başlığı taşıyan başka bir vitrin varsa sağlayıcı adıyla ayrıştır (iki sayfa aynı başlıkla yarışmasın).
   if (await hasSameTitle(row)) tailParts.unshift(provider);
   const tail = tailParts.join(" · ");
-  const title = tail ? `${clamp(row.title, 44)} — ${tail} | İşinn` : `${clamp(row.title, 52)} | İşinn`;
-  const description = clamp(row.description?.trim() || `${provider} tarafından ${city} bölgesinde sunulan "${row.title}" hizmeti — İşinn'de komisyonsuz keşfet.`, 155);
+  // 2026-10-20: uzun başlık 44 karakterde kesilip ek konuyordu, Google yarım başlık yerine H1'i gösteriyordu.
+  // Başlık 44 karakteri geçiyorsa ek atılır, başlığın tamamı (60'a kadar) kullanılır.
+  const fullTitle = String(row.title || "").replace(/\s+/g, " ").trim();
+  const title = tail && fullTitle.length <= 44 ? `${fullTitle} — ${tail} | İşinn` : `${clamp(fullTitle, 60)} | İşinn`;
+  const placeLabel = row.is_remote ? "uzaktan" : String(row.city || "").split(",").map((s) => s.trim()).filter(Boolean).filter((s, i, a) => a.indexOf(s) === i).join("/");
+  const description = (row.description || "").trim().length >= 40
+    ? vitrinMetaDescription({ title: fullTitle, provider, place: placeLabel, description: row.description })
+    : clamp(`${provider} tarafından ${city === "Uzaktan" ? "uzaktan" : city + " bölgesinde"} sunulan "${row.title}" hizmeti. Vitrini incele, mesaj gönder.`, 160);
   // DEMO (örnek) ve içeriği çok ince vitrinler arama motoruna açılmaz.
   const isDemo = (row.description || "").trim().startsWith("DEMO VİTRİN");
   const isThin = (row.description || "").trim().length < 40;

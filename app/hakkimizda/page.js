@@ -11,8 +11,8 @@ import SeoFooter from "../../components/SeoFooter";
 const BASE_URL = "https://www.isinn.com.tr";
 const URL = `${BASE_URL}/hakkimizda`;
 const TITLE = "İşinn Nedir? Ne Yapar, Ne Yapmaz | Hakkımızda";
-const DESCRIPTION = "İşinn, becerini fark edip hizmet vitrinine dönüştürmene ve yakınındaki hizmetleri bulmana yardım eden bir hizmet keşif platformudur. Komisyon almaz, ödemeye aracılık etmez, ürün satmaz. İşinn (isinn.com.tr) bir banka, işe alım/personel arama sitesi ya da ürün satış sitesi değildir.";
-const UPDATED = "2026-10-11";
+const DESCRIPTION = "İşinn, Türkiye'de freelance uzmanları ve hizmet verenleri keşfetmeni, becerini bir hizmet vitrinine dönüştürmeni sağlayan bir platformdur. Komisyon almaz, ödemeye aracılık etmez, ürün satmaz.";
+const UPDATED = "2026-10-20";
 
 export const metadata = {
   title: TITLE,
@@ -35,8 +35,9 @@ const DOESNT = [
   "“Doğrulandı” rozeti yalnızca telefon numarasının SMS ile doğrulandığını gösterir; kimlik, belge ya da hizmet kalitesi doğrulaması değildir.",
 ];
 const FAQ = [
+  { q: "İşinn bir banka ya da iş ilanı sitesi mi?", a: "Hayır. İşinn, hizmet verenlerin vitrin açtığı ve hizmet arayanların onlarla doğrudan iletişime geçtiği bir hizmet keşif platformudur. Bir bankayla ya da banka ürünüyle bağı yoktur; iş ilanı yayınlamaz, personel aramaya aracılık etmez." },
   { q: "İşinn nedir?", a: "İşinn, insanların becerilerini fark edip hizmet vitrinine dönüştürmesine ve Türkiye'de yerel ya da uzaktan hizmet arayanlarla buluşmasına yardım eden bir hizmet keşif platformudur." },
-  { q: "İşinn güvenilir mi?", a: "İşinn, Code G Teknoloji ve Ticaret Limited Şirketi'nin markasıdır ve şirket bilgileri bu sayfada yer alır. Hizmet verenlerin telefon numarası SMS ile doğrulanır; bu bir kimlik ya da kalite doğrulaması değildir. İşinn ödemeye aracılık etmediği için karar vermeden önce vitrini ve değerlendirmeleri incelemeni, ücret ve iptal koşullarını yazılı netleştirmeni öneririz." },
+  { q: "İşinn güvenilir mi?", a: "İşinn, Code G Teknoloji ve Ticaret Limited Şirketi'nin markasıdır ve şirket bilgileri bu sayfada yer alır. Telefon numarasını SMS ile doğrulayan hizmet verenlerin vitrininde “Doğrulandı” rozeti görünür; bu bir kimlik ya da kalite doğrulaması değildir. İşinn ödemeye aracılık etmediği için karar vermeden önce vitrini ve değerlendirmeleri incelemeni, ücret ve iptal koşullarını yazılı netleştirmeni öneririz." },
   { q: "İşinn komisyon alıyor mu?", a: "Hayır. Hizmet verenler sabit üyelik ücreti öder, kazandıkları işten komisyon ödemez. Üyelik 1 Ocak 2027'ye kadar ücretsizdir." },
 ];
 
@@ -78,9 +79,9 @@ export default function HakkimizdaPage() {
         </nav>
         <h1 className="font-sans text-3xl font-black mb-3" style={{ color: "#0F1115" }}>İşinn Nedir? Ne Yapar, Ne Yapmaz</h1>
         <p className="text-base mb-3" style={{ color: "#374151" }}>
-          <b>Kısa cevap:</b> İşinn, becerini fark edip hizmet vitrinine dönüştürmene ve yakınındaki hizmetleri bulmana yardım eden bir hizmet keşif platformudur. Komisyon almaz, ödemeye aracılık etmez, ürün satmaz. İşinn (isinn.com.tr) bir banka, işe alım/personel arama sitesi ya da ürün satış sitesi değildir.
+          <b>Kısa cevap:</b> İşinn, Türkiye'de freelance uzmanları ve hizmet verenleri keşfetmeni, becerini bir hizmet vitrinine dönüştürmeni sağlayan bir platformdur. Komisyon almaz, ödemeye aracılık etmez, ürün satmaz.
         </p>
-        <p className="text-xs mb-8" style={{ color: "#6B7280" }}>Son güncelleme: 11 Ekim 2026</p>
+        <p className="text-xs mb-8" style={{ color: "#6B7280" }}>Son güncelleme: 20 Ekim 2026</p>
 
         <h2 className="font-sans text-xl font-black mb-3" style={{ color: "#0F1115" }}>Kimler için?</h2>
         <p className="text-sm mb-8" style={{ color: "#374151" }}>
