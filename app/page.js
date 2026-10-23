@@ -1,3 +1,4 @@
+import { preload } from "react-dom";
 import HomeClient from "../components/HomeClient";
 import { faqJsonLd } from "../lib/faqJsonLd";
 import { supabase } from "../lib/supabaseClient";
@@ -77,6 +78,9 @@ export const revalidate = 3600;
 
 export default async function Page() {
   const { popularCategories, recentListings, initialListings } = await getDiscoveryData();
+  // Mobilde en büyük içerik (LCP) Yeteneğini Keşfet videosunun kapak görseli; istemci bileşeni çizilmeden önce
+  // tarayıcı onu bilmiyordu (Lighthouse 2026-10-23: LCP 3,9 sn, 1,5 sn yükleme gecikmesi). <head>'e preload ekler.
+  preload("/videos/yetenek-ilham-v5-poster.jpg", { as: "image", fetchPriority: "high" });
 
   return (
     <>

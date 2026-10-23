@@ -1815,7 +1815,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
                         animationDelay: `${i * 70}ms`,
                       }}
                     >
-                      <img src={l.img} alt={l.title} className="w-full h-full object-cover" style={isCenter ? {} : { filter: "brightness(0.92)" }} />
+                      <img src={l.img} alt={l.title} loading={isCenter ? undefined : "lazy"} decoding="async" className="w-full h-full object-cover" style={isCenter ? {} : { filter: "brightness(0.92)" }} />
                       <div className="absolute inset-x-0 bottom-0 p-2 pt-7" style={{ background: "linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.88) 100%)" }}>
                         <p className={`font-bold text-white truncate ${isCenter ? "text-sm" : "text-[11px]"}`}>{l.provider}</p>
                       </div>
@@ -2067,7 +2067,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
                 </p>
                 <div className="mt-auto pt-4 flex items-center justify-between gap-3" style={{ borderTop: "1px solid #F0EEE9" }}>
                   <div className="min-w-0">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: "#9CA3AF" }}>{t("home.jobBudgetLabel")}</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: "#6B7280" }}>{t("home.jobBudgetLabel")}</p>
                     <p className="text-sm font-black truncate" style={{ color: "#0F1115" }}>{job.budget}</p>
                   </div>
                   <span
