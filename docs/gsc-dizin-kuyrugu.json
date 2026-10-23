@@ -1,19 +1,29 @@
 {
- "note": "Her sabah gsc-gunluk-dizin-istegi görevi okur ve günceller. status: pending | indexed (Google'da mevcut, istek gönderilmedi) | requested (istek gönderildi).",
- "updated": "2026-10-20",
+ "note": "Her sabah gsc-gunluk-dizin-istegi görevi okur ve günceller. status: pending | indexed (Google'da mevcut, istek gönderilmedi) | requested (istek gönderildi). Sıra (2026-10-23): kategori > beyaz yaka rehber > diğer rehber > vitrin > eski kitle rehberleri.",
+ "updated": "2026-10-23",
  "items": [
   {
-   "url": "https://www.isinn.com.tr/rehber/ev-temizligi-kac-saat-surer",
+   "url": "https://www.isinn.com.tr/kategori/yoga-koc",
    "status": "pending",
    "date": null
   },
   {
-   "url": "https://www.isinn.com.tr/rehber/iyi-ozel-ders-ogretmeni-nasil-secilir",
+   "url": "https://www.isinn.com.tr/kategori/muhendis",
    "status": "pending",
    "date": null
   },
   {
-   "url": "https://www.isinn.com.tr/rehber/lgs-hazirlik-sureci-nasil-planlanir",
+   "url": "https://www.isinn.com.tr/kategori/yazilim",
+   "status": "pending",
+   "date": null
+  },
+  {
+   "url": "https://www.isinn.com.tr/kategori/oyun-ablasi",
+   "status": "pending",
+   "date": null
+  },
+  {
+   "url": "https://www.isinn.com.tr/kategori/ogretmen/istanbul",
    "status": "pending",
    "date": null
   },
@@ -23,32 +33,7 @@
    "date": null
   },
   {
-   "url": "https://www.isinn.com.tr/rehber/birkac-bin-takipci-ile-yerel-isletmelerden-sponsorluk",
-   "status": "pending",
-   "date": null
-  },
-  {
-   "url": "https://www.isinn.com.tr/rehber/ev-tadilatinda-usta-secerken-nelere-dikkat-edilmeli",
-   "status": "pending",
-   "date": null
-  },
-  {
-   "url": "https://www.isinn.com.tr/rehber/cocuk-bakicisi-secerken-sorulmasi-gereken-sorular",
-   "status": "pending",
-   "date": null
-  },
-  {
-   "url": "https://www.isinn.com.tr/rehber/evden-ders-ve-atolye-vermek",
-   "status": "pending",
-   "date": null
-  },
-  {
    "url": "https://www.isinn.com.tr/rehber/sirket-kurmadan-hizmet-sunmak",
-   "status": "pending",
-   "date": null
-  },
-  {
-   "url": "https://www.isinn.com.tr/rehber/calisan-anneler-icin-esnek-hizmet-fikirleri",
    "status": "pending",
    "date": null
   },
@@ -68,16 +53,6 @@
    "date": null
   },
   {
-   "url": "https://www.isinn.com.tr/rehber/ozel-ders-vermek-icin-ne-gerekir",
-   "status": "pending",
-   "date": null
-  },
-  {
-   "url": "https://www.isinn.com.tr/rehber/evde-cocuk-atolyesi-vermeden-once-dikkat-edilecekler",
-   "status": "pending",
-   "date": null
-  },
-  {
    "url": "https://www.isinn.com.tr/rehber/ogrenciyken-hangi-hizmetleri-verebilirsin",
    "status": "pending",
    "date": null
@@ -89,11 +64,6 @@
   },
   {
    "url": "https://www.isinn.com.tr/rehber/musteriye-ilk-mesaj-ve-yazili-anlasma-sablonlari",
-   "status": "pending",
-   "date": null
-  },
-  {
-   "url": "https://www.isinn.com.tr/rehber/instagramda-calismalarini-gosteriyorsan-yerelde-nasil-bulunursun",
    "status": "pending",
    "date": null
   },
@@ -128,41 +98,6 @@
    "date": null
   },
   {
-   "url": "https://www.isinn.com.tr/rehber/freelance-iste-revizyon-hakki-kac-olmali",
-   "status": "requested",
-   "date": "2026-10-19"
-  },
-  {
-   "url": "https://www.isinn.com.tr/rehber/cevirmen-secerken-nelere-dikkat-edilmeli",
-   "status": "requested",
-   "date": "2026-10-19"
-  },
-  {
-   "url": "https://www.isinn.com.tr/rehber/freelancer-ile-calismadan-once-sorulacak-sorular",
-   "status": "requested",
-   "date": "2026-10-19"
-  },
-  {
-   "url": "https://www.isinn.com.tr/rehber/logo-tasarimcisi-secerken-nelere-dikkat-edilmeli",
-   "status": "requested",
-   "date": "2026-10-19"
-  },
-  {
-   "url": "https://www.isinn.com.tr/rehber/web-sitesi-freelancer-mi-ajans-mi",
-   "status": "requested",
-   "date": "2026-10-19"
-  },
-  {
-   "url": "https://www.isinn.com.tr/rehber/yasli-bakicisi-ile-gorusmede-sorulacak-sorular",
-   "status": "pending",
-   "date": null
-  },
-  {
-   "url": "https://www.isinn.com.tr/rehber/freelancer-nerede-bulunur-bionluk-armut-linkedin-isinn",
-   "status": "requested",
-   "date": "2026-10-19"
-  },
-  {
    "url": "https://www.isinn.com.tr/rehber/how-to-find-freelance-work-as-a-beginner",
    "status": "pending",
    "date": null
@@ -188,47 +123,7 @@
    "date": null
   },
   {
-   "url": "https://www.isinn.com.tr/rehber/how-to-hire-a-freelancer-from-turkey",
-   "status": "requested",
-   "date": "2026-10-19"
-  },
-  {
-   "url": "https://www.isinn.com.tr/rehber/questions-to-ask-a-freelancer-before-hiring",
-   "status": "requested",
-   "date": "2026-10-19"
-  },
-  {
-   "url": "https://www.isinn.com.tr/rehber/freelance-revisions-how-many-should-you-include",
-   "status": "requested",
-   "date": "2026-10-19"
-  },
-  {
-   "url": "https://www.isinn.com.tr/rehber/how-to-write-a-freelance-project-brief",
-   "status": "requested",
-   "date": "2026-10-19"
-  },
-  {
-   "url": "https://www.isinn.com.tr/kategori/ogretmen",
-   "status": "requested",
-   "date": "2026-10-19"
-  },
-  {
-   "url": "https://www.isinn.com.tr/kategori/yoga-koc",
-   "status": "pending",
-   "date": null
-  },
-  {
-   "url": "https://www.isinn.com.tr/kategori/muhendis",
-   "status": "pending",
-   "date": null
-  },
-  {
-   "url": "https://www.isinn.com.tr/kategori/yazilim",
-   "status": "pending",
-   "date": null
-  },
-  {
-   "url": "https://www.isinn.com.tr/kategori/oyun-ablasi",
+   "url": "https://www.isinn.com.tr/rehber/instagramda-calismalarini-gosteriyorsan-yerelde-nasil-bulunursun",
    "status": "pending",
    "date": null
   },
@@ -243,7 +138,52 @@
    "date": null
   },
   {
-   "url": "https://www.isinn.com.tr/kategori/ogretmen/istanbul",
+   "url": "https://www.isinn.com.tr/rehber",
+   "status": "pending",
+   "date": null
+  },
+  {
+   "url": "https://www.isinn.com.tr/yetenegini-farket",
+   "status": "pending",
+   "date": null
+  },
+  {
+   "url": "https://www.isinn.com.tr/hakkimizda",
+   "status": "pending",
+   "date": null
+  },
+  {
+   "url": "https://www.isinn.com.tr/destek",
+   "status": "pending",
+   "date": null
+  },
+  {
+   "url": "https://www.isinn.com.tr/hesap-silme",
+   "status": "pending",
+   "date": null
+  },
+  {
+   "url": "https://www.isinn.com.tr/kvkk-aydinlatma-metni",
+   "status": "pending",
+   "date": null
+  },
+  {
+   "url": "https://www.isinn.com.tr/gizlilik-politikasi",
+   "status": "pending",
+   "date": null
+  },
+  {
+   "url": "https://www.isinn.com.tr/kullanim-sartlari",
+   "status": "pending",
+   "date": null
+  },
+  {
+   "url": "https://www.isinn.com.tr/mesafeli-satis-sozlesmesi",
+   "status": "pending",
+   "date": null
+  },
+  {
+   "url": "https://www.isinn.com.tr/iptal-iade-kosullari",
    "status": "pending",
    "date": null
   },
@@ -388,6 +328,116 @@
    "date": null
   },
   {
+   "url": "https://www.isinn.com.tr/rehber/ev-temizligi-kac-saat-surer",
+   "status": "pending",
+   "date": null
+  },
+  {
+   "url": "https://www.isinn.com.tr/rehber/iyi-ozel-ders-ogretmeni-nasil-secilir",
+   "status": "pending",
+   "date": null
+  },
+  {
+   "url": "https://www.isinn.com.tr/rehber/lgs-hazirlik-sureci-nasil-planlanir",
+   "status": "pending",
+   "date": null
+  },
+  {
+   "url": "https://www.isinn.com.tr/rehber/birkac-bin-takipci-ile-yerel-isletmelerden-sponsorluk",
+   "status": "pending",
+   "date": null
+  },
+  {
+   "url": "https://www.isinn.com.tr/rehber/ev-tadilatinda-usta-secerken-nelere-dikkat-edilmeli",
+   "status": "pending",
+   "date": null
+  },
+  {
+   "url": "https://www.isinn.com.tr/rehber/cocuk-bakicisi-secerken-sorulmasi-gereken-sorular",
+   "status": "pending",
+   "date": null
+  },
+  {
+   "url": "https://www.isinn.com.tr/rehber/evden-ders-ve-atolye-vermek",
+   "status": "pending",
+   "date": null
+  },
+  {
+   "url": "https://www.isinn.com.tr/rehber/calisan-anneler-icin-esnek-hizmet-fikirleri",
+   "status": "pending",
+   "date": null
+  },
+  {
+   "url": "https://www.isinn.com.tr/rehber/ozel-ders-vermek-icin-ne-gerekir",
+   "status": "pending",
+   "date": null
+  },
+  {
+   "url": "https://www.isinn.com.tr/rehber/evde-cocuk-atolyesi-vermeden-once-dikkat-edilecekler",
+   "status": "pending",
+   "date": null
+  },
+  {
+   "url": "https://www.isinn.com.tr/rehber/yasli-bakicisi-ile-gorusmede-sorulacak-sorular",
+   "status": "pending",
+   "date": null
+  },
+  {
+   "url": "https://www.isinn.com.tr/rehber/freelance-iste-revizyon-hakki-kac-olmali",
+   "status": "requested",
+   "date": "2026-10-19"
+  },
+  {
+   "url": "https://www.isinn.com.tr/rehber/cevirmen-secerken-nelere-dikkat-edilmeli",
+   "status": "requested",
+   "date": "2026-10-19"
+  },
+  {
+   "url": "https://www.isinn.com.tr/rehber/freelancer-ile-calismadan-once-sorulacak-sorular",
+   "status": "requested",
+   "date": "2026-10-19"
+  },
+  {
+   "url": "https://www.isinn.com.tr/rehber/logo-tasarimcisi-secerken-nelere-dikkat-edilmeli",
+   "status": "requested",
+   "date": "2026-10-19"
+  },
+  {
+   "url": "https://www.isinn.com.tr/rehber/web-sitesi-freelancer-mi-ajans-mi",
+   "status": "requested",
+   "date": "2026-10-19"
+  },
+  {
+   "url": "https://www.isinn.com.tr/rehber/freelancer-nerede-bulunur-bionluk-armut-linkedin-isinn",
+   "status": "requested",
+   "date": "2026-10-19"
+  },
+  {
+   "url": "https://www.isinn.com.tr/rehber/how-to-hire-a-freelancer-from-turkey",
+   "status": "requested",
+   "date": "2026-10-19"
+  },
+  {
+   "url": "https://www.isinn.com.tr/rehber/questions-to-ask-a-freelancer-before-hiring",
+   "status": "requested",
+   "date": "2026-10-19"
+  },
+  {
+   "url": "https://www.isinn.com.tr/rehber/freelance-revisions-how-many-should-you-include",
+   "status": "requested",
+   "date": "2026-10-19"
+  },
+  {
+   "url": "https://www.isinn.com.tr/rehber/how-to-write-a-freelance-project-brief",
+   "status": "requested",
+   "date": "2026-10-19"
+  },
+  {
+   "url": "https://www.isinn.com.tr/kategori/ogretmen",
+   "status": "requested",
+   "date": "2026-10-19"
+  },
+  {
    "url": "https://www.isinn.com.tr",
    "status": "requested",
    "date": "2026-10-19"
@@ -398,68 +448,18 @@
    "date": "2026-10-19"
   },
   {
-   "url": "https://www.isinn.com.tr/rehber",
-   "status": "pending",
-   "date": null
-  },
-  {
-   "url": "https://www.isinn.com.tr/yetenegini-farket",
-   "status": "pending",
-   "date": null
-  },
-  {
-   "url": "https://www.isinn.com.tr/hakkimizda",
-   "status": "pending",
-   "date": null
-  },
-  {
-   "url": "https://www.isinn.com.tr/destek",
-   "status": "pending",
-   "date": null
-  },
-  {
-   "url": "https://www.isinn.com.tr/hesap-silme",
-   "status": "pending",
-   "date": null
-  },
-  {
-   "url": "https://www.isinn.com.tr/kvkk-aydinlatma-metni",
-   "status": "pending",
-   "date": null
-  },
-  {
-   "url": "https://www.isinn.com.tr/gizlilik-politikasi",
-   "status": "pending",
-   "date": null
-  },
-  {
-   "url": "https://www.isinn.com.tr/kullanim-sartlari",
-   "status": "pending",
-   "date": null
-  },
-  {
-   "url": "https://www.isinn.com.tr/mesafeli-satis-sozlesmesi",
-   "status": "pending",
-   "date": null
-  },
-  {
-   "url": "https://www.isinn.com.tr/iptal-iade-kosullari",
-   "status": "pending",
-   "date": null
-  },
-  {
    "url": "https://www.isinn.com.tr/vitrin/bb9aad03-6ad2-453a-952a-cebbce515ab6",
-   "status": "requested",
+   "status": "indexed",
    "date": "2026-10-20"
   },
   {
    "url": "https://www.isinn.com.tr/vitrin/6f7104c2-2034-41c0-89ff-96078bf96ee1",
-   "status": "requested",
+   "status": "indexed",
    "date": "2026-10-20"
   },
   {
    "url": "https://www.isinn.com.tr/vitrin/f998f524-81d8-4f08-90e9-4333c2dd988f",
-   "status": "requested",
+   "status": "indexed",
    "date": "2026-10-20"
   }
  ]
