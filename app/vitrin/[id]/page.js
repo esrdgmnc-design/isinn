@@ -9,6 +9,7 @@ import { SEO_CITIES, matchesCitySlug } from "../../../lib/seoTaxonomy";
 import { jsonLdString } from "../../../lib/jsonLd";
 import { safeWorkLink } from "../../../lib/workLink";
 import SeoFooter from "../../../components/SeoFooter";
+import { getCategoryGuides } from "../../../lib/categoryGuides";
 
 // SEO için eklendi (2026-09-16): İşinn'in tamamı eskiden tek bir "/" sayfası
 // üzerinde, istemci tarafı görünüm durumuyla çalışıyordu — her vitrin kendi
@@ -134,6 +135,8 @@ export default async function VitrinPage({ params }) {
 
   const ratingStats = await getRatingStats(row.id);
   const [portfolio, related] = await Promise.all([getPortfolio(row.id), getRelated(row)]);
+  // Vitrinden rehbere bağlam bağlantısı (2026-10-23): vitrin sayfaları rehberlere hiç bağlanmıyordu.
+  const guides = getCategoryGuides(row.categories?.slug).slice(0, 2);
 
   const provider = getProviderName(row);
   const city = row.is_remote ? "Uzaktan" : (row.city || "Belirtilmemiş");
@@ -332,6 +335,17 @@ export default async function VitrinPage({ params }) {
                   <Link href={`/vitrin/${r.id}`} className="text-sm font-bold" style={{ color: "#2563EB" }}>{r.title}</Link>
                   <span className="text-xs ml-2" style={{ color: "#6B7280" }}>{getProviderName(r)} · {r.is_remote ? "Uzaktan" : (r.city || "").split(",").pop().trim()}</span>
                 </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {guides.length > 0 && (
+          <section className="mt-8">
+            <h2 className="font-sans text-lg font-black mb-3" style={{ color: "#0F1115" }}>İlgili rehberler</h2>
+            <ul className="space-y-2">
+              {guides.map((p) => (
+                <li key={p.slug}><Link href={`/rehber/${p.slug}`} className="text-sm font-bold" style={{ color: "#2563EB" }}>{p.title}</Link></li>
               ))}
             </ul>
           </section>

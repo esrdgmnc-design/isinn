@@ -24,15 +24,13 @@ export default async function sitemap() {
     "/yetenegini-farket",
     "/hakkimizda",
     "/destek",
-    "/hesap-silme",
-    "/kvkk-aydinlatma-metni",
-    "/gizlilik-politikasi",
-    "/kullanim-sartlari",
-    "/mesafeli-satis-sozlesmesi",
-    "/iptal-iade-kosullari",
   ];
+  // Yasal/yardımcı sayfalar (KVKK, gizlilik, kullanım şartları, mesafeli satış,
+  // iptal-iade, hesap silme) 2026-10-23'te sitemap'ten çıkarıldı: yayında ve
+  // indekslenebilir kalırlar, alt bilgiden bağlantı alırlar; yalnızca az olan
+  // tarama ilgisini vitrin/rehber/kategori sayfalarıyla paylaşmasınlar.
   // lastmod gerçek içerik değişikliğini yansıtır: bu sayfaların içeriği 2026-10-04'te
-  // değişti; yasal sayfalar ve rozet açıklaması değişmedi.
+  // değişti.
   const CHANGED_ON_1004 = new Set(["", "/rehber", "/yetenegini-farket", "/hakkimizda"]);
   const CHANGED_ON_1011 = new Set(["/rehber", "/hakkimizda"]);
   const CHANGED_ON_1019 = new Set(["/en"]);

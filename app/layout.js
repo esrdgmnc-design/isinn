@@ -105,7 +105,23 @@ const organizationJsonLd = {
     "https://www.tiktok.com/@isinn.com.tr",
     "https://www.instagram.com/isinn.com.tr/",
     "https://www.linkedin.com/company/145299576/",
+    COMPANY.appStoreUrl,
   ],
+};
+
+// iOS uygulaması (2026-10-23): mağaza kaydını aynı varlığa bağlar. Puan/fiyat
+// alanı bilerek yok (doğrulanamayan veri şemaya yazılmaz).
+const mobileAppJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "MobileApplication",
+  "@id": "https://www.isinn.com.tr/#ios-app",
+  name: "İşinn: İşin Gücün Burada",
+  operatingSystem: "iOS",
+  applicationCategory: "BusinessApplication",
+  inLanguage: "tr",
+  url: COMPANY.appStoreUrl,
+  installUrl: COMPANY.appStoreUrl,
+  publisher: { "@id": "https://www.isinn.com.tr/#org" },
 };
 
 export default function RootLayout({ children }) {
@@ -125,6 +141,8 @@ export default function RootLayout({ children }) {
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdString(organizationJsonLd) }} />
         {/* eslint-disable-next-line react/no-danger */}
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdString(websiteJsonLd) }} />
+        {/* eslint-disable-next-line react/no-danger */}
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdString(mobileAppJsonLd) }} />
         {children}
         <ServiceWorkerRegister />
         <AttributionCapture />

@@ -9,6 +9,7 @@ import { jsonLdString } from "../../../lib/jsonLd";
 import { socialMeta, clamp } from "../../../lib/seoMeta";
 import { getCategoryGuides } from "../../../lib/categoryGuides";
 import SeoFooter from "../../../components/SeoFooter";
+import { getCategoryLongIntro } from "../../../lib/categoryIntros";
 
 // SEO için eklendi: kategoriler eskiden sadece ana sayfadaki bir istemci
 // tarafı filtreydi, kendi URL'leri yoktu — Google "istanbul temizlikçi" gibi
@@ -92,6 +93,7 @@ export default async function CategoryPage({ params }) {
   };
   const categoryFaq = services.length > 0 ? getCategoryFaq(meta.name) : null;
   const guides = getCategoryGuides(params.slug);
+  const longIntro = getCategoryLongIntro(params.slug);
 
   return (
     <>
@@ -158,6 +160,15 @@ export default async function CategoryPage({ params }) {
             </div>
           );
         })()}
+
+        {longIntro && (
+          <div className="mt-10 pt-8 border-t max-w-2xl" style={{ borderColor: "#E4E4E7" }}>
+            <h2 className="font-sans text-lg font-black mb-3" style={{ color: "#0F1115" }}>{longIntro.heading}</h2>
+            {longIntro.paragraphs.map((p, i) => (
+              <p key={i} className="text-sm leading-relaxed mb-3" style={{ color: "#374151" }}>{p}</p>
+            ))}
+          </div>
+        )}
 
         {guides.length > 0 && (
           <div className="mt-10 pt-8 border-t" style={{ borderColor: "#E4E4E7" }}>

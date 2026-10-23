@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { supabase } from "../lib/supabaseClient";
+import { COMPANY } from "../lib/companyInfo";
 import { SEO_CATEGORIES, SEO_CITIES, matchesCitySlug } from "../lib/seoTaxonomy";
 import { isIndexableListing, MIN_CITY_LISTINGS, MIN_CATEGORY_LISTINGS } from "../lib/seoFormat";
 
@@ -36,6 +37,7 @@ export default async function SeoFooter() {
         <Link href="/rehber" style={link}>Rehberler</Link>
         <Link href="/hakkimizda" style={link}>Hakkımızda</Link>
         <Link href="/en" hrefLang="en" style={link}>English</Link>
+        <a href={COMPANY.appStoreUrl} style={link} rel="noopener">iOS uygulaması</a>
       </div>
       {cats.length > 0 && (
         <p className="mb-2">

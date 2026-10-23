@@ -156,7 +156,7 @@ export default function RehberPostPage({ params }) {
             </div>
           </div>
         )}
-        <style>{`.rehber-body h2 { font-size: 18px; font-weight: 800; color: #0F1115; margin: 24px 0 8px; } .rehber-body p { margin: 0 0 12px; } .rehber-body ul { margin: 0 0 12px; padding-left: 20px; list-style: disc; } .rehber-body ol { margin: 0 0 12px; padding-left: 22px; list-style: decimal; } .rehber-body li { margin-bottom: 6px; } .rehber-body a { color: #2563EB; text-decoration: underline; }`}</style>
+        <style>{`.rehber-body h2 { font-size: 18px; font-weight: 800; color: #0F1115; margin: 24px 0 8px; } .rehber-body p { margin: 0 0 12px; } .rehber-body ul { margin: 0 0 12px; padding-left: 20px; list-style: disc; } .rehber-body ol { margin: 0 0 12px; padding-left: 22px; list-style: decimal; } .rehber-body li { margin-bottom: 6px; } .rehber-body a { color: #2563EB; text-decoration: underline; } .rehber-body .tablo { overflow-x: auto; margin: 0 0 16px; } .rehber-body table { border-collapse: collapse; width: 100%; min-width: 520px; font-size: 13px; } .rehber-body th, .rehber-body td { border: 1px solid #E5E7EB; padding: 8px 10px; text-align: left; vertical-align: top; } .rehber-body th { background: #F9FAFB; color: #0F1115; font-weight: 800; }`}</style>
       </div>
       <SeoFooter />
     </>
