@@ -74,6 +74,7 @@ const organizationJsonLd = {
   founder: { "@type": "Person", name: "Esra Güneş", sameAs: ["https://www.linkedin.com/in/esra-g-037912138/"] },
   name: "İşinn",
   legalName: COMPANY.legalName,
+  parentOrganization: { "@type": "Organization", name: COMPANY.legalName, url: COMPANY.website },
   alternateName: ["Isinn", "isinn.com.tr"],
   url: "https://www.isinn.com.tr",
   logo: "https://www.isinn.com.tr/icons/icon-512.webp",

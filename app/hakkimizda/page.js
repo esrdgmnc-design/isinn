@@ -131,7 +131,7 @@ export default function HakkimizdaPage() {
         </p>
 
         <h2 className="font-sans text-xl font-black mb-3" style={{ color: "#0F1115" }}>Şirket bilgileri</h2>
-        <p className="text-sm mb-2" style={{ color: "#374151" }}>İşinn, {COMPANY.legalName} markasıdır.</p>
+        <p className="text-sm mb-2" style={{ color: "#374151" }}>İşinn, <a href={COMPANY.website} rel="noopener" style={{ color: "#2563EB" }}>{COMPANY.legalName}</a> markasıdır.</p>
         <ul className="text-sm space-y-1 mb-8" style={{ color: "#374151" }}>
           <li>Adres: {COMPANY.address}</li>
           <li>Telefon: {COMPANY.phone}</li>
