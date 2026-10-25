@@ -1,19 +1,24 @@
 {
- "note": "Her sabah gsc-gunluk-dizin-istegi görevi okur ve günceller. status: pending | indexed (Google'da mevcut, istek gönderilmedi) | requested (istek gönderildi). Sıra (2026-10-23): kategori > beyaz yaka rehber > diğer rehber > vitrin > eski kitle rehberleri.",
- "updated": "2026-10-23",
+ "note": "Her sabah gsc-gunluk-dizin-istegi görevi okur ve günceller. status: pending | indexed (Google'da mevcut, istek gönderilmedi) | requested (istek gönderildi). Sıra (2026-10-25): içeriği 10-23/24 değişen rehberler > kategori > beyaz yaka rehber > diğer rehber > vitrin > eski kitle rehberleri. İçeriği değişen sayfa dizinde olsa bile bir kez yeniden istenir.",
+ "updated": "2026-10-25",
  "items": [
   {
-   "url": "https://www.isinn.com.tr/kategori/yoga-koc",
+   "url": "https://www.isinn.com.tr/rehber/yazilimci-ve-muhendis-icin-freelance-vitrin-nasil-yazilir",
    "status": "pending",
    "date": null
   },
   {
-   "url": "https://www.isinn.com.tr/kategori/muhendis",
+   "url": "https://www.isinn.com.tr/rehber/hizmet-fiyati-nasil-belirlenir-saatlik-sabit-teklif",
    "status": "pending",
    "date": null
   },
   {
-   "url": "https://www.isinn.com.tr/kategori/yazilim",
+   "url": "https://www.isinn.com.tr/rehber/freelancer-ile-calismadan-once-brief-nasil-hazirlanir",
+   "status": "pending",
+   "date": null
+  },
+  {
+   "url": "https://www.isinn.com.tr/rehber/freelancer-nerede-bulunur-bionluk-armut-linkedin-isinn",
    "status": "pending",
    "date": null
   },
@@ -29,11 +34,6 @@
   },
   {
    "url": "https://www.isinn.com.tr/rehber/ek-gelir-ve-freelance-is-yollari",
-   "status": "pending",
-   "date": null
-  },
-  {
-   "url": "https://www.isinn.com.tr/rehber/sirket-kurmadan-hizmet-sunmak",
    "status": "pending",
    "date": null
   },
@@ -58,11 +58,6 @@
    "date": null
   },
   {
-   "url": "https://www.isinn.com.tr/rehber/hizmet-fiyati-nasil-belirlenir-saatlik-sabit-teklif",
-   "status": "pending",
-   "date": null
-  },
-  {
    "url": "https://www.isinn.com.tr/rehber/musteriye-ilk-mesaj-ve-yazili-anlasma-sablonlari",
    "status": "pending",
    "date": null
@@ -73,22 +68,7 @@
    "date": null
   },
   {
-   "url": "https://www.isinn.com.tr/rehber/yazilimci-ve-muhendis-icin-freelance-vitrin-nasil-yazilir",
-   "status": "pending",
-   "date": null
-  },
-  {
    "url": "https://www.isinn.com.tr/rehber/hizmet-vitrini-aciklamasi-nasil-yazilir",
-   "status": "pending",
-   "date": null
-  },
-  {
-   "url": "https://www.isinn.com.tr/rehber/freelancer-ile-calismadan-once-brief-nasil-hazirlanir",
-   "status": "pending",
-   "date": null
-  },
-  {
-   "url": "https://www.isinn.com.tr/rehber/freelance-musteri-nasil-bulunur-komisyonsuz-yollar",
    "status": "pending",
    "date": null
   },
@@ -383,6 +363,31 @@
    "date": null
   },
   {
+   "url": "https://www.isinn.com.tr/kategori/yoga-koc",
+   "status": "requested",
+   "date": "2026-10-25"
+  },
+  {
+   "url": "https://www.isinn.com.tr/kategori/muhendis",
+   "status": "requested",
+   "date": "2026-10-25"
+  },
+  {
+   "url": "https://www.isinn.com.tr/kategori/yazilim",
+   "status": "requested",
+   "date": "2026-10-25"
+  },
+  {
+   "url": "https://www.isinn.com.tr/rehber/sirket-kurmadan-hizmet-sunmak",
+   "status": "requested",
+   "date": "2026-10-25"
+  },
+  {
+   "url": "https://www.isinn.com.tr/rehber/freelance-musteri-nasil-bulunur-komisyonsuz-yollar",
+   "status": "requested",
+   "date": "2026-10-25"
+  },
+  {
    "url": "https://www.isinn.com.tr/rehber/freelance-iste-revizyon-hakki-kac-olmali",
    "status": "requested",
    "date": "2026-10-19"
@@ -404,11 +409,6 @@
   },
   {
    "url": "https://www.isinn.com.tr/rehber/web-sitesi-freelancer-mi-ajans-mi",
-   "status": "requested",
-   "date": "2026-10-19"
-  },
-  {
-   "url": "https://www.isinn.com.tr/rehber/freelancer-nerede-bulunur-bionluk-armut-linkedin-isinn",
    "status": "requested",
    "date": "2026-10-19"
   },
@@ -435,7 +435,7 @@
   {
    "url": "https://www.isinn.com.tr/kategori/ogretmen",
    "status": "requested",
-   "date": "2026-10-19"
+   "date": "2026-10-25"
   },
   {
    "url": "https://www.isinn.com.tr",
@@ -461,6 +461,11 @@
    "url": "https://www.isinn.com.tr/vitrin/f998f524-81d8-4f08-90e9-4333c2dd988f",
    "status": "indexed",
    "date": "2026-10-20"
+  },
+  {
+   "url": "https://www.isinn.com.tr/kategori/danismanlik",
+   "status": "requested",
+   "date": "2026-10-25"
   }
  ]
 }
