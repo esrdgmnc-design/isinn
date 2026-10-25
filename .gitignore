@@ -18,3 +18,7 @@ ios/App/App.xcodeproj/xcuserdata/
 
 # Apple APNs anahtarı (asla repoya girmemeli)
 *.p8
+
+# Kişi adları içeren vitrin listeleri (git dışı)
+docs/vitrin-iyilestirme-listesi-*.md
+docs/vitrin-sahibi-mesajlari-*.md
