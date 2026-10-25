@@ -1856,7 +1856,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
       {/* Yeteneğini Keşfet (yapay zekânın bel kemiği; kurucu kararıyla ana sayfada kalır) — hero'nun hemen altında. */}
       <TalentDiscoveryBanner onOpen={() => onNav("talentDiscovery")} />
       {/* Güven şeridi (2026-10-17: kurucu isteğiyle hero'dan Yeteneğini Keşfet kartının altına taşındı, ortalı tek satır). Ücretsiz bilgisi yalnızca ücretsiz dönemde ve gerçek bitiş tarihiyle (lib/freePeriod.js); iOS'ta üyelik/fiyat ima etmemek için gizli. */}
-      <div className="max-w-6xl mx-auto px-5 mt-3 flex flex-wrap items-center gap-x-5 gap-y-1 text-xs font-medium sm:pl-11" style={{ color: "#6B7280" }}>
+      <div className="max-w-6xl mx-auto px-5 mt-3 flex flex-wrap items-center gap-x-5 gap-y-1 text-xs font-medium sm:pl-11" style={{ color: "#575E6B" }}>
         <span>✓ {t("home.trustNoCommission")}</span>
         {!storeApp && isFreePeriod() && <span>✓ {t("home.trustFree", { date: new Date(FREE_PERIOD_UNTIL_ISO).toLocaleDateString(language === "en" ? "en-GB" : "tr-TR", { day: "numeric", month: "long", year: "numeric" }) })}</span>}
         <span>✓ {t("home.trustPhonePrivate")}</span>
@@ -2000,7 +2000,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
         <div className="flex items-end justify-between gap-4 mb-5">
           <div className="min-w-0">
             <h2 className="font-sans text-2xl sm:text-3xl font-black tracking-tight" style={{ color: "#0F1115" }}>{t("home.jobsHeading")}</h2>
-            <p className="text-sm mt-1" style={{ color: "#6B7280" }}>{t("home.jobsSubtext")}</p>
+            <p className="text-sm mt-1" style={{ color: "#575E6B" }}>{t("home.jobsSubtext")}</p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {/* Telefonda gizli (2026-10-17, kurucu: "saçma duruyor") — başlık yanında sıkışıyordu; telefonda hero'daki "Ücretsiz talep oluştur" bağlantısı var. */}
@@ -2091,7 +2091,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
         <div className="flex items-end justify-between mb-5 flex-wrap gap-2">
           <div>
             <h2 className="font-sans text-2xl sm:text-3xl font-black tracking-tight" style={{ color: "#0F1115" }}>{t("home.showcasesHeading")}</h2>
-            <p className="text-sm mt-0.5" style={{ color: "#6B7280" }}>{t("home.showcasesSubtext")}</p>
+            <p className="text-sm mt-0.5" style={{ color: "#575E6B" }}>{t("home.showcasesSubtext")}</p>
           </div>
         </div>
         <div className="rounded-2xl p-1.5 flex gap-1 w-full sm:w-fit mb-5" style={{ background: "#FFFFFF", border: "1px solid #E4E4E7" }}>
@@ -2164,7 +2164,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
       <section className="max-w-6xl mx-auto px-5 mt-14 sm:mt-16 mb-14 sm:mb-16 grid md:grid-cols-[1fr_1.6fr] gap-6 md:gap-12">
         <div>
           <h2 className="font-sans text-2xl sm:text-3xl font-black tracking-tight" style={{ color: "#0F1115" }}>{t("home.faqTitle")}</h2>
-          <p className="text-sm mt-2" style={{ color: "#6B7280" }}>{t("home.faqSubtitle")}</p>
+          <p className="text-sm mt-2" style={{ color: "#575E6B" }}>{t("home.faqSubtitle")}</p>
         </div>
         <div className="space-y-2">
           {(language === "en" && Array.isArray(t("home.faqItems")) ? t("home.faqItems").map((x) => ({ name: x.q, acceptedAnswer: { text: x.a } })) : faqJsonLd.mainEntity).map((f) => (
@@ -2251,10 +2251,10 @@ function SiteFooter({ onNav }) {
           </div>
         </div>
         <div className="pt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2" style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}>
-          <p className="text-[11px]" style={{ color: "#5C6070" }}>
+          <p className="text-[11px]" style={{ color: "#8A8F9C" }}>
             {storeApp ? `© ${new Date().getFullYear()} İşinn` : t("footer.copyright", { year: new Date().getFullYear(), brand: COMPANY.brand, legalName: COMPANY.legalName, address: COMPANY.address })}
           </p>
-          <p className="text-[11px]" style={{ color: "#5C6070" }}>{t("footer.disclaimer")}</p>
+          <p className="text-[11px]" style={{ color: "#8A8F9C" }}>{t("footer.disclaimer")}</p>
         </div>
       </div>
     </footer>

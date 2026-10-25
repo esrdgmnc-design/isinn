@@ -4,6 +4,7 @@ import { REHBER_POSTS, findRehberPost, rehberMeta, rehberTranslations } from "..
 import { jsonLdString } from "../../../lib/jsonLd";
 import { socialMeta } from "../../../lib/seoMeta";
 import SeoFooter from "../../../components/SeoFooter";
+import { getGuideCategories } from "../../../lib/categoryGuides";
 
 const BASE_URL = "https://www.isinn.com.tr";
 
@@ -24,9 +25,13 @@ export function generateMetadata({ params }) {
   };
 }
 
-export default function RehberPostPage({ params }) {
+// İlgili kategoriler vitrin sayısına göre süzüldüğü için sayfa saatte bir yenilenir.
+export const revalidate = 3600;
+
+export default async function RehberPostPage({ params }) {
   const post = findRehberPost(params.slug);
   if (!post) notFound();
+  const guideCategories = post.lang === "en" ? [] : await getGuideCategories(post.slug);
 
   // Yazılar birbirine hiç link vermiyordu — her biri kendi kategorisine tek
   // yönlü bir CTA veriyordu, aralarında iç link akışı yoktu. Aynı kategoriden
@@ -142,6 +147,17 @@ export default function RehberPostPage({ params }) {
           <p className="text-sm mt-6" style={{ color: "#374151" }}>
             Ne sunabileceğini bilmiyor musun? <Link href="/yetenegini-farket" style={{ color: "#2563EB", fontWeight: 700 }}>Becerinden hizmet fikri al</Link>: üyelik gerekmez.
           </p>
+        )}
+
+        {guideCategories.length > 0 && (
+          <div className="mt-10 pt-6 border-t" style={{ borderColor: "#E5E7EB" }}>
+            <h2 className="font-sans text-lg font-black mb-3" style={{ color: "#0F1115" }}>Bu alandaki vitrinler</h2>
+            <div className="flex flex-wrap gap-2">
+              {guideCategories.map((c) => (
+                <Link key={c.slug} href={`/kategori/${c.slug}`} className="text-sm font-bold px-4 py-2 rounded-full" style={{ background: "#EFF6FF", color: "#1D4ED8" }}>{c.name}</Link>
+              ))}
+            </div>
+          </div>
         )}
 
         {relatedPosts.length > 0 && (
