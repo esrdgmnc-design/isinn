@@ -2,19 +2,19 @@
  "note": "Code G (https://codegtechnology.com/) Search Console dizin kuyruğu. Her sabah codeg-gunluk-dizin-istegi görevi okur ve günceller. status: pending | indexed | requested. 'yeniden' alanı true olan adresler dizinde olsa bile bir kez yeniden istenir (içerik değişti).",
  "updated": "2026-10-26",
  "items": [
-  {"url": "https://codegtechnology.com/products/44-1100-serisi-yuksek-basinc-dusurucu-regulator/", "status": "pending", "yeniden": false, "date": null},
-  {"url": "https://codegtechnology.com/products/20-1200-serisi-hidrojen-basinc-regulatoru/", "status": "pending", "yeniden": false, "date": null},
-  {"url": "https://codegtechnology.com/products/26-1700-serisi-geri-basinc-regulatoru/", "status": "pending", "yeniden": false, "date": null},
-  {"url": "https://codegtechnology.com/products/54-2200-serisi-hidrolik-basinc-dusurucu-regulator/", "status": "pending", "yeniden": false, "date": null},
-  {"url": "https://codegtechnology.com/products/26-1100-serisi-dom-yuklu-basinc-regulatoru/", "status": "pending", "yeniden": false, "date": null},
-  {"url": "https://codegtechnology.com/tedarik-ve-belgeler/", "status": "pending", "yeniden": false, "date": null},
-  {"url": "https://codegtechnology.com/hidrojen-basinc-regulatorleri/", "status": "pending", "yeniden": false, "date": null},
-  {"url": "https://codegtechnology.com/documents/", "status": "pending", "yeniden": true, "date": null},
-  {"url": "https://codegtechnology.com/contact/", "status": "pending", "yeniden": true, "date": null},
-  {"url": "https://codegtechnology.com/dom-yuklu-ve-yay-yuklu-regulator-farki/", "status": "pending", "yeniden": false, "date": null},
-  {"url": "https://codegtechnology.com/basinc-regulatoru-ile-emniyet-ventili-farki/", "status": "pending", "yeniden": false, "date": null},
-  {"url": "https://codegtechnology.com/high-pressure-regulators/", "status": "pending", "yeniden": true, "date": null},
-  {"url": "https://codegtechnology.com/valves/", "status": "pending", "yeniden": true, "date": null},
-  {"url": "https://codegtechnology.com/electronic-control-systems/", "status": "pending", "yeniden": true, "date": null}
+  {"url": "https://codegtechnology.com/products/44-1100-serisi-yuksek-basinc-dusurucu-regulator/", "status": "indexed", "yeniden": false, "date": "2026-10-26"},
+  {"url": "https://codegtechnology.com/products/20-1200-serisi-hidrojen-basinc-regulatoru/", "status": "requested", "yeniden": false, "date": "2026-10-26"},
+  {"url": "https://codegtechnology.com/products/26-1700-serisi-geri-basinc-regulatoru/", "status": "indexed", "yeniden": false, "date": "2026-10-26"},
+  {"url": "https://codegtechnology.com/products/54-2200-serisi-hidrolik-basinc-dusurucu-regulator/", "status": "requested", "yeniden": false, "date": "2026-10-26"},
+  {"url": "https://codegtechnology.com/products/26-1100-serisi-dom-yuklu-basinc-regulatoru/", "status": "requested", "yeniden": false, "date": "2026-10-26"},
+  {"url": "https://codegtechnology.com/tedarik-ve-belgeler/", "status": "indexed", "yeniden": false, "date": "2026-10-26"},
+  {"url": "https://codegtechnology.com/hidrojen-basinc-regulatorleri/", "status": "indexed", "yeniden": false, "date": "2026-10-26"},
+  {"url": "https://codegtechnology.com/documents/", "status": "requested", "yeniden": false, "date": "2026-10-26"},
+  {"url": "https://codegtechnology.com/contact/", "status": "requested", "yeniden": false, "date": "2026-10-26"},
+  {"url": "https://codegtechnology.com/dom-yuklu-ve-yay-yuklu-regulator-farki/", "status": "requested", "yeniden": false, "date": "2026-10-26"},
+  {"url": "https://codegtechnology.com/basinc-regulatoru-ile-emniyet-ventili-farki/", "status": "requested", "yeniden": false, "date": "2026-10-26"},
+  {"url": "https://codegtechnology.com/high-pressure-regulators/", "status": "requested", "yeniden": false, "date": "2026-10-26"},
+  {"url": "https://codegtechnology.com/valves/", "status": "requested", "yeniden": false, "date": "2026-10-26"},
+  {"url": "https://codegtechnology.com/electronic-control-systems/", "status": "requested", "yeniden": false, "date": "2026-10-26"}
  ]
 }
