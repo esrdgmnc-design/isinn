@@ -12409,6 +12409,22 @@ export default function IsinnPrototype({ session, onRequireAuth, discoveryPopula
     return () => { cancelled = true; };
   }, []);
 
+  // ?ilan=<id>: talep takibi e-postasındaki bağlantı (bkz. lib/demandFollowups.js) ilan detayını doğrudan açar.
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const jobId = url.searchParams.get("ilan");
+    if (!jobId) return;
+    let cancelled = false;
+    supabase.from("jobs").select("*, profiles(*), categories(*)").eq("id", jobId).is("service_id", null).eq("active", true).maybeSingle().then(({ data }) => {
+      if (cancelled || !data) return;
+      setSelectedJob(mapJobRowToPosting(data));
+      setView("jobDetail");
+      url.searchParams.delete("ilan");
+      window.history.replaceState({}, "", url);
+    });
+    return () => { cancelled = true; };
+  }, []);
+
   // Girişsiz "İletişime Geç"e basan ziyaretçi giriş yaptıktan sonra baktığı vitrine dönsün (15 dk içinde).
   const userIdRef = useRef(userId);
   userIdRef.current = userId;
@@ -12892,7 +12908,7 @@ export default function IsinnPrototype({ session, onRequireAuth, discoveryPopula
   // Bildirim panelinden bir bildirime tıklayınca ilgili yere götürür —
   // bkz. NotificationBell/notifications_center.sql.
   const handleNotificationClick = async (n) => {
-    if (n.type === "new_message" || n.type === "job_delivered") {
+    if (n.type === "new_message" || n.type === "job_delivered" || n.type === "message_reminder" || n.type === "similar_vitrins") {
       setView("messages");
       return;
     }

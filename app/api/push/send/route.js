@@ -18,6 +18,8 @@ const PUSH_TEXT = {
   media_approved: ["İşinn", "Yüklediğin içerik onaylandı"],
   media_rejected: ["İşinn", "Yüklediğin içerik onaylanmadı"],
   listing_text_edited: ["İşinn", "Vitrin metninde bir değişiklik var"],
+  message_reminder: ["İşinn", "Bir müşteri yanıtını bekliyor"],
+  similar_vitrins: ["İşinn", "Henüz yanıt gelmedi: benzer vitrinlere göz at"],
 };
 const DAILY_LIMIT = 4;
 
