@@ -38,21 +38,21 @@ const TOOLS = [
         limit: { type: "integer", minimum: 1, maximum: MAX_RESULTS, description: `En fazla kaç sonuç (varsayılan 5, en çok ${MAX_RESULTS}).` },
       },
     },
-    annotations: { readOnlyHint: true, openWorldHint: false },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
   },
   {
     name: "get_vitrin",
     title: "İşinn vitrin ayrıntısı",
     description: "Tek bir İşinn vitrininin herkese açık ayrıntılarını (açıklama, fiyat bilgisi, konum, bağlantı) getirir. id, search_vitrins sonucundan gelir.",
     inputSchema: { type: "object", properties: { id: { type: "string", description: "Vitrin kimliği (UUID)." } }, required: ["id"] },
-    annotations: { readOnlyHint: true, openWorldHint: false },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
   },
   {
     name: "list_categories",
     title: "İşinn kategorileri",
     description: "İşinn'deki hizmet kategorilerini ve şu an her birinde kaç aktif vitrin olduğunu listeler.",
     inputSchema: { type: "object", properties: {} },
-    annotations: { readOnlyHint: true, openWorldHint: false },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
   },
 ];
 
