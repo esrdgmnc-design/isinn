@@ -24,6 +24,10 @@ export async function GET() {
   lines.push(`- [Rehberler](${BASE_URL}/rehber): Hizmet verenler ve hizmet alanlar için rehber yazıları.`);
   lines.push(`- Kategori sayfaları \`/kategori/<slug>\`, şehir sayfaları \`/sehir/<slug>\`, vitrin sayfaları \`/vitrin/<id>\`; güncel liste için [sitemap.xml](${BASE_URL}/sitemap.xml).`);
   lines.push("");
+  lines.push("## Yapay zekâ asistanları için araç (MCP)");
+  lines.push("");
+  lines.push(`- MCP sunucusu: \`${BASE_URL}/api/mcp\` (Streamable HTTP, durumsuz, kimlik doğrulama yok, yalnızca okuma). Araçlar: \`search_vitrins\` (hizmet, kategori, şehir ile vitrin arama), \`get_vitrin\` (tek vitrin ayrıntısı), \`list_categories\`. Yalnızca vitrin sayfalarında zaten herkese açık bilgiler döner.`);
+  lines.push("");
   lines.push("## Rehberler");
   lines.push("");
   for (const post of REHBER_POSTS) {
