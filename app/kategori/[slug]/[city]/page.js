@@ -5,6 +5,8 @@ import { supabase } from "../../../../lib/supabaseClient";
 import { SEO_CATEGORIES, SEO_CITIES, matchesCitySlug, categorySeoName } from "../../../../lib/seoTaxonomy";
 import { formatPrice, getProviderName, getCategoryCityIntro, isIndexableListing, MIN_COMBO_LISTINGS } from "../../../../lib/seoFormat";
 import { getCategoryFaq } from "../../../../lib/categoryFaq";
+import { orderByResponsiveness, getProviderLastSent } from "../../../../lib/providerResponsiveness";
+import { getCategoryCityLongIntro } from "../../../../lib/categoryIntros";
 import { jsonLdString } from "../../../../lib/jsonLd";
 import { socialMeta } from "../../../../lib/seoMeta";
 import SeoFooter from "../../../../components/SeoFooter";
@@ -33,7 +35,8 @@ async function getServices(categorySlug, citySlug) {
     .eq("active", true)
     .eq("is_remote", false)
     .order("updated_at", { ascending: false });
-  return { category, services: (services || []).filter((row) => matchesCitySlug(row.city, citySlug)) };
+  const rows = (services || []).filter((row) => matchesCitySlug(row.city, citySlug));
+  return { category, services: orderByResponsiveness(rows, await getProviderLastSent(rows.map((r) => r.provider_id))) };
 }
 
 export const revalidate = 3600;
@@ -83,7 +86,8 @@ export default async function CategoryCityPage({ params }) {
     ],
   };
 
-  const categoryFaq = services.length > 0 ? getCategoryFaq(categoryMeta.name, cityMeta.name) : null;
+  const longIntro = services.length > 0 ? getCategoryCityLongIntro(params.slug, params.city) : null;
+  const categoryFaq = services.length > 0 ? [...getCategoryFaq(categoryMeta.name, cityMeta.name), ...(longIntro?.faq || [])] : null;
   const faqJsonLd = categoryFaq ? {
     "@context": "https://schema.org",
     "@type": "FAQPage",
@@ -139,6 +143,15 @@ export default async function CategoryCityPage({ params }) {
                 </Link>
               );
             })}
+          </div>
+        )}
+
+        {longIntro && (
+          <div className="mt-10 pt-8 border-t max-w-2xl" style={{ borderColor: "#F0F0F0" }}>
+            <h2 className="font-sans text-lg font-black mb-3" style={{ color: "#0F1115" }}>{longIntro.heading}</h2>
+            {longIntro.paragraphs.map((p, i) => (
+              <p key={i} className="text-sm leading-relaxed mb-3" style={{ color: "#374151" }}>{p}</p>
+            ))}
           </div>
         )}
 

@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "node evals/talent/unit.mjs && node evals/unit-more.mjs && node evals/unit-ai-consent.mjs && node evals/unit-native-app.mjs && node evals/unit-delivery-gate.mjs && node evals/unit-content-filter.mjs && node evals/unit-demand-followups.mjs",
+    "test": "node evals/talent/unit.mjs && node evals/unit-more.mjs && node evals/unit-ai-consent.mjs && node evals/unit-native-app.mjs && node evals/unit-delivery-gate.mjs && node evals/unit-content-filter.mjs && node evals/unit-demand-followups.mjs && node evals/unit-provider-responsiveness.mjs",
     "eval:talent": "node evals/talent/run.mjs 2"
   },
   "dependencies": {

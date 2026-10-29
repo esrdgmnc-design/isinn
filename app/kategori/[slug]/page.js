@@ -10,6 +10,7 @@ import { socialMeta, clamp } from "../../../lib/seoMeta";
 import { getCategoryGuides } from "../../../lib/categoryGuides";
 import SeoFooter from "../../../components/SeoFooter";
 import { getCategoryLongIntro } from "../../../lib/categoryIntros";
+import { orderByResponsiveness, getProviderLastSent } from "../../../lib/providerResponsiveness";
 
 // SEO için eklendi: kategoriler eskiden sadece ana sayfadaki bir istemci
 // tarafı filtreydi, kendi URL'leri yoktu — Google "istanbul temizlikçi" gibi
@@ -33,7 +34,8 @@ async function getServices(slug) {
     .eq("category_id", category.id)
     .eq("active", true)
     .order("updated_at", { ascending: false });
-  return { category, services: services || [] };
+  const rows = services || [];
+  return { category, services: orderByResponsiveness(rows, await getProviderLastSent(rows.map((r) => r.provider_id))) };
 }
 
 export const revalidate = 3600;
