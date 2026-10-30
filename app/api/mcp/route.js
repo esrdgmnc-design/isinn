@@ -198,13 +198,24 @@ async function handle(msg) {
   }
 }
 
+// GEÇİCİ (2026-10-30): ChatGPT bağlantı sorununu teşhis için istek özeti; sorun çözülünce kaldırılacak.
+async function logRequest(req, kind, methods) {
+  const h = (k) => String(req.headers.get(k) || "").slice(0, 120);
+  await supabase
+    .from("events")
+    .insert({ name: "mcp_request", session_id: "mcp", props: { kind, methods, ua: h("user-agent"), accept: h("accept"), pv: h("mcp-protocol-version"), sid: h("mcp-session-id") } })
+    .then(() => {}, () => {});
+}
+
 export async function POST(req) {
   let body;
   try {
     body = await req.json();
   } catch {
+    await logRequest(req, "post-parse-error", []);
     return Response.json({ jsonrpc: "2.0", id: null, error: { code: -32700, message: "Parse error" } }, { status: 400, headers: CORS });
   }
+  await logRequest(req, "post", (Array.isArray(body) ? body : [body]).map((m) => m?.method || "?"));
   if (Array.isArray(body)) {
     const out = (await Promise.all(body.map(handle))).filter(Boolean);
     return out.length ? Response.json(out, { headers: CORS }) : new Response(null, { status: 202, headers: CORS });
@@ -213,13 +224,15 @@ export async function POST(req) {
   return out ? Response.json(out, { headers: CORS }) : new Response(null, { status: 202, headers: CORS });
 }
 
-export async function GET() {
+export async function GET(req) {
+  await logRequest(req, "get", []);
   return new Response("İşinn MCP sunucusu: POST ile JSON-RPC (Streamable HTTP, durumsuz). SSE akışı desteklenmez.", {
     status: 405,
     headers: { ...CORS, Allow: "POST, OPTIONS", "Content-Type": "text/plain; charset=utf-8" },
   });
 }
 
-export async function OPTIONS() {
+export async function OPTIONS(req) {
+  await logRequest(req, "options", []);
   return new Response(null, { status: 204, headers: CORS });
 }
