@@ -10,6 +10,7 @@ import { jsonLdString } from "../../../lib/jsonLd";
 import { safeWorkLink } from "../../../lib/workLink";
 import SeoFooter from "../../../components/SeoFooter";
 import { getCategoryGuides } from "../../../lib/categoryGuides";
+import { benzerlikPuani, dersBilgisi, DERS_SAYFALARI } from "../../../lib/dersKonulari";
 
 // SEO için eklendi (2026-09-16): İşinn'in tamamı eskiden tek bir "/" sayfası
 // üzerinde, istemci tarafı görünüm durumuyla çalışıyordu — her vitrin kendi
@@ -76,8 +77,9 @@ async function getRelated(row) {
     const prov = (sameProv || []).filter(isIndexableListing);
     const used = new Set(prov.map((r) => r.id));
     const cat = (sameCat || []).filter((r) => isIndexableListing(r) && !used.has(r.id));
-    // aynı ildekiler önce
-    cat.sort((a, b) => (provinceOf(b.city) === provinceOf(row.city)) - (provinceOf(a.city) === provinceOf(row.city)));
+    // Önce aynı ders ve düzey (öğretmen kategorisinde İngilizce vitrine ilkokul matematik öneriliyordu), sonra aynı il.
+    const score = (r) => benzerlikPuani(row, r, provinceOf(r.city) === provinceOf(row.city));
+    cat.sort((a, b) => score(b) - score(a));
     return { sameProvider: prov.slice(0, 3), similar: cat.slice(0, 4) };
   } catch { return { sameProvider: [], similar: [] }; }
 }
@@ -339,6 +341,21 @@ export default async function VitrinPage({ params }) {
             </ul>
           </section>
         )}
+
+        {(() => {
+          // Ders sayfalarına taranabilir iç bağlantı (yalnızca bu vitrin o derse giriyorsa).
+          if (row.categories?.slug !== "ogretmen") return null;
+          const d = dersBilgisi(row);
+          const pages = DERS_SAYFALARI.filter((s) => s.match(d));
+          if (pages.length === 0) return null;
+          return (
+            <p className="mt-4 text-sm flex flex-wrap gap-x-4 gap-y-1">
+              {pages.map((s) => (
+                <Link key={s.slug} href={`/ozel-ders/${s.slug}`} className="font-bold" style={{ color: "#2563EB" }}>Tüm {s.name.toLocaleLowerCase("tr-TR")} öğretmenleri →</Link>
+              ))}
+            </p>
+          );
+        })()}
 
         {guides.length > 0 && (
           <section className="mt-8">

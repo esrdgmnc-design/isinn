@@ -1,5 +1,6 @@
 import Link from "next/link";
 import TalepCta from "../../../components/TalepCta";
+import { DERS_SAYFALARI, MIN_DERS_VITRIN, dersSayfasiVitrinleri } from "../../../lib/dersKonulari";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { supabase } from "../../../lib/supabaseClient";
@@ -146,6 +147,22 @@ export default async function CategoryPage({ params }) {
             })}
           </div>
         )}
+
+        {params.slug === "ogretmen" && (() => {
+          // Derse göre alt sayfalar (app/ozel-ders): yalnızca eşiği geçenlere bağlanır.
+          const pages = DERS_SAYFALARI.filter((s) => dersSayfasiVitrinleri(s, services).length >= MIN_DERS_VITRIN);
+          if (pages.length === 0) return null;
+          return (
+            <div className="mt-8">
+              <h2 className="font-sans text-lg font-black mb-3" style={{ color: "#0F1115" }}>Derse göre öğretmenler</h2>
+              <div className="flex flex-wrap gap-2">
+                {pages.map((s) => (
+                  <Link key={s.slug} href={`/ozel-ders/${s.slug}`} className="text-sm font-bold px-4 py-2 rounded-full" style={{ background: "#EFF6FF", color: "#1D4ED8" }}>{s.name}</Link>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
 
         <TalepCta categoryLabel={meta.name} />
 

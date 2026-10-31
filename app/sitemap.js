@@ -9,6 +9,7 @@
 import { supabase } from "../lib/supabaseClient";
 import { SEO_CATEGORIES, SEO_CITIES, matchesCitySlug } from "../lib/seoTaxonomy";
 import { REHBER_POSTS, rehberMeta } from "../lib/rehberContent";
+import { DERS_SAYFALARI, MIN_DERS_VITRIN, dersSayfasiVitrinleri } from "../lib/dersKonulari";
 import { isIndexableListing, MIN_CITY_LISTINGS, MIN_COMBO_LISTINGS, MIN_CATEGORY_LISTINGS } from "../lib/seoFormat";
 
 const BASE_URL = "https://www.isinn.com.tr";
@@ -55,7 +56,7 @@ export default async function sitemap() {
   for (let from = 0; ; from += 1000) {
     const { data: page } = await supabase
       .from("services")
-      .select("id, updated_at, created_at, city, is_remote, category_id, description, categories(slug)")
+      .select("id, title, updated_at, created_at, city, is_remote, category_id, description, categories(slug)")
       .eq("active", true)
       .order("created_at", { ascending: true })
       .range(from, from + 999);
@@ -134,8 +135,19 @@ export default async function sitemap() {
     };
   });
 
+  // Ders sayfaları (app/ozel-ders): sayfanın kendisiyle aynı eşik.
+  const teachers = indexable.filter((row) => row.categories?.slug === "ogretmen");
+  const dersEntries = DERS_SAYFALARI.map((s) => ({ s, rows: dersSayfasiVitrinleri(s, teachers) }))
+    .filter(({ rows }) => rows.length >= MIN_DERS_VITRIN)
+    .map(({ s, rows }) => ({
+      url: `${BASE_URL}/ozel-ders/${s.slug}`,
+      lastModified: rows.reduce((max, row) => { const d = rowDate(row); return d > max ? d : max; }, new Date("2026-10-31T00:00:00Z")),
+      changeFrequency: "weekly",
+      priority: 0.8,
+    }));
+
   const newestListing = indexable.reduce((max, row) => { const d = rowDate(row); return d > max ? d : max; }, new Date("2026-10-11T00:00:00Z"));
   const home = staticEntries.find((e) => e.url === BASE_URL);
   if (home) home.lastModified = newestListing;
-  return [...staticEntries, ...rehberEntries, ...vitrinEntries, ...categoryEntries, ...cityEntries, ...comboEntries];
+  return [...staticEntries, ...rehberEntries, ...vitrinEntries, ...categoryEntries, ...cityEntries, ...comboEntries, ...dersEntries];
 }
