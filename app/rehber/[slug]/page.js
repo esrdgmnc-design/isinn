@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { REHBER_POSTS, findRehberPost, rehberMeta, rehberTranslations } from "../../../lib/rehberContent";
+import { REHBER_POSTS, findRehberPost, rehberMeta } from "../../../lib/rehberContent";
 import { jsonLdString } from "../../../lib/jsonLd";
 import { socialMeta } from "../../../lib/seoMeta";
 import SeoFooter from "../../../components/SeoFooter";
@@ -16,11 +16,14 @@ export function generateMetadata({ params }) {
   const post = findRehberPost(params.slug);
   if (!post) return { title: "Rehber bulunamadı — İşinn" };
   const url = `${BASE_URL}/rehber/${post.slug}`;
-  const tr = rehberTranslations(post.slug);
+  // İngilizce yazılar yayında kalır ama dizine girmez (2026-10-31): kitle Türkiye, gösterimleri kitle dışından
+  // geliyordu ve sitenin sınırlı tarama/güven payını Türkçe sayfalarla paylaşıyordu. Bu yüzden hreflang da verilmez.
+  const isEn = post.lang === "en";
   return {
     title: `${post.title} — İşinn`,
     description: post.description,
-    alternates: { canonical: url, ...(tr ? { languages: { tr: `${BASE_URL}/rehber/${tr.tr}`, en: `${BASE_URL}/rehber/${tr.en}`, "x-default": `${BASE_URL}/rehber/${tr.tr}` } } : {}) },
+    alternates: { canonical: url },
+    ...(isEn ? { robots: { index: false, follow: true } } : {}),
     ...socialMeta({ title: post.title, description: post.description, url, locale: post.lang === "en" ? "en_US" : "tr_TR", type: "article" }),
   };
 }

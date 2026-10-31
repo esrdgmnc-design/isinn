@@ -10,6 +10,7 @@ import { getCategoryCityLongIntro } from "../../../../lib/categoryIntros";
 import { jsonLdString } from "../../../../lib/jsonLd";
 import { socialMeta } from "../../../../lib/seoMeta";
 import SeoFooter from "../../../../components/SeoFooter";
+import TalepCta from "../../../../components/TalepCta";
 
 // SEO'nun en değerli sayfası: "istanbul temizlikçi", "ankara özel ders" gibi
 // uzun kuyruk aramaların doğrudan hedefi — bkz. SEO stratejisi dokümanı,
@@ -145,6 +146,8 @@ export default async function CategoryCityPage({ params }) {
             })}
           </div>
         )}
+
+        <TalepCta categoryLabel={categoryMeta.name} />
 
         {longIntro && (
           <div className="mt-10 pt-8 border-t max-w-2xl" style={{ borderColor: "#F0F0F0" }}>

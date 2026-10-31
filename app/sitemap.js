@@ -42,7 +42,8 @@ export default async function sitemap() {
     priority: path === "" ? 1 : 0.3,
   }));
 
-  const rehberEntries = REHBER_POSTS.map((post) => ({
+  // İngilizce rehberler noindex (bkz. app/rehber/[slug]/page.js), haritada da yok.
+  const rehberEntries = REHBER_POSTS.filter((post) => post.lang !== "en").map((post) => ({
     url: `${BASE_URL}/rehber/${post.slug}`,
     lastModified: new Date(`${rehberMeta(post).updated}T00:00:00Z`),
     changeFrequency: "monthly",

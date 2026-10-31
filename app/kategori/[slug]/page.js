@@ -1,4 +1,5 @@
 import Link from "next/link";
+import TalepCta from "../../../components/TalepCta";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { supabase } from "../../../lib/supabaseClient";
@@ -145,6 +146,8 @@ export default async function CategoryPage({ params }) {
             })}
           </div>
         )}
+
+        <TalepCta categoryLabel={meta.name} />
 
         {(() => {
           // Yalnızca indekslenecek kadar dolu kategori+şehir sayfalarına bağlanır.
