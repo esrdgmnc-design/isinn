@@ -39,21 +39,21 @@ const TOOLS = [
         limit: { type: "integer", minimum: 1, maximum: MAX_RESULTS, description: `Maximum number of results (default 5, max ${MAX_RESULTS}).` },
       },
     },
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    annotations: { title: "Search service providers on İşinn", readOnlyHint: true, destructiveHint: false, openWorldHint: false },
   },
   {
     name: "get_vitrin",
     title: "Get an İşinn listing",
     description: "Returns the public details of one İşinn listing: full description, location, the provider's stated price and the listing URL. Use after search_vitrins when the user wants more detail about a result.",
     inputSchema: { type: "object", properties: { id: { type: "string", description: "Listing ID (UUID) from a search_vitrins result." } }, required: ["id"] },
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    annotations: { title: "Get an İşinn listing", readOnlyHint: true, destructiveHint: false, openWorldHint: false },
   },
   {
     name: "list_categories",
     title: "List İşinn categories",
     description: "Lists the service categories on İşinn that currently have active listings, with the number of listings in each and the category page URL.",
     inputSchema: { type: "object", properties: {} },
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    annotations: { title: "List İşinn categories", readOnlyHint: true, destructiveHint: false, openWorldHint: false },
   },
 ];
 
