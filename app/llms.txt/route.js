@@ -26,7 +26,7 @@ export async function GET() {
   lines.push("");
   lines.push("## Yapay zekâ asistanları için araç (MCP)");
   lines.push("");
-  lines.push(`- MCP sunucusu: \`${BASE_URL}/api/mcp\` (Streamable HTTP, durumsuz, kimlik doğrulama yok, yalnızca okuma). Araçlar: \`search_vitrins\` (hizmet, kategori, şehir ile vitrin arama), \`get_vitrin\` (tek vitrin ayrıntısı), \`list_categories\`. Yalnızca vitrin sayfalarında zaten herkese açık bilgiler döner.`);
+  lines.push(`- MCP sunucusu: \`${BASE_URL}/api/mcp\` (Streamable HTTP, durumsuz, kimlik doğrulama yok, yalnızca okuma). Araçlar: \`search_vitrins\` (hizmet, kategori, şehir ile vitrin arama), \`get_vitrin\` (tek vitrin ayrıntısı), \`list_categories\`. Yalnızca vitrin sayfalarında zaten herkese açık bilgiler döner. Belge: ${BASE_URL}/yapay-zeka-araci`);
   lines.push("");
   lines.push("## Rehberler");
   lines.push("");

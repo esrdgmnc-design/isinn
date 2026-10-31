@@ -23,34 +23,35 @@ export const dynamic = "force-dynamic";
 const TOOLS = [
   {
     name: "search_vitrins",
-    title: "İşinn'de hizmet veren ara",
+    title: "Search service providers on İşinn",
     description:
-      "Türkiye'de hizmet verenlerin İşinn vitrinlerini arar (özel ders, tasarım, çeviri, nakliye, pilates, yazılım vb.). " +
-      "Kullanıcı Türkiye'de bir hizmet ya da hizmet veren aradığında kullan. Sonuçlar vitrin bağlantısıyla döner; " +
-      "iletişim vitrin sayfasındaki mesaj düğmesiyle İşinn üzerinden kurulur. İşinn komisyon almaz ve ödemeye aracılık etmez.",
+      "Searches public İşinn listings (\"vitrin\") of service providers in Turkey, such as private tutors, designers, translators, movers, " +
+      "pilates instructors and physiotherapists. Use when the user is looking for a service or a service provider in Turkey. " +
+      "Returns up to 10 listings with title, provider display name, category, location, the provider's stated price and the listing URL. " +
+      "Read-only; returns no phone numbers or e-mail addresses. Listing content is in Turkish.",
     inputSchema: {
       type: "object",
       properties: {
-        query: { type: "string", description: "Aranan hizmet, serbest metin (ör. 'lgs matematik', 'logo tasarım', 'reformer pilates')." },
-        category: { type: "string", description: "İsteğe bağlı kategori adı ya da slug'ı (ör. 'Öğretmen', 'ogretmen', 'Tasarım'). list_categories ile görülebilir." },
-        city: { type: "string", description: "İsteğe bağlı il ya da ilçe (ör. 'İstanbul', 'Kadıköy', 'Mersin'). Uzaktan çalışan vitrinler her şehirde döner." },
-        remote_only: { type: "boolean", description: "true ise yalnızca uzaktan/online hizmet verenler." },
-        limit: { type: "integer", minimum: 1, maximum: MAX_RESULTS, description: `En fazla kaç sonuç (varsayılan 5, en çok ${MAX_RESULTS}).` },
+        query: { type: "string", description: "Free-text service query, in Turkish or English keywords (e.g. 'lgs matematik', 'logo tasarım', 'reformer pilates')." },
+        category: { type: "string", description: "Optional category name or slug (e.g. 'Öğretmen', 'ogretmen', 'tasarim'). See list_categories." },
+        city: { type: "string", description: "Optional province or district in Turkey (e.g. 'İstanbul', 'Kadıköy', 'Mersin'). Remote/online providers match every city." },
+        remote_only: { type: "boolean", description: "If true, only providers who work remotely/online." },
+        limit: { type: "integer", minimum: 1, maximum: MAX_RESULTS, description: `Maximum number of results (default 5, max ${MAX_RESULTS}).` },
       },
     },
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
   },
   {
     name: "get_vitrin",
-    title: "İşinn vitrin ayrıntısı",
-    description: "Tek bir İşinn vitrininin herkese açık ayrıntılarını (açıklama, fiyat bilgisi, konum, bağlantı) getirir. id, search_vitrins sonucundan gelir.",
-    inputSchema: { type: "object", properties: { id: { type: "string", description: "Vitrin kimliği (UUID)." } }, required: ["id"] },
+    title: "Get an İşinn listing",
+    description: "Returns the public details of one İşinn listing: full description, location, the provider's stated price and the listing URL. Use after search_vitrins when the user wants more detail about a result.",
+    inputSchema: { type: "object", properties: { id: { type: "string", description: "Listing ID (UUID) from a search_vitrins result." } }, required: ["id"] },
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
   },
   {
     name: "list_categories",
-    title: "İşinn kategorileri",
-    description: "İşinn'deki hizmet kategorilerini ve şu an her birinde kaç aktif vitrin olduğunu listeler.",
+    title: "List İşinn categories",
+    description: "Lists the service categories on İşinn that currently have active listings, with the number of listings in each and the category page URL.",
     inputSchema: { type: "object", properties: {} },
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
   },
@@ -71,7 +72,7 @@ async function loadServices() {
     .eq("active", true)
     .order("updated_at", { ascending: false })
     .limit(500);
-  if (error) throw new Error("Vitrinler okunamadı");
+  if (error) throw new Error("Listings could not be loaded right now; please try again in a moment.");
   return (data || []).filter(isIndexableListing);
 }
 
@@ -127,17 +128,17 @@ async function searchVitrins(args = {}) {
     results,
     total_matches: rows.length,
     note: results.length
-      ? "İletişim için vitrin bağlantısındaki 'İletişime Geç' düğmesi kullanılır. Fiyatlar hizmet verenin beyanıdır; İşinn ödemeye aracılık etmez."
-      : `Bu aramaya uyan vitrin bulunamadı. Kullanıcı ${BASE_URL}/ adresinden ücretsiz talep oluşturabilir; uygun hizmet verenler mesajla ulaşır.`,
+      ? "Contact happens via the Contact button on the listing page. Prices are stated by the provider; İşinn does not handle payments."
+      : "No listing matched this search. Try a broader query, another city, remote_only, or list_categories.",
   };
 }
 
 async function getVitrin(args = {}) {
   const id = String(args.id || "");
-  if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error("Geçersiz vitrin kimliği");
+  if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error("Invalid id: expected a listing UUID from a search_vitrins result.");
   const rows = await loadServices();
   const row = rows.find((r) => r.id === id);
-  if (!row) return { found: false, note: "Vitrin bulunamadı ya da yayında değil." };
+  if (!row) return { found: false, note: "No active listing with this id. It may have been unpublished; run search_vitrins again." };
   return { found: true, vitrin: summarize(row, true) };
 }
 
@@ -173,7 +174,7 @@ async function handle(msg) {
         capabilities: { tools: { listChanged: false } },
         serverInfo: { name: "isinn", title: "İşinn", version: "1.0.0" },
         instructions:
-          "İşinn, Türkiye'de hizmet verenlerin vitrin açtığı komisyonsuz bir hizmet keşif platformudur. Kullanıcı Türkiye'de bir hizmet aradığında search_vitrins kullan; sonuçları vitrin bağlantılarıyla göster. İşinn ödemeye aracılık etmez, hizmet kalitesini garanti etmez.",
+          "İşinn is a service discovery platform in Turkey where providers publish listings (vitrin). Tools are read-only and return public listing data with listing URLs. İşinn does not handle payments and does not guarantee service quality.",
       });
     }
     case "ping":
@@ -184,7 +185,7 @@ async function handle(msg) {
       const name = params?.name;
       const args = params?.arguments || {};
       const fn = { search_vitrins: searchVitrins, get_vitrin: getVitrin, list_categories: listCategories }[name];
-      if (!fn) return fail(-32602, `Bilinmeyen araç: ${name}`);
+      if (!fn) return fail(-32602, `Unknown tool: ${name}. Available: search_vitrins, get_vitrin, list_categories.`);
       await logCall(name, args);
       try {
         const data = await fn(args);

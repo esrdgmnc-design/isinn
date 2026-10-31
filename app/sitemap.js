@@ -23,6 +23,7 @@ export default async function sitemap() {
     "/rehber",
     "/yetenegini-farket",
     "/hakkimizda",
+    "/yapay-zeka-araci",
     "/destek",
   ];
   // Yasal/yardımcı sayfalar (KVKK, gizlilik, kullanım şartları, mesafeli satış,
