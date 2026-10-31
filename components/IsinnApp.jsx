@@ -12900,6 +12900,8 @@ export default function IsinnPrototype({ session, onRequireAuth, discoveryPopula
     setQuery(q);
     setCityFilter(city);
     setView("search");
+    // Ana sayfanın altındaki "Daha fazlasını gör" ile gelince Keşfet ortadan açılıyordu (2026-10-31, kurucu).
+    window.scrollTo(0, 0);
   };
 
   // Bir iş ilanına "Teklif Ver" — gerçek bir ilansa (posterId/categoryDbId

@@ -108,18 +108,25 @@ async function searchVitrins(args = {}) {
     const STOP = ["ozel", "hizmet", "hizmeti", "icin", "ve", "bir", "ariyorum", "lazim"];
     const all = norm(args.query).split(/\s+/).filter((w) => w.length > 1);
     const words = all.filter((w) => !STOP.includes(w)).length ? all.filter((w) => !STOP.includes(w)) : all;
-    const scored = rows
-      .map((r) => {
-        const hay = norm(`${r.title} ${r.categories?.name || ""} ${r.description || ""}`);
-        const title = norm(`${r.title} ${r.categories?.name || ""}`);
-        let score = words.reduce((s, w) => s + (title.includes(w) ? 3 : hay.includes(w) ? 1 : 0), 0);
-        if (words.length > 1 && words.every((w) => hay.includes(w))) score += 5; // tüm kelimeler geçiyorsa öne
-        if (words.length > 1 && words.filter((w) => hay.includes(w)).length * 2 < words.length) score = 0;
+    const docs = rows.map((r) => ({
+      r,
+      hay: norm(`${r.title} ${r.categories?.name || ""} ${r.description || ""}`),
+      title: norm(`${r.title} ${r.categories?.name || ""}`),
+    }));
+    // Nadir kelime (ör. "matematik") yaygın kelimeden ("ders") ağır basar; yoksa "matematik özel ders"
+    // aramasında İngilizce ders vitrinleri de üst sıralara giriyordu (Claude testinde görüldü, 2026-10-31).
+    const idf = Object.fromEntries(words.map((w) => [w, Math.log((docs.length + 1) / (docs.filter((d) => d.hay.includes(w)).length + 1)) + 0.1]));
+    const scored = docs
+      .map(({ r, hay, title }) => {
+        let score = words.reduce((s, w) => s + (title.includes(w) ? 3 : hay.includes(w) ? 1 : 0) * idf[w], 0);
+        if (words.length > 1 && words.every((w) => hay.includes(w))) score *= 1.5; // tüm kelimeler geçiyorsa öne
         return { r, score };
       })
       .filter((x) => x.score > 0)
       .sort((a, b) => b.score - a.score);
-    rows = scored.map((x) => x.r);
+    // En iyi eşleşmenin yanında çok zayıf kalanlar (yalnızca genel bir kelimeyle eşleşenler) elenir.
+    const top = scored[0]?.score || 0;
+    rows = scored.filter((x) => x.score >= top * 0.35).map((x) => x.r);
   } else {
     rows = orderByResponsiveness(rows, await getProviderLastSent(rows.map((r) => r.provider_id)));
   }
