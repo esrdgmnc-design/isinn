@@ -10,7 +10,7 @@ import SeoFooter from "../../components/SeoFooter";
 // kurucunun onayıyla eklenmek üzere bilerek eklenmedi.
 const BASE_URL = "https://www.isinn.com.tr";
 const URL = `${BASE_URL}/hakkimizda`;
-const TITLE = "İşinn Nedir? Ne Yapar, Ne Yapmaz | Hakkımızda";
+const TITLE = "İşinn Nedir? Türkiye'de Hizmet Vitrini Platformu | Hakkımızda";
 const DESCRIPTION = "İşinn, Türkiye'de freelance uzmanları ve hizmet verenleri keşfetmeni, becerini bir hizmet vitrinine dönüştürmeni sağlayan bir platformdur. Komisyon almaz, ödemeye aracılık etmez, ürün satmaz.";
 const UPDATED = "2026-10-20";
 

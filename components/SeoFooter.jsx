@@ -3,6 +3,7 @@ import { supabase } from "../lib/supabaseClient";
 import { COMPANY } from "../lib/companyInfo";
 import { SEO_CATEGORIES, SEO_CITIES, matchesCitySlug } from "../lib/seoTaxonomy";
 import { isIndexableListing, MIN_CITY_LISTINGS, MIN_CATEGORY_LISTINGS } from "../lib/seoFormat";
+import { PRICE_GUIDES } from "../lib/priceGuides";
 
 // Alt sayfalarda (rehber, kategori, şehir, vitrin, hakkımızda...) site genelinde gezinme ve iç bağlantı sağlar. Teknik SEO denetimi:
 // bu sayfalarda menü/alt bilgi yoktu, /hakkimizda'ya yalnızca ana sayfadan 1 bağlantı gidiyordu. Yalnızca gerçekten indekslenebilir
@@ -38,6 +39,7 @@ export default async function SeoFooter() {
         <Link href="/hakkimizda" style={link}>Hakkımızda</Link>
         <Link href="/en" hrefLang="en" style={link}>English</Link>
         <a href={COMPANY.appStoreUrl} style={link} rel="noopener">iOS uygulaması</a>
+        <a href={COMPANY.playStoreUrl} style={link} rel="noopener">Android uygulaması</a>
       </div>
       {cats.length > 0 && (
         <p className="mb-2">
@@ -47,6 +49,12 @@ export default async function SeoFooter() {
           ))}
         </p>
       )}
+      <p className="mb-2">
+        <span className="font-bold">Fiyat rehberleri: </span>
+        {PRICE_GUIDES.map((g, i) => (
+          <span key={g.slug}>{i > 0 && " · "}<Link href={`/rehber/${g.slug}`} style={link}>{g.label}</Link></span>
+        ))}
+      </p>
       {cities.length > 0 && (
         <p className="mb-2">
           <span className="font-bold">Şehirler: </span>

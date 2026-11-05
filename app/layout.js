@@ -107,6 +107,7 @@ const organizationJsonLd = {
     "https://www.instagram.com/isinn.com.tr/",
     "https://www.linkedin.com/company/145299576/",
     COMPANY.appStoreUrl,
+    COMPANY.playStoreUrl,
   ],
 };
 
@@ -122,6 +123,20 @@ const mobileAppJsonLd = {
   inLanguage: "tr",
   url: COMPANY.appStoreUrl,
   installUrl: COMPANY.appStoreUrl,
+  publisher: { "@id": "https://www.isinn.com.tr/#org" },
+};
+
+// Android uygulaması (2026-11-03, Google Play, yalnızca Türkiye). iOS ile aynı kural: puan/fiyat yok.
+const androidAppJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "MobileApplication",
+  "@id": "https://www.isinn.com.tr/#android-app",
+  name: "İşinn: İşin Gücün Burada",
+  operatingSystem: "Android",
+  applicationCategory: "BusinessApplication",
+  inLanguage: "tr",
+  url: COMPANY.playStoreUrl,
+  installUrl: COMPANY.playStoreUrl,
   publisher: { "@id": "https://www.isinn.com.tr/#org" },
 };
 
@@ -144,6 +159,8 @@ export default function RootLayout({ children }) {
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdString(websiteJsonLd) }} />
         {/* eslint-disable-next-line react/no-danger */}
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdString(mobileAppJsonLd) }} />
+        {/* eslint-disable-next-line react/no-danger */}
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdString(androidAppJsonLd) }} />
         {children}
         <ServiceWorkerRegister />
         <AttributionCapture />

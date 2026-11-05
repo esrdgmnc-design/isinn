@@ -8,6 +8,7 @@ import { supabase } from "../lib/supabaseClient";
 // Kırpma kütüphanesi sadece fotoğraf kırpma modalı açılınca yüklensin (ilk paket küçük kalsın).
 const Cropper = dynamic(() => import("react-easy-crop"), { ssr: false, loading: () => null });
 import { COMPANY } from "../lib/companyInfo";
+import { PRICE_GUIDES } from "../lib/priceGuides";
 import { FALLBACK_LISTING_IMG, formatPriceLabel, mapServiceRowToListing } from "../lib/mapServiceRowToListing";
 import { isFreePeriod, FREE_PERIOD_UNTIL_ISO } from "../lib/freePeriod";
 import { isStoreApp, isAndroidApp } from "../lib/nativeApp";
@@ -2196,7 +2197,7 @@ function SiteFooter({ onNav }) {
   return (
     <footer className="px-5 pt-14 pb-28 sm:pb-8" style={{ background: "#0B0B0F" }}>
       <div className="max-w-6xl mx-auto">
-        <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-10 pb-10">
+        <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-10 pb-10">
           <div>
             <p className="font-sans text-xl font-black" style={{ color: "#FFFFFF" }}>
               İşinn<span style={{ color: "#2563EB" }}>.</span>
@@ -2226,6 +2227,16 @@ function SiteFooter({ onNav }) {
                   kendisi hâlâ Türkçe (bkz. app/rehber) — sadece link etiketi çevrildi. */}
               <a href="/rehber" className="text-xs text-left" style={{ color: "#9CA3AF" }}>{t("footer.guides")}</a>
               <a href="/yetenegini-farket" className="text-xs text-left" style={{ color: "#9CA3AF" }}>{t("talentDiscovery.heroTitle")}</a>
+            </div>
+          </div>
+          {/* Fiyat rehberleri (2026-11-05): ana sayfa en sık taranan sayfa; bu rehberler buradan bir tık uzakta olsun.
+              Rehberler Türkçe olduğu için etiketler de Türkçe; yalnızca başlık çevrilir. */}
+          <div>
+            <p className="text-xs font-bold tracking-wide mb-3" style={{ color: "#FFFFFF" }}>{t("footer.priceGuidesHeading")}</p>
+            <div className="flex flex-col gap-2.5">
+              {PRICE_GUIDES.map((g) => (
+                <a key={g.slug} href={`/rehber/${g.slug}`} className="text-xs text-left" style={{ color: "#9CA3AF" }}>{g.label}</a>
+              ))}
             </div>
           </div>
           <div>
@@ -8280,6 +8291,10 @@ function ShareAfterPublish({ listingId, listingTitle, userId }) {
   };
   const [text, setText] = useState(() => textFor("mahalle"));
   const pick = (k) => { setKind(k); setText(textFor(k)); setCopied(false); };
+  // Kalıcı bağlantı (2026-11-05): WhatsApp paylaşımı bir kez görülür; bio, LinkedIn, web sitesi ya da Google İşletme
+  // Profili'ndeki bağlantı kalıcıdır, hem ziyaretçi getirir hem Google'ın vitrini bulmasına yardım eder (dış bağlantı).
+  const bioUrl = `https://www.isinn.com.tr/vitrin/${listingId}?utm_source=bio&utm_medium=vitrin_link`;
+  const [linkCopied, setLinkCopied] = useState(false);
   return (
     <div className="rounded-2xl border p-5 mb-6 text-left" style={{ borderColor: "#E4E4E7", background: "#FFFDF8" }}>
       <p className="text-sm font-bold mb-1" style={{ color: "#0F1115" }}>Vitrinini paylaş</p>
@@ -8315,6 +8330,18 @@ function ShareAfterPublish({ listingId, listingTitle, userId }) {
           onClick={async () => { try { await navigator.clipboard.writeText(text); setCopied(true); trackEvent("vitrin_shared", { via: "copy", audience: kind, listing_id: listingId, source: "after_publish" }, userId); } catch {} }}
           className="px-4 py-2 rounded-full text-xs font-bold border" style={{ borderColor: "#E4E4E7", color: "#0F1115" }}
         >{copied ? "Kopyalandı" : "Metni kopyala"}</button>
+      </div>
+      <div className="mt-4 pt-4 border-t" style={{ borderColor: "#EDE7D9" }}>
+        <p className="text-xs font-bold mb-1" style={{ color: "#0F1115" }}>Linkini kalıcı bir yere ekle</p>
+        <p className="text-xs mb-2.5" style={{ color: "#4B5563" }}>Instagram bio'n, LinkedIn profilin, web siten ya da Google İşletme Profilin. Mesajlar unutulur, bu bağlantı orada kalır ve seni arayanlar vitrinine oradan da ulaşır.</p>
+        <div className="flex gap-2 items-center">
+          <input readOnly value={bioUrl} onFocus={(e) => e.target.select()} aria-label="Vitrin bağlantın" className="flex-1 min-w-0 px-3 py-2 rounded-lg border text-[11px] outline-none" style={{ borderColor: "#E4E4E7", background: "#FFFFFF", color: "#4B5563" }} />
+          <button
+            onClick={async () => { try { await navigator.clipboard.writeText(bioUrl); setLinkCopied(true); trackEvent("vitrin_shared", { via: "copy_link", audience: "bio", listing_id: listingId, source: "after_publish" }, userId); } catch {} }}
+            className="px-3.5 py-2 rounded-full text-xs font-bold border shrink-0" style={{ borderColor: "#E4E4E7", color: "#0F1115" }}
+          >{linkCopied ? "Kopyalandı" : "Linki kopyala"}</button>
+        </div>
+        <a href={`/rozet?vitrin=${listingId}`} className="inline-block mt-2.5 text-xs font-bold underline" style={{ color: "#2563EB" }}>Web sitene rozet, QR'lı broşür ve diğer araçlar</a>
       </div>
     </div>
   );
