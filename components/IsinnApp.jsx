@@ -5465,8 +5465,27 @@ function FavoritesView({ onBack, onSelectListing, onOpenJob, realListings, realJ
   );
 }
 
-function PostJobView({ onBack, onSubmitted, onViewOffers, onMatchAI, userId, onJobPosted, editingJob, onJobUpdated, onGoToProfile }) {
+// 2026-11-07: Talep formu artık girişsiz açılıyor (önceden ziyaretçi daha ihtiyacını yazmadan giriş ekranına düşüyordu).
+// Girişsiz "Yayınla"ya basınca form içeriği bu anahtarla saklanır, giriş ekranı açılır; giriş sonrası form aynı içerikle
+// geri gelir, kişi bir kez daha "Yayınla"ya basar (otomatik gönderim yok). localStorage: e-posta doğrulama bağlantısı
+// yeni sekmede açılsa da taslak kaybolmasın. 2 saat geçerli; başarılı gönderimde silinir. Yalnızca kişinin kendi tarayıcısında.
+const POST_DRAFT_KEY = "isinn_post_draft";
+const POST_DRAFT_TTL = 2 * 60 * 60 * 1000;
+function readPostDraft() {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(POST_DRAFT_KEY);
+    if (!raw) return null;
+    const d = JSON.parse(raw);
+    if (!d || Date.now() - (d.ts || 0) > POST_DRAFT_TTL) { localStorage.removeItem(POST_DRAFT_KEY); return null; }
+    return d;
+  } catch { return null; }
+}
+function clearPostDraft() { try { localStorage.removeItem(POST_DRAFT_KEY); } catch {} }
+
+function PostJobView({ onBack, onSubmitted, onViewOffers, onMatchAI, userId, onJobPosted, editingJob, onJobUpdated, onGoToProfile, onRequireAuth }) {
   const { t } = useLanguage();
+  const [draft] = useState(() => (editingJob ? null : readPostDraft()));
   // İlan verildikten sonra düzenleme yolu hiç yoktu (kullanıcının fark
   // ettiği gerçek bir eksiklik — "balkon temizliğinden bahsetmeyi unutmuş,
   // düzenleyemiyor" gibi bir durumda tek çare ilanı silip yeniden girmekti).
@@ -5482,18 +5501,18 @@ function PostJobView({ onBack, onSubmitted, onViewOffers, onMatchAI, userId, onJ
       return p && Date.now() - (p.ts || 0) < 30 * 60 * 1000 ? p : null;
     } catch { return null; }
   });
-  const [mode, setMode] = useState(editingJob?.mode || (needPrefill?.remote ? "remote" : "local"));
+  const [mode, setMode] = useState(editingJob?.mode || (draft?.mode === "remote" || draft?.mode === "local" ? draft.mode : null) || (needPrefill?.remote ? "remote" : "local"));
   const [step, setStep] = useState("form"); // form | success
-  const [title, setTitle] = useState(editingJob?.title || needPrefill?.title || "");
-  const [categoryId, setCategoryId] = useState(editingJob?.category === "diger" ? CUSTOM_CATEGORY_ID : editingJob?.category || (CATEGORIES.some((c) => c.id === needPrefill?.categorySlug) ? needPrefill.categorySlug : ""));
-  const [customCategoryLabel, setCustomCategoryLabel] = useState(editingJob?.customCategoryLabel || ""); // categoryId === CUSTOM_CATEGORY_ID iken
-  const [desc, setDesc] = useState(editingJob?.desc || needPrefill?.desc || "");
-  const [cityId, setCityId] = useState(() => deriveCityIdFromLabel(editingJob?.city) || (CITIES.some((c) => c.id === needPrefill?.province) ? needPrefill.province : "istanbul"));
-  const [district, setDistrict] = useState(() => (editingJob?.city || "").split(",")[0]?.trim() || "");
-  const [minBudget, setMinBudget] = useState(editingJob?.budgetMin != null ? String(editingJob.budgetMin) : "");
-  const [maxBudget, setMaxBudget] = useState(editingJob?.budgetMax != null ? String(editingJob.budgetMax) : "");
-  const [urgency, setUrgency] = useState("today"); // now | today | flexible
-  const [homeServicePref, setHomeServicePref] = useState("evde"); // evde | mekanda | esnek
+  const [title, setTitle] = useState(editingJob?.title || draft?.title || needPrefill?.title || "");
+  const [categoryId, setCategoryId] = useState(editingJob?.category === "diger" ? CUSTOM_CATEGORY_ID : editingJob?.category || (draft?.categoryId && (draft.categoryId === CUSTOM_CATEGORY_ID || CATEGORIES.some((c) => c.id === draft.categoryId)) ? draft.categoryId : "") || (CATEGORIES.some((c) => c.id === needPrefill?.categorySlug) ? needPrefill.categorySlug : ""));
+  const [customCategoryLabel, setCustomCategoryLabel] = useState(editingJob?.customCategoryLabel || draft?.customCategoryLabel || ""); // categoryId === CUSTOM_CATEGORY_ID iken
+  const [desc, setDesc] = useState(editingJob?.desc || draft?.desc || needPrefill?.desc || "");
+  const [cityId, setCityId] = useState(() => deriveCityIdFromLabel(editingJob?.city) || (CITIES.some((c) => c.id === draft?.cityId) ? draft.cityId : null) || (CITIES.some((c) => c.id === needPrefill?.province) ? needPrefill.province : "istanbul"));
+  const [district, setDistrict] = useState(() => (editingJob?.city || "").split(",")[0]?.trim() || draft?.district || "");
+  const [minBudget, setMinBudget] = useState(editingJob?.budgetMin != null ? String(editingJob.budgetMin) : draft?.minBudget || "");
+  const [maxBudget, setMaxBudget] = useState(editingJob?.budgetMax != null ? String(editingJob.budgetMax) : draft?.maxBudget || "");
+  const [urgency, setUrgency] = useState(["now", "today", "flexible"].includes(draft?.urgency) ? draft.urgency : "today"); // now | today | flexible
+  const [homeServicePref, setHomeServicePref] = useState(["evde", "mekanda", "esnek"].includes(draft?.homeServicePref) ? draft.homeServicePref : "evde"); // evde | mekanda | esnek
   const [photos, setPhotos] = useState([]); // { url, name }
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -5605,7 +5624,19 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme:
     if (!desc.trim()) { setError(t("postJob.errDesc")); return; }
     if (checkContent(`${title}
 ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return; }
-    if (!userId) { setError(t("postJob.errAuthRequired")); return; }
+    if (!userId) {
+      // Yazılanı sakla, giriş ekranını aç; giriş sonrası form aynı içerikle geri gelir (bkz. POST_DRAFT_KEY).
+      try {
+        localStorage.setItem(POST_DRAFT_KEY, JSON.stringify({
+          ts: Date.now(), mode, title, categoryId, customCategoryLabel, desc, cityId, district, minBudget, maxBudget, urgency, homeServicePref,
+        }));
+      } catch {}
+      setError("");
+      trackEvent("job_post_auth_prompt", { category: categoryId }, null);
+      if (onRequireAuth) { onRequireAuth(); return; }
+      setError(t("postJob.errAuthRequired"));
+      return;
+    }
     // "Diğer" seçilince gerçek FK hedefi hep "diger" kategorisi — kullanıcının
     // yazdığı serbest metin ayrı bir kolonda duruyor (bkz. custom_category_label).
     const categoryDbId = categoryId === CUSTOM_CATEGORY_ID ? categoryIdBySlug["diger"] : categoryIdBySlug[categoryId];
@@ -5657,8 +5688,9 @@ Aciliyet: ${urgencyLabel}${mode === "local" ? ` · Hizmet yeri: ${prefLabel}` : 
       onJobUpdated?.();
       return;
     }
+    clearPostDraft();
     setPostedJob({ dbId: data.id, posterId: data.client_id, categoryDbId: data.category_id });
-    trackEvent("job_posted", { category: categoryId }, userId);
+    trackEvent("job_posted", { category: categoryId, from_draft: !!draft }, userId);
     onJobPosted?.();
     setStep("success");
     // Şüpheli içerik taraması — sessiz, engellemeyen.
@@ -5967,6 +5999,12 @@ Aciliyet: ${urgencyLabel}${mode === "local" ? ` · Hizmet yeri: ${prefLabel}` : 
           {submitting && <Loader2 size={14} className="animate-spin" />}
           {submitting ? (isEditing ? t("common.savingEllipsis") : t("common.publishingEllipsis")) : (isEditing ? t("common.saveChanges") : t("postJob.submitPublishJob"))}
         </button>
+        {!userId && !isEditing && (
+          <p className="text-xs text-center mt-3 pb-20 sm:pb-0" style={{ color: "#575E6B" }}>{t("postJob.guestNote")}</p>
+        )}
+        {userId && draft && !isEditing && (
+          <p className="text-xs text-center mt-3 pb-20 sm:pb-0" style={{ color: "#575E6B" }}>{t("postJob.draftRestoredNote")}</p>
+        )}
       </div>
     </div>
   );
@@ -12981,7 +13019,10 @@ export default function IsinnPrototype({ session, onRequireAuth, discoveryPopula
   // giriş yapmadan gidilemiyor; o durumda view değişmez, giriş ekranı açılır
   // (bkz. app/page.js'deki onRequireAuth). "auth" değeri Header'daki "Giriş
   // Yap" butonundan geliyor.
-  const GATED_VIEWS = new Set(["createListing", "post", "messages", "profile", "favorites"]);
+  // 2026-11-07: "post" (talep formu) artık girişsiz açılır; giriş yalnızca "Yayınla"ya basınca istenir (bkz. POST_DRAFT_KEY).
+  const GATED_VIEWS = new Set(["createListing", "messages", "profile", "favorites"]);
+  // Giriş sonrası devam edilebilecek ekranlar: kilitli ekranlar + girişi formun içinden isteyen talep formu.
+  const RESUMABLE_VIEWS = new Set([...GATED_VIEWS, "post"]);
   // Giriş yapmamış biri kilitli bir ekrana (örn. "Bu fikirle vitrinimi hazırla") basınca giriş ekranı uygulamayı
   // kaldırıyor (Google girişinde sayfa da yeniden yükleniyor) — dönünce ana sayfada kalıyor, kullanıcı
   // "nereye gidiyordum" diye şaşırıyordu. Gitmek istediği ekran + varsa vitrin taslağı sekme oturumunda saklanır,
@@ -13022,7 +13063,7 @@ export default function IsinnPrototype({ session, onRequireAuth, discoveryPopula
     if (!raw) return;
     try {
       const p = JSON.parse(raw);
-      if (!p || Date.now() - (p.ts || 0) > 15 * 60 * 1000 || !GATED_VIEWS.has(p.view)) return;
+      if (!p || Date.now() - (p.ts || 0) > 15 * 60 * 1000 || !RESUMABLE_VIEWS.has(p.view)) return;
       if (p.prefill) setTalentPrefill(p.prefill);
       setSelected(null);
       setView(p.view);
@@ -13157,6 +13198,10 @@ export default function IsinnPrototype({ session, onRequireAuth, discoveryPopula
           onViewOffers={() => setView("messages")}
           onMatchAI={(job) => { setLastJob(job); setView("aimatch"); }}
           userId={userId}
+          onRequireAuth={() => {
+            try { sessionStorage.setItem(PENDING_NAV_KEY, JSON.stringify({ view: "post", prefill: null, ts: Date.now() })); } catch {}
+            onRequireAuth?.();
+          }}
           onJobPosted={() => fetchJobs()}
           editingJob={editingJob}
           onJobUpdated={() => { setEditingJob(null); fetchJobs(); setView("profile"); }}

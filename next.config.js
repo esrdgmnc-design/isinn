@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Aynı klasörde ikinci bir geliştirme sunucusu (ör. 3001) açılırken .next çakışmasın diye: NEXT_DIST_DIR=.next-3001.
+  // Üretimde (Vercel) tanımlı değil, varsayılan .next kullanılır.
+  ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
   // public/ altındaki görsel/video/ikonlar "max-age=0, must-revalidate" ile geliyordu: her ziyarette yeniden doğrulanıyordu.
   async headers() {
     const cache = [{ key: "Cache-Control", value: "public, max-age=86400, stale-while-revalidate=604800" }];
