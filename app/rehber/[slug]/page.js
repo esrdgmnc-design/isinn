@@ -19,8 +19,12 @@ export function generateMetadata({ params }) {
   // İngilizce yazılar yayında kalır ama dizine girmez (2026-10-31): kitle Türkiye, gösterimleri kitle dışından
   // geliyordu ve sitenin sınırlı tarama/güven payını Türkçe sayfalarla paylaşıyordu. Bu yüzden hreflang da verilmez.
   const isEn = post.lang === "en";
+  // 2026-11-07: arama sonucunda ~60 karakterden sonrası kesiliyor. Uzun rehberlere kısa seoTitle verilir (H1 aynı kalır);
+  // marka eki yalnızca sığarsa eklenir.
+  const baseTitle = post.seoTitle || post.title;
+  const metaTitle = `${baseTitle} — İşinn`.length <= 62 ? `${baseTitle} — İşinn` : baseTitle;
   return {
-    title: `${post.title} — İşinn`,
+    title: metaTitle,
     description: post.description,
     alternates: { canonical: url },
     ...(isEn ? { robots: { index: false, follow: true } } : {}),

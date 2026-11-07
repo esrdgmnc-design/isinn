@@ -104,12 +104,30 @@ export async function generateMetadata({ params }) {
   const lowerTitle = String(row.title || "").toLocaleLowerCase("tr-TR");
   const tailParts = [catName, place].filter(Boolean).filter((x) => !lowerTitle.includes(x.toLocaleLowerCase("tr-TR")));
   // Aynı başlığı taşıyan başka bir vitrin varsa sağlayıcı adıyla ayrıştır (iki sayfa aynı başlıkla yarışmasın).
-  if (await hasSameTitle(row)) tailParts.unshift(provider);
-  const tail = tailParts.join(" · ");
+  const sameTitle = await hasSameTitle(row);
   // 2026-10-20: uzun başlık 44 karakterde kesilip ek konuyordu, Google yarım başlık yerine H1'i gösteriyordu.
   // Başlık 44 karakteri geçiyorsa ek atılır, başlığın tamamı (60'a kadar) kullanılır.
+  // 2026-11-07: ek parçaları yalnızca toplam ~60 karakter içine sığdıkça eklenir (önce şehir, sonra kategori; 97 karakterlik
+  // başlıklar vardı). Aynı başlıklı başka vitrin varsa sağlayıcı adı başlık uzun olsa bile eklenir (başlık gerekirse kısaltılır).
   const fullTitle = String(row.title || "").replace(/\s+/g, " ").trim();
-  const title = tail && fullTitle.length <= 44 ? `${fullTitle} — ${tail} | İşinn` : `${clamp(fullTitle, 60)} | İşinn`;
+  const MAX = 60;
+  let title;
+  if (sameTitle && provider) {
+    const suffix = ` — ${provider}`;
+    title = `${clamp(fullTitle, Math.max(30, MAX - suffix.length))}${suffix} | İşinn`;
+  } else if (fullTitle.length <= 44) {
+    const ordered = [...tailParts].reverse(); // şehir önce
+    const picked = [];
+    for (const part of ordered) {
+      const candidate = [...picked, part];
+      const tailStr = [catName, place].filter((x) => candidate.includes(x)).join(" · ");
+      if (`${fullTitle} — ${tailStr}`.length <= MAX) picked.push(part);
+    }
+    const tail = [catName, place].filter((x) => x && picked.includes(x)).join(" · ");
+    title = tail ? `${fullTitle} — ${tail} | İşinn` : `${fullTitle} | İşinn`;
+  } else {
+    title = `${clamp(fullTitle, MAX)} | İşinn`;
+  }
   const placeLabel = row.is_remote ? "uzaktan" : String(row.city || "").split(",").map((s) => s.trim()).filter(Boolean).filter((s, i, a) => a.indexOf(s) === i).join("/");
   const description = (row.description || "").trim().length >= 40
     ? vitrinMetaDescription({ title: fullTitle, provider, place: placeLabel, description: row.description })
