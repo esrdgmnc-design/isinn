@@ -5840,6 +5840,14 @@ Aciliyet: ${urgencyLabel}${mode === "local" ? ` · Hizmet yeri: ${prefLabel}` : 
       </button>
       <h1 className="font-sans text-2xl sm:text-3xl font-black tracking-tight mb-1" style={{ color: "#0F1115" }}>{isEditing ? t("postJob.editTitle") : t("postJob.createTitle")}</h1>
       <p className="text-sm mb-6" style={{ color: "#4B5563" }}>{isEditing ? t("postJob.editSubtitle") : t("postJob.createSubtitle")}</p>
+      {/* 2026-11-08: yeni bir kullanıcı (ChatGPT'den gelen mimar) kendi hizmetini iki kez "ilan" olarak verdi, sonra vitrine
+          geçti. İlan formu hizmet ARAYAN içindir; hizmet verene tek satırlık yönlendirme (engel/uyarı değil). */}
+      {!isEditing && (
+        <div className="rounded-xl px-4 py-3 mb-6 text-sm flex flex-wrap items-center gap-x-2 gap-y-1" style={{ background: "#F5F7FF", border: "1px solid #DCE4FF", color: "#374151" }}>
+          <span>{t("postJob.providerHint")}</span>
+          <a href="/hizmet-ver" className="font-bold underline" style={{ color: "#2563EB" }}>{t("postJob.providerHintCta")} →</a>
+        </div>
+      )}
 
       <div className="flex gap-2 mb-6">
         {[["local", t("postJob.modeLocal")], ["remote", t("postJob.modeRemote")]].map(([key, label]) => (

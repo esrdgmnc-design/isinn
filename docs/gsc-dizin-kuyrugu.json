@@ -1,7 +1,37 @@
 {
- "note": "Her sabah gsc-gunluk-dizin-istegi görevi okur ve günceller. status: pending | indexed (Google'da mevcut, istek gönderilmedi) | requested (istek gönderildi). Sıra (2026-10-25): içeriği 10-23/24 değişen rehberler > kategori > beyaz yaka rehber > diğer rehber > vitrin > eski kitle rehberleri. İçeriği değişen sayfa dizinde olsa bile bir kez yeniden istenir.",
+ "note": "Her sabah gsc-gunluk-dizin-istegi görevi okur ve günceller. status: pending | indexed (Google'da mevcut, istek gönderilmedi) | requested (istek gönderildi). Sıra (2026-10-25): içeriği 10-23/24 değişen rehberler > kategori > beyaz yaka rehber > diğer rehber > vitrin > eski kitle rehberleri. İçeriği değişen sayfa dizinde olsa bile bir kez yeniden istenir. (2026-11-08: son 10 günün yeni vitrinleri başa eklendi.)",
  "updated": "2026-11-08",
  "items": [
+  {
+   "url": "https://www.isinn.com.tr/vitrin/abaa50de-32e4-4ce8-a8c7-d288296c28e5",
+   "status": "pending",
+   "date": null
+  },
+  {
+   "url": "https://www.isinn.com.tr/vitrin/7c19f226-0a03-4bee-80da-3745555d1da6",
+   "status": "pending",
+   "date": null
+  },
+  {
+   "url": "https://www.isinn.com.tr/vitrin/b4a0909a-8449-43ea-8214-6d0da191338b",
+   "status": "pending",
+   "date": null
+  },
+  {
+   "url": "https://www.isinn.com.tr/vitrin/f88bb314-b4d3-4bbf-b37a-bba3752ba5d3",
+   "status": "pending",
+   "date": null
+  },
+  {
+   "url": "https://www.isinn.com.tr/vitrin/362a72f0-517d-469b-9a6f-610a9ce0108a",
+   "status": "pending",
+   "date": null
+  },
+  {
+   "url": "https://www.isinn.com.tr/vitrin/53f5b0b4-c0fd-44f4-ae85-80f3e5dc9c24",
+   "status": "pending",
+   "date": null
+  },
   {
    "url": "https://www.isinn.com.tr/rehber/yazilimci-ve-muhendis-icin-freelance-vitrin-nasil-yazilir",
    "status": "indexed",
@@ -9,68 +39,68 @@
   },
   {
    "url": "https://www.isinn.com.tr/rehber/hizmet-fiyati-nasil-belirlenir-saatlik-sabit-teklif",
-   "status": "pending",
-   "date": null
+   "status": "requested",
+   "date": "2026-11-08"
   },
   {
    "url": "https://www.isinn.com.tr/rehber/freelancer-ile-calismadan-once-brief-nasil-hazirlanir",
-   "status": "pending",
-   "date": null
+   "status": "indexed",
+   "date": "2026-11-08"
   },
   {
    "url": "https://www.isinn.com.tr/rehber/freelancer-nerede-bulunur-bionluk-armut-linkedin-isinn",
-   "status": "pending",
-   "date": null
+   "status": "indexed",
+   "date": "2026-11-08"
   },
   {
    "url": "https://www.isinn.com.tr/kategori/oyun-ablasi",
-   "status": "pending",
-   "date": null
+   "status": "indexed",
+   "date": "2026-11-08"
   },
   {
    "url": "https://www.isinn.com.tr/kategori/ogretmen/istanbul",
-   "status": "pending",
-   "date": null
+   "status": "indexed",
+   "date": "2026-11-08"
   },
   {
    "url": "https://www.isinn.com.tr/rehber/ek-gelir-ve-freelance-is-yollari",
-   "status": "pending",
-   "date": null
+   "status": "requested",
+   "date": "2026-11-08"
   },
   {
    "url": "https://www.isinn.com.tr/rehber/gencler-icin-teknolojik-hizmet-fikirleri",
-   "status": "pending",
-   "date": null
+   "status": "requested",
+   "date": "2026-11-08"
   },
   {
    "url": "https://www.isinn.com.tr/rehber/becerilerimi-nasil-degerlendirebilirim",
-   "status": "pending",
-   "date": null
+   "status": "requested",
+   "date": "2026-11-08"
   },
   {
    "url": "https://www.isinn.com.tr/rehber/ilk-vitrinini-nasil-hazirlarsin",
-   "status": "pending",
-   "date": null
+   "status": "requested",
+   "date": "2026-11-08"
   },
   {
    "url": "https://www.isinn.com.tr/rehber/ogrenciyken-hangi-hizmetleri-verebilirsin",
-   "status": "pending",
-   "date": null
+   "status": "requested",
+   "date": "2026-11-08"
   },
   {
    "url": "https://www.isinn.com.tr/rehber/musteriye-ilk-mesaj-ve-yazili-anlasma-sablonlari",
-   "status": "pending",
-   "date": null
+   "status": "indexed",
+   "date": "2026-11-08"
   },
   {
    "url": "https://www.isinn.com.tr/rehber/danismanlik-ve-mentorluk-hizmeti-nasil-paketlenir",
-   "status": "pending",
-   "date": null
+   "status": "requested",
+   "date": "2026-11-08"
   },
   {
    "url": "https://www.isinn.com.tr/rehber/hizmet-vitrini-aciklamasi-nasil-yazilir",
-   "status": "pending",
-   "date": null
+   "status": "requested",
+   "date": "2026-11-08"
   },
   {
    "url": "https://www.isinn.com.tr/rehber/freelance-portfolyo-sifir-referansla-nasil-hazirlanir",
