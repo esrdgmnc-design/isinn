@@ -1539,14 +1539,14 @@ const isOptimizableImg = (src) => typeof src === "string" && (src.startsWith("/"
 // görseller, satırda 12'ye kadar. Kurucu: "vitrinler küçük, odaksız olsun ki azlığı
 // dikkat çekmesin; içeride kaç kişi olduğu öngörülemez dursun". Rozet/fiyat/yıldız/
 // "Yeni" yok; başlık ve sağlayıcı yalnızca üzerine gelince (ve ekran okuyucuda) görünür.
-const HomeListingCard = memo(function HomeListingCard({ l, isFavorite, onSelectListing, onToggleFavorite }) {
+const HomeListingCard = memo(function HomeListingCard({ l, fresh, isFavorite, onSelectListing, onToggleFavorite }) {
   const { t } = useLanguage();
   const href = l.isReal && l.dbId && !l.isDemo ? `/vitrin/${l.dbId}` : null;
   return (
       <div
         {...(href ? {} : { role: "button", tabIndex: 0, onKeyDown: (e) => { if (e.key === "Enter" || e.key === " ") onSelectListing(l); } })}
         onClick={() => onSelectListing(l)}
-        className="group relative aspect-square rounded-lg overflow-hidden cursor-pointer"
+        className={`group relative aspect-square rounded-lg overflow-hidden cursor-pointer${fresh ? " home-grid-swap" : ""}`}
         style={{ background: "#F3F4F6" }}
         title={`${l.title} · ${l.provider}`}
       >
@@ -1637,6 +1637,41 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
     const sorted = base.slice().sort((a, b) => computeVisibilityScore(b) - computeVisibilityScore(a));
     return avoidAdjacentCategoryClash(sorted);
   }, [homeListings, filter]);
+
+  // 2026-11-08 (kurucu: "kartlar sürekli değişsin ki kalabalıklaşmış algısı oluşsun"): Keşfet ızgarası sayfa açıldıktan
+  // sonra birkaç saniyede bir rastgele bir kareyi, ızgarada görünmeyen bir vitrinle (yoksa başka bir görünür kareyle)
+  // yumuşak geçişle değiştirir. İlk çizim sunucudakiyle aynı sırada kalır (SSR/SEO ve hydration bozulmaz); yalnızca
+  // tarayıcıda, sekme görünürken, fare/dokunuş ızgaranın üstünde değilken ve "hareketi azalt" kapalıyken döner.
+  const [gridOrder, setGridOrder] = useState(null);
+  const [gridFresh, setGridFresh] = useState(() => new Set());
+  const [gridPaused, setGridPaused] = useState(false);
+  useEffect(() => { setGridOrder(null); setGridFresh(new Set()); }, [filtered]);
+  const gridListings = useMemo(() => {
+    if (!gridOrder) return filtered;
+    const byId = new Map(filtered.map((l) => [l.id, l]));
+    const ordered = gridOrder.map((id) => byId.get(id)).filter(Boolean);
+    return ordered.length === filtered.length ? ordered : filtered;
+  }, [gridOrder, filtered]);
+  useEffect(() => {
+    if (filtered.length < 2 || gridPaused) return;
+    let reduce = false;
+    try { reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch {}
+    if (reduce) return;
+    const gridInterval = setInterval(() => {
+      if (typeof document !== "undefined" && document.hidden) return;
+      setGridOrder((prev) => {
+        const ids = prev && prev.length === filtered.length ? prev.slice() : filtered.map((l) => l.id);
+        const visible = Math.min(HOME_GRID_LIMIT, ids.length);
+        const i = Math.floor(Math.random() * visible);
+        let j = ids.length > visible ? visible + Math.floor(Math.random() * (ids.length - visible)) : Math.floor(Math.random() * visible);
+        if (j === i) j = (i + 1) % visible;
+        [ids[i], ids[j]] = [ids[j], ids[i]];
+        setGridFresh(new Set([ids[i], ids[j]]));
+        return ids;
+      });
+    }, 2800);
+    return () => clearInterval(gridInterval);
+  }, [filtered, gridPaused]);
 
   useEffect(() => {
     if (featured.length === 0 || featuredPaused) return;
@@ -2117,10 +2152,17 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
             <p className="text-sm" style={{ color: "#6B7280" }}>{t("home.noListingsMatch")}</p>
           </div>
         ) : (
-          <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-12 gap-1.5 sm:gap-2">
-            {filtered.map((l, idx) => (
+          <div
+            className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-12 gap-1.5 sm:gap-2"
+            onMouseEnter={() => setGridPaused(true)}
+            onMouseLeave={() => setGridPaused(false)}
+            onTouchStart={() => setGridPaused(true)}
+            onFocus={() => setGridPaused(true)}
+            onBlur={() => setGridPaused(false)}
+          >
+            {gridListings.map((l, idx) => (
               <div key={l.id} className={idx >= HOME_GRID_LIMIT ? "hidden" : "contents"}>
-                <HomeListingCard l={l} isFavorite={!!favoriteIds?.has(l.dbId)} onSelectListing={onSelectListing} onToggleFavorite={onToggleFavorite} />
+                <HomeListingCard l={l} fresh={gridFresh.has(l.id)} isFavorite={!!favoriteIds?.has(l.dbId)} onSelectListing={onSelectListing} onToggleFavorite={onToggleFavorite} />
               </div>
             ))}
           </div>
@@ -4084,8 +4126,12 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
       </button>
 
       {!(ownerMode && editingInfo) && (
-        <div className="rounded-xl overflow-hidden mb-6">
-          <img src={listing.img} alt={listing.title} className="w-full h-72 object-cover" />
+        // 2026-11-08 (kurucu: "kapaklar çok yayvan kalıyor"): geniş bantta object-cover dikey portreleri ortadan kesip
+        // yalnızca burun/dudak bırakıyordu. Artık fotoğrafın tamamı ortada (object-contain), iki yanı aynı fotoğrafın
+        // bulanık, karartılmış hâliyle doluyor — yatay kapaklar yine bandı tamamen kaplar.
+        <div className="relative rounded-xl overflow-hidden mb-6 h-72 sm:h-96" style={{ background: "#0F1115" }}>
+          <img src={listing.img} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-70" />
+          <img src={listing.img} alt={listing.title} className="relative w-full h-full object-contain" />
         </div>
       )}
 

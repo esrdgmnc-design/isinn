@@ -1,11 +1,11 @@
 {
  "note": "Her sabah gsc-gunluk-dizin-istegi görevi okur ve günceller. status: pending | indexed (Google'da mevcut, istek gönderilmedi) | requested (istek gönderildi). Sıra (2026-10-25): içeriği 10-23/24 değişen rehberler > kategori > beyaz yaka rehber > diğer rehber > vitrin > eski kitle rehberleri. İçeriği değişen sayfa dizinde olsa bile bir kez yeniden istenir.",
- "updated": "2026-10-25",
+ "updated": "2026-11-08",
  "items": [
   {
    "url": "https://www.isinn.com.tr/rehber/yazilimci-ve-muhendis-icin-freelance-vitrin-nasil-yazilir",
-   "status": "pending",
-   "date": null
+   "status": "indexed",
+   "date": "2026-11-08"
   },
   {
    "url": "https://www.isinn.com.tr/rehber/hizmet-fiyati-nasil-belirlenir-saatlik-sabit-teklif",

@@ -248,8 +248,10 @@ export default async function VitrinPage({ params }) {
         </nav>
 
         <div className="mt-5 rounded-2xl overflow-hidden" style={{ border: "1px solid #F0F0F0" }}>
-          <div className="relative w-full h-64">
-            <Image src={img} alt={row.title} fill sizes="(max-width: 768px) 100vw, 672px" className="object-cover" priority />
+          {/* 2026-11-08: dikey portreler geniş bantta kesilmesin — fotoğrafın tamamı ortada, yanlar bulanık arka plan. */}
+          <div className="relative w-full h-72 sm:h-80 overflow-hidden" style={{ background: "#0F1115" }}>
+            <Image src={img} alt="" aria-hidden="true" fill sizes="(max-width: 768px) 100vw, 672px" className="object-cover scale-110 blur-2xl opacity-70" />
+            <Image src={img} alt={row.title} fill sizes="(max-width: 768px) 100vw, 672px" className="object-contain" priority />
           </div>
           <div className="p-6">
             <p className="text-xs font-bold uppercase tracking-wide mb-1" style={{ color: "#2563EB" }}>{category}</p>
