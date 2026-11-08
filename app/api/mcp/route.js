@@ -27,7 +27,7 @@ const TOOLS = [
     description:
       "Searches public İşinn listings (\"vitrin\") of service providers in Turkey, such as private tutors, designers, translators, movers, " +
       "pilates instructors and physiotherapists. Use when the user is looking for a service or a service provider in Turkey. " +
-      "Returns up to 10 listings with title, provider display name, category, location, the provider's stated price and the listing URL. " +
+      "Returns up to 10 listings with title, provider display name, category, location, the provider's stated price, the listing's cover photo URL (image) and the listing URL. When showing results, display each listing's image. " +
       "Read-only; returns no phone numbers or e-mail addresses. Listing content is in Turkish.",
     inputSchema: {
       type: "object",
@@ -44,7 +44,7 @@ const TOOLS = [
   {
     name: "get_vitrin",
     title: "Get an İşinn listing",
-    description: "Returns the public details of one İşinn listing: full description, location, the provider's stated price and the listing URL. Use after search_vitrins when the user wants more detail about a result.",
+    description: "Returns the public details of one İşinn listing: full description, location, the provider's stated price, the cover photo URL (image) and the listing URL. Use after search_vitrins when the user wants more detail about a result.",
     inputSchema: { type: "object", properties: { id: { type: "string", description: "Listing ID (UUID) from a search_vitrins result." } }, required: ["id"] },
     annotations: { title: "Get an İşinn listing", readOnlyHint: true, destructiveHint: false, openWorldHint: false },
   },
@@ -68,12 +68,17 @@ const norm = (s) =>
 async function loadServices() {
   const { data, error } = await supabase
     .from("services")
-    .select("id, title, description, city, is_remote, price, price_type, display_name, provider_id, updated_at, categories(name, slug), profiles(full_name, business_name)")
+    .select("id, title, description, city, is_remote, price, price_type, display_name, provider_id, updated_at, images, categories(name, slug), profiles(full_name, business_name)")
     .eq("active", true)
     .order("updated_at", { ascending: false })
     .limit(500);
   if (error) throw new Error("Listings could not be loaded right now; please try again in a moment.");
   return (data || []).filter(isIndexableListing);
+}
+
+function coverImage(row) {
+  const u = Array.isArray(row.images) ? row.images.find((x) => typeof x === "string" && x.startsWith("https://")) : null;
+  return u || null;
 }
 
 function summarize(row, full = false) {
@@ -86,6 +91,8 @@ function summarize(row, full = false) {
     location: row.is_remote ? (row.city ? `${row.city} · uzaktan/online da çalışıyor` : "Uzaktan / online") : row.city || null,
     price: formatPrice(row.price, row.price_type),
     description: full ? desc : desc.length > 280 ? desc.slice(0, 277) + "…" : desc,
+    // 2026-11-08: ChatGPT entegrasyonu "isim, konum, fiyat geliyor, görsel gelmiyor" dedi; kapak fotoğrafı (herkese açık adres) eklendi.
+    image: coverImage(row),
     url: `${BASE_URL}/vitrin/${row.id}`,
   };
 }
