@@ -23,17 +23,33 @@ const PUSH_TEXT = {
 };
 const DAILY_LIMIT = 4;
 
-function secretOk(request) {
-  const expected = process.env.PUSH_WEBHOOK_SECRET || "";
-  const got = (request.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
+function sameSecret(got, expected) {
   if (!expected || expected.length < 16) return false;
   const a = Buffer.from(got);
   const b = Buffer.from(expected);
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
+// 2026-11-08: veritabanı tetikleyicisi (push_on_notification_2026_11_08.sql) e-posta tetikleyicisiyle aynı kasa
+// anahtarını (vault 'notify_hook_secret') gönderir; Vercel'de ayrı PUSH_WEBHOOK_SECRET tanımlı olmasa da çalışsın diye
+// beklenen değer önce ortam değişkeninden, yoksa servis anahtarıyla kasadan okunur.
+let vaultSecretCache = null;
+async function secretOk(request) {
+  const got = (request.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
+  if (!got) return false;
+  if (sameSecret(got, process.env.PUSH_WEBHOOK_SECRET || "")) return true;
+  if (!vaultSecretCache) {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!url || !key) return false;
+    const { data } = await createClient(url, key).rpc("get_notify_hook_secret");
+    if (typeof data === "string" && data.length >= 16) vaultSecretCache = data;
+  }
+  return sameSecret(got, vaultSecretCache || "");
+}
+
 export async function POST(request) {
-  if (!secretOk(request)) return Response.json({ ok: false }, { status: 401 });
+  if (!(await secretOk(request))) return Response.json({ ok: false }, { status: 401 });
   if (!apnsConfigured()) return Response.json({ ok: false, reason: "apns_not_configured" }, { status: 200 });
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;

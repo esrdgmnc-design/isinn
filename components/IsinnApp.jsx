@@ -12552,7 +12552,14 @@ export default function IsinnPrototype({ session, onRequireAuth, discoveryPopula
   const userIdRef = useRef(userId);
   userIdRef.current = userId;
   // iOS kabuğu: push bildirimi dinleyicileri ve derin bağlantı (web'de hiçbir şey yapmaz). Dokunma = bildirim zilindeki tıklamayla aynı yönlendirme.
-  useEffect(() => { if (userId) startNativePush((n) => handleNotificationClick(n)); }, [userId]);
+  // 2026-11-08: izin eskiden yalnızca kullanıcı mesaj GÖNDERİNCE soruluyordu; sadece mesaj alan vitrin sahiplerine hiç
+  // sorulmadığı için mesajları fark etmiyorlardı. Artık girişten birkaç saniye sonra bir kez sorulur (iOS'ta tek sefer).
+  useEffect(() => {
+    if (!userId) return undefined;
+    let timer;
+    startNativePush((n) => handleNotificationClick(n)).then(() => { timer = setTimeout(() => enablePush(), 4000); }, () => {});
+    return () => clearTimeout(timer);
+  }, [userId]);
   useEffect(() => {
     let cancelled = false;
     const resume = () => {
