@@ -1854,6 +1854,10 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
                       <img src={l.img} alt={l.title} loading={isCenter ? undefined : "lazy"} decoding="async" className="w-full h-full object-cover" style={isCenter ? {} : { filter: "brightness(0.92)" }} />
                       <div className="absolute inset-x-0 bottom-0 p-2 pt-7" style={{ background: "linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.88) 100%)" }}>
                         <p className={`font-bold text-white truncate ${isCenter ? "text-sm" : "text-[11px]"}`}>{l.provider}</p>
+                        {/* 2026-11-08 (kurucu: "öne çıkanlarda ne iş yaptığı anlaşılmıyor"): ismin altında ne iş yaptığı. */}
+                        {(getCategoryName(l.category, t) || l.title) && (
+                          <p className={`text-white/85 leading-tight line-clamp-2 ${isCenter ? "text-[11px] mt-0.5" : "text-[9px]"}`}>{getCategoryName(l.category, t) || l.title}</p>
+                        )}
                       </div>
                       {l.isDemo && (
                         <span className="absolute top-2 right-2 text-[11px] font-black px-2 py-0.5 rounded-full text-white tracking-wide" style={{ background: "#DC2626" }}>{t("searchResults.demoBadge")}</span>
