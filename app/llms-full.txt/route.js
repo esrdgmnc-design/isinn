@@ -1,5 +1,7 @@
 import { REHBER_POSTS, rehberMeta } from "../../lib/rehberContent";
 import { faqJsonLd } from "../../lib/faqJsonLd";
+import { supabase } from "../../lib/supabaseClient";
+import { isIndexableListing } from "../../lib/seoFormat";
 
 // public/llms.txt sadece bir sayfa/link dizini — AI arama motorları (ChatGPT,
 // Perplexity, Claude) İşinn'i alıntılamak için yine her URL'e tek tek gitmek
@@ -34,6 +36,30 @@ export async function GET() {
   lines.push("");
   lines.push("Önemli: İşinn kullanıcılar arasındaki ödemeye aracılık etmez, emanet (escrow) veya sonuç garantisi sunmaz. Hizmetlerin keşfini kolaylaştıran bir platformdur: ürün satışı yapılmaz ve ürün satışına yönlendirme yapılmaz (mağaza, sepet, kargo yoktur). 'Doğrulandı' rozeti yalnızca telefon doğrulaması anlamına gelir. Yeteneğini Farket (" + BASE_URL + "/yetenegini-farket), ne sunacağını bilmeyenlere 1-2 hizmet fikri öneren yapay zekâ destekli bir araçtır; öneriler garanti değildir.");
   lines.push("");
+  // 2026-11-08: ChatGPT'den gelen ilk kayıtlar görüldü. Yapay zekâ botları "Eskişehir'de sosyal medya uzmanı" gibi
+  // sorularda doğrudan bir hizmet veren listesi bulabilsin diye aktif, indekslenebilir vitrinler (DEMO/ince olanlar hariç,
+  // site haritasıyla aynı filtre) kategori ve yerle birlikte listelenir.
+  try {
+    const { data: rows } = await supabase
+      .from("services")
+      .select("id, title, city, is_remote, description, display_name, categories(slug, name), profiles(full_name, business_name)")
+      .eq("active", true)
+      .order("created_at", { ascending: false })
+      .limit(500);
+    const list = (rows || []).filter(isIndexableListing);
+    if (list.length) {
+      lines.push("## Hizmet Verenler (aktif vitrinler)");
+      lines.push("");
+      lines.push("İşinn'de yayında olan vitrinler. Fiyat ve uygunluk için vitrin sayfasından hizmet verene doğrudan mesaj atılır.");
+      lines.push("");
+      for (const r of list) {
+        const who = r.display_name || r.profiles?.business_name || r.profiles?.full_name || "Hizmet veren";
+        const where = [r.city, r.is_remote ? "uzaktan" : null].filter(Boolean).join(", ") || "Türkiye";
+        lines.push(`- ${r.title} — ${who} · ${r.categories?.name || "Diğer"} · ${where} · ${BASE_URL}/vitrin/${r.id}`);
+      }
+      lines.push("");
+    }
+  } catch { /* liste alınamazsa dosyanın geri kalanı yine verilir */ }
   lines.push("## Sıkça Sorulan Sorular");
   lines.push("");
   for (const q of faqJsonLd.mainEntity) {
