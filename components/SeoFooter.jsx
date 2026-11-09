@@ -55,6 +55,12 @@ export default async function SeoFooter() {
           <span key={g.slug}>{i > 0 && " · "}<Link href={`/rehber/${g.slug}`} style={link}>{g.label}</Link></span>
         ))}
       </p>
+      <p className="mb-2">
+        <span className="font-bold">Ücretsiz araçlar: </span>
+        <Link href="/araclar/serbest-meslek-makbuzu-hesaplama" style={link}>Serbest meslek makbuzu hesaplama</Link>
+        {" · "}
+        <Link href="/araclar/ozel-ders-ucreti-hesaplama" style={link}>Özel ders ücreti hesaplama</Link>
+      </p>
       {cities.length > 0 && (
         <p className="mb-2">
           <span className="font-bold">Şehirler: </span>

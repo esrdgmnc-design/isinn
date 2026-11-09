@@ -25,6 +25,8 @@ export default async function sitemap() {
     "/yetenegini-farket",
     "/hakkimizda",
     "/yapay-zeka-araci",
+    "/araclar/serbest-meslek-makbuzu-hesaplama",
+    "/araclar/ozel-ders-ucreti-hesaplama",
     "/destek",
   ];
   // Yasal/yardımcı sayfalar (KVKK, gizlilik, kullanım şartları, mesafeli satış,
