@@ -4,6 +4,7 @@
 import { createClient } from "@supabase/supabase-js";
 import crypto from "node:crypto";
 import { sendApns, apnsConfigured } from "../../../../lib/apns";
+import { sendFcm, fcmConfigured } from "../../../../lib/fcm";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -50,7 +51,7 @@ async function secretOk(request) {
 
 export async function POST(request) {
   if (!(await secretOk(request))) return Response.json({ ok: false }, { status: 401 });
-  if (!apnsConfigured()) return Response.json({ ok: false, reason: "apns_not_configured" }, { status: 200 });
+  if (!apnsConfigured() && !fcmConfigured()) return Response.json({ ok: false, reason: "apns_not_configured" }, { status: 200 });
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) return Response.json({ ok: false }, { status: 500 });
@@ -65,12 +66,20 @@ export async function POST(request) {
   const { count } = await sb.from("notifications").select("id", { count: "exact", head: true }).eq("profile_id", row.profile_id).gte("push_sent_at", since);
   if ((count || 0) >= DAILY_LIMIT) return Response.json({ ok: true, skipped: "daily_limit" });
 
-  const { data: tokens } = await sb.from("device_push_tokens").select("token").eq("profile_id", row.profile_id).limit(5);
+  const { data: tokens } = await sb.from("device_push_tokens").select("token, platform").eq("profile_id", row.profile_id).limit(5);
   if (!tokens || tokens.length === 0) return Response.json({ ok: true, skipped: "no_token" });
 
   const [title, body] = PUSH_TEXT[row.type];
   let sent = 0;
-  for (const { token } of tokens) {
+  for (const { token, platform } of tokens) {
+    if (platform === "android") {
+      if (!fcmConfigured()) continue;
+      const r = await sendFcm(token, { title, body, collapseId: row.related_job_id || row.id, data: { type: row.type, related_job_id: row.related_job_id || null, related_service_id: row.related_service_id || null } });
+      if (r.status === 200) sent++;
+      else if (r.reason === "UNREGISTERED" || r.status === 404) await sb.from("device_push_tokens").delete().eq("token", token);
+      continue;
+    }
+    if (!apnsConfigured()) continue;
     const r = await sendApns(token, {
       title,
       body,

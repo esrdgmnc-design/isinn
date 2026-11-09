@@ -9,7 +9,9 @@ function admin() {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   return url && key ? createClient(url, key) : null;
 }
-const validToken = (t) => typeof t === "string" && /^[0-9a-fA-F]{32,200}$/.test(t);
+// APNs: onaltılık; FCM (Android): harf, rakam, - _ : içeren uzun dizi.
+const validToken = (t) => typeof t === "string" && /^[A-Za-z0-9_:-]{32,4096}$/.test(t);
+const normToken = (t, platform) => (platform === "android" ? t : t.toLowerCase());
 
 export async function POST(request) {
   const user = await getAuthedUser(request);
@@ -21,7 +23,7 @@ export async function POST(request) {
   const sb = admin();
   if (!sb) return Response.json({ ok: false }, { status: 500 });
   const { error } = await sb.from("device_push_tokens").upsert(
-    { token: body.token.toLowerCase(), profile_id: user.id, platform: "ios", last_seen_at: new Date().toISOString() },
+    { token: normToken(body.token, body?.platform === "android" ? "android" : "ios"), profile_id: user.id, platform: body?.platform === "android" ? "android" : "ios", last_seen_at: new Date().toISOString() },
     { onConflict: "token" },
   );
   return Response.json({ ok: !error }, { status: error ? 500 : 200 });
@@ -35,6 +37,6 @@ export async function DELETE(request) {
   if (!validToken(body?.token)) return Response.json({ ok: false }, { status: 400 });
   const sb = admin();
   if (!sb) return Response.json({ ok: false }, { status: 500 });
-  await sb.from("device_push_tokens").delete().eq("token", body.token.toLowerCase()).eq("profile_id", user.id);
+  await sb.from("device_push_tokens").delete().in("token", [body.token, body.token.toLowerCase()]).eq("profile_id", user.id);
   return Response.json({ ok: true });
 }
