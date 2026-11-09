@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "479991817065",
+    "project_id": "isinn-75553",
+    "storage_bucket": "isinn-75553.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:479991817065:android:1809207676b061e73fd3f8",
+        "android_client_info": {
+          "package_name": "com.isinn.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA9DzkL3qXfBxxphVIuAX2xo1TSoWwSgec"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
