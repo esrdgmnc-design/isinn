@@ -2,6 +2,10 @@ import Link from "next/link";
 import { socialMeta } from "../../../lib/seoMeta";
 import SeoFooter from "../../../components/SeoFooter";
 import SmmCalculator from "../../../components/SmmCalculator";
+import EmbedCode from "../../../components/EmbedCode";
+import { toolById } from "../../../lib/tools";
+
+const TOOL = toolById("smm");
 
 // 2026-11-09: SEO/büyüme ajanlarının önerisi. "serbest meslek makbuzu hesaplama" sürekli aranan, mevsimsiz bir sorgu;
 // arayan kişi doğrudan danışman/serbest meslek sahibi (İşinn'in arz tarafı). Oranlar: GVK 94/2-b stopaj %20, KDV %20.
@@ -83,6 +87,7 @@ export default function SmmPage() {
           <p className="text-sm mb-3" style={ink}>İşinn'de vitrinini aç; yaptığın işleri göster, seni arayan doğrudan sana yazsın.</p>
           <a href="/hizmet-ver?utm_source=smm_hesaplayici" className="inline-block text-sm font-bold px-4 py-2 rounded-full" style={{ background: "#0F1115", color: "#FFFFFF" }}>Vitrinini aç</a>
         </div>
+        <EmbedCode embedUrl={`${BASE_URL}${TOOL.embedPath}`} toolUrl={URL} name={TOOL.name} height={TOOL.embedHeight} />
         <p className="text-xs mt-6" style={{ color: "#6B7280" }}>Bu sayfa genel bilgilendirme amaçlıdır, mali tavsiye değildir. Son güncelleme: 9 Kasım 2026.</p>
       </div>
       <SeoFooter />

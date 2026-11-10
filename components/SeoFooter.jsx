@@ -50,7 +50,7 @@ export default async function SeoFooter() {
         </p>
       )}
       <p className="mb-2">
-        <span className="font-bold">Fiyat rehberleri: </span>
+        <span className="font-bold"><Link href="/hizmet-fiyatlari" style={link}>Fiyat rehberleri</Link>: </span>
         {PRICE_GUIDES.map((g, i) => (
           <span key={g.slug}>{i > 0 && " · "}<Link href={`/rehber/${g.slug}`} style={link}>{g.label}</Link></span>
         ))}

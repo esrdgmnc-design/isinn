@@ -1,5 +1,7 @@
 import Link from "next/link";
 import TalepCta from "../../../components/TalepCta";
+import ToolCallout from "../../../components/ToolCallout";
+import { toolsForCategory } from "../../../lib/tools";
 import { DERS_SAYFALARI, MIN_DERS_VITRIN, dersSayfasiVitrinleri } from "../../../lib/dersKonulari";
 import Image from "next/image";
 import { notFound } from "next/navigation";
@@ -164,6 +166,7 @@ export default async function CategoryPage({ params }) {
           );
         })()}
 
+        <ToolCallout tools={toolsForCategory(meta.slug)} />
         <TalepCta categoryLabel={meta.name} />
 
         {(() => {

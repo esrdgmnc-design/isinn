@@ -359,6 +359,25 @@ function parsePriceInput(raw) {
 
 // Bir kullanıcının kaç vitrin hakkı olduğunu hesaplar (plan tavanı + varsa
 // Ek Vitrin Paketi). CreateListingView'daki checkVitrinLimit ile ProfileView'ın
+// Vitrin tamamlama göstergesi (2026-11-10): 5 kalem, her biri %20. Sahip paneli içindir; vitrin yayınını etkilemez.
+function listingCompleteness(l, extra, t) {
+  if (!l) return null;
+  const hasCover = Array.isArray(l.images) && l.images.length > 0;
+  const descOk = String(l.description || "").trim().length >= 150;
+  const priceOk = l.price_type === "quote" || (l.price != null && Number(l.price) > 0);
+  const works = extra?.works || 0;
+  const linkOk = !!extra?.link;
+  const items = [
+    [hasCover, t("profile.missCover")],
+    [descOk, t("profile.missDesc")],
+    [priceOk, t("profile.missPrice")],
+    [works >= 3, t("profile.missWorks", { n: Math.max(0, 3 - works) })],
+    [linkOk, t("profile.missLink")],
+  ];
+  const done = items.filter(([ok]) => ok).length;
+  return { pct: done * 20, missing: items.filter(([ok]) => !ok).map(([, label]) => label) };
+}
+
 // "Vitrinlerim (N/cap)" göstergesi aynı mantığı paylaşsın diye ortak fonksiyon —
 // önceden sadece CreateListingView'da vardı, ProfileView kullanıcıya kaç
 // vitrin hakkı olduğunu hiç göstermiyordu (sadece "Vitrinlerim (N)" — tavan
@@ -11301,6 +11320,7 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
   const [profile, setProfile] = useState(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [myListings, setMyListings] = useState([]); // kendi ilanlarım — services tablosundan
+  const [listingExtras, setListingExtras] = useState({}); // vitrin tamamlama göstergesi için: { [id]: { works, link } }
   const [myJobs, setMyJobs] = useState([]); // kendi verdiğim iş ilanları — jobs tablosundan
   const [myRating, setMyRating] = useState(null); // { avg, count } — ratings tablosundan gerçek puan
   const [myPhone, setMyPhone] = useState(null); // { phone, verified, show_publicly } — özel profile_phone tablosundan
@@ -11436,6 +11456,20 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
       .eq("provider_id", userId)
       .order("created_at", { ascending: false });
     setMyListings(data || []);
+    // Vitrin tamamlama göstergesi (2026-11-10): çalışma görseli sayısı ve çalışma bağlantısı ayrı, hataya dayanıklı
+    // sorgularla (kolon/tablo eksikse yalnızca gösterge eksik kalır, liste etkilenmez).
+    const ids = (data || []).map((r) => r.id);
+    if (!ids.length) { setListingExtras({}); return; }
+    const extras = Object.fromEntries(ids.map((id) => [id, { works: 0, link: false }]));
+    try {
+      const { data: works } = await supabase.from("portfolio_items").select("service_id").in("service_id", ids).eq("media_type", "image");
+      for (const w of works || []) if (extras[w.service_id]) extras[w.service_id].works++;
+    } catch {}
+    try {
+      const { data: links, error } = await supabase.from("services").select("id, work_link_url").in("id", ids);
+      if (!error) for (const r of links || []) if (extras[r.id]) extras[r.id].link = !!r.work_link_url;
+    } catch {}
+    setListingExtras(extras);
   };
 
   const loadMyJobs = async () => {
@@ -12031,6 +12065,16 @@ function ProfileView({ userId, onBack, onOpenAdminReports, onOpenDashboard, onOp
                   <p className="text-[11px] truncate" style={{ color: "#6B7280" }}>
                     {l.is_remote ? t("profile.remoteLabel") : l.city || "—"} · {formatPriceLabel(l.price, l.price_type)}
                   </p>
+                  {(() => {
+                    // Yumuşak öneri, zorunluluk değil (kurucu kuralı: yeni zorunlu alan yok). Yalnızca sahibine görünür.
+                    const c = listingCompleteness(l, listingExtras[l.id], t);
+                    if (!c || c.pct >= 100) return null;
+                    return (
+                      <p className="text-[11px] mt-0.5" style={{ color: "#1D4ED8" }}>
+                        {t("profile.completenessLine", { pct: c.pct, missing: c.missing.join(", ") })}
+                      </p>
+                    );
+                  })()}
                 </div>
                 {confirmDeleteId === l.id ? (
                   <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>

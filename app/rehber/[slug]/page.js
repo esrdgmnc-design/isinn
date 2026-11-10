@@ -5,6 +5,8 @@ import { jsonLdString } from "../../../lib/jsonLd";
 import { socialMeta } from "../../../lib/seoMeta";
 import SeoFooter from "../../../components/SeoFooter";
 import { getGuideCategories } from "../../../lib/categoryGuides";
+import ToolCallout from "../../../components/ToolCallout";
+import { toolsForGuide } from "../../../lib/tools";
 
 const BASE_URL = "https://www.isinn.com.tr";
 
@@ -142,6 +144,7 @@ export default async function RehberPostPage({ params }) {
             </div>
           </div>
         )}
+        <ToolCallout tools={toolsForGuide(post.slug)} />
         <Link
           href={post.ctaHref}
           className="inline-block mt-8 text-sm font-bold px-6 py-3 rounded-full text-white"

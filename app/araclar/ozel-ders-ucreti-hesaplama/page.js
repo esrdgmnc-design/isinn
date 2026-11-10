@@ -2,6 +2,10 @@ import Link from "next/link";
 import { socialMeta } from "../../../lib/seoMeta";
 import SeoFooter from "../../../components/SeoFooter";
 import OzelDersCalculator from "../../../components/OzelDersCalculator";
+import EmbedCode from "../../../components/EmbedCode";
+import { toolById } from "../../../lib/tools";
+
+const TOOL = toolById("ozel-ders");
 
 // 2026-11-09: büyüme ajanının önerisi. "özel ders ücretleri 2026", "lgs özel ders ücreti", "aylık özel ders ne kadar"
 // sorguları; hem veli (talep) hem öğretmen (arz) tarafı arar. Veriler fiyat rehberlerindeki kaynaklı aralıklardan.
@@ -80,6 +84,7 @@ export default function OzelDersPage() {
             <p className="text-xs mt-1" style={ink}>Vitrinini aç, seni arayan doğrudan sana ulaşsın.</p>
           </a>
         </div>
+        <EmbedCode embedUrl={`${BASE_URL}${TOOL.embedPath}`} toolUrl={URL} name={TOOL.name} height={TOOL.embedHeight} />
         <p className="text-xs mt-6" style={{ color: "#6B7280" }}>Rakamlar bağlantısı verilen kaynaklarda yayımlanan aralıklardır; İşinn'in belirlediği fiyatlar değildir. Son güncelleme: 9 Kasım 2026.</p>
       </div>
       <SeoFooter />

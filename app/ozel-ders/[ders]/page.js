@@ -10,6 +10,8 @@ import { orderByResponsiveness, getProviderLastSent } from "../../../lib/provide
 import { DERS_SAYFALARI, MIN_DERS_VITRIN, findDersSayfasi, dersSayfasiVitrinleri } from "../../../lib/dersKonulari";
 import SeoFooter from "../../../components/SeoFooter";
 import TalepCta from "../../../components/TalepCta";
+import ToolCallout from "../../../components/ToolCallout";
+import { TOOLS } from "../../../lib/tools";
 
 // Ders bazlı özel ders sayfaları (2026-10-31): öğretmen kategorisi matematik, İngilizce, LGS ve koçluğu tek
 // listede gösteriyordu; "online ingilizce özel ders" gibi aramaların karşılığı yoktu. Sayfa yalnızca gerçek
@@ -119,6 +121,7 @@ export default async function DersSayfasi({ params }) {
           </div>
         )}
 
+        <ToolCallout tools={TOOLS.filter((t) => t.ders)} />
         <TalepCta categoryLabel={sayfa.name} />
 
         <div className="mt-10 pt-8 border-t max-w-2xl" style={{ borderColor: "#E4E4E7" }}>

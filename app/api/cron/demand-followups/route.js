@@ -6,6 +6,7 @@ import {
   JOB_WINDOW_D, MAX_CONV_AGE_D,
   matchProvidersForJob, buildConversations, pickNudges, pickSimilarServices,
   jobMatchEmail, reminderEmail, similarEmail,
+  REVIEW_WINDOW_D, pickReviewRequests, reviewRequestEmail,
 } from "../../../../lib/demandFollowups";
 
 export const maxDuration = 60;
@@ -40,17 +41,20 @@ export async function GET(request) {
   const sinceConv = new Date(now - (MAX_CONV_AGE_D + 1) * 864e5).toISOString();
   const sinceJob = new Date(now - JOB_WINDOW_D * 864e5).toISOString();
 
-  const [{ data: services }, { data: newJobs }, { data: convJobs }, { data: messages }, { data: admins }, { data: sentRows }, { data: categories }] = await Promise.all([
+  const sinceReview = new Date(now - (REVIEW_WINDOW_D + 1) * 864e5).toISOString();
+  const [{ data: services }, { data: newJobs }, { data: convJobs }, { data: messages }, { data: admins }, { data: sentRows }, { data: categories }, { data: doneJobs }] = await Promise.all([
     admin.from("services").select("id, provider_id, category_id, title, description, display_name, city, is_remote, active").eq("active", true).limit(5000),
     admin.from("jobs").select("id, client_id, category_id, title, description, city, is_remote, active, service_id, created_at").is("service_id", null).eq("active", true).gte("created_at", sinceJob),
     admin.from("jobs").select("id, client_id, service_id, created_at, services(provider_id, title)").not("service_id", "is", null).gte("created_at", sinceConv),
     admin.from("messages").select("job_id, sender_id, body, created_at").gte("created_at", sinceConv).limit(10000),
     admin.from("profiles").select("id").eq("is_admin", true),
-    admin.from("notifications").select("type, profile_id, related_job_id").in("type", ["new_job_match", "message_reminder", "similar_vitrins"]).gte("created_at", sinceConv),
+    admin.from("notifications").select("type, profile_id, related_job_id").in("type", ["new_job_match", "message_reminder", "similar_vitrins", "review_request"]).gte("created_at", sinceConv),
     admin.from("categories").select("id, name"),
+    // 4) İki tarafça onaylanmış işler (yorum isteği için). Az kayıt var; tarih süzgeci kodda.
+    admin.from("jobs").select("id, client_id, service_id, client_delivered_at, provider_delivered_at, services(provider_id, title)").not("client_delivered_at", "is", null).not("provider_delivered_at", "is", null).gte("provider_delivered_at", sinceReview).limit(1000),
   ]);
 
-  const sent = new Set((sentRows || []).map((n) => (n.type === "new_job_match" ? `job:${n.related_job_id}:${n.profile_id}` : `${n.type === "message_reminder" ? "reminder" : "similar"}:${n.related_job_id}`)));
+  const sent = new Set((sentRows || []).map((n) => (n.type === "new_job_match" ? `job:${n.related_job_id}:${n.profile_id}` : n.type === "review_request" ? `review:${n.related_job_id}` : `${n.type === "message_reminder" ? "reminder" : "similar"}:${n.related_job_id}`)));
   const catName = Object.fromEntries((categories || []).map((c) => [c.id, c.name]));
   const profileIds = new Set();
   const plan = { jobMatches: [], reminders: [], similar: [] };
@@ -77,6 +81,12 @@ export async function GET(request) {
     profileIds.add(c.job.client_id);
   }
 
+  // 4) Yorum isteği: onaylı iş, henüz yorum yok, daha önce istenmemiş.
+  const doneIds = (doneJobs || []).map((j) => j.id);
+  const { data: ratedRows } = doneIds.length ? await admin.from("ratings").select("job_id").in("job_id", doneIds) : { data: [] };
+  const reviewReqs = pickReviewRequests(doneJobs, new Set((ratedRows || []).map((r) => r.job_id)), sent, now);
+  for (const r of reviewReqs) { profileIds.add(r.job.client_id); profileIds.add(r.providerId); }
+
   const { data: profs } = profileIds.size ? await admin.from("profiles").select("id, full_name, business_name").in("id", [...profileIds]) : { data: [] };
   const P = Object.fromEntries((profs || []).map((p) => [p.id, p]));
 
@@ -95,12 +105,17 @@ export async function GET(request) {
       mail: similarEmail({ clientName: nameOf(P[c.job.client_id]), serviceTitle: c.job.services?.title, days, suggestions }) });
   }
 
+  for (const r of reviewReqs) {
+    emails.push({ kind: "review_request", profileId: r.job.client_id, jobId: r.job.id, title: "İşin nasıl geçti? Yorumunu yaz", note: r.job.services?.title,
+      mail: reviewRequestEmail({ clientName: nameOf(P[r.job.client_id]), providerName: nameOf(P[r.providerId]), serviceTitle: r.job.services?.title }) });
+  }
+
   if (dry) {
     return Response.json({ ok: true, dry: true, count: emails.length,
       emails: emails.map((e) => ({ kind: e.kind, profile: e.profileId.slice(0, 8), job: e.jobId.slice(0, 8), subject: e.mail.subject, body: e.mail.body })) });
   }
 
-  const result = { new_job_match: 0, message_reminder: 0, similar_vitrins: 0, skipped: 0 };
+  const result = { new_job_match: 0, message_reminder: 0, similar_vitrins: 0, review_request: 0, skipped: 0 };
   for (const e of emails) {
     const { error } = await admin.from("notifications").insert({ profile_id: e.profileId, type: e.kind, title: e.title, body: (e.note || "").slice(0, 120), related_job_id: e.jobId });
     if (error) { result.skipped++; continue; }

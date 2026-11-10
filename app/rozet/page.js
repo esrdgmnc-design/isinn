@@ -65,6 +65,21 @@ export default function RozetPage({ searchParams }) {
 
       {vitrinUrl && (
         <section className="mb-10">
+          <H2 n="★">Instagram hikâyesi kartı</H2>
+          <P>Vitrinin için hazırlanmış, hikâye boyutunda bir paylaşım görseli. İndir, Instagram ya da WhatsApp hikâyende paylaş; üstüne bağlantı çıkartması olarak vitrin linkini ekle.</P>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={`/vitrin/${vitrinId}/kart`} alt="Vitrin paylaşım kartı önizlemesi" width={216} height={384} loading="lazy" className="rounded-xl mb-3" style={{ border: "1px solid #E4E4E7" }} />
+          <div className="flex flex-wrap gap-2 items-center">
+            <a href={`/vitrin/${vitrinId}/kart`} download="isinn-vitrin-karti.png" className="inline-block text-sm font-bold px-5 py-2.5 rounded-full text-white" style={{ background: "#2563EB" }}>
+              Kartı indir
+            </a>
+            <CopyText text={`${vitrinUrl}?utm_source=hikaye_karti`} label="Hikâye linkini kopyala" />
+          </div>
+        </section>
+      )}
+
+      {vitrinUrl && (
+        <section className="mb-10">
           <H2 n="2">Google İşletme Profili&apos;ne web sitesi olarak ekle</H2>
           <P>Google Haritalar&apos;da görünen bir işletme profilin varsa ve web siten yoksa, &quot;Web sitesi&quot; alanına vitrin linkini yazabilirsin. Google&apos;da seni bulan kişi tek dokunuşla çalışmalarını ve fiyatını görür.</P>
           <CopyText text={vitrinUrl} label="Linki kopyala" />

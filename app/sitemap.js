@@ -27,6 +27,7 @@ export default async function sitemap() {
     "/yapay-zeka-araci",
     "/araclar/serbest-meslek-makbuzu-hesaplama",
     "/araclar/ozel-ders-ucreti-hesaplama",
+    "/hizmet-fiyatlari",
     "/destek",
   ];
   // Yasal/yardımcı sayfalar (KVKK, gizlilik, kullanım şartları, mesafeli satış,

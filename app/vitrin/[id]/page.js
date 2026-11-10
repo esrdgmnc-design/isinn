@@ -224,12 +224,35 @@ export default async function VitrinPage({ params }) {
     ...(offers ? { offers } : {}),
   };
 
+  // 2026-11-10: ProfilePage (Google'ın profil sayfaları için önerdiği tür). Yalnızca gerçek alanlar: ad, meslek/kategori,
+  // il, vitrin sahibinin kendi çalışma bağlantısı (sameAs), son güncelleme. Etkileşim sayısı/puan yazılmaz.
+  const workLink = typeof row.work_link_url === "string" && /^https:\/\//i.test(row.work_link_url) ? row.work_link_url : null;
+  const profileJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "ProfilePage",
+    url,
+    ...(row.created_at ? { dateCreated: row.created_at } : {}),
+    ...(row.updated_at || row.created_at ? { dateModified: row.updated_at || row.created_at } : {}),
+    mainEntity: {
+      "@type": hasBusinessName ? "Organization" : "Person",
+      name: provider,
+      ...(category && categorySlug !== "diger" ? (hasBusinessName ? { knowsAbout: category } : { jobTitle: category }) : {}),
+      ...(description ? { description: description.slice(0, 300) } : {}),
+      ...(realImg ? { image: realImg } : {}),
+      ...(row.is_remote || !province ? {} : { address: { "@type": "PostalAddress", addressLocality: district || province, addressRegion: province, addressCountry: "TR" } }),
+      ...(workLink ? { sameAs: [workLink] } : {}),
+      makesOffer: { "@id": `${url}#service` },
+    },
+  };
+
   return (
     <>
       {/* eslint-disable-next-line react/no-danger */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdString(breadcrumbJsonLd) }} />
       {/* eslint-disable-next-line react/no-danger */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdString(jsonLd) }} />
+      {/* eslint-disable-next-line react/no-danger */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdString(profileJsonLd) }} />
       <div className="max-w-2xl mx-auto px-5 py-10">
         <nav className="flex flex-wrap items-center gap-1 text-sm" style={{ color: "#6B7280" }}>
           <Link href="/" className="font-bold" style={{ color: "#2563EB" }}>İşinn</Link>
