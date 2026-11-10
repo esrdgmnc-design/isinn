@@ -3,6 +3,41 @@
  "updated": "2026-11-08",
  "items": [
   {
+   "url": "https://www.isinn.com.tr/araclar/serbest-meslek-makbuzu-hesaplama",
+   "status": "pending",
+   "date": null
+  },
+  {
+   "url": "https://www.isinn.com.tr/araclar/ozel-ders-ucreti-hesaplama",
+   "status": "pending",
+   "date": null
+  },
+  {
+   "url": "https://www.isinn.com.tr/rehber/avukat-danisma-ucreti-2026",
+   "status": "pending",
+   "date": null
+  },
+  {
+   "url": "https://www.isinn.com.tr/rehber/ceviri-ucretleri-2026",
+   "status": "pending",
+   "date": null
+  },
+  {
+   "url": "https://www.isinn.com.tr/rehber/freelancer-nerede-bulunur-bionluk-armut-linkedin-isinn",
+   "status": "pending",
+   "date": null
+  },
+  {
+   "url": "https://www.isinn.com.tr/rehber/insaat-maliyeti-m2-2026",
+   "status": "pending",
+   "date": null
+  },
+  {
+   "url": "https://www.isinn.com.tr/rehber/ozel-ders-ucretleri-2026",
+   "status": "pending",
+   "date": null
+  },
+  {
    "url": "https://www.isinn.com.tr/vitrin/abaa50de-32e4-4ce8-a8c7-d288296c28e5",
    "status": "pending",
    "date": null
@@ -44,11 +79,6 @@
   },
   {
    "url": "https://www.isinn.com.tr/rehber/freelancer-ile-calismadan-once-brief-nasil-hazirlanir",
-   "status": "indexed",
-   "date": "2026-11-08"
-  },
-  {
-   "url": "https://www.isinn.com.tr/rehber/freelancer-nerede-bulunur-bionluk-armut-linkedin-isinn",
    "status": "indexed",
    "date": "2026-11-08"
   },

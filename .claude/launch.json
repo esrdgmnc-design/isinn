@@ -4,8 +4,63 @@
     {
       "name": "isinn-dev",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
       "port": 3000
+    },
+    {
+      "name": "isinn-dev-3001",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "next",
+        "dev",
+        "-p",
+        "3001"
+      ],
+      "port": 3001
+    },
+    {
+      "name": "bilim-masasi",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "C:/Users/Pc/Desktop/bilim-masasi",
+        "start"
+      ],
+      "port": 8765
+    },
+    {
+      "name": "turkcep-onizleme",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "C:/Users/Pc/Desktop/turkcep/sunucu.mjs"
+      ],
+      "port": 8790
+    },
+    {
+      "name": "turkcep-app-web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "C:/Users/Pc/Desktop/turkcep/app",
+        "run",
+        "web",
+        "--",
+        "--port",
+        "8791"
+      ],
+      "port": 8791
+    },
+    {
+      "name": "isinn-dev-3001-ayri",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": [
+        "/c",
+        "set NEXT_DIST_DIR=.next-3001&& npx next dev -p 3001"
+      ],
+      "port": 3001
     }
   ]
 }

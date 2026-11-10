@@ -31,10 +31,10 @@ export async function GET(_req, { params }) {
           <span style={{ fontSize: 64, fontWeight: 800, color: "#0F1115", letterSpacing: -2 }}>İşinn</span>
           <span style={{ fontSize: 64, fontWeight: 800, color: "#2563EB" }}>.</span>
         </div>
-        <div style={{ display: "flex", marginTop: 64, width: 920, height: 920, borderRadius: 40, overflow: "hidden", background: "#E7E1D6" }}>
+        <div style={{ display: "flex", marginTop: 64, width: 920, height: 920, borderRadius: 40, overflow: "hidden", background: "#FFFFFF", alignItems: "center", justifyContent: "center" }}>
           {cover ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={cover} width={920} height={920} style={{ width: 920, height: 920, objectFit: "cover" }} alt="" />
+            <img src={cover} width={920} height={920} style={{ width: 920, height: 920, objectFit: "contain" }} alt="" />
           ) : (
             <div style={{ display: "flex", width: "100%", height: "100%", alignItems: "center", justifyContent: "center", fontSize: 180, fontWeight: 800, color: "#0F1115" }}>
               {(provider || row.title || "İ").charAt(0).toLocaleUpperCase("tr-TR")}

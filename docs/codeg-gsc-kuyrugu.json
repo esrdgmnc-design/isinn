@@ -1,7 +1,11 @@
 {
  "note": "Code G (https://codegtechnology.com/) Search Console dizin kuyruğu. Her sabah codeg-gunluk-dizin-istegi görevi okur ve günceller. status: pending | indexed | requested. 'yeniden' alanı true olan adresler dizinde olsa bile bir kez yeniden istenir (içerik değişti).",
- "updated": "2026-10-26",
+ "updated": "2026-11-08",
  "items": [
+  {"url": "https://codegtechnology.com/cv-degeri-nedir-nasil-hesaplanir/", "status": "requested", "yeniden": false, "date": "2026-11-06", "not": "Yoast başlık+açıklama"},
+  {"url": "https://codegtechnology.com/basinc-dusurucu-regulator-nasil-secilir/", "status": "requested", "yeniden": false, "date": "2026-11-06", "not": "Yoast başlık"},
+  {"url": "https://codegtechnology.com/basinc-regulatoru-ile-emniyet-ventili-farki/", "status": "requested", "yeniden": false, "date": "2026-11-06", "not": "Yoast başlık"},
+  {"url": "https://codegtechnology.com/", "status": "requested", "yeniden": false, "date": "2026-11-06", "not": "ana sayfa Yoast başlığı değişti"},
   {"url": "https://codegtechnology.com/products/44-1100-serisi-yuksek-basinc-dusurucu-regulator/", "status": "indexed", "yeniden": false, "date": "2026-10-26"},
   {"url": "https://codegtechnology.com/products/20-1200-serisi-hidrojen-basinc-regulatoru/", "status": "requested", "yeniden": false, "date": "2026-10-26"},
   {"url": "https://codegtechnology.com/products/26-1700-serisi-geri-basinc-regulatoru/", "status": "indexed", "yeniden": false, "date": "2026-10-26"},
