@@ -27,6 +27,7 @@ import WorkLinkEditor from "./WorkLinkEditor";
 import { safeWorkLink } from "../lib/workLink";
 import { extractJsonValue } from "../lib/jsonExtract";
 import { faqJsonLd } from "../lib/faqJsonLd";
+import { PRICE_UNITS, LESSON_CATEGORY_SLUGS, LESSON_LEVELS, LESSON_DURATIONS, LESSON_FORMATS, cleanLessonDetails } from "../lib/priceUnit";
 import {
   Search, MapPin, Star, Heart, Share2, PlayCircle, ChevronLeft, ChevronRight, ChevronDown,
   Wrench, Truck, Monitor, Paintbrush, Code2, Sparkles, ThumbsUp,
@@ -8093,6 +8094,84 @@ function ListingLocationFields({ cityId, setCityId, district, setDistrict, homeS
   );
 }
 
+// Fiyat birimi ve ders bilgileri (2026-11-11; lib/priceUnit.js). İkisi de isteğe bağlı; seçilmezse sütun hiç
+// gönderilmez (SQL çalıştırılmadan önce de kayıt bozulmasın diye — bkz. withOptionalListingFields).
+const chipStyle = (on) => (on ? { background: "#0F1115", color: "#FFFFFF", borderColor: "transparent" } : { borderColor: "#E4E4E7", color: "#4B5563" });
+const UNIT_KEYS = { ders: "priceUnitDers", ay: "priceUnitAy", paket: "priceUnitPaket", proje: "priceUnitProje" };
+function PriceUnitChips({ value, onChange }) {
+  const { t } = useLanguage();
+  return (
+    <div className="mt-2.5">
+      <p className="text-[11px] mb-1.5" style={{ color: "#6B7280" }}>{t("listingDetail.priceUnitLabel")}</p>
+      <div className="flex flex-wrap gap-2">
+        {PRICE_UNITS.map((u) => (
+          <button key={u} type="button" onClick={() => onChange(value === u ? null : u)} className="px-3 py-1.5 rounded-full text-xs font-medium border" style={chipStyle(value === u)}>
+            {t(`listingDetail.${UNIT_KEYS[u]}`)}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const LEVEL_KEYS = { ilkokul: "levelIlkokul", ortaokul: "levelOrtaokul", lise: "levelLise", universite: "levelUniversite", yetiskin: "levelYetiskin" };
+const FORMAT_KEYS = { birebir: "formatBirebir", grup: "formatGrup", ikisi: "formatIkisi" };
+function LessonDetailsFields({ value, onChange }) {
+  const { t } = useLanguage();
+  const v = value || {};
+  const set = (patch) => onChange({ ...v, ...patch });
+  const levels = Array.isArray(v.levels) ? v.levels : [];
+  return (
+    <div className="rounded-xl border p-3.5 space-y-3" style={{ borderColor: "#E4E4E7" }}>
+      <p className="text-xs font-bold" style={{ color: "#0F1115" }}>{t("listingDetail.lessonTitle")}</p>
+      <div>
+        <p className="text-[11px] mb-1.5" style={{ color: "#6B7280" }}>{t("listingDetail.lessonLevels")}</p>
+        <div className="flex flex-wrap gap-2">
+          {Object.keys(LESSON_LEVELS).map((l) => (
+            <button key={l} type="button" onClick={() => set({ levels: levels.includes(l) ? levels.filter((x) => x !== l) : [...levels, l] })} className="px-3 py-1.5 rounded-full text-xs font-medium border" style={chipStyle(levels.includes(l))}>
+              {t(`listingDetail.${LEVEL_KEYS[l]}`)}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div>
+        <p className="text-[11px] mb-1.5" style={{ color: "#6B7280" }}>{t("listingDetail.lessonDuration")}</p>
+        <div className="flex flex-wrap gap-2">
+          {LESSON_DURATIONS.map((n) => (
+            <button key={n} type="button" onClick={() => set({ duration_min: v.duration_min === n ? null : n })} className="px-3 py-1.5 rounded-full text-xs font-medium border" style={chipStyle(v.duration_min === n)}>
+              {t("listingDetail.lessonMinutes", { n })}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div>
+        <p className="text-[11px] mb-1.5" style={{ color: "#6B7280" }}>{t("listingDetail.lessonFormat")}</p>
+        <div className="flex flex-wrap gap-2">
+          {Object.keys(LESSON_FORMATS).map((f) => (
+            <button key={f} type="button" onClick={() => set({ format: v.format === f ? null : f })} className="px-3 py-1.5 rounded-full text-xs font-medium border" style={chipStyle(v.format === f)}>
+              {t(`listingDetail.${FORMAT_KEYS[f]}`)}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div>
+        <p className="text-[11px] mb-1.5" style={{ color: "#6B7280" }}>{t("listingDetail.lessonEducation")}</p>
+        <input value={v.education || ""} onChange={(e) => set({ education: e.target.value.slice(0, 120) })} placeholder={t("listingDetail.lessonEducationPh")} className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none" style={{ borderColor: "#E4E4E7", background: "#F7F7F8", color: "#0F1115" }} />
+      </div>
+    </div>
+  );
+}
+
+// Yeni sütunlar yalnızca doluysa ya da satırda zaten varsa (SQL çalıştırılmış) payload'a girer.
+function withOptionalListingFields(payload, { row, priceUnit, lessonDetails, categorySlug }) {
+  const out = { ...payload };
+  const unit = payload.price_type === "fixed" && PRICE_UNITS.includes(priceUnit) ? priceUnit : null;
+  if (unit || (row && "price_unit" in row)) out.price_unit = unit;
+  const lesson = LESSON_CATEGORY_SLUGS.includes(categorySlug) ? cleanLessonDetails(lessonDetails) : null;
+  if (lesson || (row && "lesson_details" in row)) out.lesson_details = lesson;
+  return out;
+}
+
 // Vitrin sayfasında (sahip modu) bilgi bölümünün YERİNDE düzenlenmesi — eski
 // "ayrı düzenleme formu" (CreateListingView'ın edit modu) kalktı. `row`, sahibin
 // ListingDetail'de çektiği ham services satırı (profiles + categories ile).
@@ -8118,6 +8197,8 @@ function ListingInfoEditor({ row, userId, onSaved, onCancel }) {
   const [homeServiceVal, setHomeServiceVal] = useState(row.home_service_type || "evde");
   const [priceType, setPriceType] = useState(["fixed", "hourly", "quote"].includes(row.price_type) ? row.price_type : "fixed");
   const [priceText, setPriceText] = useState(row.price != null ? String(row.price).replace(".", ",") : "");
+  const [priceUnit, setPriceUnit] = useState(row.price_unit || null);
+  const [lessonDetails, setLessonDetails] = useState(row.lesson_details || null);
   const cover = useListingCoverPhoto({ userId, initialUrl: Array.isArray(row.images) ? row.images[0] : null });
   const [aiWriting, setAiWriting] = useState(false);
   const [error, setError] = useState("");
@@ -8179,7 +8260,7 @@ ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return
     };
     const { data, error: dbError } = await supabase
       .from("services")
-      .update(payload)
+      .update(withOptionalListingFields(payload, { row, priceUnit, lessonDetails, categorySlug: categoryId }))
       .eq("id", row.id)
       .select("*, profiles(*), categories(*)")
       .single();
@@ -8306,7 +8387,10 @@ ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return
               style={inputStyle}
             />
           )}
+          {priceType === "fixed" && <PriceUnitChips value={priceUnit} onChange={setPriceUnit} />}
         </div>
+
+        {LESSON_CATEGORY_SLUGS.includes(categoryId) && <LessonDetailsFields value={lessonDetails} onChange={setLessonDetails} />}
 
         {error && (
           <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(220,38,38,0.1)", color: "#DC2626" }}>{error}</p>
@@ -8476,6 +8560,8 @@ function CreateListingView({ onBack, onCreated, userId, onGoToProfile, onGoToPla
   const [cityId, setCityId] = useState("istanbul");
   const [district, setDistrict] = useState("");
   const [price, setPrice] = useState("");
+  const [priceUnit, setPriceUnit] = useState(null);
+  const [lessonDetails, setLessonDetails] = useState(null);
   const [homeServiceVal, setHomeServiceVal] = useState("evde");
   // Kapak fotoğrafı (kırp + yükle + AI içerik kontrolü) vitrin sayfasındaki sahip
   // düzenleyicisiyle ortak — bkz. useListingCoverPhoto.
@@ -8856,7 +8942,7 @@ ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return
 
     const { data, error: dbError } = await supabase
       .from("services")
-      .insert({ ...payload, provider_id: userId, active: true })
+      .insert({ ...withOptionalListingFields(payload, { row: null, priceUnit, lessonDetails, categorySlug: categoryId }), provider_id: userId, active: true })
       .select("*, profiles(*), categories(*)")
       .single();
 
@@ -9304,7 +9390,14 @@ ${desc}`).action === "block") { setError(t("moderation.blockedListing")); return
             className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none"
             style={{ borderColor: "#E4E4E7", background: "#F7F7F8", color: "#0F1115" }}
           />
+          {(() => {
+            // Serbest metin fiyatta birim yalnızca sabit tutar yazılınca sorulur ("saat" geçerse saatlik sayılır).
+            const p = parsePriceInput(price.trim());
+            return p.numeric != null && p.priceType === "fixed" ? <PriceUnitChips value={priceUnit} onChange={setPriceUnit} /> : null;
+          })()}
         </div>
+
+        {LESSON_CATEGORY_SLUGS.includes(categoryId) && <LessonDetailsFields value={lessonDetails} onChange={setLessonDetails} />}
 
         {error && (
           <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(220,38,38,0.1)", color: "#DC2626" }}>{error}</p>

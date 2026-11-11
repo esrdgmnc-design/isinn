@@ -33,7 +33,7 @@ export default async function VitrinBrosurPage({ params }) {
   const provider = getProviderName(row);
   const category = row.categories?.slug === "diger" ? "" : (row.categories?.name || "");
   const place = row.is_remote ? "Uzaktan / online" : String(row.city || "").split(",").map((s) => s.trim()).filter(Boolean).join(", ");
-  const price = row.price != null && Number(row.price) > 0 ? formatPrice(row.price, row.price_type) : "";
+  const price = row.price != null && Number(row.price) > 0 ? formatPrice(row.price, row.price_type, row.price_unit) : "";
   const realImg = Array.isArray(row.images) && row.images[0] ? row.images[0] : null;
   const cover = realImg ? optimizedImageUrl(realImg, 1080) : null;
   // A5'e sığsın diye: uzun başlıkta yazı küçülür, açıklama kısaltılır (QR alt kenardan taşmasın).

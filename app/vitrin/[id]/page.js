@@ -11,6 +11,7 @@ import { safeWorkLink } from "../../../lib/workLink";
 import SeoFooter from "../../../components/SeoFooter";
 import { getCategoryGuides } from "../../../lib/categoryGuides";
 import { benzerlikPuani, dersBilgisi, DERS_SAYFALARI } from "../../../lib/dersKonulari";
+import { LESSON_CATEGORY_SLUGS, lessonDetailRows } from "../../../lib/priceUnit";
 
 // SEO için eklendi (2026-09-16): İşinn'in tamamı eskiden tek bir "/" sayfası
 // üzerinde, istemci tarafı görünüm durumuyla çalışıyordu — her vitrin kendi
@@ -160,7 +161,7 @@ export default async function VitrinPage({ params }) {
 
   const provider = getProviderName(row);
   const city = row.is_remote ? "Uzaktan" : (row.city || "Belirtilmemiş");
-  const price = formatPrice(row.price, row.price_type);
+  const price = formatPrice(row.price, row.price_type, row.price_unit);
   const realImg = Array.isArray(row.images) && row.images[0] ? row.images[0] : null;
   const img = realImg || FALLBACK_IMG;
   const category = row.categories?.name || "";
@@ -307,6 +308,7 @@ export default async function VitrinPage({ params }) {
           else if (row.home_service_type) rows.push(["Hizmet şekli", { evde: "Müşterinin evinde", mekanda: "Kendi mekânında", esnek: "Esnek (ev ya da mekân)" }[row.home_service_type] || null]);
           if (!row.is_remote && row.city) rows.push(["Konum", row.city]);
           rows.push(["Fiyat", price]);
+          if (LESSON_CATEGORY_SLUGS.includes(row.categories?.slug)) rows.push(...lessonDetailRows(row.lesson_details));
           if (row.created_at) rows.push(["Yayın tarihi", new Date(row.created_at).toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" })]);
           const filtered = rows.filter(([, v]) => v);
           if (filtered.length < 2) return null;

@@ -89,7 +89,7 @@ function summarize(row, full = false) {
     provider: getProviderName(row),
     category: row.categories?.name || null,
     location: row.is_remote ? (row.city ? `${row.city} · uzaktan/online da çalışıyor` : "Uzaktan / online") : row.city || null,
-    price: formatPrice(row.price, row.price_type),
+    price: formatPrice(row.price, row.price_type, row.price_unit),
     description: full ? desc : desc.length > 280 ? desc.slice(0, 277) + "…" : desc,
     // 2026-11-08: ChatGPT entegrasyonu "isim, konum, fiyat geliyor, görsel gelmiyor" dedi; kapak fotoğrafı (herkese açık adres) eklendi.
     image: coverImage(row),

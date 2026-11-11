@@ -136,7 +136,7 @@ export default async function CityPage({ params }) {
                     <Link href={`/vitrin/${row.id}`} className="block">
                       <p className="text-sm font-bold mb-1 line-clamp-2" style={{ color: "#0F1115" }}>{row.title}</p>
                       <p className="text-xs mb-2" style={{ color: "#6B7280" }}>{provider}</p>
-                      <p className="text-sm font-black" style={{ color: "#0F1115" }}>{formatPrice(row.price, row.price_type)}</p>
+                      <p className="text-sm font-black" style={{ color: "#0F1115" }}>{formatPrice(row.price, row.price_type, row.price_unit)}</p>
                     </Link>
                   </div>
                 </div>

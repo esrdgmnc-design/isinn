@@ -113,7 +113,7 @@ export default async function DersSayfasi({ params }) {
                     <p className="text-sm font-bold mb-1 line-clamp-2" style={{ color: "#0F1115" }}>{row.title}</p>
                     <p className="text-xs mb-2" style={{ color: "#6B7280" }}>{getProviderName(row)} · {yer}</p>
                     {row.description && <p className="text-xs mb-2 line-clamp-3" style={{ color: "#6B7280" }}>{clamp(String(row.description).split(/\n\s*\n/)[0], 130)}</p>}
-                    <p className="text-sm font-black" style={{ color: "#0F1115" }}>{formatPrice(row.price, row.price_type)}</p>
+                    <p className="text-sm font-black" style={{ color: "#0F1115" }}>{formatPrice(row.price, row.price_type, row.price_unit)}</p>
                   </div>
                 </Link>
               );
