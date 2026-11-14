@@ -25,6 +25,7 @@ export default async function sitemap() {
     "/yetenegini-farket",
     "/hakkimizda",
     "/yapay-zeka-araci",
+    "/teknoloji",
     "/araclar/serbest-meslek-makbuzu-hesaplama",
     "/araclar/ozel-ders-ucreti-hesaplama",
     "/hizmet-fiyatlari",
@@ -39,9 +40,10 @@ export default async function sitemap() {
   const CHANGED_ON_1004 = new Set(["", "/rehber", "/yetenegini-farket", "/hakkimizda"]);
   const CHANGED_ON_1011 = new Set(["/rehber", "/hakkimizda"]);
   const CHANGED_ON_1019 = new Set(["/en"]);
+  const CHANGED_ON_1114 = new Set(["", "/teknoloji"]);
   const staticEntries = staticPaths.map((path) => ({
     url: `${BASE_URL}${path}`,
-    lastModified: new Date(CHANGED_ON_1019.has(path) ? "2026-10-19T00:00:00Z" : CHANGED_ON_1011.has(path) ? "2026-10-11T00:00:00Z" : CHANGED_ON_1004.has(path) ? "2026-10-04T00:00:00Z" : "2026-09-21T00:00:00Z"),
+    lastModified: new Date(CHANGED_ON_1114.has(path) ? "2026-11-14T00:00:00Z" : CHANGED_ON_1019.has(path) ? "2026-10-19T00:00:00Z" : CHANGED_ON_1011.has(path) ? "2026-10-11T00:00:00Z" : CHANGED_ON_1004.has(path) ? "2026-10-04T00:00:00Z" : "2026-09-21T00:00:00Z"),
     changeFrequency: path === "" ? "daily" : "monthly",
     priority: path === "" ? 1 : 0.3,
   }));

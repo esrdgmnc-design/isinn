@@ -20,6 +20,7 @@ export async function GET() {
   lines.push("");
   lines.push(`- [Ana Sayfa](${BASE_URL}/): Becerilerinden hizmet fikri alma ve hizmet bulma.`);
   lines.push(`- [Yeteneğini Farket](${BASE_URL}/yetenegini-farket): Becerilerini yazan kişiye 1-2 hizmet fikri ve hazır vitrin taslağı öneren yapay zekâ destekli araç. Öneriler kazanç ya da iş garantisi değildir; denemek için üyelik gerekmez.`);
+  lines.push(`- [Teknoloji](${BASE_URL}/teknoloji): Yapay zekâ eşleştirmesi (ihtiyacı serbest metinle yazınca uygun vitrinleri sıralar, sunucu kurallarla denetler, ücretli öne çıkarma sıralamaya girmez), Yeteneğini Keşfet, anlam tabanlı arama genişletme, yayın öncesi yapay zekâ görsel denetimi, MCP sunucusu, kişisel verinin yapay zekâya gitmeden silinmesi, iki taraflı iş onayı.`);
   lines.push(`- [Hakkımızda](${BASE_URL}/hakkimizda): İşinn nedir, ne yapar, ne yapmaz, şirket bilgileri.`);
   lines.push(`- [Rehberler](${BASE_URL}/rehber): Hizmet verenler ve hizmet alanlar için rehber yazıları.`);
   lines.push(`- Kategori sayfaları \`/kategori/<slug>\`, şehir sayfaları \`/sehir/<slug>\`, vitrin sayfaları \`/vitrin/<id>\`; güncel liste için [sitemap.xml](${BASE_URL}/sitemap.xml).`);

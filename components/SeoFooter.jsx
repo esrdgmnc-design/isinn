@@ -35,6 +35,7 @@ export default async function SeoFooter() {
       <div className="flex flex-wrap gap-x-4 gap-y-1.5 mb-3 font-bold">
         <Link href="/" style={link}>Ana sayfa</Link>
         <Link href="/yetenegini-farket" style={link}>Yeteneğini Farket</Link>
+        <Link href="/teknoloji" style={link}>Teknoloji</Link>
         <Link href="/rehber" style={link}>Rehberler</Link>
         <Link href="/hakkimizda" style={link}>Hakkımızda</Link>
         <Link href="/en" hrefLang="en" style={link}>English</Link>
