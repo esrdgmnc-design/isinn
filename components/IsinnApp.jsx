@@ -19,6 +19,7 @@ import { startNativePush, enablePush, unregisterPush } from "../lib/nativePush";
 import AiConsentModal from "./AiConsentModal";
 import NeedMatchView, { NEED_PREFILL_KEY, NEED_TEXT_KEY } from "./NeedMatchView";
 import HomeBento from "./HomeBento";
+import HomeTechShowcase from "./HomeTechShowcase";
 import DeliveryConfirmGate from "./DeliveryConfirmGate";
 import { trackEvent, captureAttribution, markInternal } from "../lib/analytics";
 import { useLanguage } from "../lib/i18n/LanguageContext";
@@ -2052,36 +2053,11 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
       </div>
       </div>
 
-      {/* Teknoloji bandı (2026-11-14, kurucu: "insanlar sıradan algılıyor, teknik yüksekliğimizi vurgula").
-          Yalnızca koddaki gerçek davranış; ayrıntı ve kaynak dosyalar app/teknoloji/page.js'te. */}
-      <section className="max-w-6xl mx-auto px-5 mt-14 sm:mt-16">
-        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-6">
-          <div className="min-w-0">
-            <p className="text-xs tracking-[0.2em] uppercase font-bold mb-1.5" style={{ color: "#2563EB" }}>{t("home.techEyebrow")}</p>
-            <h2 className="font-sans text-2xl sm:text-3xl font-black tracking-tight" style={{ color: "#0F1115" }}>{t("home.techHeading")}</h2>
-            <p className="text-sm mt-1 max-w-2xl" style={{ color: "#575E6B" }}>{t("home.techSubtext")}</p>
-          </div>
-          <Link href="/teknoloji" className="text-sm font-bold shrink-0 inline-flex items-center gap-1" style={{ color: "#2563EB" }}>
-            {t("home.techCta")} <ChevronRight size={16} aria-hidden="true" />
-          </Link>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[
-            { Icon: Sparkles, k: "Match" },
-            { Icon: Wand2, k: "Talent" },
-            { Icon: Bot, k: "Assistants" },
-            { Icon: ShieldCheck, k: "Privacy" },
-          ].map(({ Icon, k }) => (
-            <div key={k} className="rounded-2xl p-5" style={{ border: "1px solid #E4E4E7" }}>
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-3" style={{ background: "#0F1115" }}>
-                <Icon size={17} className="text-white" aria-hidden="true" />
-              </div>
-              <p className="text-sm font-bold mb-1.5" style={{ color: "#0F1115" }}>{t(`home.tech${k}Title`)}</p>
-              <p className="text-xs leading-relaxed" style={{ color: "#575E6B" }}>{t(`home.tech${k}Body`)}</p>
-            </div>
-          ))}
-        </div>
-      </section>
+      {/* Teknoloji vitrini (2026-11-14, kurucu: "daha etkileyici, açıklayıcı, fayda görsünler"); içerik components/HomeTechShowcase.jsx. */}
+      <HomeTechShowcase onTry={() => {
+        if (process.env.NEXT_PUBLIC_NEED_MATCH_ENABLED !== "1") { onNav("post"); return; }
+        onNav("needMatch");
+      }} />
 
       {/* Açık talepler (2026-10-17 yeniden tasarım): pastel başlık şeridi, turuncu
           fiyat ve emoji kalktı; sektör-nötr, sade kart. "0 teklif var" (teklif akışı
