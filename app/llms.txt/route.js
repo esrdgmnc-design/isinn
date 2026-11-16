@@ -1,4 +1,5 @@
 import { REHBER_POSTS, rehberMeta } from "../../lib/rehberContent";
+import { TOOLS } from "../../lib/tools";
 
 // Eskiden statik public/llms.txt'ti ve rehber yazılarına hiç bağlantı vermiyordu;
 // artık REHBER_POSTS'tan üretiliyor (yeni yazı eklenince otomatik yansır). Dürüst not:
@@ -21,13 +22,21 @@ export async function GET() {
   lines.push(`- [Ana Sayfa](${BASE_URL}/): Becerilerinden hizmet fikri alma ve hizmet bulma.`);
   lines.push(`- [Yeteneğini Farket](${BASE_URL}/yetenegini-farket): Becerilerini yazan kişiye 1-2 hizmet fikri ve hazır vitrin taslağı öneren yapay zekâ destekli araç. Öneriler kazanç ya da iş garantisi değildir; denemek için üyelik gerekmez.`);
   lines.push(`- [Teknoloji](${BASE_URL}/teknoloji): Yapay zekâ eşleştirmesi (ihtiyacı serbest metinle yazınca uygun vitrinleri sıralar, sunucu kurallarla denetler, ücretli öne çıkarma sıralamaya girmez), Yeteneğini Keşfet, anlam tabanlı arama genişletme, yayın öncesi yapay zekâ görsel denetimi, MCP sunucusu, kişisel verinin yapay zekâya gitmeden silinmesi, iki taraflı iş onayı.`);
+  lines.push(`- [Yapay Zekâ Aracı](${BASE_URL}/yapay-zeka-araci): İşinn vitrin aramasını Claude, ChatGPT ve MCP destekleyen diğer asistanlara bağlama belgesi; araçlar ve paylaşılan veriler.`);
+  lines.push(`- [Hizmet Fiyatları](${BASE_URL}/hizmet-fiyatlari): Özel ders, mali müşavir, çeviri, web sitesi, logo, ev temizliği ve diğer hizmetler için kaynaklı fiyat aralıkları tek sayfada.`);
   lines.push(`- [Hakkımızda](${BASE_URL}/hakkimizda): İşinn nedir, ne yapar, ne yapmaz, şirket bilgileri.`);
+  lines.push(`- [English](${BASE_URL}/en): İşinn'in İngilizce tanıtım sayfası.`);
   lines.push(`- [Rehberler](${BASE_URL}/rehber): Hizmet verenler ve hizmet alanlar için rehber yazıları.`);
+  lines.push("- Özel ders sayfaları `/ozel-ders/<konu>` (ör. matematik, online İngilizce, LGS): o konuda ders veren öğretmen vitrinleri.");
   lines.push(`- Kategori sayfaları \`/kategori/<slug>\`, şehir sayfaları \`/sehir/<slug>\`, vitrin sayfaları \`/vitrin/<id>\`; güncel liste için [sitemap.xml](${BASE_URL}/sitemap.xml).`);
   lines.push("");
   lines.push("## Yapay zekâ asistanları için araç (MCP)");
   lines.push("");
   lines.push(`- MCP sunucusu: \`${BASE_URL}/api/mcp\` (Streamable HTTP, durumsuz, kimlik doğrulama yok, yalnızca okuma). Araçlar: \`search_vitrins\` (hizmet, kategori, şehir ile vitrin arama), \`get_vitrin\` (tek vitrin ayrıntısı), \`list_categories\`. Yalnızca vitrin sayfalarında zaten herkese açık bilgiler döner. Belge: ${BASE_URL}/yapay-zeka-araci`);
+  lines.push("");
+  lines.push("## Ücretsiz hesaplama araçları");
+  lines.push("");
+  for (const t of TOOLS) lines.push(`- [${t.name}](${BASE_URL}${t.path}): ${t.teaser}`);
   lines.push("");
   lines.push("## Rehberler");
   lines.push("");

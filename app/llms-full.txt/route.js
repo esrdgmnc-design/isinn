@@ -2,6 +2,7 @@ import { REHBER_POSTS, rehberMeta } from "../../lib/rehberContent";
 import { faqJsonLd } from "../../lib/faqJsonLd";
 import { supabase } from "../../lib/supabaseClient";
 import { isIndexableListing } from "../../lib/seoFormat";
+import { TOOLS } from "../../lib/tools";
 
 // public/llms.txt sadece bir sayfa/link dizini — AI arama motorları (ChatGPT,
 // Perplexity, Claude) İşinn'i alıntılamak için yine her URL'e tek tek gitmek
@@ -60,6 +61,16 @@ export async function GET() {
       lines.push("");
     }
   } catch { /* liste alınamazsa dosyanın geri kalanı yine verilir */ }
+  lines.push("## Yapay zekâ asistanları için araç (MCP)");
+  lines.push("");
+  lines.push("İşinn vitrinleri, MCP destekleyen yapay zekâ asistanlarından (Claude, ChatGPT ve diğerleri) aranabilir. Sunucu adresi: " + BASE_URL + "/api/mcp (Streamable HTTP, kimlik doğrulama yok, yalnızca okuma). Araçlar: search_vitrins (hizmet, kategori, şehir/ilçe ile vitrin arar, en fazla 10 sonuç), get_vitrin (tek vitrinin açıklaması, konumu, hizmet verenin beyan ettiği fiyat ve bağlantısı), list_categories (aktif vitrini olan kategoriler ve sayıları). Yalnızca vitrin sayfasında zaten herkese açık bilgiler döner; telefon ve e-posta paylaşılmaz. Belge: " + BASE_URL + "/yapay-zeka-araci");
+  lines.push("");
+  lines.push("## Ücretsiz hesaplama araçları");
+  lines.push("");
+  for (const t of TOOLS) lines.push(`- ${t.name} (${BASE_URL}${t.path}): ${t.teaser}`);
+  lines.push("");
+  lines.push("Hizmet fiyat aralıklarının özeti: " + BASE_URL + "/hizmet-fiyatlari");
+  lines.push("");
   lines.push("## Sıkça Sorulan Sorular");
   lines.push("");
   for (const q of faqJsonLd.mainEntity) {

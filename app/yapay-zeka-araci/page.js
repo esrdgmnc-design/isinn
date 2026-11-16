@@ -2,6 +2,7 @@ import Link from "next/link";
 import { COMPANY } from "../../lib/companyInfo";
 import { socialMeta } from "../../lib/seoMeta";
 import SeoFooter from "../../components/SeoFooter";
+import { jsonLdString } from "../../lib/jsonLd";
 
 // Yapay zekâ asistanları için MCP aracının herkese açık belgesi (Claude bağlayıcı dizini ve
 // ChatGPT uygulama dizini "documentation URL" ister). Dizin incelemecileri için İngilizce bölüm de var.
@@ -34,6 +35,39 @@ const PROMPTS = [
   "Find a logo designer in Turkey who works remotely",
 ];
 
+// Yapılandırılmış veri: sayfa + MCP sunucusunun kendisi (WebAPI). Yalnızca app/api/mcp/route.js'in gerçek
+// davranışı; puan/fiyat/kullanıcı sayısı yok.
+const LD = [
+  {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    name: TITLE,
+    description: DESCRIPTION,
+    url: URL,
+    dateModified: UPDATED,
+    inLanguage: "tr-TR",
+    isPartOf: { "@id": `${BASE_URL}/#website` },
+    breadcrumb: {
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "İşinn", item: `${BASE_URL}/` },
+        { "@type": "ListItem", position: 2, name: "Yapay zekâ aracı", item: URL },
+      ],
+    },
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "WebAPI",
+    name: "İşinn MCP sunucusu",
+    description: "İşinn vitrinlerini hizmet, kategori ve şehre göre arayan, salt okunur Model Context Protocol (MCP) sunucusu. Araçlar: search_vitrins, get_vitrin, list_categories. Kimlik doğrulama gerekmez; yalnızca vitrin sayfalarında zaten herkese açık bilgiler döner.",
+    url: MCP_URL,
+    documentation: URL,
+    isAccessibleForFree: true,
+    inLanguage: ["tr", "en"],
+    provider: { "@id": `${BASE_URL}/#org` },
+  },
+];
+
 const h2 = "font-sans text-xl font-black mb-3 mt-8";
 const p = "text-sm mb-3";
 const ink = { color: "#374151" };
@@ -41,6 +75,7 @@ const ink = { color: "#374151" };
 export default function AiToolPage() {
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdString(LD) }} />
       <div className="max-w-2xl mx-auto px-5 py-10">
         <nav aria-label="Sayfa yolu" className="text-xs mb-4" style={{ color: "#6B7280" }}>
           <Link href="/" style={{ color: "#2563EB" }}>İşinn</Link> › Yapay zekâ aracı
