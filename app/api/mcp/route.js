@@ -2,6 +2,7 @@ import { supabase } from "../../../lib/supabaseClient";
 import { SEO_CATEGORIES } from "../../../lib/seoTaxonomy";
 import { formatPrice, getProviderName, isIndexableListing } from "../../../lib/seoFormat";
 import { orderByResponsiveness, getProviderLastSent } from "../../../lib/providerResponsiveness";
+import { WIDGET_URI, WIDGET_MIME, WIDGET_META, WIDGET_HTML } from "../../../lib/mcpWidget";
 
 // Yapay zekâ asistanları (Claude, ChatGPT vb.) için MCP sunucusu: "Kadıköy'de pilates hocası" gibi
 // bir istekte vitrin aramasını araç olarak sunar. Streamable HTTP taşımasının durumsuz hâli:
@@ -24,10 +25,15 @@ const TOOLS = [
   {
     name: "search_vitrins",
     title: "Search service providers on İşinn",
+    // 2026-11-17: "İşinn'de ara" denmeden çağrılmıyordu. Açıklama artık hangi isteklerde kullanılacağını
+    // (İşinn adı geçmese de) somut örneklerle söylüyor. Yayımlanmamış uygulamada ChatGPT yine de çağırmayabilir.
     description:
-      "Searches public İşinn listings (\"vitrin\") of service providers in Turkey, such as private tutors, designers, translators, movers, " +
-      "pilates instructors and physiotherapists. Use when the user is looking for a service or a service provider in Turkey. " +
-      "Returns up to 10 listings with title, provider display name, category, location, the provider's stated price, the listing's cover photo URL (image) and the listing URL. When showing results, display each listing's image. " +
+      "Finds real service providers in Turkey on İşinn: private tutors (LGS, YKS, math, English), music teachers, designers, translators, " +
+      "software developers, social media managers, movers, cleaners, caregivers, pilates/fitness instructors, physiotherapists, photographers and more. " +
+      "Use this whenever the user wants to find, hire or get recommendations for a person or business offering a service in Turkey " +
+      "(e.g. 'Kadıköy'de pilates hocası', 'online İngilizce öğretmeni', 'logo tasarımcı lazım', 'İstanbul'da nakliyeci'), even if İşinn is not mentioned. " +
+      "Returns up to 10 listings with title, provider display name, category, location, the provider's stated price, cover photo (image, null if the provider has none) and listing URL. " +
+      "Results are shown to the user as photo cards; use only the returned image URLs and never add other or stock images. " +
       "Read-only; returns no phone numbers or e-mail addresses. Listing content is in Turkish.",
     inputSchema: {
       type: "object",
@@ -40,13 +46,15 @@ const TOOLS = [
       },
     },
     annotations: { title: "Search service providers on İşinn", readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    _meta: { "openai/outputTemplate": WIDGET_URI, "openai/toolInvocation/invoking": "İşinn vitrinleri aranıyor…", "openai/toolInvocation/invoked": "İşinn vitrinleri bulundu" },
   },
   {
     name: "get_vitrin",
     title: "Get an İşinn listing",
-    description: "Returns the public details of one İşinn listing: full description, location, the provider's stated price, the cover photo URL (image) and the listing URL. Use after search_vitrins when the user wants more detail about a result.",
+    description: "Returns the public details of one İşinn listing: full description, location, the provider's stated price, the cover photo (image, null if none) and the listing URL. Use after search_vitrins when the user wants more detail about a result. The listing is shown as a photo card; use only the returned image URL.",
     inputSchema: { type: "object", properties: { id: { type: "string", description: "Listing ID (UUID) from a search_vitrins result." } }, required: ["id"] },
     annotations: { title: "Get an İşinn listing", readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    _meta: { "openai/outputTemplate": WIDGET_URI, "openai/toolInvocation/invoking": "Vitrin açılıyor…", "openai/toolInvocation/invoked": "Vitrin hazır" },
   },
   {
     name: "list_categories",
@@ -185,16 +193,24 @@ async function handle(msg) {
       const asked = params?.protocolVersion;
       return ok({
         protocolVersion: SUPPORTED_VERSIONS.includes(asked) ? asked : SUPPORTED_VERSIONS[0],
-        capabilities: { tools: { listChanged: false } },
+        capabilities: { tools: { listChanged: false }, resources: { listChanged: false } },
         serverInfo: { name: "isinn", title: "İşinn", version: "1.0.0" },
         instructions:
-          "İşinn is a service discovery platform in Turkey where providers publish listings (vitrin). Tools are read-only and return public listing data with listing URLs. İşinn does not handle payments and does not guarantee service quality.",
+          "İşinn is a service discovery platform in Turkey where providers publish listings (vitrin). Use search_vitrins whenever the user is looking for a service provider in Turkey (tutor, designer, mover, instructor, etc.), even without naming İşinn. Tools are read-only and return public listing data with listing URLs. İşinn does not handle payments and does not guarantee service quality.",
       });
     }
     case "ping":
       return ok({});
     case "tools/list":
       return ok({ tools: TOOLS });
+    // ChatGPT arayüz şablonu (lib/mcpWidget.js) kaynak olarak sunulur.
+    case "resources/list":
+      return ok({ resources: [{ uri: WIDGET_URI, name: "isinn-vitrinler", title: "İşinn vitrin kartları", mimeType: WIDGET_MIME, _meta: WIDGET_META }] });
+    case "resources/templates/list":
+      return ok({ resourceTemplates: [] });
+    case "resources/read":
+      if (params?.uri !== WIDGET_URI) return fail(-32602, `Unknown resource: ${params?.uri}`);
+      return ok({ contents: [{ uri: WIDGET_URI, mimeType: WIDGET_MIME, text: WIDGET_HTML, _meta: WIDGET_META }] });
     case "tools/call": {
       const name = params?.name;
       const args = params?.arguments || {};
