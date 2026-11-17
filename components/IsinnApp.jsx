@@ -42,7 +42,7 @@ import {
   PaintBucket, AirVent, PawPrint, Music2, Calculator, Languages,
   PenTool, Video, Mic, ClipboardList, TrendingUp, BarChart3, Wallet, CalendarClock, Puzzle, PencilRuler, Layers,
   MonitorSmartphone, Car, Bug, Stethoscope, Scale,
-  Shapes, Flame, Brush, Cpu, PersonStanding, Crown, Table2, Sofa, Footprints, ExternalLink, LogOut
+  Shapes, Flame, Brush, Cpu, PersonStanding, Crown, Table2, Sofa, Footprints, ExternalLink, LogOut, Bike
 } from "lucide-react";
 
 // ---------------------------------------------------------------
@@ -118,6 +118,8 @@ const CATEGORIES = [
   { id: "avukat", name: "Avukat / Hukuki Danışmanlık", mode: "both", icon: Scale },
   // 2026-10-20 (kurucu): tanıtımlarda anılan genel danışmanlık kategorisi yoktu. bkz. supabase/categories_seed_v9.sql.
   { id: "danismanlik", name: "Danışmanlık & Mentorluk", mode: "both", icon: Briefcase },
+  // 2026-11-17 (kurucu): kurye vitrini "Diğer"e düşmüştü (destek talebi). bkz. supabase/categories_seed_v10.sql.
+  { id: "kurye", name: "Kurye", mode: "local", icon: Bike },
   // Gerçek kullanıcı bildirimi (2026-09-30): direksiyon dersi vermek isteyen
   // bir eğitmen, sabit listede uygun bir kategori bulamayıp vitrin açamamıştı
   // ("Diğer" seçeneğini fark etmemiş) — bu, genel "Eğitmen" kategorisinin
@@ -151,7 +153,7 @@ const CATEGORIES = [
 const CUSTOM_CATEGORY_ID = "diger-ozel";
 
 const PARENT_CATEGORIES = [
-  { id: "ev-hizmetleri", name: "Ev Hizmetleri", icon: Home, categoryIds: ["temizlik", "nakliye", "tadilat", "cilingir", "terzi", "elektrikci", "su-tesisatcisi", "hali-yikama", "yemek", "boya-badana", "klima-beyaz-esya", "ic-mimarlik", "teknik-servis", "oto-tamir", "bocek-ilaclama", "mobilya-yenileme", "ayakkabi-canta-tamiri"] },
+  { id: "ev-hizmetleri", name: "Ev Hizmetleri", icon: Home, categoryIds: ["temizlik", "nakliye", "kurye", "tadilat", "cilingir", "terzi", "elektrikci", "su-tesisatcisi", "hali-yikama", "yemek", "boya-badana", "klima-beyaz-esya", "ic-mimarlik", "teknik-servis", "oto-tamir", "bocek-ilaclama", "mobilya-yenileme", "ayakkabi-canta-tamiri"] },
   { id: "guzellik-bakim", name: "Güzellik & Bakım", icon: Wand2, categoryIds: ["tirnakci", "makyaj", "bakim", "kuafor-berber"] },
   { id: "saglik", name: "Sağlık", icon: HeartPulse, categoryIds: ["hasta-bakici", "hemsire", "fizyoterapist", "diyetisyen", "psikolog", "yoga-koc", "spor-egitmeni", "veteriner"] },
   { id: "egitim-aile", name: "Eğitim & Aile", icon: GraduationCap, categoryIds: ["ogretmen", "egitmen", "bakici", "logusa-bakicisi", "emzirme-danismani", "etkinlik-organizatoru", "muzik-egitmeni", "oyun-ablasi", "direksiyon-egitmeni"] },
