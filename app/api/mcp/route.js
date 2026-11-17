@@ -134,11 +134,13 @@ async function searchVitrins(args = {}) {
     const idf = Object.fromEntries(words.map((w) => [w, Math.log((docs.length + 1) / (docs.filter((d) => d.hay.includes(w)).length + 1)) + 0.1]));
     // Eş anlamlı / yazım hatası → kategori ("video editör" → Video Düzenleme). bkz. lib/searchSynonyms.js
     const synCats = synonymCategories(args.query);
-    // Yalnızca yedek: kelimesi hiç geçmeyen vitrine küçük puan; gerçek eşleşme varsa aşağıdaki %35 eşiğinde elenir.
+    // Eş anlamlının işaret ettiği kategorideki vitrine, başlıkta geçen bir kelime kadar puan.
+    // ("gemi inşa" → "insa" kelimesi açıklamadaki "insan"a takılıp alakasız vitrin getiriyordu.)
+    const synBonus = 3 * Math.max(0.1, ...Object.values(idf));
     const scored = docs
       .map(({ r, hay, title }) => {
         let score = words.reduce((s, w) => s + (title.includes(w) ? 3 : hay.includes(w) ? 1 : 0) * idf[w], 0);
-        if (score === 0 && synCats.includes(r.categories?.slug)) score = 0.05;
+        if (synCats.includes(r.categories?.slug)) score += synBonus;
         if (words.length > 1 && words.every((w) => hay.includes(w))) score *= 1.5; // tüm kelimeler geçiyorsa öne
         return { r, score };
       })
