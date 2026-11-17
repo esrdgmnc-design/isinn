@@ -9578,7 +9578,24 @@ function SupportChatView({ onBack, onReport, currentUserId, onNav }) {
       if (!(activeVitrinCount > 0)) missing.push("aktif vitrin");
       if (!(reviewCount > 0)) missing.push("müşteri değerlendirmesi");
       if (!phone?.verified) missing.push("telefon doğrulaması");
-      setUserContext(`KULLANICI BİLGİSİ (bu konuştuğun gerçek kişi — cevaplarını buna göre kişiselleştir, ama bu bilgiyi kullanıcıya "sistemden okudum" diye tuhaf şekilde tekrar etme, doğal kullan):\nAd: ${name}\nTelefon doğrulaması: ${phone?.verified ? "yapılmış" : "yapılmamış"}\n${planLine}\nProfil doluluk puanı: %${strengthPct} (7 gerçek sinyalden hesaplandı: profil fotoğrafı, bio, sertifika/CV, tanıtım videosu, aktif vitrin, müşteri değerlendirmesi, telefon doğrulaması). "Profilim güçlü mü/yeterli mi" gibi bir soru gelirse SADECE bu gerçek %${strengthPct} rakamını ve eksik olanları (${missing.length ? missing.join(", ") : "eksik yok"}) söyle, kendi başına farklı bir yüzde uydurma.`);
+      // Kullanıcının kendi vitrin durumu ve son 14 günde reddedilen fotoğrafları
+      // (moderated_images istemciye kapalı, sunucu yalnızca bu kişinin kayıtlarını döner).
+      // "Reddedildi uyarısı aldım" diyen birine nedenini söyleyebilmek için.
+      let statusLines = "";
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.access_token) {
+          const r = await fetch("/api/support-context", { headers: { Authorization: `Bearer ${session.access_token}` } });
+          if (r.ok) {
+            const sc = await r.json();
+            const v = (sc.vitrins || []).map((x) => `- "${x.title}": ${x.active ? "yayında" : x.closedForBilling ? "üyelik bittiği için kapalı" : "kapalı (yayında değil)"}`).join("\n");
+            const p = (sc.rejectedPhotos || []).map((x) => `- ${new Date(x.at).toLocaleString("tr-TR", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })}: ${x.reason}`).join("\n");
+            statusLines = `\nVİTRİNLERİ (gerçek durum):\n${v || "- Henüz vitrini yok."}\nSON 14 GÜNDE YAPAY ZEKÂ DENETİMİNİN REDDETTİĞİ FOTOĞRAFLARI:\n${p || "- Yok."}\nKullanıcı "vitrinim yayınlanmıyor", "fotoğraf yüklenmiyor", "reddedildi/denied uyarısı aldım" gibi bir şey söylerse ÖNCE bu gerçek durumu kullan: vitrin yayındaysa bunu açıkça söyle; reddedilen fotoğraf varsa nedenini nazikçe aktar ve o fotoğraf yerine kuralla uyumlu başka bir fotoğraf eklemesini öner. Reddin haksız olduğunu düşünüyorsa **Hayır, yönetime bildir** butonunu öner. Ret kararını kendin değiştiremezsin, değiştirebilirmiş gibi davranma.`;
+          }
+        }
+      } catch {}
+      if (cancelled) return;
+      setUserContext(`KULLANICI BİLGİSİ (bu konuştuğun gerçek kişi — cevaplarını buna göre kişiselleştir, ama bu bilgiyi kullanıcıya "sistemden okudum" diye tuhaf şekilde tekrar etme, doğal kullan):\nAd: ${name}\nTelefon doğrulaması: ${phone?.verified ? "yapılmış" : "yapılmamış"}\n${planLine}\nProfil doluluk puanı: %${strengthPct} (7 gerçek sinyalden hesaplandı: profil fotoğrafı, bio, sertifika/CV, tanıtım videosu, aktif vitrin, müşteri değerlendirmesi, telefon doğrulaması). "Profilim güçlü mü/yeterli mi" gibi bir soru gelirse SADECE bu gerçek %${strengthPct} rakamını ve eksik olanları (${missing.length ? missing.join(", ") : "eksik yok"}) söyle, kendi başına farklı bir yüzde uydurma.${statusLines}`);
     })();
     return () => { cancelled = true; };
   }, [currentUserId]);
