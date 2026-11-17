@@ -28,6 +28,7 @@ import WorkLinkEditor from "./WorkLinkEditor";
 import { safeWorkLink } from "../lib/workLink";
 import { extractJsonValue } from "../lib/jsonExtract";
 import { faqJsonLd } from "../lib/faqJsonLd";
+import { synonymCategories } from "../lib/searchSynonyms";
 import { PRICE_UNITS, LESSON_CATEGORY_SLUGS, LESSON_LEVELS, LESSON_DURATIONS, LESSON_FORMATS, cleanLessonDetails } from "../lib/priceUnit";
 import {
   Search, MapPin, Star, Heart, Share2, PlayCircle, ChevronLeft, ChevronRight, ChevronDown,
@@ -5279,12 +5280,16 @@ function SearchResultsView({ query, cityFilter, onBack, onSelectListing, realLis
   const cityQ = (cityFilter || "").trim().toLocaleLowerCase("tr-TR");
   // DEMO vitrinler arama sonuçlarında gösterilmez (jüri incelemesi: "site bitmemiş" izlenimi veriyordu).
   const pool = (realListings || []).filter((l) => !l.isDemo);
+  // Eş anlamlı / yazım hatası → kategori ("video editör" → Video Düzenleme). bkz. lib/searchSynonyms.js
+  // Yalnızca yedek: sorgu hiçbir vitrinde birebir geçmiyorsa devreye girer, iyi sonuç veren aramaları değiştirmez.
+  const hasLiteralHit = q.length > 0 && pool.some((l) => [l.title, l.provider, l.city, l.desc || "", CATEGORIES.find((c) => c.id === l.category)?.name || ""].join(" ").toLocaleLowerCase("tr-TR").includes(q));
+  const synCats = hasLiteralHit ? [] : synonymCategories(query);
   const literalResults = pool
     .filter((l) => {
       const haystack = [l.title, l.provider, l.city, l.desc || "", CATEGORIES.find((c) => c.id === l.category)?.name || ""]
         .join(" ")
         .toLocaleLowerCase("tr-TR");
-      const matchesQuery = q.length === 0 || haystack.includes(q);
+      const matchesQuery = q.length === 0 || haystack.includes(q) || synCats.includes(l.category);
       const matchesCity = cityQ.length === 0 || (l.city || "").toLocaleLowerCase("tr-TR").includes(cityQ);
       const matchesHome = !homeOnly || l.homeService === "evde" || l.homeService === "esnek";
       return matchesQuery && matchesCity && matchesHome;

@@ -3,6 +3,7 @@ import { SEO_CATEGORIES } from "../../../lib/seoTaxonomy";
 import { formatPrice, getProviderName, isIndexableListing } from "../../../lib/seoFormat";
 import { orderByResponsiveness, getProviderLastSent } from "../../../lib/providerResponsiveness";
 import { WIDGET_URI, WIDGET_MIME, WIDGET_META, WIDGET_HTML } from "../../../lib/mcpWidget";
+import { synonymCategories } from "../../../lib/searchSynonyms";
 
 // Yapay zekâ asistanları (Claude, ChatGPT vb.) için MCP sunucusu: "Kadıköy'de pilates hocası" gibi
 // bir istekte vitrin aramasını araç olarak sunar. Streamable HTTP taşımasının durumsuz hâli:
@@ -131,9 +132,13 @@ async function searchVitrins(args = {}) {
     // Nadir kelime (ör. "matematik") yaygın kelimeden ("ders") ağır basar; yoksa "matematik özel ders"
     // aramasında İngilizce ders vitrinleri de üst sıralara giriyordu (Claude testinde görüldü, 2026-10-31).
     const idf = Object.fromEntries(words.map((w) => [w, Math.log((docs.length + 1) / (docs.filter((d) => d.hay.includes(w)).length + 1)) + 0.1]));
+    // Eş anlamlı / yazım hatası → kategori ("video editör" → Video Düzenleme). bkz. lib/searchSynonyms.js
+    const synCats = synonymCategories(args.query);
+    // Yalnızca yedek: kelimesi hiç geçmeyen vitrine küçük puan; gerçek eşleşme varsa aşağıdaki %35 eşiğinde elenir.
     const scored = docs
       .map(({ r, hay, title }) => {
         let score = words.reduce((s, w) => s + (title.includes(w) ? 3 : hay.includes(w) ? 1 : 0) * idf[w], 0);
+        if (score === 0 && synCats.includes(r.categories?.slug)) score = 0.05;
         if (words.length > 1 && words.every((w) => hay.includes(w))) score *= 1.5; // tüm kelimeler geçiyorsa öne
         return { r, score };
       })
