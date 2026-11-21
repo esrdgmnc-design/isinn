@@ -7091,7 +7091,7 @@ const BOOST_PACKAGE = {
   id: "one-cikarma", name: "Öne Çıkarma Paketi", priceMonthly: 459, currency: "₺",
   tagline: "Tüm vitrinlerini öne çıkarır — Standart Üyeliğe ek, isteğe bağlı",
   features: [
-    "Öne çıkan sağlayıcı rozeti", "Haritada ve aramada üstte görünme",
+    "Öne çıkan hizmet veren rozeti", "Haritada ve aramada üstte görünme",
     "AI eşleştirmede öncelik", "Destek asistanında öncelikli sıra",
   ],
 };

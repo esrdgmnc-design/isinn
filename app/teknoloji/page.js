@@ -24,62 +24,62 @@ const FEATURES = [
   {
     // lib/needMatchCore.js, lib/needMatchRun.js, app/api/need-match
     icon: Sparkles,
-    tag: "Yapay zekâ eşleştirmesi",
+    tag: "Derdini yaz",
     title: "Derdini yaz, uzmanı o bulsun",
-    body: "“Kızım LGS'ye hazırlanıyor, matematikte zorlanıyor” gibi kendi cümlenle yazarsın. Yapay zekâ ne aradığını ve nerede aradığını anlar, uygun vitrinleri sıralar. Sonra sunucu her öneriyi kurallarla yeniden denetler: yüz yüze bir işte başka ilden aday gelmez, para verip öne çıkmış olmak sıralamayı etkilemez.",
+    body: "“Kızım LGS'ye hazırlanıyor, matematikte zorlanıyor” gibi kendi cümlenle yazarsın. Yapay zekâ ne aradığını ve nerede aradığını anlar, sana uygun vitrinleri sıralar. Sonra her öneri kurallarla bir kez daha kontrol edilir: yüz yüze işte başka şehirden kimse çıkmaz, para verip öne çıkmak sırayı etkilemez.",
     href: "/?view=needMatch",
     cta: "Dene",
   },
   {
     // app/api/talent, lib/talentCore.js, app/yetenegini-farket
     icon: Lightbulb,
-    tag: "Yeteneğini Keşfet",
+    tag: "Yeteneğini Farket",
     title: "Beceriden hizmete, hazır vitrin taslağıyla",
-    body: "Ne yapmaktan keyif aldığını, haftada ne kadar vaktin olduğunu yazarsın; yapay zekâ 1-2 somut hizmet fikri, bu hafta atacağın ilk adımı ve yayına hazır bir vitrin taslağı çıkarır. Öneri uymazsa nedenini söylersin (vaktim yok, yüzümü göstermem…), ona göre yeniden önerir.",
+    body: "Ne yapmaktan keyif aldığını ve haftada ne kadar vaktin olduğunu yazarsın. Yapay zekâ 1-2 hizmet fikri, bu hafta atacağın ilk adımı ve yayına hazır bir vitrin metni çıkarır. Uymazsa nedenini yazarsın (vaktim yok, yüzümü göstermem…), yenisini önerir.",
     href: "/yetenegini-farket",
-    cta: "Keşfet",
+    cta: "Dene",
   },
   {
     // components/IsinnApp.jsx feature "search_expand"
     icon: Search,
-    tag: "Anlamı anlayan arama",
+    tag: "Akıllı arama",
     title: "Kelime tutmasa da sonuç bulur",
-    body: "Aradığın kelimeyle birebir eşleşen vitrin yoksa arama boş dönmez: yapay zekâ aramanın anlamından ilgili kategori ve anahtar kelimeleri çıkarır, yakın sonuçları getirir.",
+    body: "Yazdığın kelimeyle birebir uyan vitrin yoksa arama boş dönmez: yapay zekâ ne aradığını anlar, ilgili alanlara bakar ve yakın sonuçları getirir.",
   },
   {
     // app/api/listing-photo-check + supabase/listing_photo_moderation.sql (trigger)
     icon: ScanEye,
-    tag: "Görsel denetimi",
-    title: "Her fotoğraf yayından önce yapay zekâdan geçer",
-    body: "Vitrine yüklenen her görsel sunucuda küçültülür ve yapay zekâ ile denetlenir. Onay kaydı veritabanında tutulur ve veritabanı, onaysız bir görselin vitrine yazılmasını kendisi reddeder; yani denetim tarayıcıda atlanarak aşılamaz.",
+    tag: "Fotoğraf kontrolü",
+    title: "Her fotoğraf yayından önce kontrol edilir",
+    body: "Vitrine yüklenen her fotoğraf yapay zekâ ile kontrol edilir. Kontrolden geçmeyen fotoğraf vitrine eklenemez; bu kontrol atlanamaz.",
   },
   {
     // app/api/mcp/route.js
     icon: Bot,
-    tag: "Yapay zekâ asistanlarına açık",
+    tag: "Asistanına da sor",
     title: "Claude ve ChatGPT, İşinn'de arama yapabilir",
-    body: "İşinn, yapay zekâ asistanlarının doğrudan bağlanabildiği bir MCP sunucusu çalıştırır. Asistana “İstanbul'da matematik öğretmeni bul” dediğinde sonuçlar İşinn vitrinlerinden, bağlantılarıyla gelir. Yalnızca vitrin sayfasında zaten herkese açık olan bilgiler paylaşılır.",
+    body: "Claude ya da ChatGPT gibi yapay zekâ asistanları İşinn'e bağlanabilir. Asistana “İstanbul'da matematik öğretmeni bul” dersen sonuçlar İşinn vitrinlerinden, bağlantılarıyla gelir. Yalnızca vitrinde zaten herkese açık olan bilgiler paylaşılır.",
     href: "/yapay-zeka-araci",
     cta: "Nasıl bağlanır",
   },
   {
     // lib/piiScrub.js, lib/needMatchCore.js
     icon: ShieldCheck,
-    tag: "Gizlilik tasarımda",
+    tag: "Gizlilik",
     title: "Kişisel bilgi yapay zekâya gitmez",
-    body: "Telefon, e-posta, T.C. kimlik numarası ve IBAN, hiçbir yapay zekâ çağrısına girmeden metinden silinir. Eşleştirmede yazdığın metin saklanmaz; sağlık şikâyeti içeren metin yapay zekâya hiç gönderilmez, kurallarla eşleştirilir. Yapay zekânın serbest metni sana sonuç diye gösterilmez.",
+    body: "Telefon, e-posta, T.C. kimlik numarası ve IBAN, yapay zekâya gitmeden yazından silinir. Aramada yazdığın metin saklanmaz. Sağlıkla ilgili bir şey yazarsan metin yapay zekâya hiç gönderilmez, yalnızca kurallarla aranır. Yapay zekânın kendi yazdığı cümleler sana sonuç diye gösterilmez.",
   },
   {
     // supabase/two_sided_confirmation_2026_10_05.sql, delivery_dispute_2026_10_16.sql
     icon: BadgeCheck,
     tag: "İki taraflı onay",
     title: "“İş yapıldı” bilgisini iki taraf da onaylar",
-    body: "Bir iş bittiğinde hem hizmet alan hem hizmet veren onay verir; onay zamanları sunucuda damgalanır. İki onay da varsa yorumda “İki taraf da onayladı” etiketi görünür, itiraz gelirse etiket kendiliğinden kalkar.",
+    body: "İş bitince hizmet alan da hizmet veren de onay verir; onayların zamanı kaydedilir. İkisi de onaylarsa yorumda “İki taraf da onayladı” yazar, biri itiraz ederse bu yazı kalkar.",
   },
   {
     // features list D.51
     icon: BellRing,
-    tag: "Kayıtlı arama",
+    tag: "Aramayı kaydet",
     title: "Aradığın kişi gelince haber verir",
     body: "Aramanı kaydedersin; sonradan bu aramaya uyan yeni bir vitrin açıldığında bildirim alırsın. Tekrar tekrar bakman gerekmez.",
   },
@@ -88,7 +88,7 @@ const FEATURES = [
     icon: Smartphone,
     tag: "Her yerde",
     title: "Web, iOS ve Android",
-    body: "Aynı hesap, aynı vitrin: tarayıcıdan, App Store'daki iOS uygulamasından ya da Google Play'deki Android uygulamasından kullanılır. Arayüz Türkçe ve İngilizce.",
+    body: "Aynı hesapla tarayıcıdan, App Store'daki iPhone uygulamasından ya da Google Play'deki Android uygulamasından kullanırsın. Türkçe ve İngilizce.",
   },
 ];
 
@@ -115,14 +115,14 @@ export default function TechnologyPage() {
         <section className="rounded-3xl px-6 sm:px-10 py-10 sm:py-14" style={{ background: "#0B0B0F" }}>
           <p className="text-xs tracking-[0.2em] uppercase font-bold mb-3" style={{ color: "#3B82F6" }}>Teknoloji</p>
           <h1 className="font-sans text-3xl sm:text-5xl font-black tracking-tight mb-4 max-w-3xl" style={{ color: "#FFFFFF" }}>
-            Arkasında yapay zekâ çalışan bir hizmet keşif platformu
+            İhtiyacın olan kişiyi bulmana yapay zekâ yardım eder
           </h1>
           <p className="text-base sm:text-lg max-w-2xl leading-relaxed" style={{ color: "#A1A1AA" }}>
-            İşinn bir ilan panosu değil. Ne aradığını kendi cümlenle anlatırsın, yapay zekâ anlamını çıkarır, sunucu kurallarla denetler, sana uygun uzmanlar gelir. Kişisel bilgilerin bu sürecin hiçbir aşamasında yapay zekâya gitmez.
+            Ne aradığını kendi cümlenle yazarsın. Yapay zekâ ne istediğini anlar, uymayanları eler ve sana uygun kişileri gösterir. Kişisel bilgilerin yapay zekâya gitmez.
           </p>
           <div className="flex flex-wrap gap-3 mt-7">
-            <Link href="/?view=needMatch" className="text-sm font-bold px-5 py-3 rounded-full text-white" style={{ background: "#2563EB" }}>Yapay zekâ ile uzman bul</Link>
-            <Link href="/yetenegini-farket" className="text-sm font-bold px-5 py-3 rounded-full" style={{ border: "1px solid #3F3F46", color: "#FFFFFF" }}>Yeteneğini keşfet</Link>
+            <Link href="/?view=needMatch" className="text-sm font-bold px-5 py-3 rounded-full text-white" style={{ background: "#2563EB" }}>Uzman bul</Link>
+            <Link href="/yetenegini-farket" className="text-sm font-bold px-5 py-3 rounded-full" style={{ border: "1px solid #3F3F46", color: "#FFFFFF" }}>Ne iş yapabilirim?</Link>
           </div>
         </section>
 
@@ -150,8 +150,8 @@ export default function TechnologyPage() {
           <h2 className="font-sans text-2xl sm:text-3xl font-black tracking-tight mb-4" style={{ color: "#0F1115" }}>Yapay zekâ neye karar vermez?</h2>
           <ul className="list-disc pl-5 space-y-2 text-sm leading-relaxed" style={{ color: "#374151" }}>
             <li>Kiminle çalışacağına sen karar verirsin. Yapay zekâ öneri sunar, seçimi ve anlaşmayı taraflar kendi aralarında yapar.</li>
-            <li>Sıralamayı para belirlemez: eşleştirmede ücretli öne çıkarma hesaba katılmaz.</li>
-            <li>Yapay zekânın önerileri iş, kazanç ya da hizmet kalitesi garantisi değildir. İşinn ödemeye aracılık etmez.</li>
+            <li>Sırayı para belirlemez: ücretli öne çıkarma bu sıralamada hesaba katılmaz.</li>
+            <li>Yapay zekânın önerileri iş, kazanç ya da hizmet kalitesi sözü değildir. İşinn ödemeye aracılık etmez.</li>
             <li>Hangi verinin nasıl işlendiği: <Link href="/gizlilik-politikasi" style={{ color: "#2563EB" }}>Gizlilik Politikası</Link> ve <Link href="/kvkk-aydinlatma-metni" style={{ color: "#2563EB" }}>KVKK Aydınlatma Metni</Link>.</li>
           </ul>
           <p className="text-sm mt-6" style={{ color: "#374151" }}>
