@@ -46,6 +46,10 @@ ok("sağlık şikâyeti yapay zekâya gitmez", () => {
   assert.equal(healthCategory("Depresyondayım, bir psikolog arıyorum"), "psikolog");
   assert.equal(healthCategory("Bel fıtığım var, evde fizik tedavi"), "fizyoterapist");
   assert.equal(healthCategory("Web sitesi yaptırmak istiyorum"), null);
+  // "terapi" fizyoterapistin içinde geçiyor: psikoloğa düşmemeli
+  assert.equal(healthCategory("İstanbul'da fizyoterapist arıyorum"), "fizyoterapist");
+  assert.equal(healthCategory("Ümraniye'de bel fıtığı sonrası egzersiz için fizyoterapist arıyorum"), "fizyoterapist");
+  assert.equal(healthCategory("Kaygı bozukluğu için terapi almak istiyorum"), "psikolog");
 });
 
 ok("ürün satın alma ayrılır, hizmet ayrılmaz", () => {
