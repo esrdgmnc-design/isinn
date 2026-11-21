@@ -27,10 +27,14 @@ export default function NeedMatchView({ realListings, onSelectListing, onBack, o
   const [state, setState] = useState({ status: "idle" }); // idle | loading | done | error
   const examples = t("needMatch.examples");
 
+  // Kutu boşken içindeki silik örnek cümle gerçek yazı sanılıyordu; düğme pasif kalınca "çalışmıyor"
+  // izlenimi veriyordu (kurucu, 2026-11-21). Kutu boşsa Eşleştir o örnek cümleyle arar ve cümleyi kutuya yazar.
+  const placeholderText = hint || (Array.isArray(examples) ? examples[0] : "");
   const submit = async (e) => {
     e?.preventDefault();
-    const q = text.trim();
+    const q = text.trim() || placeholderText.trim();
     if (!q) return;
+    if (!text.trim()) setText(q);
     setState({ status: "loading" });
     trackEvent("need_submit", {}, userId);
     try {
@@ -98,13 +102,13 @@ export default function NeedMatchView({ realListings, onSelectListing, onBack, o
               rows={3}
               onFocus={() => setFocused(true)}
               onBlur={() => setFocused(false)}
-              placeholder={focused ? "" : hint || (Array.isArray(examples) ? examples[0] : "")}
+              placeholder={focused ? "" : placeholderText}
               aria-label={t("needMatch.inputLabel")}
               className="w-full rounded-md px-4 py-3 text-[15px] leading-relaxed outline-none resize-y focus:ring-2 focus:ring-[#3B82F6] placeholder:text-[#8B8D98]"
               style={{ background: "#1E2029", border: "2px solid #3B82F6", color: "#F9FAFB" }}
             />
             <p className="mt-2.5 text-xs leading-relaxed" style={{ color: "#8B8D98" }}>{t("needMatch.privacyNote")}</p>
-            <button type="submit" disabled={state.status === "loading" || !text.trim()} className="mt-6 inline-flex items-center gap-2 px-8 py-3.5 rounded-md text-[15px] font-bold disabled:opacity-50 transition-colors" style={{ background: "#2563EB", color: "#FFFFFF" }}>
+            <button type="submit" disabled={state.status === "loading" || !(text.trim() || placeholderText.trim())} className="mt-6 inline-flex items-center gap-2 px-8 py-3.5 rounded-md text-[15px] font-bold disabled:opacity-50 transition-colors" style={{ background: "#2563EB", color: "#FFFFFF" }}>
               {state.status === "loading" ? <><Loader2 size={16} className="animate-spin" /> {t("needMatch.loading")}</> : <>{t("needMatch.submit")} <ChevronRight size={16} /></>}
             </button>
           </form>
@@ -122,10 +126,15 @@ export default function NeedMatchView({ realListings, onSelectListing, onBack, o
             <h2 className="text-2xl font-black text-white">{t("needMatch.resultsTitle")}</h2>
             <p className="text-sm mt-1 mb-6" style={{ color: "#9CA3AF" }}>{t("needMatch.rankingNote")}</p>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {cards.map(({ l, reasons }, i) => (
+              {cards.map(({ l, reasons, score }, i) => (
                 <button key={l.id} onClick={() => { trackEvent("need_card_click", { rank: i + 1 }, userId); onSelectListing(l); }} className="group text-left rounded-2xl overflow-hidden transition-transform hover:-translate-y-1" style={{ background: "#15161B", border: "1px solid #26272E" }}>
                   <div className="relative aspect-[16/10] overflow-hidden" style={{ background: "#1F2028" }}>
                     {l.img && <img src={l.img} alt={l.title} loading="lazy" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />}
+                    {Number.isFinite(score) && (
+                      <span className="absolute top-3 right-3 text-xs font-bold px-2.5 py-1 rounded-full" style={{ background: "rgba(11,11,15,0.85)", color: "#93C5FD", border: "1px solid rgba(96,165,250,0.4)" }}>
+                        {t("needMatch.matchPct", { score })}
+                      </span>
+                    )}
                   </div>
                   <div className="p-4">
                     <p className="text-[15px] font-bold leading-snug line-clamp-2 text-white">{l.title}</p>
