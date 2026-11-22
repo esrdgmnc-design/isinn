@@ -1591,9 +1591,9 @@ const HomeListingCard = memo(function HomeListingCard({ l, fresh, isFavorite, on
           </p>
           <p className="text-[10px] truncate" style={{ color: "rgba(255,255,255,0.75)" }}>{l.provider}</p>
         </div>
-        {/* Dokunmatik ekranda (hover yok) branş her zaman görünür (2026-10-17, kurucu: "tıklamadan branşları yazmıyor"). */}
+        {/* Branş her ekranda her zaman görünür (2026-11-22, kurucu: "kategoriler belirgin olsun, her kategoriden insan var gibi dursun"); üzerine gelince başlık/isim katmanına yer açar. */}
         {(getCategoryName(l.category, t) || l.provider) && (
-          <span className="hidden [@media(hover:none)]:block absolute inset-x-0 bottom-0 px-1.5 pb-1 pt-5 text-[11px] font-semibold leading-tight text-white truncate pointer-events-none" style={{ background: "linear-gradient(180deg, transparent, rgba(0,0,0,0.78))" }}>
+          <span className="group-hover:opacity-0 transition-opacity absolute inset-x-0 bottom-0 px-1.5 pb-1 pt-5 text-[11px] font-semibold leading-tight text-white line-clamp-2 pointer-events-none" style={{ background: "linear-gradient(180deg, transparent, rgba(0,0,0,0.78))" }}>
             {getCategoryName(l.category, t) || l.provider}
           </span>
         )}
@@ -1641,7 +1641,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
   const homeListings = useMemo(() => (realListings || []).filter((l) => !l.isDemo), [realListings]);
   // Ana sayfada ilk 24 küçük vitrin (masaüstünde iki tam satır); "Daha fazlasını gör" tam listeye götürür. Gizlenenler yine
   // HTML'de (CSS hidden), SSR/SEO'dan düşmüyor.
-  const HOME_GRID_LIMIT = 24;
+  const HOME_GRID_LIMIT = 36; // 2026-11-22 kurucu: "Keşfet'te daha çok insan görünsün" (masaüstünde üç tam satır)
   const jobsScrollRef = useRef(null);
   // useMemo: hero kelime (1.8sn) ve öne çıkan (4.5sn) zamanlayıcıları HomeView'ı
   // sürekli yeniden render ediyor — filtre/sıralama/karıştırma her tikte tekrar koşmasın.
@@ -1659,7 +1659,13 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
       filter === "home" ? all.filter((l) => l.mode === "local" && (l.homeService === "evde" || l.homeService === "esnek")) :
       all.filter((l) => l.mode === filter);
     const sorted = base.slice().sort((a, b) => computeVisibilityScore(b) - computeVisibilityScore(a));
-    return avoidAdjacentCategoryClash(sorted);
+    // 2026-11-22: her kategoriden önce bir kişi (sırayla tur), böylece ilk satırlarda olabildiğince çok kategori görünür.
+    const byCat = new Map();
+    sorted.forEach((l) => { const k = l.category || "_"; if (!byCat.has(k)) byCat.set(k, []); byCat.get(k).push(l); });
+    const queues = [...byCat.values()];
+    const mixed = [];
+    for (let round = 0; mixed.length < sorted.length; round++) queues.forEach((q) => { if (q[round]) mixed.push(q[round]); });
+    return avoidAdjacentCategoryClash(mixed);
   }, [homeListings, filter]);
 
   // 2026-11-08 (kurucu: "kartlar sürekli değişsin ki kalabalıklaşmış algısı oluşsun"): Keşfet ızgarası sayfa açıldıktan
@@ -2074,7 +2080,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {/* Telefonda gizli (2026-10-17, kurucu: "saçma duruyor") — başlık yanında sıkışıyordu; telefonda hero'daki "Ücretsiz talep oluştur" bağlantısı var. */}
-            <button onClick={() => onNav("post")} className="hidden sm:inline-flex text-sm font-bold px-4 py-2.5 rounded-full transition-colors hover:bg-black hover:text-white" style={{ border: "1px solid #0F1115", color: "#0F1115" }}>
+            <button onClick={() => onNav("post")} className="hidden sm:inline-flex text-sm font-bold px-4 py-2.5 rounded-full transition-colors hover:bg-[#F4F4F5]" style={{ border: "1px solid #0F1115", color: "#0F1115" }}>
               {t("home.postJobCta")}
             </button>
             <button onClick={() => jobsScrollRef.current?.scrollBy({ left: -300, behavior: "smooth" })} aria-label={t("home.scrollPrev")} className="hidden sm:flex w-10 h-10 rounded-full items-center justify-center transition-colors hover:bg-gray-100" style={{ border: "1px solid #E4E4E7", color: "#0F1115" }}>
@@ -2229,7 +2235,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
           <h2 className="font-sans text-2xl sm:text-3xl font-black tracking-tight mb-5" style={{ color: "#0F1115" }}>{t("home.popularCategoriesTitle")}</h2>
           <div className="flex flex-wrap gap-2">
             {discoveryPopularCategories.map((c) => (
-              <Link key={c.slug} href={`/kategori/${c.slug}`} className="text-sm font-bold px-4 py-2 rounded-full transition-colors hover:bg-black hover:text-white" style={{ border: "1px solid #0F1115", color: "#0F1115" }}>
+              <Link key={c.slug} href={`/kategori/${c.slug}`} className="text-sm font-bold px-4 py-2 rounded-full transition-colors hover:bg-[#F4F4F5]" style={{ border: "1px solid #0F1115", color: "#0F1115" }}>
                 {(language === "en" && getCategoryName(c.slug, t)) || c.name}
               </Link>
             ))}

@@ -64,8 +64,8 @@ export default function HomeBento({ onOpen }) {
   }, [allowMotion, video]);
 
   return (
-    <section className="pt-7 sm:pt-10 pb-8" aria-label={L(BENTO_BIG, "title")}>
-      <h2 className="px-5 sm:px-8 mb-5 sm:mb-6 font-sans text-[22px] sm:text-3xl font-black tracking-tight [text-wrap:balance]" style={{ color: "#FFFFFF" }}>
+    <section className="pt-5 sm:pt-7 pb-6" aria-label={L(BENTO_BIG, "title")}>
+      <h2 className="px-5 sm:px-8 mb-4 font-sans text-xl sm:text-2xl font-black tracking-tight [text-wrap:balance]" style={{ color: "#FFFFFF" }}>
         {heading.lead} <span style={{ color: "#60A5FA" }}>{heading.accent}</span>
       </h2>
       <div className="bento px-5 sm:px-8">
