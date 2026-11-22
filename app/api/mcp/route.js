@@ -2,7 +2,7 @@ import { supabase } from "../../../lib/supabaseClient";
 import { SEO_CATEGORIES } from "../../../lib/seoTaxonomy";
 import { formatPrice, getProviderName, isIndexableListing } from "../../../lib/seoFormat";
 import { orderByResponsiveness, getProviderLastSent } from "../../../lib/providerResponsiveness";
-import { WIDGET_URI, WIDGET_MIME, WIDGET_META, WIDGET_HTML } from "../../../lib/mcpWidget";
+import { WIDGET_URI, WIDGET_MIME, WIDGET_META, WIDGET_HTML, toolUiMeta } from "../../../lib/mcpWidget";
 import { synonymCategories } from "../../../lib/searchSynonyms";
 
 // Yapay zekâ asistanları (Claude, ChatGPT vb.) için MCP sunucusu: "Kadıköy'de pilates hocası" gibi
@@ -47,7 +47,7 @@ const TOOLS = [
       },
     },
     annotations: { title: "Search service providers on İşinn", readOnlyHint: true, destructiveHint: false, openWorldHint: false },
-    _meta: { "openai/outputTemplate": WIDGET_URI, "openai/toolInvocation/invoking": "İşinn vitrinleri aranıyor…", "openai/toolInvocation/invoked": "İşinn vitrinleri bulundu" },
+    _meta: toolUiMeta("İşinn vitrinleri aranıyor…", "İşinn vitrinleri bulundu"),
   },
   {
     name: "get_vitrin",
@@ -55,7 +55,7 @@ const TOOLS = [
     description: "Returns the public details of one İşinn listing: full description, location, the provider's stated price, the cover photo (image, null if none) and the listing URL. Use after search_vitrins when the user wants more detail about a result. The listing is shown as a photo card; use only the returned image URL.",
     inputSchema: { type: "object", properties: { id: { type: "string", description: "Listing ID (UUID) from a search_vitrins result." } }, required: ["id"] },
     annotations: { title: "Get an İşinn listing", readOnlyHint: true, destructiveHint: false, openWorldHint: false },
-    _meta: { "openai/outputTemplate": WIDGET_URI, "openai/toolInvocation/invoking": "Vitrin açılıyor…", "openai/toolInvocation/invoked": "Vitrin hazır" },
+    _meta: toolUiMeta("Vitrin açılıyor…", "Vitrin hazır"),
   },
   {
     name: "list_categories",
@@ -168,7 +168,11 @@ async function getVitrin(args = {}) {
   const rows = await loadServices();
   const row = rows.find((r) => r.id === id);
   if (!row) return { found: false, note: "No active listing with this id. It may have been unpublished; run search_vitrins again." };
-  return { found: true, vitrin: summarize(row, true) };
+  // Çalışma görselleri: vitrinin diğer fotoğrafları + portföy (vitrin sayfasındakiyle aynı kaynak, herkese açık).
+  const { data: pf } = await supabase.from("portfolio_items").select("url").eq("service_id", row.id).eq("media_type", "image").limit(9);
+  const extra = (Array.isArray(row.images) ? row.images : []).filter((u) => typeof u === "string" && u.startsWith("https://"));
+  const gallery = [...new Set([...extra.slice(1), ...(pf || []).map((p) => p.url).filter((u) => typeof u === "string" && u.startsWith("https://"))])].slice(0, 8);
+  return { found: true, vitrin: { ...summarize(row, true), gallery } };
 }
 
 async function listCategories() {
