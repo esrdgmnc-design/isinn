@@ -3462,6 +3462,30 @@ function ListingDetail({ listing, onBack, onContact, userReviews, onAddReview, o
     if (navigator.share) { try { await navigator.share({ title: listing.title, url }); } catch {} return; }
     try { await navigator.clipboard.writeText(url); setShareCopied(true); setTimeout(() => setShareCopied(false), 2000); } catch {}
   };
+  // Hikâyede paylaş (2026-11-22): Instagram bağlantıyı yalnızca mesajda kabul ediyor; hikâye için görsel dosyası
+  // gerekir. 1080×1920 vitrin kartını (/vitrin/[id]/kart) dosya olarak paylaşım menüsüne verir. Dosya paylaşımı
+  // desteklenmiyorsa kartı yeni sekmede açar (uzun basıp kaydedilir).
+  const [storyPreparing, setStoryPreparing] = useState(false);
+  const shareListingStory = async () => {
+    const cardUrl = `/vitrin/${listing.dbId}/kart`;
+    trackEvent("vitrin_shared", { via: "story", listing_id: listing.dbId || null }, currentUserId || null);
+    setStoryPreparing(true);
+    try {
+      const res = await fetch(cardUrl);
+      if (!res.ok) throw new Error("card");
+      const blob = await res.blob();
+      const file = new File([blob], "isinn-vitrin.png", { type: "image/png" });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try { await navigator.share({ files: [file] }); } catch {}
+      } else {
+        window.open(cardUrl, "_blank", "noopener");
+      }
+    } catch {
+      window.open(cardUrl, "_blank", "noopener");
+    } finally {
+      setStoryPreparing(false);
+    }
+  };
   const [listingReportReason, setListingReportReason] = useState("yanlis_kategori");
   const [listingReportDetail, setListingReportDetail] = useState("");
   const [listingReportSubmitting, setListingReportSubmitting] = useState(false);
@@ -4287,6 +4311,17 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
             >
               <Share2 size={14} />
               {shareCopied ? t("listingDetail.shareCopied") : t("listingDetail.shareButton")}
+            </button>
+          )}
+          {listing.isReal && listing.dbId && !listing.isDemo && (
+            <button
+              onClick={shareListingStory}
+              disabled={storyPreparing}
+              className="w-full py-2.5 mt-2 rounded-full text-sm font-medium border flex items-center justify-center gap-1.5"
+              style={{ borderColor: "#E4E4E7", color: "#0F1115", opacity: storyPreparing ? 0.6 : 1 }}
+            >
+              <Share2 size={14} />
+              {storyPreparing ? t("listingDetail.shareStoryLoading") : t("listingDetail.shareStoryButton")}
             </button>
           )}
 
