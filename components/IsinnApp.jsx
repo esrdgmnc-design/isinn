@@ -1789,7 +1789,7 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
             <button
               type="button"
               onClick={() => onNav("createListing")}
-              className="w-full sm:w-auto sm:px-6 py-2.5 rounded-2xl border font-bold text-[15px] flex items-center justify-center gap-2 bg-white transition-colors hover:bg-black hover:text-white"
+              className="w-full sm:w-auto sm:px-6 py-2.5 rounded-2xl border font-bold text-[15px] flex items-center justify-center gap-2 bg-white transition-colors hover:bg-[#F4F4F5] active:bg-[#E4E4E7]"
               style={{ borderColor: "#0F1115", color: "#0F1115" }}
             >
               {t("home.providerCtaButton")}
