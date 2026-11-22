@@ -2062,12 +2062,6 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
       </div>
       </div>
 
-      {/* Teknoloji vitrini (2026-11-14, kurucu: "daha etkileyici, açıklayıcı, fayda görsünler"); içerik components/HomeTechShowcase.jsx. */}
-      <HomeTechShowcase onTry={() => {
-        if (process.env.NEXT_PUBLIC_NEED_MATCH_ENABLED !== "1") { onNav("post"); return; }
-        onNav("needMatch");
-      }} />
-
       {/* Açık talepler (2026-10-17 yeniden tasarım): pastel başlık şeridi, turuncu
           fiyat ve emoji kalktı; sektör-nötr, sade kart. "0 teklif var" (teklif akışı
           yok, sayı hep 0'dı) ve her kartta aynı "Detaylar ilanda" satırı çıkarıldı;
@@ -2219,6 +2213,12 @@ function HomeView({ onSelectListing, onNav, filter, setFilter, onSearch, onApply
           </div>
         )}
       </section>
+
+      {/* Teknoloji vitrini (2026-11-14); 2026-11-22 kurucu: "Kategorilerde kaybolma" bölümü Keşfet'ten hemen sonra. İçerik components/HomeTechShowcase.jsx. */}
+      <HomeTechShowcase onTry={() => {
+        if (process.env.NEXT_PUBLIC_NEED_MATCH_ENABLED !== "1") { onNav("post"); return; }
+        onNav("needMatch");
+      }} />
 
       {/* 2026-10-17: "Öne çıkan profiller" (vitrinlerin tekrarı) ve ~70 kategorilik
           "Aradığını bulamadın mı?" duvarı kaldırıldı — kutucuklar bağlantı değil arama
