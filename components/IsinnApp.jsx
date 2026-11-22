@@ -6352,6 +6352,9 @@ function useVisualViewportHeight() {
   return h;
 }
 
+// Sohbet kimliği: aynı ilana yazan farklı kişiler ayrı sohbetlerde görünsün diye ilan + karşı taraf.
+const convoKey = (jobId, otherId) => `${jobId}|${otherId || ""}`;
+
 function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) {
   const { t } = useLanguage();
   const vvh = useVisualViewportHeight();
@@ -6398,9 +6401,16 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
       .order("created_at", { ascending: true });
     if (error || !myMessages || myMessages.length === 0) return { realConvos: [], realThreads: {} };
 
+    // Sohbet = (ilan, karşı taraf) çifti (2026-11-22). Eskiden yalnızca ilana göre gruplanıyordu: kendi iş ilanına
+    // iki farklı kişi yazınca (Elvan + Timur) tek sohbette birleşiyor, yanıt da son yazana gidiyordu.
     const byJob = {};
-    myMessages.forEach((m) => { (byJob[m.job_id] = byJob[m.job_id] || []).push(m); });
-    const jobIds = Object.keys(byJob);
+    myMessages.forEach((m) => {
+      const otherId = m.sender_id === currentUserId ? m.receiver_id : m.sender_id;
+      const key = convoKey(m.job_id, otherId);
+      (byJob[key] = byJob[key] || []).push(m);
+    });
+    const convoKeys = Object.keys(byJob);
+    const jobIds = [...new Set(myMessages.map((m) => m.job_id))];
 
     const { data: jobsData } = await supabase.from("jobs").select("id, title, service_id").in("id", jobIds);
     const jobsById = {};
@@ -6418,7 +6428,7 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
     }
 
     const otherIds = new Set();
-    jobIds.forEach((jid) => byJob[jid].forEach((m) => {
+    convoKeys.forEach((k) => byJob[k].forEach((m) => {
       const otherId = m.sender_id === currentUserId ? m.receiver_id : m.sender_id;
       if (otherId && otherId !== currentUserId) otherIds.add(otherId);
     }));
@@ -6432,9 +6442,10 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
     }
 
     const realThreads = {};
-    const realConvos = jobIds
-      .map((jid) => {
-        const msgs = [...byJob[jid]].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    const realConvos = convoKeys
+      .map((key) => {
+        const msgs = [...byJob[key]].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+        const jid = msgs[0].job_id;
         const last = msgs[msgs.length - 1];
         const otherId = last.sender_id === currentUserId ? last.receiver_id : last.sender_id;
         const otherProfile = profilesById[otherId];
@@ -6445,11 +6456,12 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
         const vitrin = servicesById[jobsById[jid]?.service_id];
         const vitrinName = vitrin && vitrin.provider_id === otherId ? (vitrin.display_name || "").trim() : "";
         const otherName = vitrinName || (otherProfile?.business_name && otherProfile.business_name.trim()) || otherProfile?.full_name || t("messages.unknownUser");
-        realThreads[jid] = msgs.map((m) => ({
+        realThreads[key] = msgs.map((m) => ({
           id: m.id, sender: m.sender_id === currentUserId ? "me" : "them", text: m.body, time: formatMessageTime(m.created_at),
         }));
         return {
-          id: jid,
+          id: key,
+          jobId: jid,
           name: otherName,
           initials: otherName.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase(),
           lastMessage: last.body,
@@ -6527,14 +6539,16 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
       }
       if (cancelled) return;
 
+      const contactKey = convoKey(jobId, initialContact.providerId);
       const { realConvos, realThreads } = await loadRealConversations();
       if (cancelled) return;
       if (Object.keys(realThreads).length > 0) setThreads((t) => ({ ...t, ...realThreads }));
       setConversations((prev) => {
         const merged = [...realConvos, ...prev.filter((c) => c.demo)];
-        if (!merged.find((c) => c.id === jobId)) {
+        if (!merged.find((c) => c.id === contactKey)) {
           merged.unshift({
-            id: jobId,
+            id: contactKey,
+            jobId,
             name: initialContact.name,
             initials: initialContact.name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase(),
             lastMessage: t("messages.newChat"), time: t("messages.justNow"), unread: 0, listingTitle: initialContact.listingTitle, otherId: initialContact.providerId,
@@ -6542,7 +6556,7 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
         }
         return merged;
       });
-      setActiveId(jobId);
+      setActiveId(contactKey);
       // Randevu talebi: hazır metin kutuya düşer, müşteri isterse düzenleyip kendisi gönderir.
       if (initialContact.draft) setInput(initialContact.draft);
       setLoading(false);
@@ -6553,6 +6567,8 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
 
   const active = conversations.find((c) => c.id === activeId);
   const activeMessages = threads[activeId] || [];
+  // Sohbet kimliği artık "ilan|kişi"; veritabanındaki iş (jobs) kimliği ayrı tutulur.
+  const activeJobId = active?.jobId || activeId;
 
   useEffect(() => {
     if (!active?.otherId || active.demo || !currentUserId) { setMyBlockOfThem(false); return; }
@@ -6577,9 +6593,9 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
     let cancelled = false;
     (async () => {
       // delivery_disputed_at (supabase/delivery_dispute_2026_10_16.sql) henüz yoksa bir önceki sürüme düşer
-      let { data, error } = await supabase.from("jobs").select("client_id, state, service_id, client_delivered_at, provider_delivered_at, delivery_disputed_at, services(provider_id)").eq("id", activeId).maybeSingle();
-      if (error) ({ data, error } = await supabase.from("jobs").select("client_id, state, service_id, client_delivered_at, provider_delivered_at, services(provider_id)").eq("id", activeId).maybeSingle());
-      if (error) ({ data } = await supabase.from("jobs").select("client_id, state, service_id, services(provider_id)").eq("id", activeId).maybeSingle());
+      let { data, error } = await supabase.from("jobs").select("client_id, state, service_id, client_delivered_at, provider_delivered_at, delivery_disputed_at, services(provider_id)").eq("id", activeJobId).maybeSingle();
+      if (error) ({ data, error } = await supabase.from("jobs").select("client_id, state, service_id, client_delivered_at, provider_delivered_at, services(provider_id)").eq("id", activeJobId).maybeSingle());
+      if (error) ({ data } = await supabase.from("jobs").select("client_id, state, service_id, services(provider_id)").eq("id", activeJobId).maybeSingle());
       if (!cancelled) setActiveJob(data ? { clientId: data.client_id, state: data.state, serviceId: data.service_id, providerId: data.services?.provider_id || null, clientConfirmed: !!data.client_delivered_at, providerConfirmed: !!data.provider_delivered_at, disputed: !!data.delivery_disputed_at } : null);
     })();
     setDeliveredError("");
@@ -6596,10 +6612,10 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
     if (!window.confirm(t("messages.confirmMarkDelivered"))) return;
     setDeliveredError("");
     setMarkingDelivered(true);
-    let { error } = await supabase.rpc("confirm_job_delivery", { p_job_id: activeId });
+    let { error } = await supabase.rpc("confirm_job_delivery", { p_job_id: activeJobId });
     // SQL (supabase/two_sided_confirmation_2026_10_05.sql) henüz çalışmadıysa eski tek taraflı yola düş
     if (error?.code === "PGRST202") {
-      const { data: updated, error: e2 } = await supabase.from("jobs").update({ state: "delivered" }).eq("id", activeId).eq("client_id", currentUserId).select("id");
+      const { data: updated, error: e2 } = await supabase.from("jobs").update({ state: "delivered" }).eq("id", activeJobId).eq("client_id", currentUserId).select("id");
       error = e2 || (updated?.length ? null : { message: t("common.errNoPermission") });
     }
     setMarkingDelivered(false);
@@ -6619,9 +6635,9 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
     if (!window.confirm(t("messages.confirmMarkProviderDelivered"))) return;
     setDeliveredError("");
     setMarkingDelivered(true);
-    let { error } = await supabase.rpc("confirm_job_delivery", { p_job_id: activeId });
+    let { error } = await supabase.rpc("confirm_job_delivery", { p_job_id: activeJobId });
     if (error?.code === "PGRST202") {
-      const { data: updated, error: e2 } = await supabase.from("jobs").update({ state: "delivered", provider_delivered_at: new Date().toISOString() }).eq("id", activeId).select("id");
+      const { data: updated, error: e2 } = await supabase.from("jobs").update({ state: "delivered", provider_delivered_at: new Date().toISOString() }).eq("id", activeJobId).select("id");
       error = e2 || (updated?.length ? null : { message: t("common.errNoPermission") });
     }
     setMarkingDelivered(false);
@@ -6659,7 +6675,7 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
       if (isOffer) {
         const [{ data: own }, { data: jobRow }] = await Promise.all([
           supabase.from("services").select("title, categories(name)").eq("provider_id", currentUserId).eq("active", true).limit(3),
-          supabase.from("jobs").select("title, description").eq("id", activeId).maybeSingle(),
+          supabase.from("jobs").select("title, description").eq("id", activeJobId).maybeSingle(),
         ]);
         const ownLine = (own || []).length
           ? `Teklif verenin kendi vitrinleri (yalnızca bunlar gerçek): ${own.map((o) => `"${o.title}" (${o.categories?.name || "kategori yok"})`).join(", ")}.`
@@ -6714,7 +6730,7 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
       reported_id: active.otherId,
       reason: reportReason,
       detail: reportDetail.trim() || null,
-      job_id: active.demo ? null : activeId,
+      job_id: active.demo ? null : activeJobId,
     });
     setReportSubmitting(false);
     if (error) { setReportError(t("messages.errReportFailed", { message: error.message })); return; }
@@ -6776,7 +6792,7 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
     }
     const { data, error } = await supabase
       .from("messages")
-      .insert({ job_id: activeId, sender_id: currentUserId, receiver_id: active.otherId, body })
+      .insert({ job_id: activeJobId, sender_id: currentUserId, receiver_id: active.otherId, body })
       .select()
       .single();
     setSending(false);
@@ -6792,7 +6808,7 @@ function MessagesView({ onBack, initialContact, currentUserId, onOpenListing }) 
     setInput("");
     setRiskWarnBody("");
     trackEvent("message_sent", {}, currentUserId);
-    if (body.startsWith(APPOINTMENT_DRAFT_PREFIX)) trackEvent("appointment_request_sent", { job_id: activeId }, currentUserId);
+    if (body.startsWith(APPOINTMENT_DRAFT_PREFIX)) trackEvent("appointment_request_sent", { job_id: activeJobId }, currentUserId);
     const time = formatMessageTime(data.created_at);
     setThreads((t) => ({ ...t, [activeId]: [...(t[activeId] || []), { id: data.id, sender: "me", text: body, time }] }));
     setConversations((cs) => cs.map((c) => (c.id === activeId ? { ...c, lastMessage: body, time } : c)));
