@@ -21,7 +21,7 @@ const TXT = {
     ctaMore: "Teknolojimizi incele",
     caps: [
       { icon: Sparkles, t: "Tek cümle yeter", d: "Kategori seçmekle uğraşmazsın." },
-      { icon: Scale, t: "Para veren öne geçmez", d: "Sırayı ihtiyacın belirler." },
+      { icon: Scale, t: "Sana en uygun kişi önce gelir", d: "Reklam verenler öne geçirilmez." },
     ],
     panelTitle: "Örnek",
     input: "Kızım LGS'ye hazırlanıyor, matematikte zorlanıyor. İstanbul Kadıköy.",
@@ -37,7 +37,7 @@ const TXT = {
     ctaMore: "See our technology",
     caps: [
       { icon: Sparkles, t: "One sentence is enough", d: "No categories to pick." },
-      { icon: Scale, t: "Paying doesn't buy rank", d: "Your need decides the order." },
+      { icon: Scale, t: "The best match comes first", d: "Advertisers are not pushed ahead." },
     ],
     panelTitle: "Example",
     input: "My daughter is preparing for the LGS exam and struggles with maths. Istanbul Kadıköy.",
