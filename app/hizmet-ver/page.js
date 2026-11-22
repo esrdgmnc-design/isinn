@@ -24,7 +24,7 @@ export default function HizmetVerPage({ searchParams }) {
       <p className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: "#2563EB" }}>{audience.title}</p>
       <h1 className="font-sans text-3xl font-black mb-3" style={{ color: "#0F1115" }}>{audience.headline}</h1>
       <p className="text-sm mb-2" style={{ color: "#4B5563" }}>{audience.sub}</p>
-      <p className="text-xs mb-4" style={{ color: "#9CA3AF" }}>İşinn, hizmet arayanla hizmet vereni buluşturur. Vitrin, işinizi fotoğraf ve yazıyla gösterdiğiniz kendi sayfanızdır.</p>
+      <p className="text-xs mb-4" style={{ color: "#9CA3AF" }}>İşinn, hizmet almak isteyenlerle hizmet vermek isteyenleri buluşturan, fayda ve güven odaklı bir platformdur.</p>
       <span
         className="inline-block text-xs font-bold px-4 py-2 rounded-full text-white mb-8"
         style={{ background: "#2563EB" }}
@@ -38,7 +38,7 @@ export default function HizmetVerPage({ searchParams }) {
           "Lansman sürecinde ücretsiz — kart bilgisi talep edilmez",
           "Komisyon uygulanmaz — kazancınızın tamamı size kalır",
           "Teklif ya da mesaj başına ücret alınmaz",
-          "Müşterilerin aradığı işleri görüp onlara da teklif verebilirsiniz",
+          "Vitrininiz dışında, müşterilerin paylaştığı açık iş ilanlarına da teklif verebilirsiniz",
         ].map((t, i) => (
           <div key={i} className="flex items-start gap-2">
             <span className="mt-1 w-1.5 h-1.5 rounded-full shrink-0" style={{ background: "#2563EB" }} />
@@ -53,8 +53,8 @@ export default function HizmetVerPage({ searchParams }) {
         <div className="space-y-3">
           {[
             "Müşteriler uygulama içinde sizi harita üzerinden ve kategoriye göre filtreleyerek hemen bulur.",
-            "Müşterilerin aradığı işleri görüp doğrudan teklif verebilirsiniz.",
-            "İş yaptıkça müşterilerinizin bıraktığı fotoğraflı yorumlar ve puanlar vitrininizde görünür.",
+            "Müşterilerin paylaştığı açık iş ilanlarını görüp doğrudan teklif verebilirsiniz.",
+            "İş yaptıkça müşterilerinizin bıraktığı fotoğraflı yorum ve puanlar, hak ettiğiniz değere ulaşmanızı destekler.",
           ].map((t, i) => (
             <div key={i} className="flex items-start gap-2">
               <span className="mt-1 w-1.5 h-1.5 rounded-full shrink-0" style={{ background: "#2563EB" }} />

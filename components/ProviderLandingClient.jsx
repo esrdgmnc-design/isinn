@@ -34,7 +34,7 @@ export default function ProviderLandingClient({ audienceSlug }) {
         className="inline-block text-center text-sm font-bold px-7 py-3.5 rounded-full border"
         style={{ borderColor: "#E4E4E7", color: "#0F1115" }}
       >
-        Müşterilerin Aradığı İşlere Bakın
+        Açık İş İlanlarını İnceleyin
       </a>
     </div>
   );
