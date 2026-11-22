@@ -296,7 +296,7 @@ export default async function VitrinPage({ params }) {
               >
                 İşinn'de Görüntüle ve Mesaj Gönder
               </a>
-              <ShareButton url={url} title={title} />
+              <ShareButton url={url} title={title} storyCardPath={description.startsWith("DEMO VİTRİN") ? null : `/vitrin/${row.id}/kart`} />
             </div>
           </div>
         </div>

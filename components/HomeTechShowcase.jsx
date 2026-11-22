@@ -26,6 +26,7 @@ const TXT = {
     panelTitle: "Örnek",
     input: "Kızım LGS'ye hazırlanıyor, matematikte zorlanıyor. İstanbul Kadıköy.",
     steps: ["Ne istediğin anlaşıldı", "Sana uygun uzmanlar gösterildi"],
+    matchPct: "%{score} uyum",
     chips: [["Ne", "Matematik özel ders"], ["Düzey", "LGS"], ["Nerede", "İstanbul"]],
     pause: "Animasyonu durdur", play: "Animasyonu oynat",
   },
@@ -42,6 +43,7 @@ const TXT = {
     panelTitle: "Example",
     input: "My daughter is preparing for the LGS exam and struggles with maths. Istanbul Kadıköy.",
     steps: ["What you want was understood", "Matching experts were shown"],
+    matchPct: "{score}% match",
     chips: [["What", "Maths tutoring"], ["Level", "LGS"], ["Where", "Istanbul"]],
     pause: "Pause animation", play: "Play animation",
   },
@@ -160,10 +162,12 @@ export default function HomeTechShowcase({ onTry }) {
               <li style={fade(stepOn[1])}>
                 <div className="flex items-center gap-3 mb-2"><StepDot on={stepOn[1]} /> <span className="text-sm font-semibold" style={{ color: "#FFFFFF" }}>{L.steps[1]}</span></div>
                 <div className="pl-9 space-y-2" aria-hidden="true">
-                  {[0.92, 0.72].map((w, i) => (
+                  {/* 2026-11-22 kurucu: örnek sonuçlarda uyum yüzdesi görünsün ("Ne arıyorsun?" kartlarındaki gibi). */}
+                  {[[0.8, 94], [0.62, 87]].map(([w, pct], i) => (
                     <div key={i} style={fade(stepOn[1], i * 150)} className="flex items-center gap-3 rounded-lg px-3 py-2" >
                       <span className="w-7 h-7 rounded-md shrink-0" style={{ background: "#27272A" }} />
-                      <span className="h-2 rounded-full" style={{ width: `${w * 100}%`, background: "#3F3F46" }} />
+                      <span className="h-2 rounded-full flex-1" style={{ maxWidth: `${w * 100}%`, background: "#3F3F46" }} />
+                      <span className="ml-auto text-xs font-bold px-2 py-0.5 rounded-full shrink-0" style={{ background: "#14532D", color: "#86EFAC" }}>{L.matchPct.replace("{score}", pct)}</span>
                     </div>
                   ))}
                 </div>

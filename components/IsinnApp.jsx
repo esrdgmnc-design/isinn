@@ -3471,26 +3471,38 @@ function ListingDetail({ listing, onBack, onContact, userReviews, onAddReview, o
   // Hikâyede paylaş (2026-11-22): Instagram bağlantıyı yalnızca mesajda kabul ediyor; hikâye için görsel dosyası
   // gerekir. 1080×1920 vitrin kartını (/vitrin/[id]/kart) dosya olarak paylaşım menüsüne verir. Dosya paylaşımı
   // desteklenmiyorsa kartı yeni sekmede açar (uzun basıp kaydedilir).
+  // 2026-11-22 kurucu: tek "Paylaş" düğmesi; basınca "Hikâyede paylaş / Mesajla gönder" seçimi açılır (klasik yöntem).
+  // Kart, seçim açılır açılmaz indirilmeye başlar: iPhone paylaşım menüsünü dokunuştan uzun süre sonra açmaya izin vermiyor.
+  const [shareMenuOpen, setShareMenuOpen] = useState(false);
   const [storyPreparing, setStoryPreparing] = useState(false);
+  const storyFileRef = useRef(null); // Promise<File|null>
+  const canShareStory = !!(listing.isReal && listing.dbId && !listing.isDemo);
+  const loadStoryFile = () => {
+    if (!storyFileRef.current) {
+      storyFileRef.current = fetch(`/vitrin/${listing.dbId}/kart`)
+        .then((r) => (r.ok ? r.blob() : null))
+        .then((b) => (b ? new File([b], "isinn-vitrin.png", { type: "image/png" }) : null))
+        .catch(() => null);
+    }
+    return storyFileRef.current;
+  };
+  const openShareMenu = () => {
+    if (!canShareStory) { shareThisListing(); return; }
+    setShareMenuOpen((v) => !v);
+    loadStoryFile();
+  };
   const shareListingStory = async () => {
     const cardUrl = `/vitrin/${listing.dbId}/kart`;
     trackEvent("vitrin_shared", { via: "story", listing_id: listing.dbId || null }, currentUserId || null);
     setStoryPreparing(true);
-    try {
-      const res = await fetch(cardUrl);
-      if (!res.ok) throw new Error("card");
-      const blob = await res.blob();
-      const file = new File([blob], "isinn-vitrin.png", { type: "image/png" });
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        try { await navigator.share({ files: [file] }); } catch {}
-      } else {
-        window.open(cardUrl, "_blank", "noopener");
-      }
-    } catch {
-      window.open(cardUrl, "_blank", "noopener");
-    } finally {
-      setStoryPreparing(false);
+    const file = await loadStoryFile();
+    setStoryPreparing(false);
+    setShareMenuOpen(false);
+    if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file] }); } catch {}
+      return;
     }
+    window.open(cardUrl, "_blank", "noopener");
   };
   const [listingReportReason, setListingReportReason] = useState("yanlis_kategori");
   const [listingReportDetail, setListingReportDetail] = useState("");
@@ -4310,25 +4322,36 @@ SADECE şu JSON formatında yanıt ver: {"appropriate": true/false, "showsIdenti
             </details>
           )}
           {listing.isReal && listing.dbId && (
-            <button
-              onClick={shareThisListing}
-              className="w-full py-2.5 mt-2 rounded-full text-sm font-medium border flex items-center justify-center gap-1.5"
-              style={{ borderColor: "#E4E4E7", color: "#0F1115" }}
-            >
-              <Share2 size={14} />
-              {shareCopied ? t("listingDetail.shareCopied") : t("listingDetail.shareButton")}
-            </button>
-          )}
-          {listing.isReal && listing.dbId && !listing.isDemo && (
-            <button
-              onClick={shareListingStory}
-              disabled={storyPreparing}
-              className="w-full py-2.5 mt-2 rounded-full text-sm font-medium border flex items-center justify-center gap-1.5"
-              style={{ borderColor: "#E4E4E7", color: "#0F1115", opacity: storyPreparing ? 0.6 : 1 }}
-            >
-              <Share2 size={14} />
-              {storyPreparing ? t("listingDetail.shareStoryLoading") : t("listingDetail.shareStoryButton")}
-            </button>
+            <div className="mt-2">
+              <button
+                onClick={openShareMenu}
+                aria-expanded={canShareStory ? shareMenuOpen : undefined}
+                className="w-full py-2.5 rounded-full text-sm font-medium border flex items-center justify-center gap-1.5"
+                style={{ borderColor: "#E4E4E7", color: "#0F1115" }}
+              >
+                <Share2 size={14} />
+                {shareCopied ? t("listingDetail.shareCopied") : t("listingDetail.shareButton")}
+              </button>
+              {shareMenuOpen && (
+                <div className="mt-2 rounded-2xl border overflow-hidden" style={{ borderColor: "#E4E4E7", background: "#FFFFFF" }}>
+                  <button
+                    onClick={shareListingStory}
+                    disabled={storyPreparing}
+                    className="w-full px-4 py-3 text-sm font-medium text-left hover:bg-[#F4F4F5]"
+                    style={{ color: "#0F1115", opacity: storyPreparing ? 0.6 : 1 }}
+                  >
+                    {storyPreparing ? t("listingDetail.shareStoryLoading") : t("listingDetail.shareStoryButton")}
+                  </button>
+                  <button
+                    onClick={() => { setShareMenuOpen(false); shareThisListing(); }}
+                    className="w-full px-4 py-3 text-sm font-medium text-left border-t hover:bg-[#F4F4F5]"
+                    style={{ color: "#0F1115", borderColor: "#E4E4E7" }}
+                  >
+                    {t("listingDetail.shareMessageButton")}
+                  </button>
+                </div>
+              )}
+            </div>
           )}
 
           {canReportListing && !listingReportSubmitted && (
