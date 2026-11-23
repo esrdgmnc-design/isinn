@@ -1,9 +1,10 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { useLanguage } from "../lib/i18n/LanguageContext";
 import { trackEvent } from "../lib/analytics";
 import { useStoreApp } from "../lib/useIosApp";
+import { isNativeGoogleAvailable, signInWithGoogleNative } from "../lib/nativeGoogleAuth";
 
 // Kayıt sırasında hangi yasal metin sürümüne onay verildiğini işaretlemek
 // için — metinler (bkz. legal/ klasörü, /kvkk-aydinlatma-metni vb.) ileride
@@ -13,7 +14,12 @@ const TERMS_VERSION = "2026-09-07-taslak";
 
 export default function AuthView({ onAuthenticated, onCancel }) {
   const { t } = useLanguage();
-  const storeApp = useStoreApp(); // iOS kabuğunda Google girişi yok (Google gömülü WebView'ı engeller, 4.8)
+  const storeApp = useStoreApp();
+  // Mağaza kabuğunda Google girişi gömülü WebView'da çalışmaz (Google engeller); yeni sürümlerde sistem
+  // tarayıcısı üzerinden yapılır (lib/nativeGoogleAuth.js). Eski sürümlerde (Browser eklentisi yok) gizli kalır.
+  const [nativeGoogle, setNativeGoogle] = useState(false);
+  useEffect(() => { setNativeGoogle(isNativeGoogleAvailable()); }, []);
+  const showGoogle = !storeApp || nativeGoogle;
   const [mode, setMode] = useState("login"); // login | signup | forgot
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -58,6 +64,17 @@ export default function AuthView({ onAuthenticated, onCancel }) {
     }
     setError("");
     setLoading(true);
+    if (nativeGoogle) {
+      const r = await signInWithGoogleNative();
+      setLoading(false);
+      if (r.ok) {
+        const { data } = await supabase.auth.getSession();
+        if (data?.session) onAuthenticated(data.session);
+      } else if (!r.cancelled) {
+        setError(r.error || "Google ile giriş tamamlanamadı");
+      }
+      return;
+    }
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: window.location.origin },
@@ -338,7 +355,7 @@ export default function AuthView({ onAuthenticated, onCancel }) {
           {mode === "login" ? t("auth.switchToSignup") : t("auth.switchToLogin")}
         </button>
 
-        {!storeApp && (<>
+        {showGoogle && (<>
         <div className="flex items-center gap-3 mb-5">
           <div className="flex-1 h-px" style={{ background: "#E4E4E7" }} />
           <span className="text-[11px] font-medium" style={{ color: "#9CA3AF" }}>{t("auth.or")}</span>
