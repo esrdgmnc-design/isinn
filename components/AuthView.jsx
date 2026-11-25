@@ -5,6 +5,7 @@ import { useLanguage } from "../lib/i18n/LanguageContext";
 import { trackEvent } from "../lib/analytics";
 import { useStoreApp } from "../lib/useIosApp";
 import { isNativeGoogleAvailable, signInWithGoogleNative } from "../lib/nativeGoogleAuth";
+import { isNativeAppleAvailable, signInWithAppleNative } from "../lib/nativeAppleAuth";
 
 // Kayıt sırasında hangi yasal metin sürümüne onay verildiğini işaretlemek
 // için — metinler (bkz. legal/ klasörü, /kvkk-aydinlatma-metni vb.) ileride
@@ -20,6 +21,9 @@ export default function AuthView({ onAuthenticated, onCancel }) {
   const [nativeGoogle, setNativeGoogle] = useState(false);
   useEffect(() => { setNativeGoogle(isNativeGoogleAvailable()); }, []);
   const showGoogle = !storeApp || nativeGoogle;
+  // Apple ile giriş: yalnızca iOS uygulamasının yeni sürümlerinde (yerel eklenti; lib/nativeAppleAuth.js).
+  const [nativeApple, setNativeApple] = useState(false);
+  useEffect(() => { setNativeApple(isNativeAppleAvailable()); }, []);
   const [mode, setMode] = useState("login"); // login | signup | forgot
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -85,6 +89,23 @@ export default function AuthView({ onAuthenticated, onCancel }) {
     }
     // Başarılıysa Google'a yönlendirir, buraya geri dönmez — loading state'i
     // sıfırlamaya gerek yok, sayfa zaten yeniden yüklenecek.
+  };
+
+  const handleAppleAuth = async () => {
+    if (mode === "signup" && !agreedToTerms) {
+      setError(t("auth.errorTerms"));
+      return;
+    }
+    setError("");
+    setLoading(true);
+    const r = await signInWithAppleNative();
+    setLoading(false);
+    if (r.ok) {
+      const { data } = await supabase.auth.getSession();
+      if (data?.session) onAuthenticated(data.session);
+    } else if (!r.cancelled) {
+      setError(r.error || "Apple ile giriş tamamlanamadı");
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -355,13 +376,31 @@ export default function AuthView({ onAuthenticated, onCancel }) {
           {mode === "login" ? t("auth.switchToSignup") : t("auth.switchToLogin")}
         </button>
 
-        {showGoogle && (<>
+        {(showGoogle || nativeApple) && (
         <div className="flex items-center gap-3 mb-5">
           <div className="flex-1 h-px" style={{ background: "#E4E4E7" }} />
           <span className="text-[11px] font-medium" style={{ color: "#9CA3AF" }}>{t("auth.or")}</span>
           <div className="flex-1 h-px" style={{ background: "#E4E4E7" }} />
         </div>
+        )}
 
+        {/* Apple ile giriş: yalnızca eklentisi olan iOS uygulamasında; Apple yönergesi gereği diğer girişlerden aşağıda/küçük değil. */}
+        {nativeApple && (
+        <button
+          type="button"
+          onClick={handleAppleAuth}
+          disabled={loading}
+          className="w-full py-3 rounded-full text-sm font-bold flex items-center justify-center gap-2.5 mb-3"
+          style={{ background: "#000000", color: "#FFFFFF", opacity: loading ? 0.6 : 1 }}
+        >
+          <svg width="16" height="18" viewBox="0 0 814 1000" aria-hidden="true">
+            <path fill="#FFFFFF" d="M788 341c-6 4-108 62-108 190 0 148 130 200 134 202-1 3-21 72-69 142-43 61-88 123-156 123s-86-40-165-40c-77 0-104 41-167 41s-106-57-156-127C43 790 0 671 0 557 0 375 118 279 235 279c62 0 114 41 153 41 37 0 95-43 166-43 27 0 124 2 188 64zM554 157c29-35 50-83 50-131 0-7-1-14-2-19-48 2-104 32-138 72-27 31-52 79-52 128 0 7 1 15 2 17 3 1 8 1 13 1 43 0 97-29 127-68z" />
+          </svg>
+          {t("auth.appleContinue")}
+        </button>
+        )}
+
+        {showGoogle && (<>
         <button
           type="button"
           onClick={handleGoogleAuth}
