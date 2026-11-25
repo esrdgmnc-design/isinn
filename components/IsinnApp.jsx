@@ -43,7 +43,7 @@ import {
   PaintBucket, AirVent, PawPrint, Music2, Calculator, Languages,
   PenTool, Video, Mic, ClipboardList, TrendingUp, BarChart3, Wallet, CalendarClock, Puzzle, PencilRuler, Layers,
   MonitorSmartphone, Car, Bug, Stethoscope, Scale,
-  Shapes, Flame, Brush, Cpu, PersonStanding, Crown, Table2, Sofa, Footprints, ExternalLink, LogOut, Bike
+  Shapes, Flame, Brush, Cpu, PersonStanding, Crown, Table2, Sofa, Footprints, ExternalLink, LogOut, Bike, Shovel, Construction
 } from "lucide-react";
 
 // ---------------------------------------------------------------
@@ -142,6 +142,8 @@ const CATEGORIES = [
   { id: "ofis-programlari-egitmeni", name: "Excel ve Ofis Programları Eğitmeni", mode: "both", icon: Table2 },
   { id: "mobilya-yenileme", name: "Mobilya Yenileme ve Restorasyon", mode: "local", icon: Sofa },
   { id: "ayakkabi-canta-tamiri", name: "Ayakkabı ve Çanta Tamiri", mode: "local", icon: Footprints },
+  { id: "hafriyat", name: "Hafriyat", mode: "local", icon: Shovel },
+  { id: "insaat", name: "İnşaat", mode: "local", icon: Construction },
 ];
 
 // Sabit listede olmayan bir kategori isteyen kullanıcı için — CATEGORIES'e
@@ -154,7 +156,7 @@ const CATEGORIES = [
 const CUSTOM_CATEGORY_ID = "diger-ozel";
 
 const PARENT_CATEGORIES = [
-  { id: "ev-hizmetleri", name: "Ev Hizmetleri", icon: Home, categoryIds: ["temizlik", "nakliye", "kurye", "tadilat", "cilingir", "terzi", "elektrikci", "su-tesisatcisi", "hali-yikama", "yemek", "boya-badana", "klima-beyaz-esya", "ic-mimarlik", "teknik-servis", "oto-tamir", "bocek-ilaclama", "mobilya-yenileme", "ayakkabi-canta-tamiri"] },
+  { id: "ev-hizmetleri", name: "Ev Hizmetleri", icon: Home, categoryIds: ["temizlik", "nakliye", "kurye", "tadilat", "cilingir", "terzi", "elektrikci", "su-tesisatcisi", "hali-yikama", "yemek", "boya-badana", "klima-beyaz-esya", "ic-mimarlik", "teknik-servis", "oto-tamir", "bocek-ilaclama", "mobilya-yenileme", "ayakkabi-canta-tamiri", "insaat", "hafriyat"] },
   { id: "guzellik-bakim", name: "Güzellik & Bakım", icon: Wand2, categoryIds: ["tirnakci", "makyaj", "bakim", "kuafor-berber"] },
   { id: "saglik", name: "Sağlık", icon: HeartPulse, categoryIds: ["hasta-bakici", "hemsire", "fizyoterapist", "diyetisyen", "psikolog", "yoga-koc", "spor-egitmeni", "veteriner"] },
   { id: "egitim-aile", name: "Eğitim & Aile", icon: GraduationCap, categoryIds: ["ogretmen", "egitmen", "bakici", "logusa-bakicisi", "emzirme-danismani", "etkinlik-organizatoru", "muzik-egitmeni", "oyun-ablasi", "direksiyon-egitmeni"] },
@@ -4926,7 +4928,7 @@ function MapView({ onBack, onSelectProvider, onSelectJob, realListings, realJobs
     "evcil-hayvan": "#C68642", "muzik-egitmeni": "#8A5FBF", "muhasebe": "#4A6572", "ceviri": "#5FA8A0",
     "oyun-ablasi": "#E0A458", "ic-mimarlik": "#7C6A9C", "moda-tekstil-tasarim": "#C15B5B",
     "teknik-servis": "#3B6EA5", "oto-tamir": "#4A4A4A", "bocek-ilaclama": "#6B8C3F", "veteriner": "#3F9C6E", "avukat": "#8C6A3F",
-    "el-sanatlari-atolyesi": "#C98B5B", "seramik-atolyesi": "#B5704F", "dikis-orgu-atolyesi": "#9B6FA8", "resim-sanat-atolyesi": "#D9774B", "mutfak-atolyesi": "#C99A3F", "cocuk-atolyesi": "#E08FA0", "geleneksel-sanatlar-atolyesi": "#4F7F86", "kodlama-egitmeni": "#3F7FBF", "dans-egitmeni": "#C0508C", "satranc-egitmeni": "#5A5A7A", "diksiyon-hitabet-egitmeni": "#7A5CA0", "ofis-programlari-egitmeni": "#3F8F6E", "mobilya-yenileme": "#A0714F", "ayakkabi-canta-tamiri": "#6F5B4A",
+    "el-sanatlari-atolyesi": "#C98B5B", "seramik-atolyesi": "#B5704F", "dikis-orgu-atolyesi": "#9B6FA8", "resim-sanat-atolyesi": "#D9774B", "mutfak-atolyesi": "#C99A3F", "cocuk-atolyesi": "#E08FA0", "geleneksel-sanatlar-atolyesi": "#4F7F86", "kodlama-egitmeni": "#3F7FBF", "dans-egitmeni": "#C0508C", "satranc-egitmeni": "#5A5A7A", "diksiyon-hitabet-egitmeni": "#7A5CA0", "ofis-programlari-egitmeni": "#3F8F6E", "mobilya-yenileme": "#A0714F", "ayakkabi-canta-tamiri": "#6F5B4A", "hafriyat": "#8A6A45", "insaat": "#C2873A",
   };
 
   const useMyLocation = () => {
