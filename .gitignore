@@ -26,3 +26,15 @@ codeg-katalog/
 
 .next-*
 docs/android-surum/
+
+# 2026-11-28: docs altındaki video/görsel/ses çıktıları depoya girmez (yerelde kalır)
+docs/**/*.mp4
+docs/**/*.mov
+docs/**/*.png
+docs/**/*.jpg
+docs/**/*.jpeg
+docs/**/*.webp
+docs/**/*.mp3
+docs/**/*.wav
+docs/**/*.zip
+public/bento/eski/

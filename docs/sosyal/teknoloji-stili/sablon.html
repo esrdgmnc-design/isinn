@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* İŞİNN // SİSTEM — aşırı teknolojik stil. Kurallar: gerçek veri, gerçek komut; yapay zekâ görseli yok;
+   reklamda fiyat/ücret/rakam yok (koordinat ve saat damgası süs öğesidir). */
+:root{--bg:#04060A;--panel:#0B1018;--line:#1A2333;--blue:#2563EB;--cyan:#5CF2FF;--lime:#B6FF3B;--txt:#E6EDF7;--mut:#6B7A90}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:var(--bg);color:var(--txt);font-family:'JetBrains Mono',monospace;overflow:hidden}
+.frame{position:relative;width:1080px;height:1350px;overflow:hidden;background:
+ radial-gradient(900px 600px at 80% -10%, rgba(37,99,235,.28), transparent 60%),
+ radial-gradient(700px 500px at -10% 110%, rgba(92,242,255,.12), transparent 60%), var(--bg)}
+.frame.v{height:1920px}
+.grid{position:absolute;inset:0;background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:54px 54px;opacity:.35;mask-image:radial-gradient(circle at 50% 40%,#000 30%,transparent 80%)}
+.scan{position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(255,255,255,.025) 0 2px,transparent 2px 4px);pointer-events:none}
+.hud{position:absolute;left:64px;right:64px;display:flex;justify-content:space-between;font-size:20px;color:var(--mut);letter-spacing:2px}
+.hud.top{top:52px}.hud.bot{bottom:52px}
+.hud b{color:var(--cyan);font-weight:500}
+.dot{display:inline-block;width:12px;height:12px;border-radius:50%;background:var(--lime);box-shadow:0 0 14px var(--lime);margin-right:10px;vertical-align:middle}
+.brand{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:30px;color:var(--txt);letter-spacing:0}
+.brand i{color:var(--blue);font-style:normal}
+h1{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:84px;line-height:1.02;letter-spacing:-2px;position:absolute;left:64px;right:64px}
+h1 em{font-style:normal;color:var(--cyan)}
+.term{white-space:pre-wrap;position:absolute;left:64px;right:64px;background:rgba(11,16,24,.86);border:1px solid var(--line);border-radius:18px;padding:34px 38px;font-size:27px;line-height:1.6;box-shadow:0 0 0 1px rgba(92,242,255,.06),0 30px 80px rgba(0,0,0,.5)}
+.term .bar{display:flex;gap:10px;margin-bottom:22px}.term .bar span{width:14px;height:14px;border-radius:50%;background:#253047}
+.p{color:var(--lime)}.k{color:var(--cyan)}.s{color:#FFD27A}.c{color:var(--mut)}
+.card{position:absolute;left:64px;right:64px;border:1px solid rgba(92,242,255,.45);border-radius:18px;padding:30px 36px;background:linear-gradient(135deg,rgba(37,99,235,.18),rgba(11,16,24,.9));box-shadow:0 0 40px rgba(37,99,235,.25)}
+.card .t{font-family:'Space Grotesk',sans-serif;font-size:40px;font-weight:700;margin:8px 0 10px}
+.card .m{font-size:22px;color:var(--mut)}
+.tag{display:inline-block;border:1px solid var(--cyan);color:var(--cyan);font-size:18px;padding:4px 12px;border-radius:999px;letter-spacing:2px}
+.cursor{display:inline-block;width:16px;height:30px;background:var(--cyan);vertical-align:middle;margin-left:4px}
+.idx{position:absolute;left:64px;right:64px;font-size:28px;line-height:1.75}
+.idx div{display:flex;justify-content:space-between;border-bottom:1px dashed var(--line)}
+.idx .on{color:var(--lime)}
+svg text{font-family:'JetBrains Mono',monospace}
+</style></head>
+<body><div id="root"></div>
+<script>
+const q=new URLSearchParams(location.search);const P=q.get('p')||'1';const T=Math.max(0,Math.min(1,parseFloat(q.get('t')||'1')));
+const R=document.getElementById('root');
+const hudTop=(label)=>`<div class="hud top"><span class="brand">İşinn<i>.</i></span><span>${label}</span></div>`;
+const hudBot=(l,r)=>`<div class="hud bot"><span><span class="dot"></span>${l}</span><span>${r}</span></div>`;
+const bg=`<div class="grid"></div><div class="scan"></div>`;
+
+// Gerçek MCP çağrısı (2026-10-31, canlı yanıt)
+const ASK="Sarıyer'de pilates dersi veren bir yer öner";
+const CALL=[`<span class="p">user@ai</span> <span class="c">~</span> ask "${ASK}"`,
+ `<span class="c">→ tool</span> <span class="k">isinn.search_vitrins</span>({`,
+ `    query: <span class="s">"pilates"</span>, city: <span class="s">"Sarıyer"</span>`,
+ `  })`,
+ `<span class="c">← 200 · results[0]</span>`];
+function typed(lines,t){ // t: 0..1 yazılan oran
+  const plain=lines.map(l=>l.replace(/<[^>]+>/g,''));const total=plain.join('').length;let n=Math.floor(total*t);let out=[];
+  for(let i=0;i<lines.length;i++){const len=plain[i].length;if(n<=0)break;if(n>=len){out.push(lines[i]);n-=len}else{out.push(esc(plain[i].slice(0,n))+'<span class="cursor"></span>');n=0}}
+  if(t>=1)out[out.length-1]+= '<span class="cursor"></span>';return out.join('<br>');
+}
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;')}
+const CARD=`<span class="tag">VİTRİN · MATCH</span><div class="t">GLAM Pilates by AleyNaz</div><div class="m">Spor Eğitmeni · Sarıyer, İstanbul</div><div class="m" style="margin-top:14px;color:#9FB3CC">isinn.com.tr/vitrin/f998f524…</div>`;
+
+if(P==='1'){
+  R.innerHTML=`<div class="frame">${bg}${hudTop('SYS://QUERY')}
+  <h1 style="top:150px">Yapay zekâya sorulduğunda,<br><em>cevap sen ol.</em></h1>
+  <div class="term" style="top:470px"><div class="bar"><span></span><span></span><span></span></div>${typed(CALL,1)}</div>
+  <div class="card" style="top:900px">${CARD}</div>
+  ${hudBot('LIVE · MCP','ChatGPT · Claude')}</div>`;
+}
+if(P==='2'){
+  // Gerçek vitrin şehirleri (yaklaşık konumlar, 1080 genişliğe izdüşüm)
+  const C=[["İstanbul",29.0,41.0,18,-18],["Bursa",29.06,40.18,22,30],["İzmir",27.14,38.42,22,-16],["Ankara",32.85,39.93,22,-16],["Karaman",33.2,37.18,-150,-22],["Mersin",34.63,36.8,-40,50],["Adana",35.32,37.0,24,-18]];
+  const X=lo=>60+(lo-26)/(37-26)*900, Y=la=>760-(la-36.4)/(41.4-36.4)*560;
+  const hub=[X(29.0),Y(41.0)];
+  let lines='',dots='';
+  C.forEach(([n,lo,la,dx,dy],i)=>{const x=X(lo),y=Y(la);if(i)lines+=`<path d="M${hub[0]} ${hub[1]} Q ${(hub[0]+x)/2} ${Math.min(hub[1],y)-120} ${x} ${y}" stroke="url(#g)" stroke-width="2" fill="none" opacity=".85"/>`;
+   dots+=`<circle cx="${x}" cy="${y}" r="${i?9:14}" fill="#5CF2FF"/><circle cx="${x}" cy="${y}" r="${i?26:40}" fill="none" stroke="#5CF2FF" opacity=".35"/><text x="${x+dx}" y="${y+dy}" fill="#E6EDF7" font-size="22">${n.toUpperCase()}</text><text x="${x+dx}" y="${y+dy+24}" fill="#6B7A90" font-size="16">${la.toFixed(2)}N ${lo.toFixed(2)}E</text>`});
+  R.innerHTML=`<div class="frame">${bg}${hudTop('SYS://NETWORK')}
+  <h1 style="top:150px">Yetenek ağı.<br><em>Şehirden şehre, canlı.</em></h1>
+  <svg width="1080" height="1350" style="position:absolute;left:0;top:220px"><defs><linearGradient id="g" x1="0" x2="1"><stop offset="0" stop-color="#2563EB"/><stop offset="1" stop-color="#5CF2FF"/></linearGradient></defs>
+   ${lines}${dots}
+   <circle cx="860" cy="200" r="110" fill="none" stroke="#B6FF3B" stroke-dasharray="4 10" opacity=".7"/><text x="860" y="195" fill="#B6FF3B" font-size="22" text-anchor="middle">UZAKTAN</text><text x="860" y="225" fill="#6B7A90" font-size="16" text-anchor="middle">tüm şehirlere açık</text>
+  </svg>
+  ${hudBot('NODE · ONLINE','isinn.com.tr')}</div>`;
+}
+if(P==='3'){
+  const cats=[["öğretmen","yerinde · online"],["fizyoterapist","yerinde"],["tasarım","online"],["çeviri","online"],["nakliye","yerinde"],["dikiş-örgü atölyesi","yerinde · online"],["spor eğitmeni","yerinde"],["yazılım","online"],["direksiyon eğitmeni","yerinde"]];
+  R.innerHTML=`<div class="frame">${bg}${hudTop('SYS://INDEX')}
+  <h1 style="top:150px">Her yetenek<br><em>bir adres.</em></h1>
+  <div class="idx" style="top:470px"><div class="c" style="border:0">$ ls isinn.com.tr/kategori/</div>
+  ${cats.map(([n,m])=>`<div><span><span class="k">/</span>${n}</span><span class="on">● ${m}</span></div>`).join('')}
+  <div class="c" style="border:0;display:block">… <span class="cursor"></span></div></div>
+  ${hudBot('INDEX · PUBLIC','vitrinini aç → isinn.com.tr')}</div>`;
+}
+if(P==='v'){
+  // Dikey video karesi: 0-0.6 yazma, 0.6-0.8 kart, 0.8-1 kapanış
+  const tt=Math.min(1,T/0.6), card=T<0.6?0:Math.min(1,(T-0.6)/0.15), end=T<0.82?0:Math.min(1,(T-0.82)/0.12);
+  R.innerHTML=`<div class="frame v">${bg}${hudTop('SYS://QUERY')}
+  <h1 style="top:200px;font-size:92px">Yapay zekâya<br>sorulduğunda,<br><em>cevap sen ol.</em></h1>
+  <div class="term" style="top:640px">${'<div class="bar"><span></span><span></span><span></span></div>'+typed(CALL,tt)}</div>
+  <div class="card" style="top:1120px;opacity:${card};transform:translateY(${(1-card)*40}px)">${CARD}</div>
+  <div style="position:absolute;left:0;right:0;top:1500px;text-align:center;opacity:${end}">
+    <div style="font-family:'Space Grotesk';font-size:64px;font-weight:700">İşinn<span style="color:#2563EB">.</span></div>
+    <div style="font-size:26px;color:#5CF2FF;letter-spacing:4px;margin-top:10px">VİTRİNİNİ AÇ · isinn.com.tr</div></div>
+  ${hudBot('LIVE · MCP','ChatGPT · Claude')}</div>`;
+}
+</script></body></html>

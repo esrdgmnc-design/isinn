@@ -1,0 +1,79 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@700&display=swap" rel="stylesheet">
+<style>html,body{margin:0;background:#000;overflow:hidden}canvas{display:block}</style></head>
+<body><canvas id="c" width="1080" height="1920"></canvas>
+<script>
+(async()=>{try{await document.fonts.load('700 96px "Space Grotesk"');await document.fonts.load('16px "JetBrains Mono"');}catch(e){}
+// İşinn // NEURAL INDEX — kare kare çizilen sahne (?t=0..1). Gerçek veri: vitrini olan şehirler ve gerçek MCP çağrısı.
+const q=new URLSearchParams(location.search);const T=parseFloat(q.get('t')||'0.6');const H=parseInt(q.get('h')||'1920');
+const cv=document.getElementById('c');cv.height=H;const g=cv.getContext('2d');const W=1080;
+const CY=['#5CF2FF'],BL='#2563EB',LM='#B6FF3B';
+const cities=[["İSTANBUL",41.0,29.0],["BURSA",40.18,29.06],["İZMİR",38.42,27.14],["ANKARA",39.93,32.85],["KARAMAN",37.18,33.2],["MERSİN",36.8,34.63],["ADANA",37.0,35.32]];
+const R=3500, cx=560, cy=H*0.45;
+const D=Math.PI/180; const rot=-33*D+Math.sin(T*Math.PI)*2.2*D, tilt=39*D; // Türkiye ortada, hafif salınan dev küre
+function proj(lat,lon){const la=lat*Math.PI/180, lo=lon*Math.PI/180+rot;
+ let x=Math.cos(la)*Math.sin(lo), y=Math.sin(la), z=Math.cos(la)*Math.cos(lo);
+ const y2=y*Math.cos(tilt)-z*Math.sin(tilt), z2=y*Math.sin(tilt)+z*Math.cos(tilt);
+ return {x:cx+x*R, y:cy-y2*R, z:z2};}
+function glow(c,b){g.shadowColor=c;g.shadowBlur=b}
+// zemin
+g.fillStyle='#02040A';g.fillRect(0,0,W,H);
+const rg=g.createRadialGradient(cx,cy,50,cx,cy,900);rg.addColorStop(0,'rgba(37,99,235,.35)');rg.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=rg;g.fillRect(0,0,W,H);
+// Tron zemin ızgarası
+const hz=H*0.74;g.save();g.strokeStyle='rgba(92,242,255,.35)';g.lineWidth=1.2;glow('#5CF2FF',8);
+for(let i=-14;i<=14;i++){g.beginPath();g.moveTo(cx+i*18,hz);g.lineTo(cx+i*260,H);g.stroke();}
+const off=(T*6)%1;for(let k=0;k<14;k++){const p=Math.pow((k+off)/14,2.2);const y=hz+p*(H-hz);g.globalAlpha=0.15+p*.7;g.beginPath();g.moveTo(0,y);g.lineTo(W,y);g.stroke();}
+g.restore();
+// küre tel kafes
+g.save();g.lineWidth=1;
+for(let lat=30;lat<=48;lat+=1){g.beginPath();let first=true;for(let lon=18;lon<=50;lon+=0.5){const p=proj(lat,lon);g.strokeStyle=`rgba(37,99,235,${p.z>0?.55:.12})`;if(first){g.moveTo(p.x,p.y);first=false}else g.lineTo(p.x,p.y);}g.stroke();}
+for(let lon=18;lon<=50;lon+=1){g.beginPath();let f=true;for(let lat=30;lat<=48;lat+=0.5){const p=proj(lat,lon);if(f){g.moveTo(p.x,p.y);f=false}else g.lineTo(p.x,p.y);}g.strokeStyle='rgba(37,99,235,.28)';g.stroke();}
+g.restore();
+// küre kenar halkası
+
+// radar taraması
+g.save();const sw=T*Math.PI*4;const gr=g.createConicGradient?g.createConicGradient(sw,cx,cy):null;
+if(gr){gr.addColorStop(0,'rgba(182,255,59,.35)');gr.addColorStop(.08,'rgba(182,255,59,0)');gr.addColorStop(1,'rgba(182,255,59,0)');g.fillStyle=gr;g.beginPath();g.arc(cx,cy,470,0,Math.PI*2);g.fill();}
+g.strokeStyle='rgba(182,255,59,.5)';g.setLineDash([4,10]);g.beginPath();g.arc(cx,cy,470,0,Math.PI*2);g.stroke();g.setLineDash([]);g.restore();
+// şehir noktaları + yaylar
+const ist=proj(41.0,29.0);const pts=cities.map(([n,la,lo])=>({n,la,lo,...proj(la,lo)}));
+const arcT=Math.min(1,Math.max(0,(T-0.15)/0.45));
+pts.slice(1).forEach((p,i)=>{const prog=Math.min(1,Math.max(0,arcT*1.6-i*0.12));if(prog<=0||p.z<-0.1)return;
+ const mx=(ist.x+p.x)/2, my=Math.min(ist.y,p.y)-120-i*14;g.save();glow('#5CF2FF',16);g.strokeStyle='#5CF2FF';g.lineWidth=2.4;g.beginPath();
+ for(let s=0;s<=40*prog;s++){const u=s/40;const x=(1-u)*(1-u)*ist.x+2*(1-u)*u*mx+u*u*p.x, y=(1-u)*(1-u)*ist.y+2*(1-u)*u*my+u*u*p.y;s?g.lineTo(x,y):g.moveTo(x,y);}g.stroke();
+ // yay üzerindeki veri paketi
+ const u=((T*3+i*0.2)%1)*prog;const x=(1-u)*(1-u)*ist.x+2*(1-u)*u*mx+u*u*p.x, y=(1-u)*(1-u)*ist.y+2*(1-u)*u*my+u*u*p.y;g.fillStyle='#fff';g.beginPath();g.arc(x,y,4,0,7);g.fill();g.restore();});
+pts.forEach((p,i)=>{if(p.z<-0.05)return;if(T>=0.67&&p.n==="MERSİN"){g.save();glow("#B6FF3B",40);g.strokeStyle="#B6FF3B";g.lineWidth=3;g.beginPath();g.arc(p.x,p.y,34+6*Math.sin(T*30),0,7);g.stroke();g.restore();}const pulse=1+0.5*Math.sin(T*20+i);g.save();glow(i?'#5CF2FF':'#B6FF3B',24);g.fillStyle=i?'#5CF2FF':LM;g.beginPath();g.arc(p.x,p.y,i?6:9,0,7);g.fill();
+ g.strokeStyle=i?'rgba(92,242,255,.5)':'rgba(182,255,59,.6)';g.beginPath();g.arc(p.x,p.y,(i?16:24)*pulse,0,7);g.stroke();g.restore();
+ g.font='500 19px "JetBrains Mono"';g.fillStyle='#E6EDF7';const lx=p.x+(i%2?18:-18), al=i%2?'left':'right';g.textAlign=al;g.fillText(p.n,lx,p.y-12);g.fillStyle='#6B7A90';g.font='14px "JetBrains Mono"';g.fillText(`${p.la.toFixed(2)}N ${p.lo.toFixed(2)}E`,lx,p.y+8);});
+// HUD köşeleri
+g.save();g.strokeStyle='rgba(92,242,255,.8)';g.lineWidth=3;const m=46,L=70;[[m,m,1,1],[W-m,m,-1,1],[m,H-m,1,-1],[W-m,H-m,-1,-1]].forEach(([x,y,a,b])=>{g.beginPath();g.moveTo(x+a*L,y);g.lineTo(x,y);g.lineTo(x,y+b*L);g.stroke();});g.restore();
+g.font='18px "JetBrains Mono"';g.textAlign='left';g.fillStyle='#5CF2FF';g.fillText('SYS://NEURAL-INDEX',80,100);g.textAlign='right';g.fillStyle='#6B7A90';
+const ts=new Date(Date.UTC(2026,9,31,9,0,0)+T*8000).toISOString().replace('T',' ').slice(0,22);g.fillText('T '+ts+'Z',W-80,100);
+// Anlatım: 3 sahne, büyük Türkçe yazı (kurucu: "anlaşılır değil", 2026-10-31)
+const ph=T<0.34?1:T<0.67?2:3;
+function rr(x,y,w,h,r){g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath();}
+function cap(l1,l2){g.textAlign="left";g.font="700 66px \"Space Grotesk\"";g.fillStyle="#fff";g.fillText(l1,80,250);if(l2){g.fillStyle="#5CF2FF";g.fillText(l2,80,330);}}
+if(ph===1){cap("Biri yapay zekâya","soruyor:");
+ const n=Math.floor(Math.min(1,T/0.28)*38);const msg="Tarsus'ta örgü kursu veren var mı?".slice(0,n);
+ g.save();glow("#2563EB",30);g.fillStyle="rgba(37,99,235,.92)";rr(80,390,920,120,30);g.fill();g.restore();
+ g.font="500 36px \"JetBrains Mono\"";g.fillStyle="#fff";g.fillText(msg+(Math.sin(T*60)>0?"▍":""),118,465);}
+if(ph===2){cap("İşinn'deki vitrinler","taranıyor…");
+ g.font="500 30px \"JetBrains Mono\"";g.fillStyle="#B6FF3B";g.fillText("> isinn.search_vitrins(\"örgü\", \"Tarsus\")",80,420);}
+if(ph===3){cap("Cevap: İşinn'de","bir vitrin.");
+ const k=Math.min(1,(T-0.67)/0.1);const y=390+(1-k)*40;g.save();g.globalAlpha=k;glow("#5CF2FF",30);g.strokeStyle="#5CF2FF";g.lineWidth=2;g.fillStyle="rgba(8,16,30,.94)";rr(80,y,920,190,26);g.fill();g.stroke();g.restore();
+ g.save();g.globalAlpha=k;g.font="700 22px \"JetBrains Mono\"";g.fillStyle="#B6FF3B";g.fillText("● BULUNDU",118,y+50);
+ g.font="700 46px \"Space Grotesk\"";g.fillStyle="#fff";g.fillText("Dikiş ve Örgü Atölyesi",118,y+108);
+ g.font="26px \"JetBrains Mono\"";g.fillStyle="#9FB3CC";g.fillText("Ören Bayan Hatice · Tarsus, Mersin",118,y+155);g.restore();}
+// alt bölüm
+const ty=H*0.86;function title(dx,col){g.font="700 96px \"Space Grotesk\"";g.textAlign="center";g.fillStyle=col;g.fillText("İşinn",cx+dx,ty);}
+g.save();g.globalCompositeOperation="lighter";const gl=(Math.sin(T*90)>0.7)?10:3;title(-gl,"rgba(255,0,80,.7)");title(gl,"rgba(0,200,255,.7)");title(0,"#fff");g.restore();
+g.textAlign="center";
+if(ph<3){g.font="500 28px \"JetBrains Mono\"";g.fillStyle="#5CF2FF";g.fillText("YAPAY ZEKÂ ASİSTANLARINA BAĞLI YETENEK AĞI",cx,ty+60);}
+else{g.font="700 40px \"Space Grotesk\"";g.fillStyle="#fff";g.fillText("Yeteneğin, yapay zekânın cevabı olsun.",cx,ty+66);g.font="500 28px \"JetBrains Mono\"";g.fillStyle="#B6FF3B";g.fillText("Vitrinini aç → isinn.com.tr",cx,ty+112);}
+// tarama çizgileri + kayan tarama bandı
+g.fillStyle='rgba(255,255,255,.035)';for(let y=0;y<H;y+=4)g.fillRect(0,y,W,1);
+const by=(T*1.4%1)*H;const bg2=g.createLinearGradient(0,by-80,0,by+80);bg2.addColorStop(0,'rgba(92,242,255,0)');bg2.addColorStop(.5,'rgba(92,242,255,.10)');bg2.addColorStop(1,'rgba(92,242,255,0)');g.fillStyle=bg2;g.fillRect(0,by-80,W,160);
+})();
+</script></body></html>

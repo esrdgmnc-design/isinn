@@ -1,0 +1,20 @@
+[Script Info]
+ScriptType: v4.00+
+PlayResX: 1080
+PlayResY: 1920
+WrapStyle: 0
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: A,Segoe UI,70,&H00FFFFFF,&H00FFFFFF,&H00181210,&H00181210,1,0,0,0,100,100,0,0,3,18,0,2,110,110,560,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:00.30,0:00:01.90,A,,0,0,0,,İş başvurusu yaparken
+Dialogue: 0,0:00:01.90,0:00:03.40,A,,0,0,0,,CV'n bir uygulamada,
+Dialogue: 0,0:00:03.40,0:00:05.20,A,,0,0,0,,belgelerin e-postalarda,
+Dialogue: 0,0:00:05.20,0:00:07.95,A,,0,0,0,,çalışmaların web sitende\Nya da sosyal medyanda…
+Dialogue: 0,0:00:08.60,0:00:10.90,A,,0,0,0,,Ordan oraya geçmekten\Nsıkılmadın mı?
+Dialogue: 0,0:00:11.30,0:00:13.70,A,,0,0,0,,İşinn'de dijital\Nvitrinini oluştur.
+Dialogue: 0,0:00:13.96,0:00:16.80,A,,0,0,0,,Uzmanlığına dair her şey\Ntek bir linkte.
+Dialogue: 0,0:00:17.10,0:00:18.45,A,,0,0,0,,Dilediğinle paylaş.

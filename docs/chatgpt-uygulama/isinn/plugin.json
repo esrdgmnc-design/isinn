@@ -1,0 +1,92 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "isinn",
+  "version": "1.0.0",
+  "description": "Türkiye'de hizmet verenlerin İşinn vitrinlerini arar: özel ders, tasarım, çeviri, nakliye, pilates ve daha fazlası.",
+  "author": {
+    "name": "CODE G LTD",
+    "url": "https://www.isinn.com.tr"
+  },
+  "homepage": "https://www.isinn.com.tr",
+  "keywords": ["hizmet", "freelance", "özel ders", "Türkiye", "yerel hizmet"],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "İşinn",
+        "shortDescription": "Türkiye'de hizmet veren bul",
+        "longDescription": "İşinn, Türkiye'de insanların yeteneklerini bir vitrinde sunduğu bir hizmet keşif platformudur. Bu uygulama, ChatGPT içinde İşinn vitrinlerini aramanı sağlar: özel ders öğretmenleri, grafik tasarımcılar, çevirmenler, nakliyeciler, pilates ve spor eğitmenleri, yazılımcılar ve diğer hizmet verenler.\n\nHizmeti, kategoriyi ve şehri ya da ilçeyi yazman yeterli; uygulama uygun vitrinleri başlık, hizmet veren adı, konum, hizmet verenin kendi beyan ettiği fiyat bilgisi ve vitrin bağlantısıyla getirir. Uzaktan çalışan hizmet verenler her şehir için listelenir. Tek bir vitrinin ayrıntısına bakabilir ya da kategorileri ve her kategorideki aktif vitrin sayısını görebilirsin.\n\nUygulama yalnızca okuma yapar ve yalnızca vitrin sayfalarında zaten herkese açık olan bilgileri gösterir; telefon numarası ya da e-posta paylaşmaz. İletişim, vitrin sayfasındaki mesaj düğmesiyle İşinn üzerinden kurulur. İşinn kullanıcılar arasındaki ödemeye aracılık etmez ve hizmet kalitesini garanti etmez.\n\nİşinn, CODE G LTD (Code G Teknoloji ve Ticaret Limited Şirketi) markasıdır.",
+        "developerName": "CODE G LTD",
+        "category": "Lifestyle",
+        "capabilities": ["Hizmet veren arama", "Vitrin ayrıntısı", "Kategori listesi"],
+        "websiteURL": "https://www.isinn.com.tr",
+        "supportURL": "https://www.isinn.com.tr/destek",
+        "privacyPolicyURL": "https://www.isinn.com.tr/gizlilik-politikasi",
+        "termsOfServiceURL": "https://www.isinn.com.tr/kullanim-sartlari",
+        "defaultPrompt": [
+          "İstanbul'da LGS matematik özel dersi veren öğretmen bul",
+          "Logo tasarımı yapan bir grafik tasarımcı öner",
+          "Mersin'de nakliye hizmeti veren var mı?"
+        ],
+        "brandColor": "#2563EB",
+        "composerIcon": "./assets/icon.webp",
+        "logo": "./assets/logo.webp"
+      },
+      "review": {
+        "test_cases": {
+          "positive": [
+            {
+              "description": "Şehir ve derse göre öğretmen arama",
+              "prompt": "İstanbul'da matematik özel dersi veren öğretmen bul",
+              "tools_triggered": "search_vitrins",
+              "expected_behavior": "search_vitrins query='matematik özel ders', city='İstanbul' ile çağrılır; İstanbul'daki ya da uzaktan çalışan matematik öğretmenlerinin vitrinleri başlık, ad, konum, fiyat bilgisi ve vitrin bağlantısıyla listelenir."
+            },
+            {
+              "description": "İlçe bazlı stüdyo arama",
+              "prompt": "Sarıyer Zekeriyaköy civarında pilates dersi veren bir yer var mı?",
+              "tools_triggered": "search_vitrins",
+              "expected_behavior": "search_vitrins query='pilates', city='Sarıyer' ile çağrılır; Zekeriyaköy'deki pilates stüdyosu vitrini bağlantısıyla döner."
+            },
+            {
+              "description": "Uzaktan hizmet arama",
+              "prompt": "Online İngilizce dersi verenleri göster",
+              "tools_triggered": "search_vitrins",
+              "expected_behavior": "search_vitrins query='ingilizce', remote_only=true ile çağrılır; uzaktan ders veren İngilizce öğretmenlerinin vitrinleri listelenir."
+            },
+            {
+              "description": "Vitrin ayrıntısı",
+              "prompt": "İlk sonuçtaki öğretmenin vitrininde neler yazıyor, fiyatı ne?",
+              "tools_triggered": "get_vitrin",
+              "expected_behavior": "Önceki aramadaki vitrin kimliğiyle get_vitrin çağrılır; vitrinin tam açıklaması, konumu, hizmet verenin beyan ettiği fiyat bilgisi ve bağlantısı gösterilir."
+            },
+            {
+              "description": "Kategori listesi",
+              "prompt": "İşinn'de hangi hizmet kategorileri var?",
+              "tools_triggered": "list_categories",
+              "expected_behavior": "list_categories çağrılır; aktif vitrini olan kategoriler, her birindeki vitrin sayısı ve kategori sayfası bağlantılarıyla listelenir."
+            }
+          ],
+          "negative": [
+            {
+              "description": "Hizmet aramasıyla ilgisiz seyahat isteği",
+              "prompt": "Bana İstanbul-Londra için ucuz uçak bileti bul"
+            },
+            {
+              "description": "Hizmet aramasıyla ilgisiz genel soru",
+              "prompt": "Bana bir kek tarifi yaz"
+            },
+            {
+              "description": "Kişisel iletişim bilgisi isteği",
+              "prompt": "Bu öğretmenin telefon numarasını ve ev adresini ver"
+            }
+          ]
+        },
+        "demo_recording_url": "https://www.isinn.com.tr/demo/isinn-chatgpt-demo.mp4",
+        "commerce": false,
+        "commerce_description": "Uygulama ürün satmaz, ödeme almaz ve ödemeye aracılık etmez; yalnızca herkese açık hizmet vitrinlerini arar."
+      },
+      "publication": {
+        "release_notes": "İlk sürüm: vitrin arama, vitrin ayrıntısı ve kategori listesi."
+      }
+    }
+  }
+}

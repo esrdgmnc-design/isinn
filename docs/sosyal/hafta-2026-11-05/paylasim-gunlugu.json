@@ -1,0 +1,40 @@
+{
+  "gun1": {
+    "linkedin_sayfa": "https://www.linkedin.com/feed/update/urn:li:share:7524020523450720257 | 2026-11-05T08:11:49.882Z",
+    "linkedin_kisisel": "https://www.linkedin.com/feed/update/urn:li:activity:7524021045780213760/ | 2026-11-05T08:13:41.855Z",
+    "instagram": "https://www.instagram.com/p/DfWlIyXxgDe/ | 2026-11-05T08:16:30.289Z",
+    "tiktok": "https://www.tiktok.com/@isinn.com.tr/video/7704598581050690823 | 2026-11-05T08:17:59.044Z | inceleme bitti, Herkes",
+    "youtube_shorts": "https://youtube.com/shorts/TZZwgs2s3ws | 2026-11-05T08:20:04.697Z"
+  },
+  "gun2": {
+    "linkedin_sayfa": "https://www.linkedin.com/feed/update/urn:li:share:7524416262702239744 | 2026-11-06T10:24:05.201Z",
+    "instagram": "https://www.instagram.com/p/DfZY4vARUTT/ | 2026-11-06T10:26:30Z",
+    "tiktok": "https://www.tiktok.com/@isinn.com.tr/photo/7705002459873152257 | 2026-11-06T10:28:20Z | fotoğraf gönderisi, içerik inceleniyor"
+  },
+  "gun3": {
+    "linkedin_sayfa": "https://www.linkedin.com/feed/update/urn:li:activity:7524747067710185473/ | 2026-11-07T08:19:22.086Z",
+    "instagram": "https://www.instagram.com/p/DfbvcWRR3qV/ | 2026-11-07T08:22:34.588Z",
+    "tiktok": "https://www.tiktok.com/@isinn.com.tr/photo/7705342342890343700 | 2026-11-07T08:24:03.636Z | fotoğraf gönderisi, içerik inceleniyor"
+  },
+  "gun4": {
+    "linkedin_sayfa": "https://www.linkedin.com/feed/update/urn:li:share:7525115835330359296 | 2026-11-08T08:43:59.340Z",
+    "linkedin_kisisel": "https://www.linkedin.com/feed/update/urn:li:activity:7525116443416543232/ | 2026-11-08T08:46:11.750Z",
+    "instagram_atlandi": "isinn.com.tr hesabı hesap değiştiricide yok (yalnızca esra_dgmnc) | 2026-11-08T08:48Z",
+    "tiktok_atlandi": "metinlerde bu gün TikTok yok"
+  },
+  "gun5": {
+    "linkedin_sayfa": "https://www.linkedin.com/feed/update/urn:li:share:7525490083408564224 | 2026-11-09T09:31:06Z",
+    "instagram_atlandi": "isinn.com.tr hesabı hesap değiştiricide yok (yalnızca esra_dgmnc) | 2026-11-09T09:32Z",
+    "tiktok": "https://www.tiktok.com/@isinn.com.tr/photo/7706102506794880277 | 2026-11-09T09:33:52Z | fotoğraf gönderisi, içerik inceleniyor"
+  },
+  "gun6": {
+    "linkedin_sayfa": "https://www.linkedin.com/feed/update/urn:li:share:7525831048195174400 | 2026-11-10T08:05:54Z",
+    "instagram": "https://www.instagram.com/p/DfjcYPiRY7E/ | 2026-11-10T08:09:43Z",
+    "tiktok_atlandi": "metinlerde bu gün TikTok yok"
+  },
+  "gun7": {
+    "linkedin_sayfa": "https://www.linkedin.com/feed/update/urn:li:share:7526194615096553472 | 2026-11-11T08:10:30Z",
+    "instagram": "https://www.instagram.com/p/DfmBnINRf8r/ | 2026-11-11T08:13Z",
+    "tiktok": "https://www.tiktok.com/@isinn.com.tr/photo/7706824428239244564 | 2026-11-11T08:15Z | fotoğraf gönderisi, içerik inceleniyor (inceleme sırasında görünürlük \"Sadece ben\" gösteriyor; seçilen Herkes)"
+  }
+}

@@ -1,0 +1,8 @@
+<!doctype html><meta charset="utf-8"><canvas id="c"></canvas><script>
+// baslangic-1.png içindeki ekranın iç köşelerini bulur (beyaz ekran / siyah çerçeve sınırı).
+const im=new Image();im.onload=()=>{const c=document.getElementById('c');c.width=im.width;c.height=im.height;const g=c.getContext('2d');g.drawImage(im,0,0);
+const d=g.getImageData(0,0,im.width,im.height).data;const L=(x,y)=>{const i=(y*im.width+x)*4;return (d[i]+d[i+1]+d[i+2])/3};
+const res={};const rows=[800,1100,1400,1600];res.rows=rows.map(y=>{let l=-1,r=-1;for(let x=150;x<800;x++){if(L(x,y)<60&&L(x+3,y)>200){l=x+3;break}}for(let x=1400;x>700;x--){if(L(x,y)<60&&L(x-3,y)>200){r=x-3;break}}return [y,l,r]});
+const cols=[500,760,1000,1200];res.cols=cols.map(x=>{let t=-1,b=-1;for(let y=600;y<1000;y++){if(L(x,y)<60&&L(x,y+3)>200){t=y+3;break}}for(let y=1750;y>1300;y--){if(L(x,y)<80&&L(x,y-3)>180){b=y-3;break}}return [x,t,b]});
+window.out=res;window.ready=true};im.src='baslangic-1.png';
+</script>

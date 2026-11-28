@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Ayora — Atölye kilidi</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&amp;family=Rubik:wght@300;400;500&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}a{color:#2D5661}a:hover{color:#1F3F48}</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #FFFFFF; font-family: 'Rubik', sans-serif; font-weight: 300; color: #1E2A2E; box-sizing: border-box;">
+  <div style="position: relative; height: 320px;">
+    <img src="img/s9.jpg" alt="Manifest Atölyesi" style="width: 100%; height: 100%; object-fit: cover; display: block;">
+    <a href="Atolyeler.dc.html" aria-label="Geri" style="position: absolute; top: 34px; left: 20px; width: 44px; height: 44px; border-radius: 22px; background: #FFFFFF; display: flex; align-items: center; justify-content: center;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2D5661" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>
+    </a>
+    <span style="position: absolute; left: 50%; bottom: -40px; margin-left: -40px; width: 80px; height: 80px; border-radius: 40px; background: #FFFFFF; border: 1px solid #2D5661; display: flex; align-items: center; justify-content: center; box-sizing: border-box;">
+      <sc-if value="{{locked}}" hint-placeholder-val="{{true}}">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#2D5661" stroke-width="1.5" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>
+      </sc-if>
+      <sc-if value="{{bought}}" hint-placeholder-val="{{false}}">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="#2D5661" aria-hidden="true"><path d="M8 5v14l11-7z"></path></svg>
+      </sc-if>
+    </span>
+  </div>
+  <div style="padding: 56px 24px 0; display: flex; flex-direction: column; align-items: center; text-align: center;">
+    <h1 style="margin: 0; font-family: 'Cormorant Garamond', serif; font-weight: 600; font-size: 30px; letter-spacing: 0.04em; color: #2D5661;">MANİFEST ATÖLYESİ</h1>
+    <span style="font-size: 13px; color: #3D4F55; margin-top: 4px;">Hamide Değirmenci · 1 sa · video + ses</span>
+    <p style="margin: 12px 0 0; font-family: 'Cormorant Garamond', serif; font-style: italic; font-weight: 500; font-size: 17px; color: #3D4F55;">[Atölye açıklaması — Hamide yazacak]</p>
+    <div style="width: 100%; margin-top: 12px; border-top: 1px solid #2D5661;">
+      <div style="padding: 10px 0; border-bottom: 1px solid #E3ECEE; font-size: 14px;">Video olarak izle ya da ekran kapalıyken dinle</div>
+      <div style="padding: 10px 0; border-bottom: 1px solid #E3ECEE; font-size: 14px;">Atölye sonrası vision board'unu Pano'da hazırla</div>
+      <div style="padding: 10px 0; font-size: 14px;">Bir kez al, hesabında kalsın</div>
+    </div>
+  </div>
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; background: #FFFFFF; border-top: 1px solid #E3ECEE; padding: 14px 24px 26px; display: flex; flex-direction: column; gap: 8px;">
+    <sc-if value="{{locked}}" hint-placeholder-val="{{true}}">
+      <div style="display: flex; align-items: center; justify-content: space-between;">
+        <span style="display: flex; flex-direction: column;">
+          <span style="font-size: 12px; color: #3D4F55;">Tek seferlik</span>
+          <span style="font-family: 'Cormorant Garamond', serif; font-weight: 600; font-size: 24px;">[Fiyat]</span>
+        </span>
+        <button onClick="{{buy}}" style="min-height: 50px; padding: 0 30px; border-radius: 25px; border: none; background: #2D5661; color: #FFFFFF; font-family: Rubik, sans-serif; font-size: 15px;">Kilidi Aç</button>
+      </div>
+      <span style="font-size: 11px; color: #3D4F55; text-align: center;">Ödeme App Store / Google Play üzerinden alınır.</span>
+    </sc-if>
+    <sc-if value="{{bought}}" hint-placeholder-val="{{false}}">
+      <button onClick="{{reset}}" style="min-height: 50px; border-radius: 25px; border: none; background: #2D5661; color: #FFFFFF; font-family: Rubik, sans-serif; font-size: 15px;">İzlemeye başla</button>
+      <span style="font-size: 12px; color: #3D4F55; text-align: center;">Kilit açıldı. Bu kayıt artık senin.</span>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(p) { super(p); this.state = { bought: false }; }
+renderVals() {
+const b = this.state.bought;
+return { locked: !b, bought: b, buy: () => this.setState({ bought: true }), reset: () => this.setState({ bought: false }) };
+}
+}
+</script>
+</body>
+</html>

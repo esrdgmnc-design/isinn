@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1080px;height:1920px;overflow:hidden;background:#F6F1E8}
+body{font-family:Inter,sans-serif;color:#1F1A14;position:relative}
+.marka{font-family:Fraunces,serif;font-weight:600}
+.marka i{font-style:normal;color:#2563EB}
+h1{font-family:Fraunces,serif;font-weight:600;letter-spacing:-.015em;line-height:1.06}
+h1 b,.cap b{color:#2563EB;font-weight:600}
+.cap{position:absolute;left:80px;right:80px;top:190px;font-family:Fraunces,serif;font-weight:600;font-size:72px;line-height:1.1;letter-spacing:-.01em}
+.kicker{font:600 26px/1 Inter;letter-spacing:.22em;text-transform:uppercase;color:#2563EB}
+#ust{position:absolute;top:84px;left:80px;right:80px;display:flex;justify-content:space-between;align-items:center}
+#hook{position:absolute;inset:0;padding:0 80px;display:flex;flex-direction:column;justify-content:center}
+#tel{position:absolute;left:50%;top:560px;width:660px;height:1428px;margin-left:-330px;border-radius:80px;background:#15120F;padding:21px;box-shadow:0 50px 110px rgba(43,33,24,.28),0 0 0 2px #2A241E}
+#ekr{width:618px;height:1386px;border-radius:60px;overflow:hidden;background:#fff;position:relative}
+#ekr img{position:absolute;left:0;top:0;width:618px;display:block}
+#halka{position:absolute;border:6px solid #2563EB;border-radius:18px;opacity:0}
+#son{position:absolute;inset:0;padding:0 80px;display:none;flex-direction:column;justify-content:center;background:#F6F1E8}
+</style>
+</head>
+<body>
+<div id="ust"><div class="marka" style="font-size:44px">İşinn<i>.</i></div><div id="ustk" class="kicker"></div></div>
+<div id="hook"><div class="kicker" id="h0"></div><h1 id="h1" style="font-size:118px;margin-top:40px"></h1></div>
+<div class="cap" id="capA"></div><div class="cap" id="capB"></div>
+<div id="tel"><div id="ekr"><img id="im"><img id="im2" style="opacity:0"><div id="halka"></div></div></div>
+<div id="son">
+  <div class="marka" style="font-size:96px">İşinn<i>.</i></div>
+  <h1 style="font-size:132px;margin-top:56px">İşini göster,<br>müşterilerini bul.</h1>
+  <div style="font:400 40px/1.45 Inter;color:#6E5F4E;margin-top:48px;max-width:880px">Öğretmenler ve danışmanlar vitrin açar, işini gösterir.</div>
+  <div style="position:absolute;left:80px;right:80px;bottom:110px;display:flex;justify-content:space-between;align-items:flex-end;border-top:1px solid #D9CDBA;padding-top:30px">
+    <div style="font:500 32px/1.3 Inter">Web’de, App Store ve Google Play’de</div><div style="font:600 34px/1 Inter;color:#2563EB">isinn.com.tr</div></div>
+</div>
+<script>
+const P=new URLSearchParams(location.search), BASE=P.get('base')||'', V=P.get('p')||'p1';
+// Sahne planı: sesin sessizlik analizine göre zamanlandı (betik/kurgu.mjs ile aynı süreler)
+const CFG={
+ p1:{kicker:'Özel ders', hook:'İyi öğretmeni CV’si değil, <b>anlatışı</b> ele verir.', hookEnd:3.0, son:16.3,
+   s:[[3.1,'Diplomalar birbirine benzer. Fark, bir konuyu <b>nasıl açtığında.</b>','h_p1'],
+      [8.0,'Öğretmenler yöntemlerini <b>vitrinlerinde</b> gösterir.','h_panel'],
+      [12.6,'Seçmeden önce <b>görürsün.</b>','h_panel'],
+      [14.3,'Uzmansan sen de <b>vitrinini aç.</b>','h_vitrin']]},
+ p2:{kicker:'Danışmanlık', hook:'Danışman seçerken en sık hata: <b>unvana bakmak.</b>', hookEnd:3.6, son:16.3,
+   s:[[3.8,'Asıl soru: benimkine benzer bir sorunu <b>daha önce çözmüş mü?</b>','h_p2'],
+      [8.2,'Danışmanlar yaptıkları işi <b>vitrinlerinde</b> gösterir.','h_nasil'],
+      [11.75,'Önce gör, <b>sonra yaz.</b>','h_nasil'],
+      [13.9,'Uzmansan sen de <b>vitrinini aç.</b>','h_vitrin']]}
+}[V];
+const N={h_p1:83,h_p2:79,h_nasil:120,h_vitrin:1,h_panel:55};
+const PT=[231,424,585,735,879,1088,1252,1436,1591,1787,1946,2103,2270,2456,2617,2775,2943,3128,3312,3484,3656,3866,4057,4219,4394,4591,4740,4878,5043,5181,5320,5467,5657,5852,6013,6135,6297,6445,6588,6781,6994,7182,7350,7474,7618,7766,7895,8039,8190,8346,8498,8645,8795,8935,9082];
+const imgs={};
+function src(k,i){return BASE+k+'/'+String(i).padStart(4,'0')+'.png'}
+window.preload=async()=>{const need=new Set(CFG.s.map(x=>x[2]));const L=[];need.forEach(k=>{for(let i=0;i<N[k];i++)L.push([k,i])});
+  await Promise.all(L.map(([k,i])=>new Promise(r=>{const im=new Image();im.onload=im.onerror=r;im.src=src(k,i);imgs[k+i]=im.src;})));await document.fonts.ready;return L.length};
+const cl=x=>Math.max(0,Math.min(1,x)), E=x=>1-Math.pow(1-cl(x),3), EIO=x=>{x=cl(x);return x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2};
+const $=id=>document.getElementById(id);
+function show(el,o,dy){el.style.opacity=o;el.style.transform=`translateY(${dy}px)`}
+$('ustk').textContent=CFG.kicker; $('h0').textContent=CFG.kicker; $('h1').innerHTML=CFG.hook;
+// klip başlangıçları: aynı klip art arda geliyorsa kaldığı yerden sürer
+const clipStart=[]; CFG.s.forEach((x,i)=>{clipStart[i]=(i>0&&CFG.s[i-1][2]===x[2])?clipStart[i-1]:x[0];});
+function frameOf(k,dt){ if(k==='h_panel'){const ms=dt*1800;let j=0;while(j<PT.length-1&&PT[j+1]<=ms+231)j++;return j;} return Math.max(0,Math.min(N[k]-1,Math.floor(dt*30))); }
+window.render=async(t)=>{
+  const hk=t<CFG.hookEnd+0.5; $('hook').style.display=hk?'flex':'none';
+  if(hk){const out=E((t-CFG.hookEnd+0.35)/0.45);
+    show($('h0'),E((t-0.05)/0.4)*(1-out),20*(1-E((t-0.05)/0.4))-40*out);
+    show($('h1'),E((t-0.15)/0.5)*(1-out),60*(1-E((t-0.15)/0.5))-40*out);}
+  const t0=CFG.s[0][0]-0.25, tv=t>t0-0.1&&t<CFG.son+0.6;
+  $('tel').style.display=tv?'block':'none';
+  const tin=EIO((t-t0)/0.7); $('tel').style.top=(560+(1-tin)*1500)+'px';
+  // aktif sahne
+  let i=-1; CFG.s.forEach((x,j)=>{if(t>=x[0]-0.25)i=j;});
+  const capA=$('capA'),capB=$('capB');
+  if(i<0||!tv){capA.style.opacity=0;capB.style.opacity=0;}
+  else{ const k=E((t-(CFG.s[i][0]-0.25))/0.5); const prev=i>0?CFG.s[i-1][1]:'';
+    capA.innerHTML=prev; capB.innerHTML=CFG.s[i][1];
+    show(capA,i>0?(1-cl(k*2)):0,-30*cl(k*2)); show(capB,cl(k*2-(i>0?1:0)),30*(1-k));
+    const fo=1-cl((t-CFG.son+0.2)/0.3); capB.style.opacity=parseFloat(capB.style.opacity)*fo; }
+  const im=$('im'),h=$('halka');h.style.opacity=0;
+  if(i>=0){ const key=CFG.s[i][2]; im.src=imgs[key+frameOf(key,t-clipStart[i])];
+    if(key==='h_vitrin'){ const s=618/390, p=((t-CFG.s[i][0])%0.9)/0.9, pad=6+22*p; h.style.opacity=(1-p)*0.9;
+      h.style.left=(20*s-pad)+'px'; h.style.top=(346*s-pad)+'px'; h.style.width=(350*s+2*pad)+'px'; h.style.height=(44.5*s+2*pad)+'px'; } }
+  else im.src=imgs[CFG.s[0][2]+'0'];
+  const sv=t>=CFG.son; $('son').style.display=sv?'flex':'none'; $('son').style.opacity=E((t-CFG.son)/0.45);
+  $('ust').style.opacity=hk?0:1-cl((t-CFG.son)/0.3);
+  await new Promise(r=>{ if(im.complete) r(); else im.onload=r; });
+  return 1;
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Ayora — Atölyeler</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&amp;family=Jost:wght@300;400&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#3E5770}a:hover{color:#56718C}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #F0EDE6; font-family: 'Jost', sans-serif; font-weight: 300; color: #26303A; box-sizing: border-box;">
+  <div style="padding: 40px 28px 0; display: flex; flex-direction: column;">
+    <div style="display: flex; flex-direction: column; align-items: center; text-align: center;">
+      <div aria-hidden="true" style="width: 30px; height: 38px; border: 1px solid #7F98B2; border-bottom: none; border-radius: 15px 15px 0 0; box-sizing: border-box; padding: 4px 4px 0;"><div style="width: 100%; height: 100%; border: 1px solid rgba(94,122,152,0.28); border-bottom: none; border-radius: 11px 11px 0 0; box-sizing: border-box;"></div></div>
+      <h1 style="margin: 12px 0 0; font-family: 'Cormorant Garamond', serif; font-weight: 400; font-size: 44px; line-height: 1; color: #3E5770;">Atölyeler</h1>
+      <p style="margin: 8px 0 0; font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 17px; color: #5D6A77;">Canlı atölyelerin kayıtları, dilediğin zaman.</p>
+    </div>
+    <div style="margin-top: 22px; display: flex; flex-direction: column;">
+      <sc-for list="{{items}}" as="it" hint-placeholder-count="3">
+        <a href="AtolyeDetay.dc.html" style="{{it.row}}">
+          <span style="flex-grow: 1; display: flex; flex-direction: column;">
+            <span style="font-family: 'Cormorant Garamond', serif; font-weight: 400; font-size: 26px; line-height: 1.2; color: #26303A;">{{it.title}}</span>
+            <span style="margin-top: 8px; font-size: 10px; letter-spacing: 0.26em; color: #4F6A85;">{{it.meta}}</span>
+          </span>
+          <span style="display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0;">
+            <sc-if value="{{it.locked}}" hint-placeholder-val="{{true}}">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E7A98" stroke-width="1.4" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="1"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>
+            </sc-if>
+            <span style="font-size: 10px; letter-spacing: 0.24em; color: #3E5770;">{{it.state}}</span>
+          </span>
+        </a>
+      </sc-for>
+    </div>
+    <div style="margin-top: 30px; text-align: center; display: flex; flex-direction: column; align-items: center;">
+      <p style="margin: 8px 0 0; width: 100%; font-family: 'Cormorant Garamond', serif; font-style: italic; font-weight: 300; font-size: 19px; line-height: 1.5; color: #26303A;">Canlı atölyeye katılmak ya da bire bir görüşmek istersen</p>
+      <a href="https://www.ayorahealing.com/hizmetler" style="margin-top: 14px; min-height: 46px; padding: 0 26px; display: flex; align-items: center; border: 1px solid #5E7A98; font-size: 11px; letter-spacing: 0.28em; text-decoration: none; color: #3E5770;">RANDEVU AL</a>
+    </div>
+  </div>
+  <nav aria-label="Ana menü" style="position: absolute; left: 0; right: 0; bottom: 0; padding: 34px 10px 18px; background: linear-gradient(rgba(240,237,230,0), #F0EDE6 45%); display: flex; justify-content: center; gap: 14px;">
+    <a href="Main.dc.html" style="min-height: 44px; display: flex; align-items: center; padding: 0 2px; font-size: 10px; letter-spacing: 0.24em; text-decoration: none; color: #5D6A77; border-bottom: 1px solid transparent; box-sizing: border-box;">BUGÜN</a>
+    <a href="Defter.dc.html" style="min-height: 44px; display: flex; align-items: center; padding: 0 2px; font-size: 10px; letter-spacing: 0.24em; text-decoration: none; color: #5D6A77; border-bottom: 1px solid transparent; box-sizing: border-box;">DEFTER</a>
+    <a href="Dinle.dc.html" style="min-height: 44px; display: flex; align-items: center; padding: 0 2px; font-size: 10px; letter-spacing: 0.24em; text-decoration: none; color: #5D6A77; border-bottom: 1px solid transparent; box-sizing: border-box;">DİNLE VE OKU</a>
+    <a href="Atolyeler.dc.html" style="min-height: 44px; display: flex; align-items: center; padding: 0 2px; font-size: 10px; letter-spacing: 0.24em; text-decoration: none; color: #3E5770; border-bottom: 1px solid #7F98B2; box-sizing: border-box;">ATÖLYE</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+const row = 'display: flex; align-items: center; gap: 12px; padding: 22px 0; border-bottom: 1px solid rgba(94,122,152,0.28); text-decoration: none;';
+const list = [
+{ title: 'Manifest Atölyesi', meta: '1 SA · VİDEO + SES', locked: true, state: 'KİLİTLİ' },
+{ title: 'Dönüşüm Atölyesi', meta: '1 SA 30 DK · VİDEO + SES', locked: false, state: 'SENDE · İZLE' },
+{ title: 'Arınma Atölyesi', meta: '1 SA · VİDEO + SES', locked: true, state: 'KİLİTLİ' }
+];
+return {
+items: list.map((x, i) => ({ title: x.title, meta: x.meta, locked: x.locked, state: x.state, row: i === 0 ? row + ' border-top: 1px solid rgba(94,122,152,0.28);' : row }))
+};
+}
+}
+</script>
+</body>
+</html>

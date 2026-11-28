@@ -61,6 +61,16 @@
         "set NEXT_DIST_DIR=.next-3001&& npx next dev -p 3001"
       ],
       "port": 3001
+    },
+    {
+      "name": "isinn-dev-3005-ayri",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": [
+        "/c",
+        "set NEXT_DIST_DIR=.next-3005&& npx next dev -p 3005"
+      ],
+      "port": 3005,
+      "autoPort": false
     }
   ]
 }

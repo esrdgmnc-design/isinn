@@ -1,0 +1,140 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>html,body{margin:0;background:#000;overflow:hidden}canvas{position:absolute;left:0;top:0;display:block}</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+</head><body>
+<canvas id="bg" width="1080" height="1920"></canvas>
+<canvas id="gl" width="1080" height="1920"></canvas>
+<script type="module">
+// "Ekrandan taşan yetenek" — Eğitim sahnesi, ücretsiz yol: yapay zekâ videosu yok.
+// Arka plan: baslangic-1.png (masa + dizüstü). Ekran: Azra'nın gerçek vitrin görüntüsü, sahnenin ışığına uydurulur.
+// Üstte Three.js: rakamlar ekranın camından çıkar (kırpma düzlemi), masaya düşer, yığılır. renderAt(t) belirlenimci.
+import * as THREE from "three";
+import { TTFLoader } from "three/addons/loaders/TTFLoader.js";
+import { Font } from "three/addons/loaders/FontLoader.js";
+import { TextGeometry } from "three/addons/geometries/TextGeometry.js";
+
+const W = 1080, H = 1920;
+const load = (src) => new Promise((r, j) => { const i = new Image(); i.onload = () => r(i); i.onerror = j; i.src = src; });
+
+// ---------- 2B katman: fotoğraf + gerçek ekran ----------
+const [photo, shot] = await Promise.all([load("baslangic-1.png"), load("azra-ekran.png")]);
+const bg = document.getElementById("bg").getContext("2d");
+const S = Math.max(W / photo.width, H / photo.height), ox = (W - photo.width * S) / 2, oy = (H - photo.height * S) / 2;
+bg.drawImage(photo, ox, oy, photo.width * S, photo.height * S);
+// Ekranın iç köşeleri (baslangic-1.png'den ölçüldü, 1080x1920'ye çevrildi)
+const Q = { tl: [260, 748], tr: [1253, 748], bl: [264, 1658], br: [1252, 1658] };
+for (const k in Q) Q[k] = [Q[k][0] * S + ox, Q[k][1] * S + oy];
+// Fotoğraftaki ekran beyazını örnekle: yeni ekran aynı parlaklık ve sıcaklıkta dursun
+const smp = bg.getImageData(Math.round(Q.tl[0] + 8), Math.round(Q.tl[1] + 330), 6, 40).data; // sol kenar boşluğu (beyaz)
+let wr = 0, wg = 0, wb = 0, n = 0; for (let i = 0; i < smp.length; i += 4) { wr += smp[i]; wg += smp[i + 1]; wb += smp[i + 2]; n++; }
+const white = [wr / n, wg / n, wb / n];
+// Kaynak kırpma: kartı ortalayan bölge (model de 1. sahnede kenar boşluklarını böyle atmıştı)
+const crop = { x: 612, y: 0, w: 1656, h: 1522 };
+const off = document.createElement("canvas"); off.width = W; off.height = H; const og = off.getContext("2d");
+og.imageSmoothingQuality = "high"; og.filter = "blur(0.35px)";
+const y0 = Q.tl[1], y1 = Q.bl[1];
+for (let y = Math.floor(y0); y < Math.ceil(y1); y++) {
+  const v = (y - y0) / (y1 - y0), lx = Q.tl[0] + (Q.bl[0] - Q.tl[0]) * v, rx = Q.tr[0] + (Q.br[0] - Q.tr[0]) * v;
+  const sy = crop.y + v * crop.h;
+  og.drawImage(shot, crop.x, sy, crop.w, crop.h / (y1 - y0), lx, y, rx - lx, 1.02);
+}
+og.filter = "none";
+// Işığa uydurma: beyazı fotoğraftaki ekran beyazına çek, üstte hafif parlama, köşelerde çok hafif kararma
+og.globalCompositeOperation = "multiply"; og.fillStyle = `rgb(${white.map(Math.round).join(",")})`;
+og.beginPath(); og.moveTo(...Q.tl); og.lineTo(...Q.tr); og.lineTo(...Q.br); og.lineTo(...Q.bl); og.closePath(); og.fill();
+const vg = og.createRadialGradient((Q.tl[0] + Q.tr[0]) / 2, (y0 + y1) / 2, 120, (Q.tl[0] + Q.tr[0]) / 2, (y0 + y1) / 2, 520);
+vg.addColorStop(0, "rgba(255,255,255,1)"); vg.addColorStop(1, "rgba(232,228,222,1)"); og.fillStyle = vg; og.fill();
+og.globalCompositeOperation = "screen";
+const gl0 = og.createLinearGradient(Q.tl[0], y0, Q.br[0], y1);
+gl0.addColorStop(0, "rgba(255,244,230,0.10)"); gl0.addColorStop(0.45, "rgba(255,255,255,0)"); gl0.addColorStop(1, "rgba(255,255,255,0)");
+og.fillStyle = gl0; og.fill();
+og.globalCompositeOperation = "source-over";
+bg.drawImage(off, 0, 0);
+
+// ---------- 3B katman: rakamlar ----------
+const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById("gl"), alpha: true, antialias: true, preserveDrawingBuffer: true });
+renderer.setSize(W, H, false); renderer.setClearColor(0x000000, 0);
+renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; renderer.localClippingEnabled = true;
+const scene = new THREE.Scene();
+// Fotoğrafa uydurulan kamera (kamera.mjs): yükseklik 0,40 m, uzaklık 1,54 m, 10° aşağı, dikey görüş 29°
+const cam = new THREE.PerspectiveCamera(29, W / H, 0.05, 10); cam.position.set(0, 0.40, 1.54); cam.rotation.x = -10 * Math.PI / 180;
+scene.add(new THREE.HemisphereLight(0xfff1df, 0x9a6b42, 1.1));
+const sun = new THREE.DirectionalLight(0xffd9a6, 2.6); sun.position.set(-1.0, 1.1, -0.25); sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048); Object.assign(sun.shadow.camera, { left: -0.6, right: 0.6, top: 0.6, bottom: -0.6, near: 0.1, far: 4 }); sun.shadow.radius = 6; sun.shadow.bias = -0.0004;
+scene.add(sun);
+const fill = new THREE.DirectionalLight(0xfff6ea, 0.7); fill.position.set(0.3, 0.6, 1.2); scene.add(fill);
+// Gölge alan yüzeyler: masa ve dizüstünün tabanı (yalnızca gölge görünür)
+const shMat = new THREE.ShadowMaterial({ opacity: 0.3 });
+const desk = new THREE.Mesh(new THREE.PlaneGeometry(4, 4), shMat); desk.rotation.x = -Math.PI / 2; desk.receiveShadow = true; scene.add(desk);
+const BASE = { w: 0.34, d: 0.16, h: 0.012 };
+const base = new THREE.Mesh(new THREE.BoxGeometry(BASE.w, BASE.h, BASE.d), shMat); base.position.set(0, BASE.h / 2, BASE.d / 2); base.receiveShadow = true; scene.add(base);
+// Ekran düzlemi: menteşeden 10° geriye yatık; arkasında kalan kısım görünmez → nesne camdan çıkıyormuş gibi
+const tilt = 10 * Math.PI / 180, nrm = new THREE.Vector3(0, Math.sin(tilt), Math.cos(tilt));
+const clip = new THREE.Plane(nrm.clone(), -0.03 * Math.sin(tilt));
+const SCREEN_H = 0.28;
+const onScreen = (x, s) => new THREE.Vector3(x, 0.03 + s * Math.cos(tilt), -s * Math.sin(tilt)); // s: ekranın altından yukarı mesafe
+
+const ttf = await new TTFLoader().loadAsync("file:///C:/Windows/Fonts/segoeuib.ttf");
+const font = new Font(ttf);
+let chars = "0123456789+=×÷π√".split("").filter((c) => font.data.glyphs[c]);
+const COLORS = ["#F7F2E8", "#F7F2E8", "#A9C4EB", "#F2B8A2", "#B9D7C1", "#F3D27A", "#2563EB"];
+const geoCache = {};
+const geoFor = (c) => geoCache[c] || (geoCache[c] = (() => {
+  const g = new TextGeometry(c, { font, size: 0.042, height: 0.011, depth: 0.011, curveSegments: 8, bevelEnabled: true, bevelThickness: 0.0018, bevelSize: 0.0013, bevelSegments: 3 });
+  g.computeBoundingBox(); g.center(); g.computeVertexNormals(); return g;
+})());
+
+// Belirlenimci rastgele
+let seed = 7; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+const N = 44, items = [];
+for (let i = 0; i < N; i++) {
+  const c = chars[Math.floor(rnd() * chars.length)];
+  const mat = new THREE.MeshStandardMaterial({ color: COLORS[Math.floor(rnd() * COLORS.length)], roughness: 0.58, metalness: 0.0, clippingPlanes: [clip] });
+  const m = new THREE.Mesh(geoFor(c), mat); m.castShadow = true; m.receiveShadow = true; m.visible = false; scene.add(m);
+  // Ekrandaki kapak fotoğrafının (defter) bulunduğu bölgeden çıkış
+  const t0 = 0.95 + (i / N) * 2.3 + rnd() * 0.12;
+  const p0 = onScreen((rnd() - 0.5) * 0.13, SCREEN_H * (0.62 + rnd() * 0.2)).addScaledVector(nrm, -0.03);
+  const out = 0.62 + rnd() * 0.36;
+  const v0 = nrm.clone().multiplyScalar(out).add(new THREE.Vector3((rnd() - 0.5) * 0.26, 0.08 + rnd() * 0.2, 0));
+  const w0 = new THREE.Vector3(rnd() - 0.5, rnd() - 0.5, rnd() - 0.5).multiplyScalar(9);
+  const flat = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2 + (rnd() - 0.5) * 0.35, (rnd() - 0.5) * 0.3, (rnd() - 0.5) * 2.4, "YXZ"));
+  const q0 = new THREE.Quaternion().setFromEuler(new THREE.Euler((rnd() - 0.5) * 0.6, (rnd() - 0.5) * 0.6, (rnd() - 0.5) * 0.6));
+  items.push({ m, c, t0, p0, v0, w0, flat, q0 });
+}
+
+const G = 4.4, DT = 1 / 240, R = 0.024, THICK = 0.0075;
+function simulate(T) {
+  const st = items.map((it) => ({ it, alive: false, p: it.p0.clone(), v: it.v0.clone(), q: it.q0.clone(), w: it.w0.clone(), landed: false, rest: false, settleQ: 0 }));
+  const settled = [];
+  for (let t = 0; t <= T + 1e-9; t += DT) {
+    for (const s of st) {
+      if (t < s.it.t0) continue; s.alive = true; if (s.rest) continue;
+      s.v.y -= G * DT; s.p.addScaledVector(s.v, DT);
+      // zemin: masa, dizüstü tabanı ya da daha önce yerleşmiş rakamların üstü
+      let floor = (Math.abs(s.p.x) < BASE.w / 2 && s.p.z > 0 && s.p.z < BASE.d) ? BASE.h : 0;
+      for (const o of settled) { const dx = o.p.x - s.p.x, dz = o.p.z - s.p.z; if (dx * dx + dz * dz < R * R) floor = Math.max(floor, o.p.y + THICK * 0.9); }
+      if (s.p.y - THICK < floor && s.v.y < 0 && s.p.dot(nrm) > 0.02) {
+        s.p.y = floor + THICK; s.landed = true;
+        if (Math.abs(s.v.y) > 0.25) { s.v.y *= -0.28; s.v.x *= 0.55; s.v.z *= 0.55; s.w.multiplyScalar(0.5); }
+        else { s.v.y = 0; const sp = Math.hypot(s.v.x, s.v.z); const k = Math.max(0, sp - 1.6 * DT) / (sp || 1); s.v.x *= k; s.v.z *= k; if (sp < 0.01) { s.rest = true; settled.push(s); } }
+      }
+      if (!s.landed) { const dq = new THREE.Quaternion().setFromAxisAngle(s.w.clone().normalize(), s.w.length() * DT); s.q.premultiply(dq); }
+      else { s.settleQ = Math.min(1, s.settleQ + DT * 7); s.q.slerp(s.it.flat, Math.min(1, DT * 9)); }
+    }
+  }
+  return st;
+}
+
+window.renderAt = (T) => {
+  for (const s of simulate(T)) {
+    const m = s.it.m; m.visible = s.alive; if (!s.alive) continue;
+    m.position.copy(s.p); m.quaternion.copy(s.q);
+  }
+  renderer.render(scene, cam); return true;
+};
+window.info = { white, chars, Q };
+window.renderAt(0);
+window.ready = true;
+</script></body></html>

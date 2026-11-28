@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --krem:#F6F1E8; --kahve:#2B2118; --soluk:#7A6A58; --cizgi:#D9CDBA; --mavi:#2563EB; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html, body { width:1080px; height:1920px; background:var(--krem); overflow:hidden; }
+  body { font-family:Inter, system-ui, sans-serif; color:var(--kahve); }
+  body.koyu { --krem:#2B2118; --kahve:#F6F1E8; --soluk:#C9B89F; --cizgi:#5A4A3A; --mavi:#7FA6FF; }
+  .sahne { width:1080px; height:1920px; padding:150px 96px 120px; display:flex; flex-direction:column; }
+  .ust { font:600 30px/1 Inter; letter-spacing:.18em; text-transform:uppercase; color:var(--soluk); }
+  h1 { font-family:Fraunces, Georgia, serif; font-weight:600; font-size:118px; line-height:1.05; letter-spacing:-.015em; margin-top:56px; }
+  .alt { font:400 44px/1.4 Inter; color:var(--soluk); margin-top:44px; }
+  .harf { font-family:Fraunces, serif; font-weight:600; font-size:300px; line-height:1; color:var(--mavi); margin-top:120px; }
+  .secenek { font-family:Fraunces, serif; font-weight:400; font-size:104px; line-height:1.1; margin-top:40px; }
+  .kaydir { margin-top:auto; font:600 40px/1 Inter; color:var(--kahve); display:flex; align-items:center; gap:18px; }
+  .kaydir span { font-size:56px; color:var(--mavi); }
+  .tel { width:560px; aspect-ratio:9/16; border-radius:44px; overflow:hidden; background:#fff; margin:56px auto 0;
+         box-shadow:0 30px 60px rgba(0,0,0,.35), 0 0 0 10px #F6F1E8, 0 0 0 11px var(--cizgi); }
+  .tel img { width:100%; height:100%; object-fit:cover; object-position:top; display:block; }
+  .orta { margin:auto 0; }
+  .orta .harf { margin-top:0; }
+  .orta h1 { margin-top:0; }
+  .orta .harf { font-size:220px; }
+  .gorsel { margin-top:72px; }
+  .kart { background:#fff; border:1px solid var(--cizgi); border-radius:28px; box-shadow:0 24px 50px rgba(43,33,24,.10); padding:40px; }
+  .ara { display:flex; align-items:center; gap:22px; border:2px solid var(--cizgi); border-radius:60px; padding:26px 34px; font:500 40px/1 Inter; }
+  .ara svg { flex:none; }
+  .bos { font:500 34px/1.4 Inter; color:var(--soluk); margin-top:40px; padding-left:8px; }
+  .cizgi { height:22px; border-radius:11px; background:#EFE8DC; margin-top:22px; }
+  .profil { display:flex; gap:32px; align-items:center; filter:grayscale(1); opacity:.55; }
+  .avatar { width:130px; height:130px; border-radius:50%; background:#D9CDBA; flex:none; }
+  .etiket { display:inline-block; margin-top:34px; font:600 30px/1 Inter; color:#B45309; background:#FEF3C7; border-radius:40px; padding:16px 26px; }
+  .yigin { position:relative; height:520px; }
+  .cip { position:absolute; background:#fff; border:1px solid var(--cizgi); border-radius:22px; padding:24px 30px; font:500 34px/1 Inter;
+         box-shadow:0 16px 34px rgba(43,33,24,.10); white-space:nowrap; }
+  .cip b { font-weight:600; color:var(--soluk); margin-right:14px; }
+  .tek { display:flex; align-items:center; gap:28px; background:#fff; border:3px solid var(--mavi); border-radius:28px; padding:34px 38px;
+         box-shadow:0 24px 50px rgba(37,99,235,.18); font:600 40px/1.2 Inter; }
+  .tik { width:84px; height:84px; border-radius:50%; background:var(--mavi); color:#fff; display:grid; place-items:center; font-size:48px; flex:none; }
+  .alti { display:flex; gap:16px; flex-wrap:wrap; margin-top:30px; }
+  .alti span { font:500 32px/1 Inter; background:#E8EEFC; color:#1E40AF; border-radius:40px; padding:16px 24px; }
+  .alt-bant { display:flex; justify-content:space-between; align-items:flex-end; border-top:1px solid var(--cizgi); padding-top:32px; margin-top:auto; }
+  .marka { font-family:Fraunces, serif; font-weight:600; font-size:56px; }
+  .marka i { font-style:normal; color:var(--mavi); }
+  .motto { font:500 32px/1.3 Inter; color:var(--soluk); }
+  .site { font:500 30px/1 Inter; color:var(--soluk); letter-spacing:.04em; }
+</style>
+</head>
+<body>
+<div class="sahne" id="s"></div>
+<script>
+const n = +(new URLSearchParams(location.search).get('n') || 1);
+const bant = `<div class="alt-bant"><div><div class="marka">İşinn<i>.</i></div><div class="motto">İşini göster, uzmanını bul.</div></div><div class="site">isinn.com.tr</div></div>`;
+const kaydir = `<div class="kaydir">Kaydır <span>→</span></div>`;
+const S = {
+  1: `<div class="ust">Dürüst ol</div><div class="orta"><h1>Biri adını Google’da arasa, ne bulur?</h1><div class="alt">Seni bir iş için araştıran kişi, karar vermeden önce bakar.</div></div>${kaydir}`,
+  2: `<div class="ust">Hangisi sensin?</div><div class="orta"><div class="harf">A</div><div class="secenek">Hiçbir şey.</div>
+      <div class="gorsel kart"><div class="ara"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#7A6A58" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>Adın Soyadın</div>
+      <div class="bos">Sonuç bulunamadı.</div></div></div>${kaydir}`,
+  3: `<div class="ust">Hangisi sensin?</div><div class="orta"><div class="harf">B</div><div class="secenek">Yıllardır güncellenmemiş bir profil.</div>
+      <div class="gorsel kart"><div class="profil"><div class="avatar"></div><div style="flex:1"><div class="cizgi" style="width:70%;margin-top:0;height:30px"></div><div class="cizgi" style="width:90%"></div><div class="cizgi" style="width:55%"></div></div></div>
+      <div class="etiket">Son güncelleme: 2019</div></div></div>${kaydir}`,
+  4: `<div class="ust">Hangisi sensin?</div><div class="orta"><div class="harf">C</div><div class="secenek">Dağınık linkler.</div>
+      <div class="gorsel yigin">
+        <div class="cip" style="left:0;top:10px;transform:rotate(-4deg)"><b>CV</b>cv_son_v3_final.pdf</div>
+        <div class="cip" style="left:300px;top:130px;transform:rotate(3deg)"><b>Belgeler</b>e-postada, ekte</div>
+        <div class="cip" style="left:30px;top:250px;transform:rotate(2deg)"><b>İşler</b>eski-web-sitem.com</div>
+        <div class="cip" style="left:360px;top:370px;transform:rotate(-3deg)"><b>Örnekler</b>sosyal medyada</div>
+      </div></div>${kaydir}`,
+  5: `<div class="ust">Hangisi sensin?</div><div class="orta"><div class="harf">D</div><div class="secenek">İşini gösteren tek bir sayfa.</div>
+      <div class="gorsel"><div class="tek"><div class="tik">✓</div>Hepsi tek bir linkte</div>
+      <div class="alti"><span>Uzmanlık</span><span>Çalışmalar</span><span>Belgeler</span><span>Yorumlar</span></div></div></div>${kaydir}`,
+  6: `<div class="ust">Harfini yorumlara yaz</div><h1 style="font-size:96px">D değilse, vitrinini aç.</h1><div class="alt">Uzmanlığına dair her şey, tek bir linkte.</div><div class="tel"><img src="1_karsilama_temiz.png"></div>${bant}`,
+};
+if (n === 1 || n === 6) document.body.classList.add('koyu');
+document.getElementById('s').innerHTML = S[n];
+</script>
+</body>
+</html>

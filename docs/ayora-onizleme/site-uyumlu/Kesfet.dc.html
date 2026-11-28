@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Ayora — Keşfet</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&amp;family=Rubik:wght@300;400;500&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}a{color:#2D5661}a:hover{color:#1F3F48}</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #FFFFFF; font-family: 'Rubik', sans-serif; font-weight: 300; color: #1E2A2E; box-sizing: border-box;">
+  <div style="padding: 34px 24px 0; display: flex; flex-direction: column; gap: 16px;">
+    <div style="text-align: center;">
+      <h1 style="margin: 0; font-family: 'Cormorant Garamond', serif; font-weight: 600; font-size: 32px; letter-spacing: 0.04em; color: #2D5661;">KEŞFET</h1>
+      <span style="font-size: 13px; color: #3D4F55;">Zihni sakinleştirmek ve özle yeniden buluşmak için</span>
+    </div>
+    <div role="tablist" style="display: flex; gap: 6px; justify-content: center;">
+      <sc-for list="{{tabs}}" as="t" hint-placeholder-count="3">
+        <button role="tab" onClick="{{t.pick}}" style="{{t.style}}">{{t.label}}</button>
+      </sc-for>
+    </div>
+    <sc-if value="{{isAudio}}" hint-placeholder-val="{{true}}">
+      <div style="display: flex; flex-direction: column;">
+        <sc-for list="{{items}}" as="it" hint-placeholder-count="5">
+          <div style="display: flex; align-items: center; gap: 14px; padding: 12px 0; border-bottom: 1px solid #E3ECEE;">
+            <img src="{{it.img}}" alt="" style="width: 56px; height: 56px; border-radius: 28px; object-fit: cover; flex-shrink: 0;">
+            <div style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1; min-width: 0;">
+              <span style="font-family: 'Cormorant Garamond', serif; font-weight: 600; font-size: 20px; color: #1E2A2E;">{{it.title}}</span>
+              <span style="font-size: 12px; color: #3D4F55;">{{it.meta}}</span>
+            </div>
+            <a href="Oynatici.dc.html" aria-label="Oynat" style="width: 44px; height: 44px; border-radius: 22px; border: 1px solid #2D5661; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-sizing: border-box;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="#2D5661" aria-hidden="true"><path d="M8 5v14l11-7z"></path></svg>
+            </a>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+    <sc-if value="{{isText}}" hint-placeholder-val="{{false}}">
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <article style="background: #F3F7F8; border-radius: 24px; padding: 20px; text-align: center; display: flex; flex-direction: column; gap: 8px;">
+          <span style="font-size: 11px; letter-spacing: 0.18em; font-weight: 500; color: #2D5661;">BUGÜNÜN HİS YÜKLEMESİ</span>
+          <span style="font-family: 'Cormorant Garamond', serif; font-weight: 600; font-size: 24px; line-height: 1.15;">Güvende olduğumu biliyorum</span>
+          <span style="font-family: 'Cormorant Garamond', serif; font-style: italic; font-weight: 500; font-size: 16px; color: #3D4F55;">[Hamide'nin yazdığı metin burada yer alır.]</span>
+          <button style="align-self: center; margin-top: 4px; min-height: 42px; padding: 0 24px; border-radius: 21px; border: none; background: #2D5661; color: #FFFFFF; font-family: Rubik, sans-serif; font-size: 14px;">Oku</button>
+        </article>
+        <sc-for list="{{texts}}" as="x" hint-placeholder-count="4">
+          <button style="display: flex; align-items: center; justify-content: space-between; min-height: 58px; padding: 0 2px; background: none; border: none; border-bottom: 1px solid #E3ECEE; text-align: left; font-family: Rubik, sans-serif;">
+            <span style="display: flex; flex-direction: column; gap: 2px;">
+              <span style="font-family: 'Cormorant Garamond', serif; font-weight: 600; font-size: 19px; color: #1E2A2E;">{{x.title}}</span>
+              <span style="font-size: 12px; color: #3D4F55;">{{x.meta}}</span>
+            </span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2D5661" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
+          </button>
+        </sc-for>
+      </div>
+    </sc-if>
+  </div>
+  <nav aria-label="Ana menü" style="position: absolute; left: 0; right: 0; bottom: 0; height: 80px; background: #FFFFFF; border-top: 1px solid #E3ECEE; display: flex; justify-content: space-around; align-items: flex-start; padding-top: 10px; box-sizing: border-box;">
+    <a href="Main.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 64px; min-height: 44px; font-size: 11px; text-decoration: none; color: #5C6F75;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>Bugün</a>
+    <a href="Defter.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 64px; min-height: 44px; font-size: 11px; text-decoration: none; color: #5C6F75;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"></path><path d="M5 17a3 3 0 0 1 3-3h11"></path></svg>Defter</a>
+    <a href="Kesfet.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 64px; min-height: 44px; font-size: 11px; font-weight: 500; text-decoration: none; color: #2D5661;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 14v-2a9 9 0 0 1 18 0v2"></path><rect x="3" y="14" width="4" height="6" rx="1.5"></rect><rect x="17" y="14" width="4" height="6" rx="1.5"></rect></svg>Keşfet</a>
+    <a href="Atolyeler.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 64px; min-height: 44px; font-size: 11px; text-decoration: none; color: #5C6F75;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M10 9.5v5l4-2.5z"></path></svg>Atölyeler</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(p) { super(p); this.state = { tab: 'med' }; }
+renderVals() {
+const tab = this.state.tab;
+const on = 'min-height: 40px; padding: 0 14px; border-radius: 20px; border: 1px solid #2D5661; background: #2D5661; color: #FFFFFF; font-family: Rubik, sans-serif; font-size: 13px;';
+const off = 'min-height: 40px; padding: 0 14px; border-radius: 20px; border: 1px solid #2D5661; background: #FFFFFF; color: #2D5661; font-family: Rubik, sans-serif; font-size: 13px;';
+const med = [
+{ img: 'img/s4.jpg', title: 'Sabah Nefesi', meta: '10 dk · Hamide Değirmenci' },
+{ img: 'img/s2.jpg', title: 'Bedeni Fark Etmek', meta: '15 dk · Hamide Değirmenci' },
+{ img: 'img/s3.jpg', title: 'Uykuya Hazırlık', meta: '20 dk · Hamide Değirmenci' },
+{ img: 'img/s1.jpg', title: 'Şükür Meditasyonu', meta: '12 dk · Hamide Değirmenci' },
+{ img: 'img/s8.jpg', title: 'Kısa Bir Mola', meta: '5 dk · Hamide Değirmenci' }
+];
+const frq = [
+{ img: 'img/s6.jpg', title: '432 Hz', meta: '30 dk · arka plan sesi' },
+{ img: 'img/s2.jpg', title: '528 Hz', meta: '30 dk · arka plan sesi' },
+{ img: 'img/s8.jpg', title: '639 Hz', meta: '30 dk · arka plan sesi' },
+{ img: 'img/s3.jpg', title: 'Derin Uyku Sesi', meta: '60 dk · arka plan sesi' }
+];
+const mk = (k, l) => ({ label: l, style: tab === k ? on : off, pick: () => this.setState({ tab: k }) });
+return {
+tabs: [mk('med', 'Meditasyon'), mk('frq', 'Frekans'), mk('his', 'His Yüklemeleri')],
+isAudio: tab !== 'his',
+isText: tab === 'his',
+items: tab === 'frq' ? frq : med,
+texts: [
+{ title: 'Bolluğa alan açmak', meta: 'Bolluk · 2 dk okuma' },
+{ title: 'Kalbimi yumuşatıyorum', meta: 'Sevgi · 3 dk okuma' },
+{ title: 'Bugün yeterince iyiyim', meta: 'Huzur · 2 dk okuma' }
+]
+};
+}
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Ayora — Oynatıcı</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&amp;family=Jost:wght@300;400&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#3E5770}a:hover{color:#56718C}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #F0EDE6; font-family: 'Jost', sans-serif; font-weight: 300; color: #26303A; box-sizing: border-box; padding: 40px 28px 40px; display: flex; flex-direction: column; align-items: center;">
+  <div aria-hidden="true" style="width: 30px; height: 38px; border: 1px solid #7F98B2; border-bottom: none; border-radius: 15px 15px 0 0; box-sizing: border-box; padding: 4px 4px 0;"><div style="width: 100%; height: 100%; border: 1px solid rgba(94,122,152,0.28); border-bottom: none; border-radius: 11px 11px 0 0; box-sizing: border-box;"></div></div>
+  <a href="Dinle.dc.html" style="margin-top: 6px; min-height: 44px; display: flex; align-items: center; font-size: 10.5px; letter-spacing: 0.3em; text-decoration: none; color: #5D6A77;">← DİNLE</a>
+  <div aria-hidden="true" style="margin-top: 18px; width: 270px; height: 270px; position: relative; display: flex; align-items: center; justify-content: center;">
+    <div style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; border-radius: 50%; border: 1px solid rgba(94,122,152,0.28);"></div>
+    <div style="position: absolute; left: 30px; top: 30px; right: 30px; bottom: 30px; border-radius: 50%; border: 1px solid rgba(94,122,152,0.28);"></div>
+    <div style="position: absolute; left: 60px; top: 60px; right: 60px; bottom: 60px; border-radius: 50%; border: 1px dashed rgba(94,122,152,0.28);"></div>
+    <div style="position: absolute; left: 90px; top: 90px; right: 90px; bottom: 90px; border-radius: 50%; border: 1px solid #7F98B2;"></div>
+    <div style="width: 34px; height: 34px; border-radius: 50%; background: radial-gradient(circle at 38% 34%, #FFF6DE, #F1D49A 45%, #C99A4E); box-shadow: 0 0 40px rgba(241,200,120,0.8), 0 0 90px rgba(255,220,160,0.5);"></div>
+  </div>
+  <h1 style="margin: 26px 0 0; font-family: 'Cormorant Garamond', serif; font-weight: 400; font-size: 36px; line-height: 1; color: #3E5770;">Sabah Nefesi</h1>
+  <div style="margin-top: 8px; font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 18px; color: #5D6A77;">Hamide Değirmenci</div>
+  <div style="width: 100%; margin-top: 28px;">
+    <div style="height: 1px; background: rgba(94,122,152,0.28); position: relative;">
+      <div style="width: 32%; height: 1px; background: #3E5770;"></div>
+      <div style="position: absolute; left: 32%; top: -4px; width: 9px; height: 9px; margin-left: -4px; border-radius: 50%; background: #3E5770;"></div>
+    </div>
+    <div style="display: flex; justify-content: space-between; margin-top: 10px; font-size: 10.5px; letter-spacing: 0.2em; color: #5D6A77;"><span>03:12</span><span>10:00</span></div>
+  </div>
+  <div style="display: flex; align-items: center; justify-content: center; gap: 30px; margin-top: 22px;">
+    <button style="min-height: 44px; background: none; border: none; padding: 0; color: #5D6A77; font-family: Jost, sans-serif; font-size: 10.5px; letter-spacing: 0.24em;">15 SN GERİ</button>
+    <button aria-label="{{playLabel}}" onClick="{{toggle}}" style="width: 72px; height: 72px; border-radius: 36px; border: 1px solid #5E7A98; background: none; color: #3E5770; display: flex; align-items: center; justify-content: center; padding: 0;">
+      <sc-if value="{{playing}}" hint-placeholder-val="{{true}}">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M8 5v14M16 5v14"></path></svg>
+      </sc-if>
+      <sc-if value="{{paused}}" hint-placeholder-val="{{false}}">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M8 5v14l11-7z"></path></svg>
+      </sc-if>
+    </button>
+    <button style="min-height: 44px; background: none; border: none; padding: 0; color: #5D6A77; font-family: Jost, sans-serif; font-size: 10.5px; letter-spacing: 0.24em;">15 SN İLERİ</button>
+  </div>
+  <div style="display: flex; gap: 26px; margin-top: 22px;">
+    <button style="min-height: 44px; background: none; border: none; border-bottom: 1px solid rgba(94,122,152,0.28); padding: 0; color: #5D6A77; font-family: Jost, sans-serif; font-size: 11px; letter-spacing: 0.24em;">UYKU ZAMANLAYICI</button>
+    <button style="min-height: 44px; background: none; border: none; border-bottom: 1px solid rgba(94,122,152,0.28); padding: 0; color: #5D6A77; font-family: Jost, sans-serif; font-size: 11px; letter-spacing: 0.24em;">İNDİRİLDİ</button>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(p) { super(p); this.state = { playing: true }; }
+renderVals() {
+const playing = this.state.playing;
+return {
+playing: playing,
+paused: !playing,
+playLabel: playing ? 'Duraklat' : 'Oynat',
+toggle: () => this.setState({ playing: !playing })
+};
+}
+}
+</script>
+</body>
+</html>

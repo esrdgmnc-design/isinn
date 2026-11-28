@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1080px;height:1920px;overflow:hidden;background:#F6F1E8}
+body{font-family:Inter,sans-serif;color:#1F1A14;position:relative}
+.abs{position:absolute;left:0;right:0}
+.marka{font-family:Fraunces,serif;font-weight:600}
+.marka i{font-style:normal;color:#2563EB}
+h1{font-family:Fraunces,serif;font-weight:600;letter-spacing:-.015em;line-height:1.06}
+.cap{font-family:Fraunces,serif;font-weight:600;font-size:76px;line-height:1.08;letter-spacing:-.01em}
+.kicker{font:600 26px/1 Inter;letter-spacing:.22em;text-transform:uppercase;color:#2563EB}
+#tel{position:absolute;left:50%;width:700px;height:1514px;margin-left:-350px;border-radius:84px;background:#15120F;padding:22px;box-shadow:0 50px 110px rgba(43,33,24,.28),0 0 0 2px #2A241E}
+#ekr{width:656px;height:1470px;border-radius:64px;overflow:hidden;background:#fff;position:relative}
+#ekr img{width:656px;display:block;transform-origin:50% 0}
+#halka{position:absolute;border:6px solid #2563EB;border-radius:999px;opacity:0}
+#ust{position:absolute;top:84px;left:80px;right:80px;display:flex;justify-content:space-between;align-items:center}
+</style>
+</head>
+<body>
+<div id="ust"><div class="marka" style="font-size:44px">İşinn<i>.</i></div><div style="font:500 26px/1 Inter;color:#6E5F4E">İşini göster, müşterilerini bul.</div></div>
+<div id="hook" class="abs" style="top:0;bottom:0;padding:0 80px;display:flex;flex-direction:column;justify-content:center">
+  <div class="kicker" id="h0">Özel ders · Danışmanlık</div>
+  <h1 id="h1" style="font-size:128px;margin-top:40px">Özel ders mi arıyorsun?</h1>
+  <h1 id="h2" style="font-size:128px;margin-top:30px;color:#2563EB">Bir danışman mı?</h1>
+</div>
+<div id="capw" class="abs" style="top:200px;padding:0 80px;height:230px">
+  <div class="cap" id="capA"></div><div class="cap" id="capB" style="position:absolute;top:0;left:80px;right:80px"></div>
+</div>
+<div id="tel"><div id="ekr"><img id="im"><div id="halka"></div></div></div>
+<div id="son" class="abs" style="top:0;bottom:0;padding:0 80px;display:flex;flex-direction:column;justify-content:center">
+  <div class="marka" id="s0" style="font-size:96px">İşinn<i>.</i></div>
+  <h1 id="s1" style="font-size:120px;margin-top:56px">İşini göster,<br>müşterilerini bul.</h1>
+  <div id="s2" style="font:400 40px/1.45 Inter;color:#6E5F4E;margin-top:48px;max-width:880px">Öğretmenler ve danışmanlar vitrin açar, işini gösterir. Sen doğru kişiyi bulur, doğrudan yazarsın.</div>
+  <div id="s3" style="position:absolute;left:80px;right:80px;bottom:110px;display:flex;justify-content:space-between;align-items:flex-end;border-top:1px solid #D9CDBA;padding-top:30px">
+    <div style="font:500 32px/1.3 Inter">Web’de, App Store ve Google Play’de</div><div style="font:600 34px/1 Inter;color:#2563EB">isinn.com.tr</div></div>
+</div>
+<script>
+const P=new URLSearchParams(location.search), BASE=P.get('base')||'ekran/';
+const CL={a:45,b:100}; const imgs={};
+function src(k,i){return BASE+k+'/'+String(i).padStart(4,'0')+'.png'}
+window.preload=async()=>{const L=[];for(const k in CL)for(let i=0;i<CL[k];i++)L.push([k,i]);L.push(['c',0]);
+  await Promise.all(L.map(([k,i])=>new Promise(r=>{const im=new Image();im.onload=im.onerror=r;im.src=src(k==='c'?'c_vitrin':k==='a'?'a_yaz':'b_sonuc',i);imgs[k+i]=im.src;})));await document.fonts.ready;return L.length};
+const cl=(x)=>Math.max(0,Math.min(1,x)), E=x=>1-Math.pow(1-cl(x),3), EIO=x=>{x=cl(x);return x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2};
+function show(el,o,dy){el.style.opacity=o;el.style.transform=`translateY(${dy}px)`}
+const $=id=>document.getElementById(id);
+function cap(a,b,k){ // k: 0 → a görünür, 1 → b görünür
+  $('capA').textContent=a;$('capB').textContent=b; show($('capA'),1-cl(k*2),-30*cl(k*2)); show($('capB'),cl(k*2-1),30*(1-cl(k*2-1)));}
+window.render=async(t)=>{
+  const fps=30;
+  // HOOK 0-3.0
+  const hk=t<3.4; $('hook').style.display=hk?'flex':'none';
+  if(hk){ const out=E((t-2.75)/0.5);
+    show($('h0'),E((t-0.1)/0.5)*(1-out),20*(1-E((t-0.1)/0.5))-40*out);
+    show($('h1'),E((t-0.25)/0.6)*(1-out),60*(1-E((t-0.25)/0.6))-40*out);
+    show($('h2'),E((t-1.1)/0.6)*(1-out),60*(1-E((t-1.1)/0.6))-40*out);}
+  // TELEFON 2.9-11.2
+  const tin=EIO((t-2.9)/0.8), tout=EIO((t-10.9)/0.6);
+  const tv=t>2.8&&t<11.6; $('tel').style.display=tv?'block':'none'; $('capw').style.display=tv?'block':'none';
+  $('tel').style.top=(470+(1-tin)*1500+tout*1600)+'px';
+  $('capw').style.opacity=cl((t-3.1)/0.5)*(1-cl((t-10.8)/0.4));
+  const im=$('im'), h=$('halka'); h.style.opacity=0; im.style.transform='scale(1)';
+  if(t<4.6){ const i=Math.round((t-3.0)*fps); const f=Math.max(0,Math.min(44,i)); im.src=imgs['a'+f]; }
+  // Arama sonuçları (başka öğretmenlerin görselleri) çıkarıldı; yalnızca kurucunun vitrini
+  else { im.src=imgs['c0']; const z=1+0.07*EIO((t-4.6)/6.4); im.style.transform=`scale(${z})`;
+    // buton: css 45,577 283x44 @390 genişlik → 656/390
+    const s=656/390*z, ox=328*(1-z); // transform-origin 50% 0
+    if(t>8.0){ const p=((t-8.0)%0.9)/0.9; h.style.opacity=(1-p)*0.9; const pad=8+26*p;
+      h.style.left=(45*s+ox-pad)+'px'; h.style.top=(577*s-pad)+'px'; h.style.width=(283*s+2*pad)+'px'; h.style.height=(44*s+2*pad)+'px'; } }
+  if(t<4.6) cap('Ne aradığını yaz.','Ne aradığını yaz.',0);
+  else if(t<8.0) cap('Ne aradığını yaz.','Uzmanın işini gör.',E((t-4.6)/0.6));
+  else cap('Uzmanın işini gör.','Doğrudan mesaj at.',E((t-8.0)/0.6));
+  // SON 11.2-
+  const sv=t>11.1; $('son').style.display=sv?'flex':'none'; $('ust').style.opacity=1-cl((t-10.9)/0.4);
+  if(sv){ show($('s0'),E((t-11.2)/0.6),30*(1-E((t-11.2)/0.6)));
+    show($('s1'),E((t-11.45)/0.7),60*(1-E((t-11.45)/0.7)));
+    show($('s2'),E((t-12.2)/0.7),40*(1-E((t-12.2)/0.7)));
+    show($('s3'),E((t-12.8)/0.6),20*(1-E((t-12.8)/0.6)));}
+  await new Promise(r=>{ if(im.complete) r(); else im.onload=r; });
+  return 1;
+};
+</script>
+</body>
+</html>

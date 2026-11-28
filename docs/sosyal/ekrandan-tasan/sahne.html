@@ -1,0 +1,219 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>html,body{margin:0;background:#000;overflow:hidden}canvas{position:absolute;left:0;top:0;display:block}</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+</head><body>
+<canvas id="bg" width="1080" height="1920"></canvas>
+<canvas id="gl" width="1080" height="1920"></canvas>
+<script type="module">
+// "Ekrandan taşan yetenek" — ücretsiz yol (yapay zekâ videosu yok). ?s=sayilar (Azra) | ?s=gosterge (Code G)
+// Arka plan: baslangic-1.png (masa + dizüstü). Ekran: vitrinin gerçek görüntüsü, sahnenin ışığına uydurulur.
+// Üstte Three.js: nesne ekranın camından çıkar (kırpma düzlemi), masaya düşer. renderAt(t) belirlenimci.
+import * as THREE from "three";
+import { TTFLoader } from "three/addons/loaders/TTFLoader.js";
+import { Font } from "three/addons/loaders/FontLoader.js";
+import { TextGeometry } from "three/addons/geometries/TextGeometry.js";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+
+const SCENE = new URLSearchParams(location.search).get("s") || "sayilar";
+const SHOT = { sayilar: "azra-ekran.png", gosterge: "codeg-ekran.png" }[SCENE];
+const W = 1080, H = 1920;
+const load = (src) => new Promise((r, j) => { const i = new Image(); i.onload = () => r(i); i.onerror = j; i.src = src; });
+
+// ---------- 2B katman: fotoğraf + gerçek ekran ----------
+const [photo, shot] = await Promise.all([load("baslangic-1.png"), load(SHOT)]);
+const bg = document.getElementById("bg").getContext("2d");
+const S = Math.max(W / photo.width, H / photo.height), ox = (W - photo.width * S) / 2, oy = (H - photo.height * S) / 2;
+bg.drawImage(photo, ox, oy, photo.width * S, photo.height * S);
+// Ekranın iç köşeleri (baslangic-1.png'den ölçüldü, 1080x1920'ye çevrildi)
+const Q = { tl: [260, 748], tr: [1253, 748], bl: [264, 1658], br: [1252, 1658] };
+for (const k in Q) Q[k] = [Q[k][0] * S + ox, Q[k][1] * S + oy];
+// Fotoğraftaki ekran beyazını örnekle: yeni ekran aynı parlaklık ve sıcaklıkta dursun
+const smp = bg.getImageData(Math.round(Q.tl[0] + 8), Math.round(Q.tl[1] + 330), 6, 40).data;
+let wr = 0, wg = 0, wb = 0, n = 0; for (let i = 0; i < smp.length; i += 4) { wr += smp[i]; wg += smp[i + 1]; wb += smp[i + 2]; n++; }
+const white = [wr / n, wg / n, wb / n];
+// Kaynak kırpma: kartı ortalayan bölge (model de 1. sahnede kenar boşluklarını böyle atmıştı)
+const crop = { x: 612, y: 0, w: 1656, h: 1522 };
+const off = document.createElement("canvas"); off.width = W; off.height = H; const og = off.getContext("2d");
+og.imageSmoothingQuality = "high"; og.filter = "blur(0.35px)";
+const y0 = Q.tl[1], y1 = Q.bl[1];
+for (let y = Math.floor(y0); y < Math.ceil(y1); y++) {
+  const v = (y - y0) / (y1 - y0), lx = Q.tl[0] + (Q.bl[0] - Q.tl[0]) * v, rx = Q.tr[0] + (Q.br[0] - Q.tr[0]) * v;
+  og.drawImage(shot, crop.x, crop.y + v * crop.h, crop.w, crop.h / (y1 - y0), lx, y, rx - lx, 1.02);
+}
+og.filter = "none";
+// Işığa uydurma: beyazı fotoğraftaki ekran beyazına çek, kenarlara doğru çok hafif kararma, sol üstte sıcak parlama
+og.globalCompositeOperation = "multiply"; og.fillStyle = `rgb(${white.map(Math.round).join(",")})`;
+og.beginPath(); og.moveTo(...Q.tl); og.lineTo(...Q.tr); og.lineTo(...Q.br); og.lineTo(...Q.bl); og.closePath(); og.fill();
+const vg = og.createRadialGradient((Q.tl[0] + Q.tr[0]) / 2, (y0 + y1) / 2, 120, (Q.tl[0] + Q.tr[0]) / 2, (y0 + y1) / 2, 520);
+vg.addColorStop(0, "rgba(255,255,255,1)"); vg.addColorStop(1, "rgba(232,228,222,1)"); og.fillStyle = vg; og.fill();
+og.globalCompositeOperation = "screen";
+const gl0 = og.createLinearGradient(Q.tl[0], y0, Q.br[0], y1);
+gl0.addColorStop(0, "rgba(255,244,230,0.10)"); gl0.addColorStop(0.45, "rgba(255,255,255,0)"); gl0.addColorStop(1, "rgba(255,255,255,0)");
+og.fillStyle = gl0; og.fill();
+og.globalCompositeOperation = "source-over";
+bg.drawImage(off, 0, 0);
+
+// ---------- 3B katman: ortak sahne ----------
+const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById("gl"), alpha: true, antialias: true, preserveDrawingBuffer: true });
+renderer.setSize(W, H, false); renderer.setClearColor(0x000000, 0);
+renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; renderer.localClippingEnabled = true;
+const scene = new THREE.Scene();
+// Fotoğrafa uydurulan kamera (kamera.mjs): yükseklik 0,40 m, uzaklık 1,54 m, 10° aşağı, dikey görüş 29°
+const cam = new THREE.PerspectiveCamera(29, W / H, 0.05, 10); cam.position.set(0, 0.40, 1.54); cam.rotation.x = -10 * Math.PI / 180;
+scene.add(new THREE.HemisphereLight(0xfff1df, 0x9a6b42, 1.1));
+const sun = new THREE.DirectionalLight(0xffd9a6, 2.6); sun.position.set(-1.0, 1.1, -0.25); sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048); Object.assign(sun.shadow.camera, { left: -0.6, right: 0.6, top: 0.6, bottom: -0.6, near: 0.1, far: 4 }); sun.shadow.radius = 6; sun.shadow.bias = -0.0004;
+scene.add(sun);
+const fill = new THREE.DirectionalLight(0xfff6ea, 0.7); fill.position.set(0.3, 0.6, 1.2); scene.add(fill);
+// Gölge alan yüzeyler: masa ve dizüstünün tabanı (yalnızca gölge görünür)
+const shMat = new THREE.ShadowMaterial({ opacity: 0.3 });
+const desk = new THREE.Mesh(new THREE.PlaneGeometry(4, 4), shMat); desk.rotation.x = -Math.PI / 2; desk.receiveShadow = true; scene.add(desk);
+const BASE = { w: 0.34, d: 0.16, h: 0.012 };
+const base = new THREE.Mesh(new THREE.BoxGeometry(BASE.w, BASE.h, BASE.d), shMat); base.position.set(0, BASE.h / 2, BASE.d / 2); base.receiveShadow = true; scene.add(base);
+const baseTop = (p) => (Math.abs(p.x) < BASE.w / 2 && p.z > 0 && p.z < BASE.d) ? BASE.h : 0;
+// Ekran düzlemi: menteşeden 10° geriye yatık; arkasında kalan kısım görünmez → nesne camdan çıkıyormuş gibi
+const tilt = 10 * Math.PI / 180, nrm = new THREE.Vector3(0, Math.sin(tilt), Math.cos(tilt));
+const clip = new THREE.Plane(nrm.clone(), -0.03 * Math.sin(tilt));
+const SCREEN_H = 0.28;
+const onScreen = (x, s) => new THREE.Vector3(x, 0.03 + s * Math.cos(tilt), -s * Math.sin(tilt)); // s: ekranın altından yukarı mesafe
+let seed = 7; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+
+// ---------- Sahne: dökülen sayılar (Azra) ----------
+async function buildSayilar() {
+  const font = new Font(await new TTFLoader().loadAsync("file:///C:/Windows/Fonts/segoeuib.ttf"));
+  const chars = "0123456789+=×÷π√".split("").filter((c) => font.data.glyphs[c]);
+  const COLORS = ["#F7F2E8", "#F7F2E8", "#A9C4EB", "#F2B8A2", "#B9D7C1", "#F3D27A", "#2563EB"];
+  const geoCache = {};
+  const geoFor = (c) => geoCache[c] || (geoCache[c] = (() => {
+    const g = new TextGeometry(c, { font, size: 0.042, height: 0.011, depth: 0.011, curveSegments: 8, bevelEnabled: true, bevelThickness: 0.0018, bevelSize: 0.0013, bevelSegments: 3 });
+    g.computeBoundingBox(); g.center(); g.computeVertexNormals(); return g;
+  })());
+  const N = 40, items = [];
+  for (let i = 0; i < N; i++) {
+    const c = chars[Math.floor(rnd() * chars.length)];
+    const mat = new THREE.MeshStandardMaterial({ color: COLORS[Math.floor(rnd() * COLORS.length)], roughness: 0.58, metalness: 0.0, clippingPlanes: [clip] });
+    const m = new THREE.Mesh(geoFor(c), mat); m.castShadow = true; m.receiveShadow = true; m.visible = false; scene.add(m);
+    // Ekrandaki kapak fotoğrafının bulunduğu bölgeden çıkış
+    const t0 = 0.95 + (i / N) * 2.3 + rnd() * 0.12;
+    const p0 = onScreen((rnd() - 0.5) * 0.13, SCREEN_H * (0.62 + rnd() * 0.2)).addScaledVector(nrm, -0.03);
+    const out = 0.62 + rnd() * 0.36;
+    const v0 = nrm.clone().multiplyScalar(out).add(new THREE.Vector3((rnd() - 0.5) * 0.2, 0.08 + rnd() * 0.2, 0));
+    const w0 = new THREE.Vector3(rnd() - 0.5, rnd() - 0.5, rnd() - 0.5).multiplyScalar(9);
+    const yaw = (rnd() - 0.5) * 2.4;
+    const q0 = new THREE.Quaternion().setFromEuler(new THREE.Euler((rnd() - 0.5) * 0.6, (rnd() - 0.5) * 0.6, (rnd() - 0.5) * 0.6));
+    items.push({ m, t0, p0, v0, w0, yaw, q0, tp: (rnd() - 0.5) * 0.25, tr: (rnd() - 0.5) * 0.25 });
+  }
+  // Yerleşme kuralı: rakam yüzü yukarı yatar. Altında yerleşmiş bir rakam varsa onun eğimine uyar ve ancak
+  // ağırlık merkezi üstündeyse durur; kenarına geldiyse dışarı kayar → havada asılı kalan rakam olmaz.
+  const G = 4.4, DT = 1 / 240, THICK = 0.0075, FOOT = 0.019;
+  const flatQ = (yaw, pitch = 0, roll = 0) => new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2 + pitch, roll, yaw, "YXZ"));
+  function simulate(T) {
+    const st = items.map((it) => ({ it, alive: false, p: it.p0.clone(), v: it.v0.clone(), q: it.q0.clone(), w: it.w0.clone(), landed: false, rest: false, layer: 0, target: flatQ(it.yaw) }));
+    const settled = [];
+    for (let t = 0; t <= T + 1e-9; t += DT) {
+      for (const s of st) {
+        if (t < s.it.t0) continue; s.alive = true; if (s.rest) continue;
+        s.v.y -= G * DT; s.p.addScaledVector(s.v, DT);
+        let floor = baseTop(s.p), under = null;
+        for (const o of settled) {
+          const dx = s.p.x - o.p.x, dz = s.p.z - o.p.z, d = Math.hypot(dx, dz);
+          if (d < FOOT * 1.6 && o.layer < 2 && o.p.y + THICK * 1.7 > floor) {
+            if (d < FOOT * 0.75) { floor = o.p.y + THICK * 1.7; under = o; }
+            else if (s.p.y - THICK < o.p.y + THICK) { s.v.x += (dx / (d || 1)) * 2.5 * DT; s.v.z += (dz / (d || 1)) * 2.5 * DT; } // kenara çarptı: hafifçe dışarı kay
+          }
+        }
+        if (s.p.y - THICK < floor && s.v.y < 0 && s.p.dot(nrm) > 0.02) {
+          s.p.y = floor + THICK; s.landed = true;
+          if (under) { s.layer = under.layer + 1; s.target = flatQ(s.it.yaw, s.it.tp, s.it.tr); }
+          if (Math.abs(s.v.y) > 0.25) { s.v.y *= -0.28; s.v.x *= 0.55; s.v.z *= 0.55; s.w.multiplyScalar(0.5); }
+          else { s.v.y = 0; const sp = Math.hypot(s.v.x, s.v.z); const k = Math.max(0, sp - 1.4 * DT) / (sp || 1); s.v.x *= k; s.v.z *= k; if (sp < 0.01) { s.rest = true; s.q.copy(s.target); settled.push(s); } }
+        }
+        if (!s.landed) { const dq = new THREE.Quaternion().setFromAxisAngle(s.w.clone().normalize(), s.w.length() * DT); s.q.premultiply(dq); }
+        else s.q.slerp(s.target, Math.min(1, DT * 10));
+      }
+    }
+    return st;
+  }
+  return (T) => { for (const s of simulate(T)) { const m = s.it.m; m.visible = s.alive; if (s.alive) { m.position.copy(s.p); m.quaternion.copy(s.q); } } };
+}
+
+// ---------- Sahne: basınç göstergesi (Code G) ----------
+function buildGosterge() {
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  const R = 0.043, DEPTH = 0.024, C = [clip];
+  const g = new THREE.Group(); scene.add(g);
+  const steel = new THREE.MeshStandardMaterial({ color: 0xdfe3e8, metalness: 1, roughness: 0.22, envMapIntensity: 0.9, clippingPlanes: C });
+  const brass = new THREE.MeshStandardMaterial({ color: 0xc9a253, metalness: 1, roughness: 0.3, envMapIntensity: 0.9, clippingPlanes: C });
+  const kase = new THREE.Mesh(new THREE.CylinderGeometry(R, R, DEPTH, 64), steel); kase.rotation.x = Math.PI / 2; g.add(kase);
+  const bezel = new THREE.Mesh(new THREE.TorusGeometry(R - 0.001, 0.0042, 16, 64), steel); bezel.position.z = DEPTH / 2; g.add(bezel);
+  // Kadran: sade, endüstriyel; 0–10 bar, son bölüm kırmızı
+  const cv = document.createElement("canvas"); cv.width = cv.height = 1024; const c = cv.getContext("2d");
+  c.fillStyle = "#FBFAF7"; c.beginPath(); c.arc(512, 512, 512, 0, 7); c.fill();
+  const A0 = Math.PI * 0.75, A1 = Math.PI * 2.25, ang = (f) => A0 + (A1 - A0) * f;
+  c.lineCap = "butt"; c.strokeStyle = "#C8372D"; c.lineWidth = 34; c.beginPath(); c.arc(512, 512, 400, ang(0.8), ang(1)); c.stroke();
+  c.strokeStyle = "#1B1E24";
+  for (let i = 0; i <= 50; i++) { const a = ang(i / 50), big = i % 5 === 0; c.lineWidth = big ? 9 : 4; const r0 = big ? 352 : 382; c.beginPath(); c.moveTo(512 + Math.cos(a) * r0, 512 + Math.sin(a) * r0); c.lineTo(512 + Math.cos(a) * 420, 512 + Math.sin(a) * 420); c.stroke(); }
+  c.fillStyle = "#1B1E24"; c.font = "600 74px 'Segoe UI'"; c.textAlign = "center"; c.textBaseline = "middle";
+  for (let v = 0; v <= 10; v += 2) { const a = ang(v / 10); c.fillText(String(v), 512 + Math.cos(a) * 285, 512 + Math.sin(a) * 285); }
+  c.font = "500 56px 'Segoe UI'"; c.fillStyle = "#5B6270"; c.fillText("bar", 512, 700);
+  const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
+  const face = new THREE.Mesh(new THREE.CircleGeometry(R - 0.004, 64), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.6, clippingPlanes: C }));
+  face.position.z = DEPTH / 2 + 0.0006; g.add(face); // gövde kapağının hemen önünde
+  // İbre (kadranın merkezinde döner): siyah gövde, kırmızı uç, metal göbek
+  const needle = new THREE.Group(); needle.position.z = DEPTH / 2 + 0.0022; g.add(needle);
+  const nMat = new THREE.MeshStandardMaterial({ color: 0x15171c, roughness: 0.4, clippingPlanes: C });
+  const nb = new THREE.Mesh(new THREE.BoxGeometry(0.0022, 0.04, 0.0012), nMat); nb.position.y = 0.014; needle.add(nb);
+  const tip = new THREE.Mesh(new THREE.BoxGeometry(0.0016, 0.008, 0.0012), new THREE.MeshStandardMaterial({ color: 0xc8372d, roughness: 0.4, clippingPlanes: C })); tip.position.y = 0.036; needle.add(tip);
+  const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.0035, 0.0035, 0.003, 24), steel); hub.rotation.x = Math.PI / 2; needle.add(hub);
+  // Cam: neredeyse görünmez, yalnızca ışık yansıması
+  const glass = new THREE.Mesh(new THREE.CircleGeometry(R - 0.002, 64), new THREE.MeshPhysicalMaterial({ color: 0xffffff, metalness: 0, roughness: 0.02, transparent: true, opacity: 0.12, envMapIntensity: 1.4, clippingPlanes: C }));
+  glass.position.z = DEPTH / 2 + 0.0045; g.add(glass);
+  // Alt bağlantı: pirinç altıgen + dişli uç (göstergenin altından aşağı)
+  const hex = new THREE.Mesh(new THREE.CylinderGeometry(0.0095, 0.0095, 0.014, 6), brass); hex.position.y = -R - 0.007; g.add(hex);
+  const thread = new THREE.Mesh(new THREE.CylinderGeometry(0.0055, 0.0055, 0.016, 24), brass); thread.position.y = -R - 0.022; g.add(thread);
+  g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+
+  // Hareket: ekrandaki endüstri fotoğrafından yavaşça itilir (yerçekimi yok), sonra düşer, bir kez seker ve
+  // kadranı kameraya dönük, sırtı ve bağlantısıyla masaya yaslanmış hâlde durur; ibre sallanıp yerine oturur.
+  const T0 = 0.9, PUSH = 0.55;
+  const start = onScreen(0, SCREEN_H * 0.72).addScaledVector(nrm, -0.07);
+  const faceScreen = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), nrm);
+  const rest = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.95, 0.18, 0.05, "XYZ"));
+  g.quaternion.copy(rest); g.position.set(0, 0, 0); g.updateMatrixWorld(true);
+  const restMinY = new THREE.Box3().setFromObject(g).min.y; // dinlenme duruşunda merkezin masadan yüksekliği = -restMinY
+  const target = 0.58; // ibrenin oturacağı değer (ölçeğin oranı)
+  const angleFor = (f) => (Math.PI * 0.75) - Math.PI * 1.5 * f; // ibre +y'yi gösterir: 0 → sol alt, 1 → sağ alt
+  const DT = 1 / 240, Gv = 4.4;
+  function simulate(T) {
+    let p = start.clone(), v = new THREE.Vector3(), q = faceScreen.clone(), landT = -1, bounced = false, restAt = -1;
+    for (let t = 0; t <= T + 1e-9; t += DT) {
+      if (t < T0) continue;
+      if (t < T0 + PUSH) { p.addScaledVector(nrm, 0.21 * DT); v.copy(nrm).multiplyScalar(0.85).add(new THREE.Vector3(0.03, 0.14, 0)); continue; }
+      if (restAt >= 0) continue;
+      v.y -= Gv * DT; p.addScaledVector(v, DT);
+      const k = Math.min(1, (t - T0 - PUSH) / 0.55); q.copy(faceScreen).slerp(rest, k * k * (3 - 2 * k));
+      const floor = baseTop(p) - restMinY;
+      if (p.y < floor && v.y < 0) {
+        p.y = floor; if (landT < 0) landT = t;
+        if (!bounced && Math.abs(v.y) > 0.3) { v.y *= -0.22; v.x *= 0.4; v.z *= 0.4; bounced = true; }
+        else { restAt = t; q.copy(rest); }
+      }
+    }
+    // İbre: düşerken titrer, yere değince sallanıp yerine oturur
+    let f = 0;
+    if (T > T0 + PUSH && landT < 0) f = 0.05 + 0.04 * Math.sin(T * 40);
+    if (landT >= 0) { const u = T - landT; f = target + 0.32 * Math.exp(-2.6 * u) * Math.sin(u * 13); }
+    return { visible: T >= T0, p, q, f: Math.max(0, Math.min(1, f)) };
+  }
+  return (T) => { const s = simulate(T); g.visible = s.visible; g.position.copy(s.p); g.quaternion.copy(s.q); needle.rotation.z = angleFor(s.f); };
+}
+
+const update = SCENE === "gosterge" ? buildGosterge() : await buildSayilar();
+window.renderAt = (T) => { update(T); renderer.render(scene, cam); return true; };
+window.info = { white, SCENE };
+window.renderAt(0);
+window.ready = true;
+</script></body></html>

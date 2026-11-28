@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1080px;height:1920px;overflow:hidden;background:#F6F1E8}
+body{font-family:Inter,sans-serif;color:#1F1A14;position:relative}
+.marka{font-family:Fraunces,serif;font-weight:600}
+.marka i{font-style:normal;color:#2563EB}
+h1{font-family:Fraunces,serif;font-weight:600;letter-spacing:-.015em;line-height:1.06}
+#tel{position:absolute;left:50%;top:170px;width:760px;height:1644px;margin-left:-380px;border-radius:92px;background:#15120F;padding:24px;box-shadow:0 50px 110px rgba(43,33,24,.28)}
+#ekr{width:712px;height:1596px;border-radius:70px;overflow:hidden;background:#fff;position:relative}
+#ekr img{width:712px;display:block;transform-origin:50% 0}
+#halka{position:absolute;border:7px solid #2563EB;border-radius:999px;opacity:0}
+#son{position:absolute;inset:0;padding:0 80px;display:none;flex-direction:column;justify-content:center;background:#F6F1E8}
+</style>
+</head>
+<body>
+<div id="tel"><div id="ekr"><img id="im"><div id="halka"></div></div></div>
+<div id="son">
+  <div class="marka" style="font-size:96px">İşinn<i>.</i></div>
+  <h1 style="font-size:132px;margin-top:56px">İşini göster,<br>müşterilerini bul.</h1>
+  <div style="font:400 40px/1.45 Inter;color:#6E5F4E;margin-top:48px;max-width:880px">Öğretmenler ve danışmanlar vitrin açar, işini gösterir.</div>
+  <div style="position:absolute;left:80px;right:80px;bottom:110px;display:flex;justify-content:space-between;align-items:flex-end;border-top:1px solid #D9CDBA;padding-top:30px">
+    <div style="font:500 32px/1.3 Inter">Web’de, App Store ve Google Play’de</div><div style="font:600 34px/1 Inter;color:#2563EB">isinn.com.tr</div></div>
+</div>
+<script>
+const P=new URLSearchParams(location.search), BASE=P.get('base')||'';
+const imgs={};
+window.preload=async()=>{const L=[];for(let i=0;i<100;i++)L.push(['b_sonuc',i]);L.push(['c_vitrin',0]);
+  await Promise.all(L.map(([k,i])=>new Promise(r=>{const im=new Image();im.onload=im.onerror=r;im.src=BASE+k+'/'+String(i).padStart(4,'0')+'.png';imgs[k+i]=im.src;})));await document.fonts.ready;return L.length};
+const cl=x=>Math.max(0,Math.min(1,x)), EIO=x=>{x=cl(x);return x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2};
+const $=id=>document.getElementById(id);
+// mod=ara: t 0..4 sn (0-2 sonuçlar kayar, 2-4 vitrin + Mesaj halkası); mod=son: kapanış kartı
+window.render=async(t)=>{
+  const im=$('im'),h=$('halka');
+  if(P.get('mod')==='son'){ $('tel').style.display='none'; $('son').style.display='flex'; return 1; }
+  h.style.opacity=0; im.style.transform='scale(1)';
+  // Yalnızca kurucunun kendi vitrini (başka öğretmenlerin görseli yok)
+  { im.src=imgs['c_vitrin0']; const z=1+0.06*EIO(t/4); im.style.transform=`scale(${z})`;
+    const s=712/390*z, ox=356*(1-z);
+    if(t>1.2){ const p=((t-1.2)%0.9)/0.9; h.style.opacity=(1-p)*0.9; const pad=8+28*p;
+      h.style.left=(45*s+ox-pad)+'px'; h.style.top=(577*s-pad)+'px'; h.style.width=(283*s+2*pad)+'px'; h.style.height=(44*s+2*pad)+'px'; } }
+  await new Promise(r=>{ if(im.complete) r(); else im.onload=r; });
+  return 1;
+};
+</script>
+</body>
+</html>

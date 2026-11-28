@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vitrin Önerisi · Fzt. İlayda Irmak Demir · İşinn</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{--ink:#0F1115;--muted:#6B7280;--line:#ECECEC;--blue:#2563EB;--blue-soft:#EEF3FF;--cream:#F6F1EA;--sage:#E7EFEA;--sage-ink:#2F5D50;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Inter,system-ui,sans-serif;color:var(--ink);background:#fff;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+
+  /* sunum şeridi */
+  .pitch-bar{background:var(--ink);color:#fff;font-size:13px;text-align:center;padding:10px 16px;letter-spacing:.2px}
+  .pitch-bar b{color:#9DB8FF}
+
+  /* üst menü (İşinn) */
+  header.nav{border-bottom:1px solid var(--line)}
+  header.nav .wrap{display:flex;align-items:center;gap:16px;height:64px}
+  .logo{font-weight:900;font-size:26px;letter-spacing:-1px}
+  .logo i{color:var(--blue);font-style:normal}
+  .search{flex:1;max-width:320px;border:1px solid var(--line);border-radius:999px;padding:9px 16px;color:#9CA3AF;font-size:14px}
+  .nav-right{margin-left:auto;display:flex;gap:10px;align-items:center;font-size:14px;font-weight:600}
+  .pill{padding:9px 16px;border-radius:999px}
+  .pill.blue{background:var(--blue);color:#fff}
+  .pill.dark{background:var(--ink);color:#fff}
+  @media(max-width:760px){.search,.nav-right .hide-m{display:none}}
+
+  .back{display:inline-block;margin:24px 0 16px;font-size:14px;color:var(--muted)}
+
+  /* kapak */
+  .cover{position:relative;border-radius:22px;overflow:hidden;height:340px;background:
+     radial-gradient(1200px 400px at 85% -10%, #DCE8E1 0%, transparent 60%),
+     radial-gradient(800px 380px at 0% 120%, #EADFD2 0%, transparent 55%), var(--cream);}
+  .cover svg{position:absolute;right:4%;bottom:-6px;height:118%;opacity:.95}
+  .cover .cv-text{position:absolute;left:44px;top:50%;transform:translateY(-50%);max-width:52%}
+  .cv-kicker{font-size:12px;font-weight:700;letter-spacing:3px;color:var(--sage-ink);text-transform:uppercase;margin-bottom:14px}
+  .cv-name{font-family:Georgia,'Times New Roman',serif;font-size:44px;line-height:1.05;font-weight:400;letter-spacing:-.5px}
+  .cv-sub{margin-top:14px;font-size:15px;color:#4B5563;line-height:1.5}
+  .cv-note{position:absolute;left:44px;bottom:18px;background:rgba(255,255,255,.85);border:1px dashed #C9C2B8;font-size:11px;color:#6B6257;padding:6px 10px;border-radius:999px}
+  @media(max-width:760px){.cv-note{left:22px}.cover{height:300px}.cover .cv-text{left:22px;max-width:70%}.cv-name{font-size:32px}.cover svg{right:-18%;opacity:.55}}
+
+  /* gövde */
+  .grid{display:grid;grid-template-columns:1fr 340px;gap:40px;margin-top:28px;padding-bottom:56px}
+  @media(max-width:900px){.grid{grid-template-columns:1fr}}
+  .tag{display:inline-block;font-size:11px;font-weight:800;background:var(--sage);color:var(--sage-ink);padding:5px 10px;border-radius:999px}
+  h1.title{font-size:34px;line-height:1.15;font-weight:900;letter-spacing:-.6px;margin:12px 0 10px}
+  @media(max-width:760px){h1.title{font-size:27px}}
+  .meta{display:flex;flex-wrap:wrap;gap:14px;font-size:14px;color:var(--muted);margin-bottom:22px}
+  .lead{font-size:16px;line-height:1.7;color:#374151}
+  .lead p+p{margin-top:12px}
+  h2{font-size:18px;font-weight:800;margin:34px 0 14px}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{border:1px solid var(--line);border-radius:999px;padding:8px 14px;font-size:14px;font-weight:500;background:#fff}
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  @media(max-width:760px){.steps{grid-template-columns:1fr}}
+  .step{border:1px solid var(--line);border-radius:16px;padding:16px}
+  .step b{display:block;font-size:13px;color:var(--sage-ink);margin-bottom:6px}
+  .step span{font-size:14px;color:#4B5563;line-height:1.5}
+  .facts{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:760px){.facts{grid-template-columns:1fr}}
+  .fact{background:#FAFAF9;border-radius:14px;padding:14px 16px;font-size:14px;line-height:1.5}
+  .fact small{display:block;color:var(--muted);font-size:12px;margin-bottom:3px}
+  .disclaimer{margin-top:22px;font-size:12.5px;color:var(--muted);line-height:1.6;border-left:3px solid var(--line);padding-left:12px}
+
+  /* sağ kart */
+  aside .card{position:sticky;top:20px;border:1px solid var(--line);border-radius:20px;padding:22px;box-shadow:0 10px 30px rgba(15,17,21,.05)}
+  .prov{display:flex;gap:12px;align-items:center;margin-bottom:16px}
+  .avatar{width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#CFE0D7,#EADFD2);display:grid;place-items:center;font-weight:800;color:var(--sage-ink)}
+  .prov b{display:block;font-size:15px}
+  .prov small{font-size:12px;color:var(--muted)}
+  .price{font-size:20px;font-weight:800;margin:4px 0 14px}
+  .btn{display:block;text-align:center;border-radius:999px;padding:13px;font-weight:700;font-size:15px}
+  .btn.primary{background:var(--blue);color:#fff}
+  .btn.ghost{border:1.5px solid var(--blue);color:var(--blue);margin-top:10px}
+  .safe{font-size:12px;color:var(--muted);text-align:center;margin-top:8px;line-height:1.5}
+  .hours{margin-top:18px;border-top:1px solid var(--line);padding-top:14px;font-size:13.5px;color:#374151;line-height:1.7}
+
+  /* sunum bölümü */
+  .pitch{background:#0F1115;color:#E5E7EB;padding:56px 0}
+  .pitch h3{color:#fff;font-size:24px;font-weight:900;letter-spacing:-.4px;margin-bottom:6px}
+  .pitch .sub{color:#9CA3AF;font-size:15px;margin-bottom:28px}
+  .pgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  @media(max-width:900px){.pgrid{grid-template-columns:1fr}}
+  .pcard{background:#171A21;border:1px solid #262A33;border-radius:18px;padding:20px}
+  .pcard .n{font-size:12px;font-weight:800;color:#9DB8FF;letter-spacing:1px;margin-bottom:8px}
+  .pcard b{display:block;color:#fff;font-size:16px;margin-bottom:6px}
+  .pcard span{font-size:14px;color:#AEB4BF;line-height:1.6}
+  .found{margin-top:28px;background:#171A21;border:1px solid #262A33;border-radius:18px;padding:20px;font-size:14px;line-height:1.8;color:#C7CCD6}
+  .found b{color:#fff}
+  .found a{color:#9DB8FF;text-decoration:underline}
+
+  /* PDF / baskı */
+  @page{size:A4;margin:0}
+  @media print{
+    *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    body{width:210mm}
+    .wrap{max-width:none;padding:0 14mm}
+    .grid{grid-template-columns:1fr 62mm;gap:9mm;padding-bottom:10mm}
+    aside .card{position:static}
+    .cover{height:78mm}
+    .steps{grid-template-columns:repeat(3,1fr)}
+    .facts{grid-template-columns:1fr 1fr}
+    .pgrid{grid-template-columns:repeat(3,1fr)}
+    .search,.nav-right .hide-m{display:block}
+    .pitch{break-before:page;padding:16mm 0;min-height:297mm}
+    .cover svg{right:4%;opacity:.95}
+    .cover .cv-text{left:44px;max-width:55%}
+    .cv-name{font-size:40px}
+    .cv-note{left:44px}
+    .step{padding:12px}
+    .step span{font-size:12.5px}
+    .chip{font-size:13px;padding:6px 12px}
+    .back{margin:6mm 0 4mm}
+  }
+</style>
+</head>
+<body>
+
+<div class="pitch-bar">Taslak öneri · <b>Fzt. İlayda Irmak Demir</b> için hazırlandı · Yayında değildir, onayınızla açılır</div>
+
+<header class="nav"><div class="wrap">
+  <div class="logo">İşinn<i>.</i></div>
+  <div class="search">Hizmet veya iş ara... örn. fizyoterapist</div>
+  <div class="nav-right"><span class="hide-m">Planlar</span><span class="hide-m">Haritada Gör</span><span class="pill blue">Vitrin Aç</span></div>
+</div></header>
+
+<main class="wrap">
+  <a class="back">‹ Geri</a>
+
+  <section class="cover">
+    <div class="cv-note">Kapak: kendi klinik fotoğrafınızla değiştirilebilir</div>
+    <div class="cv-text">
+      <div class="cv-kicker">Fizyoterapi &amp; Rehabilitasyon</div>
+      <div class="cv-name">Fzt. İlayda<br>Irmak Demir</div>
+      <div class="cv-sub">Ortopedik ve nörolojik rehabilitasyon · Ümraniye, İstanbul</div>
+    </div>
+    <!-- soyut omurga / hareket çizgisi -->
+    <svg viewBox="0 0 300 420" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M150 20 C 120 80, 185 120, 150 175 S 115 270, 150 330 S 185 390, 160 420" stroke="#2F5D50" stroke-width="2.2" stroke-linecap="round"/>
+      <g fill="#2F5D50" opacity=".9">
+        <ellipse cx="146" cy="52" rx="13" ry="6"/><ellipse cx="156" cy="82" rx="14" ry="6.5"/><ellipse cx="163" cy="112" rx="15" ry="7"/>
+        <ellipse cx="160" cy="142" rx="16" ry="7"/><ellipse cx="150" cy="172" rx="17" ry="7.5"/><ellipse cx="140" cy="202" rx="18" ry="8"/>
+        <ellipse cx="135" cy="232" rx="19" ry="8.5"/><ellipse cx="138" cy="262" rx="20" ry="9"/><ellipse cx="146" cy="292" rx="21" ry="9.5"/>
+        <ellipse cx="155" cy="322" rx="22" ry="10"/>
+      </g>
+      <circle cx="150" cy="210" r="120" stroke="#B9A48C" stroke-width="1" opacity=".5"/>
+      <circle cx="150" cy="210" r="160" stroke="#B9A48C" stroke-width=".8" opacity=".3"/>
+    </svg>
+  </section>
+
+  <div class="grid">
+    <div>
+      <span class="tag">Yerinde</span>
+      <h1 class="title">Ümraniye'de Ortopedik ve Nörolojik Rehabilitasyon</h1>
+      <div class="meta"><span>📍 Tatlısu, Ümraniye · İstanbul</span><span>Fizyoterapist</span><span>Randevu ile</span></div>
+
+      <div class="lead">
+        <p>Merhaba, ben Fizyoterapist İlayda Irmak Demir. Yeditepe Üniversitesi mezunuyum; ortopedik ve nörolojik rehabilitasyon alanlarında çalışıyorum ve osteopati (OMT) eğitimime devam ediyorum.</p>
+        <p>Boyun, bel ve eklem ağrıları gibi kas-iskelet sistemi şikâyetlerinde ve nörolojik rahatsızlıklar sonrası rehabilitasyon sürecinde, kişiye özel seans programı hazırlıyorum. İlk görüşmede şikâyetinizi, varsa hekim raporunuzu ve günlük hayatınızı birlikte değerlendiriyor; hedefleri ve seans planını sizinle konuşarak belirliyorum.</p>
+      </div>
+
+      <h2>Çalıştığım alanlar</h2>
+      <div class="chips">
+        <span class="chip">Ortopedik rehabilitasyon</span>
+        <span class="chip">Nörolojik rehabilitasyon</span>
+        <span class="chip">Boyun ve bel ağrısı</span>
+        <span class="chip">Fıtık sonrası egzersiz programı</span>
+        <span class="chip">Manuel terapi</span>
+        <span class="chip">Sporcu rehabilitasyonu</span>
+      </div>
+
+      <h2>Süreç nasıl işliyor?</h2>
+      <div class="steps">
+        <div class="step"><b>1 · Mesaj</b><span>Şikâyetinizi kısaca yazın; uygun gün ve saati birlikte belirleyelim.</span></div>
+        <div class="step"><b>2 · İlk değerlendirme</b><span>Hareket, ağrı ve günlük alışkanlıklarınızı değerlendirip hedef koyuyoruz.</span></div>
+        <div class="step"><b>3 · Kişisel program</b><span>Seanslar ve evde yapacağınız egzersizlerle ilerlemeyi birlikte takip ediyoruz.</span></div>
+      </div>
+
+      <h2>Bilgiler</h2>
+      <div class="facts">
+        <div class="fact"><small>Eğitim</small>Yeditepe Üniversitesi · Osteopati (OMT) eğitimi sürüyor</div>
+        <div class="fact"><small>Konum</small>Tatlısu, Turgut Özal Blv., Ümraniye / İstanbul</div>
+        <div class="fact"><small>Çalışma şekli</small>Klinikte, randevu ile</div>
+        <div class="fact"><small>İletişim</small>İşinn mesajı ile; telefon numaranız gizli kalır</div>
+      </div>
+
+      <p class="disclaimer">Fizyoterapi programı kişiye göre belirlenir ve sonuç garantisi verilmez. Tanı ve ilaç tedavisi için hekiminize danışın.</p>
+    </div>
+
+    <aside>
+      <div class="card">
+        <div class="prov">
+          <div class="avatar">İD</div>
+          <div><b>Fzt. İlayda Irmak Demir</b><small>Fizyoterapist · Ümraniye</small></div>
+        </div>
+        <div class="price">Fiyat için mesaj at</div>
+        <a class="btn primary">İletişime Geç</a>
+        <div class="safe">Ücretsiz hesapla güvenle mesajlaş; telefon numaran gizli kalır.</div>
+        <a class="btn ghost">Randevu iste</a>
+        <div class="hours"><b>Çalışma saatleri</b><br>Hafta içi akşam 21:00'e kadar<br>Cumartesi 09:00'dan itibaren<br><span style="color:#9CA3AF;font-size:12px">Kesin saatleri siz belirlersiniz</span></div>
+      </div>
+    </aside>
+  </div>
+</main>
+
+<section class="pitch">
+  <div class="wrap">
+    <h3>Vitrininiz sizin için ne yapar?</h3>
+    <p class="sub">Komisyon yok, ödemeye aracılık yok: hastalarınız size doğrudan ulaşır.</p>
+    <div class="pgrid">
+      <div class="pcard"><div class="n">01 · GOOGLE</div><b>"Ümraniye fizyoterapist" aramalarında ek bir kapı</b><span>Vitrininiz İşinn'in kategori ve şehir sayfalarına bağlanır; Google'daki işletme kaydınızın yanında ikinci bir görünürlük noktası olur.</span></div>
+      <div class="pcard"><div class="n">02 · YAPAY ZEKÂ</div><b>Asistanlara "fizyoterapist öner" diyenlere</b><span>İşinn vitrinleri, yapay zekâ asistanlarının kullanabildiği bir arama aracıyla açık. Biri İstanbul'da fizyoterapist sorduğunda vitrininiz sonuçlarda yer alabilir.</span></div>
+      <div class="pcard"><div class="n">03 · KONTROL SİZDE</div><b>Kendi takviminiz, kendi randevunuz</b><span>Mesajlar ve randevu istekleri size gelir; kabul eder, düzenler ya da reddedersiniz. Numaranız paylaşılmaz.</span></div>
+    </div>
+
+    <div class="found">
+      <b>Bu taslağı hazırlarken kullandığım herkese açık bilgiler:</b><br>
+      Instagram profiliniz (<a href="https://www.instagram.com/fztirmakdemir/">@fztirmakdemir</a>): Yeditepe Üniversitesi, Osteopati-OMT 3/5, ortopedik ve nörolojik rehabilitasyon.<br>
+      Google Haritalar kaydınız: Fizik Tedavi Kliniği, Tatlısu / Ümraniye, <b>5,0 puan · 15 yorum</b>. Yorumlarda boyun ağrısı ve bel fıtığı şikâyetleriyle gelen danışanların memnuniyeti öne çıkıyor.<br>
+      Metindeki her şeyi değiştirebilir, eksik ya da yanlış olanı düzeltebilirsiniz; vitrin yalnızca sizin onayınızla yayına girer.
+    </div>
+  </div>
+</section>
+
+</body>
+</html>
